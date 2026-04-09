@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(json|config|ts|js\\)$\")",
+      "Bash(head -50 src/objects/*.ts)",
+      "Bash(xargs wc:*)",
+      "Bash(wc -l src/core/override/*.ts)",
+      "Bash(wc -l src/utils/*.ts)",
+      "Bash(npm view:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(timeout 10 npx vite --host)",
+      "Bash(npx vite:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
+    ]
+  }
+}
