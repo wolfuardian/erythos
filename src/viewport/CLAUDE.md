@@ -30,6 +30,9 @@
 - `ErrorDialog` 來自 src/components/ErrorDialog.tsx（UI agent 建立）
 - 如果這些檔案尚未存在，先寫好自己的部分，留好 import 語句，合併後自然接通
 
+## 通用 SOP
+遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+
 ## 慣例
 - 用 SolidJS 的 onMount/onCleanup 管理 DOM 事件監聽
 - 用 createSignal 管理元件狀態
@@ -38,12 +41,15 @@
 
 ## Git 規則
 - 工作分支：feat/gltf-viewport
-- commit 訊息格式：`[viewport] 簡述`
+- commit 訊息格式：`[viewport] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - 不得操作 main/master 分支
 - 不得 merge 其他分支
 
-## 上報區（供主控者 review）
+## 待修項（由主腦根據 QC issue 填寫）
+<!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
+
+## 上報區（供主腦 review）
 - build 有 2 個 TS2307 錯誤，皆為跨模組依賴：`../../utils/gltfLoader`（core 分支）、`../../components/ErrorDialog`（ui 分支）。合併 core + ui 後即可解決。
 - ViewportPanel 三項任務（拖放事件、視覺回饋、錯誤對話框）已全部完成並 push。
