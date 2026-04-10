@@ -5,3 +5,4 @@ export { SetRotationCommand } from './SetRotationCommand';
 export { SetScaleCommand } from './SetScaleCommand';
 export { SetValueCommand } from './SetValueCommand';
 export { MultiCmdsCommand } from './MultiCmdsCommand';
+export { ImportGLTFCommand } from './ImportGLTFCommand';

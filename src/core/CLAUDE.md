@@ -33,7 +33,7 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void
 - 遵循現有 Command 模式（參考 AddObjectCommand.ts）
 - 事件發射順序：objectAdded → sceneGraphChanged（不能反過來）
 - Command 的 undo 中要檢查 selection 狀態並清除
-- import three 模組用 `'three'` 和 `'three/examples/jsm/loaders/GLTFLoader'`
+- import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
 - 工作分支：feat/gltf-core
@@ -50,3 +50,5 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+- 待修項 #1、#2 已修完並 push，build 通過。等待 QC 複審。
+- 慣例區已補上 `three/examples/jsm/` import 必須帶 `.js` 後綴的規則（自省：本次 #1 初次 commit 即漏寫導致 build 失敗）。
