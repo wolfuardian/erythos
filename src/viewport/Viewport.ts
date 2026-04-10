@@ -80,6 +80,8 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
+    this.cameraCtrl.mount(this.vpRenderer.domElement);
+
     // Wire up post-processing as render override
     this.vpRenderer.setRenderOverride(() => this.postProcessing.render());
     this.vpRenderer.setBeforeRender(() => this.cameraCtrl.update());

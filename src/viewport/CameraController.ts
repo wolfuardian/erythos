@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export class CameraController {
   readonly camera: PerspectiveCamera;
-  readonly controls: OrbitControls;
+  controls: OrbitControls;
   private requestRender: () => void;
   private focusAnim: number | null = null;
 
@@ -21,9 +21,8 @@ export class CameraController {
   }
 
   mount(domElement: HTMLCanvasElement): void {
-    // OrbitControls does not have a setDomElement, so we manually swap
     this.controls.dispose();
-    Object.assign(this.controls, new OrbitControls(this.camera, domElement));
+    this.controls = new OrbitControls(this.camera, domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.1;
     this.controls.addEventListener('change', () => this.requestRender());
