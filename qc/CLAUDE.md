@@ -18,6 +18,7 @@
 - 可以寫 qc/ 目錄
 - 可以用 `gh issue create` 開 issue
 - 可以用 `gh issue close` 關閉已修復的 issue
+- 可以用 `gh pr review` 審查 PR（approve 或 request changes）
 
 ## 審查流程
 
@@ -66,28 +67,32 @@ cd <worktree-path> && npm run build
 
 ## 輸出方式
 
+審查以 PR 為單位。開發 agent 完成後會開 PR，你在 PR 上進行 review。
+
 ### 發現問題時
-用 `gh issue create` 開 issue，必須帶 label（`bug`、`feature`、`enhancement`）：
-```bash
-gh issue create --label bug --title "[分支簡稱] 問題簡述" --body "問題描述、檔案路徑、建議修法"
-```
+1. 在 PR 上 request changes，附具體說明
+2. 同時開 issue（帶 label）：
+   ```bash
+   gh issue create --label bug --title "[分支簡稱] 問題簡述" --body "問題描述、檔案路徑、建議修法"
+   ```
 
 ### 複審時問題已修復
 1. 用 `git log --all --grep="refs #N"` 確認有對應 commit
 2. 驗證 commit 內容確實解決問題
-3. 用 `gh issue close #N` 關閉 issue
+3. 在 PR 上 **approve**（`gh pr review --approve`）
+4. 用 `gh issue close #N` 關閉 issue
 
-### 全部通過
-直接回報主腦「PASS」，不需要產出報告檔案。
+### 全部通過（首次審查無問題）
+直接在 PR 上 **approve**（`gh pr review --approve`），回報主腦。
 
 ### 複審時發現新問題
-開新 issue，回報主腦仍有問題。
+開新 issue，在 PR 上 request changes，回報主腦仍有問題。
 
 ## 審查指令
 
 主腦會這樣對你下指令：
-- 「審查 feat/gltf-core」→ 對該分支跑完整流程，有問題開 issue，沒問題回報 PASS
-- 「審查全部分支」→ 依序審查三條分支
+- 「審查 PR #N」→ 對該 PR 跑完整流程
+- 「審查全部 PR」→ 依序審查所有 open PR
 - 「只做建置驗證」→ 跳過人工審查，只跑 npm run build
 
 ## Git 規則

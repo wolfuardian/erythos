@@ -17,7 +17,11 @@
    - 新增檔案、改架構、改設計決策的 commit 必須有 body
 4. 一律用 `refs #N`，不要用 `closes #N`。issue 的關閉由 QC 複審確認後執行
 5. 先驗證再 commit：確認 build 通過或至少 import 正確，不要 commit 後馬上再修自己的錯
-6. push 後等待 QC 審查
+6. push 後開 PR：
+   ```bash
+   gh pr create --title "[模組] 簡述 (refs #N)" --body "改動摘要"
+   ```
+7. 等待 QC 在 PR 上審查
 
 ## 二、修正（QC 退回）
 
@@ -25,7 +29,7 @@
 2. 讀 issue 了解問題的具體描述
 3. 只修 issue 指出的問題，不做額外重構
 4. commit message 帶 `refs #N`
-5. push 後等待 QC 複審
+5. push 後，PR 會自動更新，等待 QC 複審
 
 ## 三、自省（防止重犯）
 

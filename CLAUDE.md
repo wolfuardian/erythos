@@ -76,12 +76,11 @@ interface ErrorDialogProps {
 
 ### Merge 流程
 
-1. 開發 agent 完成實作 → commit + push
-2. 主腦指派 QC 審查
-3. QC 審查：有問題開 GitHub issue，沒問題回報 PASS
-4. 主腦向指揮家報告結果並建議：
-   - **PASS** → 指揮家同意後，主腦執行 merge
-   - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 → 回到步驟 2
+1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
+2. QC 在 PR 上審查：有問題開 issue + request changes，沒問題 **approve**
+3. 主腦向指揮家報告結果並建議：
+   - **approved** → 指揮家同意後，主腦執行 `gh pr merge`
+   - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
 
 ### 指揮家提案
 
@@ -92,14 +91,14 @@ interface ErrorDialogProps {
 **Bug / 小功能（單一模組可完成）：**
 1. 主腦調查後開 GitHub issue（帶 label）
 2. 建 fix 或 feat 分支 + worktree，寫進模組 CLAUDE.md 待修項或當前任務
-3. 開發 agent 實作 → commit + push
-4. QC 審查 → PASS 後 merge
+3. 開發 agent 實作 → commit + push → 開 PR
+4. QC 審查 PR → approved 後 merge
 
 **大功能（跨模組）：**
 1. 主腦設計介面契約，更新根 CLAUDE.md
 2. 拆分支（每模組一條），建 worktree，寫各模組 CLAUDE.md 當前任務
-3. 開發 agent 各自實作 → commit + push
-4. QC 逐分支審查 → 全部 PASS 後依序 merge
+3. 開發 agent 各自實作 → commit + push → 各自開 PR
+4. QC 逐 PR 審查 → 全部 approved 後依序 merge
 
 ### Merge 後收尾
 
