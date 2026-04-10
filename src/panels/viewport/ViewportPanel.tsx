@@ -58,6 +58,16 @@ const ViewportPanel: Component = () => {
           viewport.focusObject(selected);
         }
       }
+
+      if (e.key === 'w' || e.key === 'W') {
+        editor.setTransformMode('translate');
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        editor.setTransformMode('rotate');
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        editor.setTransformMode('scale');
+      }
     };
 
     containerRef.addEventListener('dragover', onDragOver);
