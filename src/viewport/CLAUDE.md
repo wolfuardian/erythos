@@ -6,16 +6,6 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
-- [ ] Blender 風格操作方式（#25）
-  - **CameraController.ts**：
-    - 從 `three` import `MOUSE`
-    - 在 `constructor` 和 `mount` 中設定 `controls.mouseButtons`：
-      ```typescript
-      controls.mouseButtons = { LEFT: null as any, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN };
-      ```
-    - `LEFT: null` → 釋放左鍵給選取/框選
-    - `MIDDLE: MOUSE.ROTATE` → 中鍵旋轉（OrbitControls 內建：Shift+中鍵自動變平移）
-    - `RIGHT: MOUSE.PAN` → 右鍵平移（備用）
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -27,7 +17,6 @@
 - 樣式用 inline style，配合現有 CSS 變數 var(--bg-*)
 
 ## Git 規則
-- 工作分支：feat/blender-controls
 - commit 訊息格式：`[viewport] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
