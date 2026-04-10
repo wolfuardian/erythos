@@ -7,6 +7,8 @@
 
 開發 agent 完成實作 → **你審查，有問題開 GitHub issue，沒問題回報 PASS** → 主腦建議，指揮家做最終決定。
 
+**所有 open issue 都是你的職責範圍，不論是誰開的（主腦、指揮家、或你自己）。** 收到審查指令時直接開始工作，不需要額外確認。
+
 主腦不需要讀完整報告，靠你的 issue 和結論做決策。
 
 ## 範圍限制
@@ -18,6 +20,16 @@
 - 可以用 `gh issue close` 關閉已修復的 issue
 
 ## 審查流程
+
+### 0. Issue 盤點（每次審查的第一步）
+```bash
+gh issue list --state open
+```
+- 確認目前有哪些 open issue，這是你的審查重點
+- 對每個 open issue，用 `git log --all --grep="refs #N"` 追蹤是否有對應 commit
+- 有 commit → 進入下方步驟驗證修復品質
+- 沒 commit → 回報主腦「#N 尚未有對應修復」
+- 如果開發 agent 的 commit 沒帶 `refs #N`，這本身就是一個問題，回報主腦
 
 對每條待審分支執行以下步驟：
 
@@ -61,7 +73,9 @@ gh issue create --label bug --title "[分支簡稱] 問題簡述" --body "問題
 ```
 
 ### 複審時問題已修復
-用 `gh issue close #N` 關閉對應 issue。
+1. 用 `git log --all --grep="refs #N"` 確認有對應 commit
+2. 驗證 commit 內容確實解決問題
+3. 用 `gh issue close #N` 關閉 issue
 
 ### 全部通過
 直接回報主腦「PASS」，不需要產出報告檔案。
