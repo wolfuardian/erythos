@@ -7,7 +7,7 @@ import {
 } from 'three';
 
 export interface PickerCallbacks {
-  onSelect: (object: Object3D | null) => void;
+  onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
   onHover: (object: Object3D | null) => void;
   resolveTarget?: (object: Object3D) => Object3D;
   requestRender: () => void;
@@ -96,7 +96,7 @@ export class SelectionPicker {
     if (dist < 4 && elapsed < 500) {
       this.updatePointer(e);
       const hit = this.pick();
-      this.callbacks.onSelect(hit);
+      this.callbacks.onSelect(hit, { ctrl: e.ctrlKey || e.metaKey });
     }
   }
 
