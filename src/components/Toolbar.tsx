@@ -1,4 +1,6 @@
-import { type Component } from 'solid-js';
+import { type Component, createSignal } from 'solid-js';
+import ErrorDialog from './ErrorDialog';
+import { loadGLTFFromFile } from '../utils/gltfLoader';
 import {
   BoxGeometry,
   SphereGeometry,
@@ -18,6 +20,27 @@ import type { TransformMode } from '../core/EventEmitter';
 const Toolbar: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
+  const [importing, setImporting] = createSignal(false);
+  const [errorMsg, setErrorMsg] = createSignal('');
+
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.glb,.gltf';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setImporting(true);
+      try {
+        await loadGLTFFromFile(file, editor);
+      } catch (e: any) {
+        setErrorMsg(e.message || String(e));
+      } finally {
+        setImporting(false);
+      }
+    };
+    input.click();
+  };
 
   const addMesh = (name: string, geometry: BoxGeometry | SphereGeometry | PlaneGeometry | CylinderGeometry) => {
     const material = new MeshStandardMaterial({ color: 0x808080 });
@@ -130,6 +153,11 @@ const Toolbar: Component = () => {
 
       <Divider />
 
+      {/* Import */}
+      <ToolbarBtn label="Import" onClick={handleImport} disabled={importing()} title="Import GLTF/GLB" />
+
+      <Divider />
+
       {/* Transform mode */}
       {transformBtn('translate', 'Move', 'W')}
       {transformBtn('rotate', 'Rotate', 'E')}
@@ -141,6 +169,13 @@ const Toolbar: Component = () => {
       <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)' }}>
         v{__APP_VERSION__}
       </span>
+
+      <ErrorDialog
+        open={!!errorMsg()}
+        title="Import Failed"
+        message={errorMsg()}
+        onClose={() => setErrorMsg('')}
+      />
     </div>
   );
 };
