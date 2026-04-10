@@ -53,9 +53,10 @@ const ViewportPanel: Component = () => {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
       if (e.key === 'f' || e.key === 'F') {
-        const selected = bridge.selectedObject();
-        if (selected && viewport) {
-          viewport.focusObject(selected);
+        const objects = bridge.selectedObjects();
+        const primary = objects.length > 0 ? objects[objects.length - 1] : null;
+        if (primary && viewport) {
+          viewport.focusObject(primary);
         }
       }
 
@@ -85,8 +86,29 @@ const ViewportPanel: Component = () => {
     });
 
     viewport = new Viewport(editor.scene, {
-      onSelect: (obj) => editor.selection.select(obj),
+      onSelect: (obj, modifier) => {
+        if (modifier.ctrl && obj) {
+          editor.selection.toggle(obj);
+        } else {
+          editor.selection.select(obj);
+        }
+      },
       onHover: (obj) => editor.selection.hover(obj),
+      onMultiTransformEnd: (objects, startTransforms) => {
+        for (let i = 0; i < objects.length; i++) {
+          const obj = objects[i];
+          const start = startTransforms[i];
+          if (!obj.position.equals(start.pos)) {
+            editor.execute(new SetPositionCommand(editor, obj, obj.position.clone(), start.pos));
+          }
+          if (!obj.rotation.equals(start.rot)) {
+            editor.execute(new SetRotationCommand(editor, obj, obj.rotation.clone(), start.rot));
+          }
+          if (!obj.scale.equals(start.scale)) {
+            editor.execute(new SetScaleCommand(editor, obj, obj.scale.clone(), start.scale));
+          }
+        }
+      },
       onTransformEnd: (obj, startPos, startRot, startScale) => {
         // Create appropriate command based on what changed
         if (!obj.position.equals(startPos)) {
@@ -106,8 +128,8 @@ const ViewportPanel: Component = () => {
 
   // Sync selection → viewport
   createEffect(() => {
-    const obj = bridge.selectedObject();
-    viewport?.setSelectedObject(obj);
+    const objects = bridge.selectedObjects();
+    viewport?.setSelectedObjects(objects);
   });
 
   createEffect(() => {
