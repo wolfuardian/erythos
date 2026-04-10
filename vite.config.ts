@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
+
+function gitHash(): string {
+  try { return execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim(); }
+  catch { return 'unknown'; }
+}
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
@@ -8,6 +14,7 @@ export default defineConfig({
   plugins: [solidPlugin()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __GIT_HASH__: JSON.stringify(gitHash()),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
   },
   resolve: {
