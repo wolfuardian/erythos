@@ -10,6 +10,8 @@ export type InteractionMode = 'object' | 'edit';
 export interface EditorEventMap {
   objectAdded:            [object: Object3D];
   objectRemoved:          [object: Object3D, previousParent: Object3D];
+  selectionChanged:       [objects: Object3D[]];
+  /** @deprecated Use selectionChanged — kept for backward compat until app branch migrates */
   objectSelected:         [object: Object3D | null];
   objectHovered:          [object: Object3D | null];
   objectChanged:          [object: Object3D];
