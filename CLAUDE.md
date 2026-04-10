@@ -223,6 +223,11 @@ attachMulti(objects: Object3D[]): void;
 
 > 註：所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 `QC PASS` comment 代替。
 
+### 主腦職責邊界
+
+主腦的執行範圍到「準備 worktree + 寫好模組 CLAUDE.md 任務描述」為止。
+**不得自行派開發 agent 實作**，由指揮家決定何時、派誰去做。
+
 ### 指揮家提案
 
 指揮家用自然語言描述意圖（不需要寫技術細節），主腦判斷規模後走對應流程。
