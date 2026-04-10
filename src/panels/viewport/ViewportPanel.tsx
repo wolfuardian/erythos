@@ -94,6 +94,14 @@ const ViewportPanel: Component = () => {
         }
       },
       onHover: (obj) => editor.selection.hover(obj),
+      onBoxSelect: (objects, modifier) => {
+        if (!modifier.ctrl) {
+          editor.selection.select(null);
+        }
+        for (const obj of objects) {
+          editor.selection.add(obj);
+        }
+      },
       onMultiTransformEnd: (objects, startTransforms) => {
         for (let i = 0; i < objects.length; i++) {
           const obj = objects[i];
