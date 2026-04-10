@@ -14,16 +14,14 @@ export class CameraController {
 
     // OrbitControls needs a dummy element initially; replaced on mount
     this.controls = new OrbitControls(this.camera, document.createElement('div'));
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.1;
+    this.controls.enableDamping = false;
     this.controls.addEventListener('change', () => this.requestRender());
   }
 
   mount(domElement: HTMLCanvasElement): void {
     this.controls.dispose();
     this.controls = new OrbitControls(this.camera, domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.1;
+    this.controls.enableDamping = false;
     this.controls.addEventListener('change', () => this.requestRender());
   }
 
