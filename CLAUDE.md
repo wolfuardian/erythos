@@ -198,6 +198,9 @@ attachMulti(objects: Object3D[]): void;
 
 ### 分支規則
 
+**所有程式碼變更一律走完整流程：issue → 分支 + worktree → 開發 → PR → QC → merge。**
+不論改動大小，不得直接在 master 上修改程式碼。唯一例外是 merge 後的收尾 commit（清理 CLAUDE.md、build 驗證等非程式碼改動）。
+
 一個 issue 對應一條分支、一個 PR。不混搭多個 issue 到同一分支。
 
 分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
