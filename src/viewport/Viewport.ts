@@ -3,6 +3,7 @@ import { ViewportRenderer } from './ViewportRenderer';
 import { CameraController } from './CameraController';
 import { GizmoManager } from './GizmoManager';
 import { SelectionPicker } from './SelectionPicker';
+import { BoxSelector } from './BoxSelector';
 import { GridHelpers } from './GridHelpers';
 import { PostProcessing } from './PostProcessing';
 import { ShadingManager, type ShadingMode } from './ShadingManager';
@@ -12,6 +13,7 @@ export interface ViewportCallbacks {
   onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
   onHover: (object: Object3D | null) => void;
   onTransformEnd: (object: Object3D, startPos: Vector3, startRot: Euler, startScale: Vector3) => void;
+  onBoxSelect?: (objects: Object3D[], modifier: { ctrl: boolean }) => void;
   onMultiTransformEnd?: (objects: Object3D[], startTransforms: { pos: Vector3; rot: Euler; scale: Vector3 }[]) => void;
   resolveTarget?: (object: Object3D) => Object3D;
 }
@@ -21,6 +23,7 @@ export class Viewport {
   readonly cameraCtrl: CameraController;
   readonly gizmo: GizmoManager;
   readonly picker: SelectionPicker;
+  readonly boxSelector: BoxSelector;
   readonly gridHelpers: GridHelpers;
   readonly postProcessing: PostProcessing;
   readonly shading: ShadingManager;
@@ -58,6 +61,7 @@ export class Viewport {
         requestRender,
         onDragging: (isDragging) => {
           this.cameraCtrl.setEnabled(!isDragging);
+          this.boxSelector.setEnabled(!isDragging);
         },
         onDragEnd: (obj, startPos, startRot, startScale) => {
           this.callbacks.onTransformEnd(obj, startPos, startRot, startScale);
@@ -73,6 +77,11 @@ export class Viewport {
       onSelect: (obj, modifier) => this.callbacks.onSelect(obj, modifier),
       onHover: (obj) => this.callbacks.onHover(obj),
       resolveTarget: callbacks.resolveTarget,
+    });
+
+    this.boxSelector = new BoxSelector({
+      requestRender,
+      onBoxSelect: (objects, modifier) => this.callbacks.onBoxSelect?.(objects, modifier),
     });
   }
 
@@ -99,8 +108,11 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    // Ignore gizmo from raycasting
+    // Ignore gizmo from raycasting / box-select
     this.picker.addIgnore(this.gizmo.controls.getHelper());
+
+    this.boxSelector.mount(container, this.scene, this.cameraCtrl.camera);
+    this.boxSelector.addIgnore(this.gizmo.controls.getHelper());
 
     this.vpRenderer.requestRender();
   }
@@ -141,6 +153,7 @@ export class Viewport {
 
   dispose(): void {
     this.picker.dispose();
+    this.boxSelector.dispose();
     this.gizmo.dispose();
     this.gridHelpers.dispose();
     this.postProcessing.dispose();
