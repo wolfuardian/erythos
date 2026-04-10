@@ -12,16 +12,20 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
   const { editor } = bridge;
   const [expanded, setExpanded] = createSignal(true);
 
-  const isSelected = () => bridge.selectedObject() === props.object;
+  const isSelected = () => bridge.selectedObjects().includes(props.object);
   const isHovered = () => bridge.hoveredObject() === props.object;
   const hasChildren = () => props.object.children.length > 0;
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
-    if (isSelected()) {
-      editor.selection.select(null);
+    if (e.ctrlKey || e.metaKey) {
+      editor.selection.toggle(props.object);
     } else {
-      editor.selection.select(props.object);
+      if (isSelected()) {
+        editor.selection.select(null);
+      } else {
+        editor.selection.select(props.object);
+      }
     }
   };
 
