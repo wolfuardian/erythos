@@ -24,8 +24,8 @@ export class AddObjectCommand extends Command {
     this.parent.remove(this.object);
     this.editor.events.emit('objectRemoved', this.object, this.parent);
     this.editor.events.emit('sceneGraphChanged');
-    if (this.editor.selection.selected === this.object) {
-      this.editor.selection.select(null);
+    if (this.editor.selection.has(this.object)) {
+      this.editor.selection.remove(this.object);
     }
   }
 }

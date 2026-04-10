@@ -61,8 +61,8 @@ export class Editor {
     const parent = object.parent;
     if (!parent) return;
     parent.remove(object);
-    if (this.selection.selected === object) {
-      this.selection.select(null);
+    if (this.selection.has(object)) {
+      this.selection.remove(object);
     }
     if (this.selection.hovered === object) {
       this.selection.hover(null);
@@ -79,6 +79,7 @@ export class Editor {
 
   clear(): void {
     this.selection.clear();
+    this.selection.hover(null);
     this.history.clear();
 
     // Remove all user objects (keep default children like lights if any)
