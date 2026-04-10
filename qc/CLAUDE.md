@@ -83,7 +83,9 @@ cd <worktree-path> && npm run build
 4. 用 `gh issue close #N` 關閉 issue
 
 ### 全部通過（首次審查無問題）
-直接在 PR 上 **approve**（`gh pr review --approve`），回報主腦。
+直接在 PR 上 **approve**，回報主腦。
+
+**重要：approve 必須用 `gh pr review <PR-number> --approve --body "審查結論"`，不要用 `--comment`。** comment 不算 approve，主腦無法據此 merge。
 
 ### 複審時發現新問題
 開新 issue，在 PR 上 request changes，回報主腦仍有問題。
