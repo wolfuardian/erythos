@@ -48,16 +48,30 @@ const ViewportPanel: Component = () => {
       }
     };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.key === 'f' || e.key === 'F') {
+        const selected = bridge.selectedObject();
+        if (selected && viewport) {
+          viewport.focusObject(selected);
+        }
+      }
+    };
+
     containerRef.addEventListener('dragover', onDragOver);
     containerRef.addEventListener('dragenter', onDragEnter);
     containerRef.addEventListener('dragleave', onDragLeave);
     containerRef.addEventListener('drop', onDrop);
+    window.addEventListener('keydown', onKeyDown);
 
     onCleanup(() => {
       containerRef.removeEventListener('dragover', onDragOver);
       containerRef.removeEventListener('dragenter', onDragEnter);
       containerRef.removeEventListener('dragleave', onDragLeave);
       containerRef.removeEventListener('drop', onDrop);
+      window.removeEventListener('keydown', onKeyDown);
     });
 
     viewport = new Viewport(editor.scene, {
