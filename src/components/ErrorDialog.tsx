@@ -75,4 +75,4 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
   );
 };
 
-export default ErrorDialog;
+export { ErrorDialog };

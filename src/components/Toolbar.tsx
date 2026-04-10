@@ -1,5 +1,5 @@
 import { type Component, createSignal } from 'solid-js';
-import ErrorDialog from './ErrorDialog';
+import { ErrorDialog } from './ErrorDialog';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
 import {
   BoxGeometry,
