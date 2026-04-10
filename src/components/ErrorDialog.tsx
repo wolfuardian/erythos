@@ -1,4 +1,4 @@
-import { type Component, Show, onMount, onCleanup } from 'solid-js';
+import { type Component, Show, createEffect, onCleanup } from 'solid-js';
 
 export interface ErrorDialogProps {
   open: boolean;
@@ -8,12 +8,14 @@ export interface ErrorDialogProps {
 }
 
 const ErrorDialog: Component<ErrorDialogProps> = (props) => {
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') props.onClose();
-  };
-
-  onMount(() => document.addEventListener('keydown', onKeyDown));
-  onCleanup(() => document.removeEventListener('keydown', onKeyDown));
+  createEffect(() => {
+    if (!props.open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    onCleanup(() => document.removeEventListener('keydown', onKeyDown));
+  });
 
   return (
     <Show when={props.open}>
