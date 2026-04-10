@@ -85,10 +85,12 @@ interface ErrorDialogProps {
 
 ### 指揮家提案
 
-指揮家用自然語言描述意圖（不需要寫技術細節），主腦判斷規模後走對應流程：
+指揮家用自然語言描述意圖（不需要寫技術細節），主腦判斷規模後走對應流程。
+
+開 issue 時必須加 label：`bug`、`feature`（全新功能）、`enhancement`（改進現有功能）。
 
 **Bug / 小功能（單一模組可完成）：**
-1. 主腦調查後開 GitHub issue
+1. 主腦調查後開 GitHub issue（帶 label）
 2. 建 fix 或 feat 分支 + worktree，寫進模組 CLAUDE.md 待修項或當前任務
 3. 開發 agent 實作 → commit + push
 4. QC 審查 → PASS 後 merge

@@ -55,9 +55,9 @@ cd <worktree-path> && npm run build
 ## 輸出方式
 
 ### 發現問題時
-用 `gh issue create` 開 issue，格式：
+用 `gh issue create` 開 issue，必須帶 label（`bug`、`feature`、`enhancement`）：
 ```bash
-gh issue create --title "[分支簡稱] 問題簡述" --body "問題描述、檔案路徑、建議修法"
+gh issue create --label bug --title "[分支簡稱] 問題簡述" --body "問題描述、檔案路徑、建議修法"
 ```
 
 ### 複審時問題已修復
