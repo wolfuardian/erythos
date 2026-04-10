@@ -182,7 +182,6 @@ attachMulti(objects: Object3D[]): void;
 | 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
 | 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
 | QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
-| 校閱 | 糾正所有文件的錯字、排版、用詞不一致 | 可改所有 .md，不改 src/ |
 
 ### 開發模組清單
 
@@ -257,7 +256,7 @@ merge 完成後，主腦依序執行：
 
 ### 文件維護流程
 
-- 主腦更新文件後 → 校閱檢查文字品質 → 主腦檢視文件間一致性 → **主腦將 master merge 進所有 active feat 分支**
+- 主腦更新文件後 → 主腦自行校閱文字品質 + 檢視文件間一致性 → **主腦將 master merge 進所有 active feat 分支**
 - 指揮家需要下指令時 → 參謀提供 prompt 建議
 - 指揮家與成員溝通不順時 → 參謀診斷問題根因
 
