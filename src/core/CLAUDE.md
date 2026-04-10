@@ -20,6 +20,10 @@
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
+- build 通過後開 PR：
+  ```bash
+  gh pr create --title "[core] 簡述 (refs #N)" --body "改動摘要"
+  ```
 - 不得操作 main/master 分支
 - 不得 merge 其他分支
 

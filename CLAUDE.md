@@ -80,6 +80,14 @@ interface ErrorDialogProps {
 
 分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
 
+### 模組 CLAUDE.md 編寫原則（主腦職責）
+
+開發 agent 在獨立 worktree 中運作，**只依賴 worktree 內的 CLAUDE.md**，不一定會追 SOP 連結。因此主腦在寫模組 CLAUDE.md 時必須確保：
+
+- Git 規則中包含完整的開 PR 步驟（含指令範例），不能只靠引用 dev-sop.md
+- 待修項的描述足夠具體，agent 不需要額外查閱其他文件就能開工
+- 工作分支名稱明確寫在 Git 規則中
+
 ### Merge 流程
 
 1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
