@@ -1,4 +1,4 @@
-# Components 模組（UI 元件）
+# Components 模組
 
 ## 範圍限制
 只能修改 src/components/ 底下的檔案。
@@ -19,12 +19,12 @@
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 
 ## Git 規則
-- commit 訊息格式：`[ui] 簡述 (refs #N)`
+- commit 訊息格式：`[components] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - build 通過後開 PR：
   ```bash
-  gh pr create --title "[ui] 簡述 (refs #N)" --body "改動摘要"
+  gh pr create --title "[components] 簡述 (refs #N)" --body "改動摘要"
   ```
 - 不得操作 main/master 分支
 - 不得 merge 其他分支
