@@ -91,10 +91,12 @@ interface ErrorDialogProps {
 ### Merge 流程
 
 1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
-2. QC 在 PR 上審查：有問題開 issue + request changes，沒問題 **approve**
+2. QC 在 PR 上審查：有問題開 issue + request changes，沒問題留 **`QC PASS`** comment
 3. 主腦向指揮家報告結果並建議：
-   - **approved** → 指揮家同意後，主腦執行 `gh pr merge`
+   - **QC PASS** → 指揮家同意後，主腦執行 `gh pr merge`
    - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
+
+> 註：所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 `QC PASS` comment 代替。
 
 ### 指揮家提案
 

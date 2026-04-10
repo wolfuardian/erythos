@@ -79,13 +79,16 @@ cd <worktree-path> && npm run build
 ### 複審時問題已修復
 1. 用 `git log --all --grep="refs #N"` 確認有對應 commit
 2. 驗證 commit 內容確實解決問題
-3. 在 PR 上 **approve**（`gh pr review --approve`）
+3. 在 PR 上留下 `QC PASS` comment
 4. 用 `gh issue close #N` 關閉 issue
 
 ### 全部通過（首次審查無問題）
-直接在 PR 上 **approve**，回報主腦。
+在 PR 上留下審查結論，回報主腦。
 
-**重要：approve 必須用 `gh pr review <PR-number> --approve --body "審查結論"`，不要用 `--comment`。** comment 不算 approve，主腦無法據此 merge。
+由於所有 agent 共用同一 GitHub 帳號，無法 `--approve` 自己的 PR。改用 comment 並以 **`QC PASS`** 開頭作為通過標記：
+```bash
+gh pr review <PR-number> --comment --body "QC PASS — 審查結論"
+```
 
 ### 複審時發現新問題
 開新 issue，在 PR 上 request changes，回報主腦仍有問題。
