@@ -17,6 +17,7 @@
 - 樣式用 inline style，配合現有 CSS 變數 var(--bg-*)
 
 ## Git 規則
+- 工作分支：fix/camera-no-tween
 - commit 訊息格式：`[viewport] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
@@ -25,6 +26,8 @@
 
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
+- [ ] focusObject 移除 tween 動畫，改為直接到位（#6）
+  - `CameraController.ts`：移除動畫迴圈，直接設定 position + target，清掉 `focusAnim` 相關欄位
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
