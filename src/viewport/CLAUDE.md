@@ -45,4 +45,5 @@
 - 不得 merge 其他分支
 
 ## 上報區（供主控者 review）
-<!-- Agent 在此記錄跨模組需求或發現 -->
+- build 有 2 個 TS2307 錯誤，皆為跨模組依賴：`../../utils/gltfLoader`（core 分支）、`../../components/ErrorDialog`（ui 分支）。合併 core + ui 後即可解決。
+- ViewportPanel 三項任務（拖放事件、視覺回饋、錯誤對話框）已全部完成並 push。
