@@ -41,11 +41,9 @@ git diff master...<branch-name> -- .
 - import 路徑是否正確
 
 ### 4. 建置驗證
-各分支有獨立 worktree，直接進去跑 build：
+各分支有獨立 worktree，直接進去跑 build。worktree 路徑命名慣例為 `C:/z/erythos-<模組>`，由主腦在開工時建立。
 ```bash
-cd C:/z/erythos-core && npm run build      # feat/gltf-core
-cd C:/z/erythos-viewport && npm run build  # feat/gltf-viewport
-cd C:/z/erythos-ui && npm run build        # feat/gltf-ui
+cd <worktree-path> && npm run build
 ```
 不需要 git checkout，每個 worktree 已經在正確的分支上。
 
@@ -73,7 +71,7 @@ gh issue create --title "[分支簡稱] 問題簡述" --body "問題描述、檔
 
 ## 審查指令
 
-主控者會這樣對你下指令：
+主腦會這樣對你下指令：
 - 「審查 feat/gltf-core」→ 對該分支跑完整流程，有問題開 issue，沒問題回報 PASS
 - 「審查全部分支」→ 依序審查三條分支
 - 「只做建置驗證」→ 跳過人工審查，只跑 npm run build

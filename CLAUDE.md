@@ -83,9 +83,24 @@ interface ErrorDialogProps {
    - **PASS** → 指揮家同意後，主腦執行 merge
    - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 → 回到步驟 2
 
+### Merge 後收尾
+
+merge 完成後，主腦依序執行：
+
+1. push master 到 remote
+2. 移除已 merge 分支的 worktree（`git worktree remove`）
+3. 刪除本地 feat 分支（`git branch -d`）
+4. 刪除遠端 feat 分支（`git push origin --delete`）
+5. 清理各模組 CLAUDE.md：
+   - 清空「當前任務」（保留標題和註解佔位）
+   - 清空「待修項」和「上報區」的內容
+   - 移除 Git 規則中已過期的工作分支名稱
+6. 跑一次整合 build 確認無錯誤
+7. commit 收尾改動並 push
+
 ### 文件維護流程
 
-- 主腦更新文件後 → 校閱檢查文字品質 → 主腦檢視文件間一致性
+- 主腦更新文件後 → 校閱檢查文字品質 → 主腦檢視文件間一致性 → **主腦將 master merge 進所有 active feat 分支**
 - 指揮家需要下指令時 → 參謀提供 prompt 建議
 - 指揮家與成員溝通不順時 → 參謀診斷問題根因
 
