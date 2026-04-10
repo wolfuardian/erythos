@@ -61,6 +61,116 @@ interface ErrorDialogProps {
 
 合併順序：core 先 merge，然後 viewport 和 ui 可同時 merge。
 
+## 介面契約：多選功能（#9）
+
+### Selection 改造（src/core/Selection.ts）
+
+```typescript
+class Selection {
+  // 內部改為 Set
+  private _selected: Set<Object3D>;
+
+  // 取代舊的 select(obj | null)
+  select(object: Object3D | null): void;       // 取代選取（清除舊的，選新的）
+  add(object: Object3D): void;                  // 追加選取（Ctrl+Click）
+  remove(object: Object3D): void;               // 移除單個
+  toggle(object: Object3D): void;               // 切換（有就移除，沒就加）
+  has(object: Object3D): boolean;               // 是否在選取集合中
+  clear(): void;                                // 清除全部
+  get all(): readonly Object3D[];               // 取得全部（陣列）
+  get count(): number;                          // 數量
+  get primary(): Object3D | null;               // 最後加入的（gizmo 附著對象）
+}
+```
+- `select(obj)` = 清除舊選取 + 選新的（普通點擊）
+- `select(null)` = `clear()`
+- 事件：改發 `selectionChanged`，payload 為 `Object3D[]`
+
+### EventEmitter 新增事件（src/core/EventEmitter.ts）
+
+```typescript
+interface EditorEventMap {
+  // 取代 objectSelected
+  selectionChanged: [objects: Object3D[]];
+  // objectHovered 不變
+}
+```
+
+### Editor 調整（src/core/Editor.ts）
+
+- `removeObject()` 中：如果被移除的物體在選取集合中，從集合移除
+- 保持向後相容：如果有其他地方呼叫 `selection.select()`，行為不變
+
+### Bridge 改造（src/app/bridge.ts）
+
+```typescript
+interface EditorBridge {
+  selectedObjects: Accessor<Object3D[]>;   // 取代 selectedObject
+  // 其餘不變
+}
+```
+- 監聽 `selectionChanged` 事件，更新 signal
+
+### SelectionPicker 改造（src/viewport/SelectionPicker.ts）
+
+```typescript
+interface PickerCallbacks {
+  onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
+  // onHover 不變
+}
+```
+- `onPointerUp` 中讀取 `e.ctrlKey`（Mac 上同時支援 `e.metaKey`）
+- 傳給 callback，由 Viewport 層決定呼叫 `select()` 或 `toggle()`
+
+### Viewport 層整合（src/viewport/Viewport.ts）
+
+```typescript
+setSelectedObjects(objects: Object3D[]): void {
+  this.postProcessing.setSelectedObjects(objects);  // 已支援陣列
+  if (objects.length === 1) {
+    this.gizmo.attach(objects[0]);
+  } else if (objects.length > 1) {
+    this.gizmo.attachMulti(objects);                // 新方法
+  } else {
+    this.gizmo.detach();
+  }
+}
+```
+
+### GizmoManager 多物體 Transform（src/viewport/GizmoManager.ts）
+
+```typescript
+attachMulti(objects: Object3D[]): void;
+```
+- 計算所有物體的包圍盒中心，建立一個臨時 pivot Object3D
+- 將 TransformControls 附著到 pivot
+- 拖曳時：計算 pivot 的 transform delta，同步套用到所有 objects
+- 拖曳結束：回傳所有物體的 startPos/startRot/startScale 供 undo
+
+### SceneTreePanel（src/panels/scene-tree/SceneTreePanel.tsx）
+
+- 普通點擊：`selection.select(obj)`（取代選取）
+- Ctrl+Click：`selection.toggle(obj)`（追加/移除）
+- 視覺：所有在 `selectedObjects` 中的項目都高亮
+
+### PropertiesPanel（src/panels/properties/PropertiesPanel.tsx）
+
+- `selectedObjects.length === 0`：顯示「No object selected」
+- `selectedObjects.length === 1`：現有行為不變
+- `selectedObjects.length > 1`：顯示共同屬性，值不同的欄位顯示「—」
+
+### 分支策略
+
+| 分支 | 模組 | 改動 |
+|------|------|------|
+| feat/multiselect-core | core | Selection, EventEmitter, Editor |
+| feat/multiselect-app | app | bridge.ts |
+| feat/multiselect-viewport | viewport | SelectionPicker, GizmoManager, Viewport |
+| feat/multiselect-scene-tree | scene-tree | SceneTreePanel |
+| feat/multiselect-properties | properties | PropertiesPanel |
+
+合併順序：core → app → viewport / scene-tree / properties（可同時）
+
 ## 協作角色與流程
 
 ### 角色分工
