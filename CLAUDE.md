@@ -83,6 +83,14 @@ interface ErrorDialogProps {
    - **PASS** → 指揮家同意後，主腦執行 merge
    - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 → 回到步驟 2
 
+### Bug 回報流程（指揮家驗收）
+
+1. 指揮家實際操作後發現問題，用自然語言描述現象（不需要寫技術細節）
+2. 主腦根據描述調查原因，開 GitHub issue（含檔案路徑、重現步驟、預期行為）
+3. 主腦建 fix 分支 + worktree，寫進對應模組 CLAUDE.md 待修項
+4. 開發 agent 修復 → commit + push
+5. QC 審查 → PASS 後 merge
+
 ### Merge 後收尾
 
 merge 完成後，主腦依序執行：
