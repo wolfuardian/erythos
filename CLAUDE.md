@@ -70,9 +70,22 @@ interface ErrorDialogProps {
 | 指揮家（使用者） | 提出意圖與方向，做最終決策 | 全部 |
 | 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
 | 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
-| 開發 agent | 在指定分支實作功能，完成後 commit + push | 只改自己分支允許的檔案 |
+| 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
 | QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
 | 校閱 | 糾正所有文件的錯字、排版、用詞不一致 | 可改所有 .md，不改 src/ |
+
+### 開發模組清單
+
+每個模組有獨立的 CLAUDE.md，agent 名稱 = 模組名稱。
+
+| 模組 | 路徑 | commit 前綴 |
+|------|------|------------|
+| core | src/core/, src/utils/ | `[core]` |
+| viewport | src/viewport/, src/panels/viewport/ | `[viewport]` |
+| components | src/components/ | `[components]` |
+| app | src/app/ | `[app]` |
+| scene-tree | src/panels/scene-tree/ | `[scene-tree]` |
+| properties | src/panels/properties/ | `[properties]` |
 
 ### 分支規則
 
