@@ -88,7 +88,7 @@ export class Viewport {
 
     // Mount submodules
     this.gridHelpers.mount(this.sceneHelpers);
-    this.sceneHelpers.add(this.gizmo.controls as unknown as Object3D);
+    this.sceneHelpers.add(this.gizmo.controls.getHelper());
     this.picker.mount(
       this.vpRenderer.domElement,
       this.scene,
@@ -96,7 +96,7 @@ export class Viewport {
     );
 
     // Ignore gizmo from raycasting
-    this.picker.addIgnore(this.gizmo.controls as unknown as Object3D);
+    this.picker.addIgnore(this.gizmo.controls.getHelper());
 
     this.vpRenderer.requestRender();
   }
