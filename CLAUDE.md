@@ -120,16 +120,17 @@ interface ErrorDialogProps {
 
 merge 完成後，主腦依序執行：
 
-1. push master 到 remote
+1. 關閉對應的 GitHub issue（`gh issue close #N`）
 2. 移除已 merge 分支的 worktree（`git worktree remove`）
 3. 刪除本地 feat 分支（`git branch -d`）
 4. 刪除遠端 feat 分支（`git push origin --delete`）
-5. 清理各模組 CLAUDE.md：
+5. pull master 取得 merge commit
+6. 清理各模組 CLAUDE.md：
    - 清空「當前任務」（保留標題和註解佔位）
    - 清空「待修項」和「上報區」的內容
    - 移除 Git 規則中已過期的工作分支名稱
 6. 跑一次整合 build 確認無錯誤
-7. commit 收尾改動並 push
+8. commit 收尾改動並 push
 
 ### 文件維護流程
 
