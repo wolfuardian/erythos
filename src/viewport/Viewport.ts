@@ -9,9 +9,10 @@ import { ShadingManager, type ShadingMode } from './ShadingManager';
 import type { TransformMode } from '../core/EventEmitter';
 
 export interface ViewportCallbacks {
-  onSelect: (object: Object3D | null) => void;
+  onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
   onHover: (object: Object3D | null) => void;
   onTransformEnd: (object: Object3D, startPos: Vector3, startRot: Euler, startScale: Vector3) => void;
+  onMultiTransformEnd?: (objects: Object3D[], startTransforms: { pos: Vector3; rot: Euler; scale: Vector3 }[]) => void;
   resolveTarget?: (object: Object3D) => Object3D;
 }
 
@@ -61,12 +62,15 @@ export class Viewport {
         onDragEnd: (obj, startPos, startRot, startScale) => {
           this.callbacks.onTransformEnd(obj, startPos, startRot, startScale);
         },
+        onMultiDragEnd: (objects, startTransforms) => {
+          this.callbacks.onMultiTransformEnd?.(objects, startTransforms);
+        },
       },
     );
 
     this.picker = new SelectionPicker({
       requestRender,
-      onSelect: (obj) => this.callbacks.onSelect(obj),
+      onSelect: (obj, modifier) => this.callbacks.onSelect(obj, modifier),
       onHover: (obj) => this.callbacks.onHover(obj),
       resolveTarget: callbacks.resolveTarget,
     });
@@ -101,13 +105,14 @@ export class Viewport {
     this.vpRenderer.requestRender();
   }
 
-  setSelectedObject(object: Object3D | null): void {
-    if (object) {
-      this.gizmo.attach(object);
-      this.postProcessing.setSelectedObjects([object]);
+  setSelectedObjects(objects: Object3D[]): void {
+    this.postProcessing.setSelectedObjects(objects);
+    if (objects.length === 1) {
+      this.gizmo.attach(objects[0]);
+    } else if (objects.length > 1) {
+      this.gizmo.attachMulti(objects);
     } else {
       this.gizmo.detach();
-      this.postProcessing.setSelectedObjects([]);
     }
     this.vpRenderer.requestRender();
   }
