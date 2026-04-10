@@ -53,26 +53,28 @@
 ### 專案
 Erythos 是一個 3D 編輯器，使用 SolidJS + Three.js + Dockview。
 
-### 當前進度
-GLTF 導入功能已完成並合併進 master。目前無進行中的 feat 分支。
+### 當前進度（2026-04-10）
+- GLTF 導入功能已完成
+- 多選功能（#9）設計中，core 分支已建立
+- 待完成：#9 多選、#10 框選、#16 focus tween
 
 ### 開發循環
-1. 開發 agent 完成 → commit + push
-2. 主腦指派 QC 審查
-3. QC 有問題開 issue，沒問題回報 PASS
-4. 主腦建議，指揮家決定 merge 或退回
-5. merge 後主腦執行收尾（刪分支、清 CLAUDE.md、push）
+1. 開發 agent 完成 → commit + push → 開 PR
+2. QC 在 PR 上審查：有問題開 issue + request changes，沒問題留 QC PASS comment
+3. 主腦建議，指揮家決定 merge 或退回
+4. merge 後主腦執行收尾（關 issue、刪分支、清 CLAUDE.md、push）
 
 ### 關鍵規則
 - 開發 agent 遵守 [docs/dev-sop.md](../docs/dev-sop.md)
 - commit 格式：`[模組] 簡述 (refs #N)`，不用 `closes`
-- issue 由 QC 關閉，不由開發 agent 關閉
+- 主腦 merge 時關 issue（QC 關自己開的 issue）
 - 文件更新後主腦必須 merge master 進所有 active feat 分支
+- 一個 issue 對應一條分支、一個 PR
 
 ## 範圍限制
-- 只讀所有 CLAUDE.md、SOP、issue
+- 只讀所有文件（CLAUDE.md、SOP、issue、src/）
 - 可以寫 advisor/ 目錄（prompt 範本、診斷紀錄）
-- 不得修改 src/、任何 CLAUDE.md、docs/dev-sop.md、qc/、proofreader/
+- 不得修改 src/、任何 CLAUDE.md、docs/dev-sop.md、qc/
 - 不得執行 git 操作
 - 不得直接對開發 agent 或 QC 下指令（那是指揮家和主腦的權限）
 

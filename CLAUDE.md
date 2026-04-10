@@ -59,7 +59,7 @@ interface ErrorDialogProps {
 | feat/gltf-viewport | src/viewport/, src/panels/viewport/ | ViewportPanel 拖放 |
 | feat/gltf-ui | src/components/ | ErrorDialog, Toolbar Import 按鈕 |
 
-合併順序：core 先 merge，然後 viewport 和 ui 可同時 merge。
+合併順序：core 先 merge，然後 viewport 和 components 可同時 merge。
 
 ## 介面契約：多選功能（#9）
 
