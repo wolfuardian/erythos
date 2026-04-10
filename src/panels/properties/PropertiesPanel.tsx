@@ -1,15 +1,15 @@
-import { Show, createMemo, type Component } from 'solid-js';
-import type { Object3D } from 'three';
+import { Switch, Match, createMemo, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import ObjectDraw from './object/ObjectDraw';
 import TransformDraw from './object/TransformDraw';
+import MultiSelectDraw from './object/MultiSelectDraw';
 
 const PropertiesPanel: Component = () => {
   const bridge = useEditor();
 
-  const selected = createMemo(() => {
-    bridge.objectVersion(); // track changes
-    return bridge.selectedObject();
+  const selectedObjects = createMemo(() => {
+    bridge.objectVersion();
+    return bridge.selectedObjects();
   });
 
   return (
@@ -20,26 +20,24 @@ const PropertiesPanel: Component = () => {
       background: 'var(--bg-panel)',
       padding: 'var(--space-md)',
     }}>
-      <Show
-        when={selected()}
-        fallback={
-          <div style={{
-            color: 'var(--text-muted)',
-            'font-size': 'var(--font-size-sm)',
-            'text-align': 'center',
-            'padding-top': 'var(--space-2xl)',
-          }}>
-            No object selected
-          </div>
-        }
-      >
-        {(obj) => (
-          <>
-            <ObjectDraw object={obj() as Object3D} />
-            <TransformDraw object={obj() as Object3D} />
-          </>
-        )}
-      </Show>
+      <Switch fallback={
+        <div style={{
+          color: 'var(--text-muted)',
+          'font-size': 'var(--font-size-sm)',
+          'text-align': 'center',
+          'padding-top': 'var(--space-2xl)',
+        }}>
+          No object selected
+        </div>
+      }>
+        <Match when={selectedObjects().length === 1}>
+          <ObjectDraw object={selectedObjects()[0]} />
+          <TransformDraw object={selectedObjects()[0]} />
+        </Match>
+        <Match when={selectedObjects().length > 1}>
+          <MultiSelectDraw objects={selectedObjects()} />
+        </Match>
+      </Switch>
     </div>
   );
 };
