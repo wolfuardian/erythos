@@ -24,8 +24,8 @@ export class ImportGLTFCommand extends Command {
     this.parent.remove(this.group);
     this.editor.events.emit('objectRemoved', this.group, this.parent);
     this.editor.events.emit('sceneGraphChanged');
-    if (this.editor.selection.selected === this.group) {
-      this.editor.selection.select(null);
+    if (this.editor.selection.has(this.group)) {
+      this.editor.selection.remove(this.group);
     }
   }
 }

@@ -16,8 +16,8 @@ export class RemoveObjectCommand extends Command {
   }
 
   execute(): void {
-    if (this.editor.selection.selected === this.object) {
-      this.editor.selection.select(null);
+    if (this.editor.selection.has(this.object)) {
+      this.editor.selection.remove(this.object);
     }
     this.parent.remove(this.object);
     this.editor.events.emit('objectRemoved', this.object, this.parent);
