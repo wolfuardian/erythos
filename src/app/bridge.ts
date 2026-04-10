@@ -5,7 +5,7 @@ import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 
 export interface EditorBridge {
   editor: Editor;
-  selectedObject: Accessor<Object3D | null>;
+  selectedObjects: Accessor<Object3D[]>;
   hoveredObject: Accessor<Object3D | null>;
   interactionMode: Accessor<InteractionMode>;
   transformMode: Accessor<TransformMode>;
@@ -17,7 +17,7 @@ export interface EditorBridge {
 }
 
 export function createEditorBridge(editor: Editor): EditorBridge {
-  const [selectedObject, setSelected] = createSignal<Object3D | null>(null);
+  const [selectedObjects, setSelectedObjects] = createSignal<Object3D[]>([]);
   const [hoveredObject, setHovered] = createSignal<Object3D | null>(null);
   const [interactionMode, setMode] = createSignal<InteractionMode>('object');
   const [transformMode, setTransformMode] = createSignal<TransformMode>('translate');
@@ -30,7 +30,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     setter((v) => v + 1);
 
   const handlers = {
-    objectSelected: (obj: Object3D | null) => setSelected(obj),
+    selectionChanged: (objects: Object3D[]) => setSelectedObjects(objects),
     objectHovered: (obj: Object3D | null) => setHovered(obj),
     interactionModeChanged: (mode: InteractionMode) => setMode(mode),
     transformModeChanged: (mode: TransformMode) => setTransformMode(mode),
@@ -55,7 +55,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
 
   return {
     editor,
-    selectedObject,
+    selectedObjects,
     hoveredObject,
     interactionMode,
     transformMode,
