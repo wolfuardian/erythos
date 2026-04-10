@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Box3, Vector3, type Object3D } from 'three';
+import { PerspectiveCamera, Box3, Vector3, MOUSE, type Object3D } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export class CameraController {
@@ -16,6 +16,7 @@ export class CameraController {
     // OrbitControls needs a dummy element initially; replaced on mount
     this.controls = new OrbitControls(this.camera, document.createElement('div'));
     this.controls.enableDamping = false;
+    this.controls.mouseButtons = { LEFT: null as any, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN };
     this.controls.addEventListener('change', () => this.requestRender());
   }
 
@@ -23,6 +24,7 @@ export class CameraController {
     this.controls.dispose();
     this.controls = new OrbitControls(this.camera, domElement);
     this.controls.enableDamping = false;
+    this.controls.mouseButtons = { LEFT: null as any, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN };
     this.controls.addEventListener('change', () => this.requestRender());
   }
 
