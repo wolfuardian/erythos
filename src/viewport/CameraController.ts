@@ -5,7 +5,6 @@ export class CameraController {
   readonly camera: PerspectiveCamera;
   controls: OrbitControls;
   private requestRender: () => void;
-  private focusAnim: number | null = null;
 
   constructor(requestRender: () => void) {
     this.requestRender = requestRender;
@@ -32,10 +31,8 @@ export class CameraController {
     this.controls.update();
   }
 
-  /** Animate camera to focus on the given object. */
+  /** Focus camera on the given object (instant, no animation). */
   focusObject(object: Object3D): void {
-    if (this.focusAnim !== null) cancelAnimationFrame(this.focusAnim);
-
     const box = new Box3().setFromObject(object);
     if (box.isEmpty()) return;
 
@@ -49,28 +46,10 @@ export class CameraController {
       this.camera.position.clone().sub(this.controls.target).normalize().multiplyScalar(dist)
     );
 
-    const startPos = this.camera.position.clone();
-    const startTarget = this.controls.target.clone();
-    const startTime = performance.now();
-    const duration = 400;
-
-    const animate = () => {
-      const t = Math.min((performance.now() - startTime) / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
-
-      this.camera.position.lerpVectors(startPos, targetPos, ease);
-      this.controls.target.lerpVectors(startTarget, center, ease);
-      this.controls.update();
-      this.requestRender();
-
-      if (t < 1) {
-        this.focusAnim = requestAnimationFrame(animate);
-      } else {
-        this.focusAnim = null;
-      }
-    };
-
-    this.focusAnim = requestAnimationFrame(animate);
+    this.camera.position.copy(targetPos);
+    this.controls.target.copy(center);
+    this.controls.update();
+    this.requestRender();
   }
 
   setEnabled(enabled: boolean): void {
@@ -78,7 +57,6 @@ export class CameraController {
   }
 
   dispose(): void {
-    if (this.focusAnim !== null) cancelAnimationFrame(this.focusAnim);
     this.controls.dispose();
   }
 }
