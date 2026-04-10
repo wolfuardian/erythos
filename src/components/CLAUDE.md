@@ -44,6 +44,8 @@
 - 用 createSignal 管理元件內部狀態
 - ErrorDialog 是通用元件：不要在裡面寫死任何 GLTF 字樣
 - 匯出 ErrorDialog 讓其他模組也能用
+- 元件一律用 named export（`export { Foo }`），不用 default export，確保跨模組 import 一致
+- 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 
 ## Git 規則
 - 工作分支：feat/gltf-ui
