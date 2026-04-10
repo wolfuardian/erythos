@@ -26,6 +26,9 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void
 - 解析失敗要 throw Error('具體原因')，不要靜默吞掉
 - import 路徑：`import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'`
 
+## 通用 SOP
+遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+
 ## 慣例
 - 遵循現有 Command 模式（參考 AddObjectCommand.ts）
 - 事件發射順序：objectAdded → sceneGraphChanged（不能反過來）
@@ -34,11 +37,16 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void
 
 ## Git 規則
 - 工作分支：feat/gltf-core
-- commit 訊息格式：`[core] 簡述`
+- commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - 不得操作 main/master 分支
 - 不得 merge 其他分支
 
-## 上報區（供主控者 review）
+## 待修項（由主腦根據 QC issue 填寫）
+<!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
+- [ ] 建立 `src/utils/gltfLoader.ts`（#1）
+- [ ] `src/core/commands/index.ts` 加入 `export { ImportGLTFCommand }`（#2）
+
+## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->

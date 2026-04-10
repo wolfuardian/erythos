@@ -1,5 +1,11 @@
 # Erythos — 3D Editor
 
+## 環境需求
+
+- Node.js
+- GitHub CLI (`gh`) — 用於開 issue、建 PR。安裝：`winget install GitHub.cli`，首次需 `gh auth login`
+- `gh` 安裝後需重啟 shell 才能找到，路徑：`/c/Program Files/GitHub CLI`
+
 ## 專案慣例
 
 - 語言：TypeScript（strict mode）
@@ -54,3 +60,34 @@ interface ErrorDialogProps {
 | feat/gltf-ui | src/components/ | ErrorDialog, Toolbar Import 按鈕 |
 
 合併順序：core 先 merge，然後 viewport 和 ui 可同時 merge。
+
+## 協作角色與流程
+
+### 角色分工
+
+| 角色 | 職責 | 權限 |
+|------|------|------|
+| 指揮家（使用者） | 提出意圖與方向，做最終決策 | 全部 |
+| 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
+| 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
+| 開發 agent | 在指定分支實作功能，完成後 commit + push | 只改自己分支允許的檔案 |
+| QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
+| 校閱 | 糾正所有文件的錯字、排版、用詞不一致 | 可改所有 .md，不改 src/ |
+
+### Merge 流程
+
+1. 開發 agent 完成實作 → commit + push
+2. 主腦指派 QC 審查
+3. QC 審查：有問題開 GitHub issue，沒問題回報 PASS
+4. 主腦向指揮家報告結果並建議：
+   - **PASS** → 指揮家同意後，主腦執行 merge
+   - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 → 回到步驟 2
+
+### 文件維護流程
+
+- 主腦更新文件後 → 校閱檢查文字品質 → 主腦檢視文件間一致性
+- 指揮家需要下指令時 → 參謀提供 prompt 建議
+- 指揮家與成員溝通不順時 → 參謀診斷問題根因
+
+### 開發成員 SOP
+所有開發 agent 遵守 [docs/dev-sop.md](docs/dev-sop.md)。
