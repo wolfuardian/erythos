@@ -74,6 +74,12 @@ interface ErrorDialogProps {
 | QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
 | 校閱 | 糾正所有文件的錯字、排版、用詞不一致 | 可改所有 .md，不改 src/ |
 
+### 分支規則
+
+一個 issue 對應一條分支、一個 PR。不混搭多個 issue 到同一分支。
+
+分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
+
 ### Merge 流程
 
 1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
