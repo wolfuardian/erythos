@@ -210,8 +210,11 @@ attachMulti(objects: Object3D[]): void;
 開發 agent 在獨立 worktree 中運作，**只依賴 worktree 內的 CLAUDE.md**，不一定會追 SOP 連結。因此主腦在寫模組 CLAUDE.md 時必須確保：
 
 - Git 規則中包含完整的開 PR 步驟（含指令範例），不能只靠引用 dev-sop.md
-- 待修項的描述足夠具體，agent 不需要額外查閱其他文件就能開工
+- 任務描述足夠具體，agent 不需要額外查閱其他文件就能開工
 - 工作分支名稱明確寫在 Git 規則中
+- **「當前任務」與「待修項」用途不同，不可混用：**
+  - 「當前任務」：初始任務指派，主腦準備 worktree 時寫入
+  - 「待修項」：QC 審查回報問題後，主腦根據 QC issue 寫入的修正項
 
 ### Merge 流程
 
