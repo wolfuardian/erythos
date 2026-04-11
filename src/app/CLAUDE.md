@@ -6,6 +6,10 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] Auto-save 狀態文字改為英文（#64）
+  - 修改 `src/app/App.tsx`：
+    - `儲存中…` → `Saving...`
+    - `已儲存` → `Saved`
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -15,6 +19,7 @@
 - 不在 app 層寫業務邏輯，只做膠水和佈局
 
 ## Git 規則
+- 工作分支：fix/autosave-text-en
 - commit 訊息格式：`[app] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
