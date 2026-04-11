@@ -181,7 +181,7 @@ attachMulti(objects: Object3D[]): void;
 | 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
 | 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
 | 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
-| QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
+| QC agent | 審查分支品質，開 GitHub issue 回報問題 | 只讀 src/，可寫 qc/，可操作 `gh issue create` |
 
 ### 開發模組清單
 
@@ -219,12 +219,14 @@ attachMulti(objects: Object3D[]): void;
 ### Merge 流程
 
 1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
-2. QC 在 PR 上審查：有問題開 issue + request changes，沒問題留 **`QC PASS`** comment
-3. 主腦向指揮家報告結果並建議：
-   - **QC PASS** → 指揮家同意後，主腦執行 `gh pr merge`
-   - **有 issue** → 主腦寫進對應模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
+2. QC 在 PR 上留 comment 記錄完整審查結果（審查表格、問題描述、merge 建議等）：
+   - 通過：comment 包含 **`QC PASS`** 標記
+   - 不通過：comment 包含 **`QC FAIL`** 標記 + 開 issue 描述問題 + request changes
+3. 主腦主動檢查 PR comment（`gh pr view <N> --comments`）取得 QC 結果，不需指揮家轉達：
+   - **QC PASS** → 主腦向指揮家報告並建議 merge，指揮家同意後執行 `gh pr merge`
+   - **QC FAIL** → 主腦從 comment 和 issue 取得問題細節，寫進模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
 
-> 註：所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 `QC PASS` comment 代替。
+> 註：所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 PR comment 中的 `QC PASS` / `QC FAIL` 標記代替。
 
 ### 主腦職責邊界
 
@@ -253,7 +255,7 @@ attachMulti(objects: Object3D[]): void;
 
 merge 完成後，主腦依序執行：
 
-1. 關閉對應的 GitHub issue（`gh issue close #N`）
+1. 關閉對應的 GitHub issue（`gh issue close #N`），包含 QC 開的 bug issue
 2. 移除已 merge 分支的 worktree（`git worktree remove`）
 3. 刪除本地 feat 分支（`git branch -d`）
 4. 刪除遠端 feat 分支（`git push origin --delete`）
