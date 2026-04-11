@@ -17,15 +17,15 @@ export class AddObjectCommand extends Command {
     this.parent.add(this.object);
     this.editor.events.emit('objectAdded', this.object);
     this.editor.events.emit('sceneGraphChanged');
-    this.editor.selection.select(this.object);
+    this.editor.selection.select(this.object.uuid);
   }
 
   undo(): void {
     this.parent.remove(this.object);
     this.editor.events.emit('objectRemoved', this.object, this.parent);
     this.editor.events.emit('sceneGraphChanged');
-    if (this.editor.selection.has(this.object)) {
-      this.editor.selection.remove(this.object);
+    if (this.editor.selection.has(this.object.uuid)) {
+      this.editor.selection.remove(this.object.uuid);
     }
   }
 }

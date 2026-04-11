@@ -95,10 +95,10 @@ export class Editor {
     const parent = object.parent;
     if (!parent) return;
     parent.remove(object);
-    if (this.selection.has(object)) {
-      this.selection.remove(object);
+    if (this.selection.has(object.uuid)) {
+      this.selection.remove(object.uuid);
     }
-    if (this.selection.hovered === object) {
+    if (this.selection.hovered === object.uuid) {
       this.selection.hover(null);
     }
     this.events.emit('objectRemoved', object, parent);

@@ -48,7 +48,7 @@ describe('AutoSave', () => {
   it('restoreSnapshot clears selection', () => {
     const obj = new Object3D();
     editor.addObject(obj);
-    editor.selection.select(obj);
+    editor.selection.select(obj.uuid);
     expect(editor.selection.count).toBe(1);
 
     const snapshot = saveSnapshot(editor);
