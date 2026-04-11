@@ -1,9 +1,8 @@
 import { type Component } from 'solid-js';
-import { useEditor } from '../../EditorContext';
+
+// TODO: import { useEditor } from '../../EditorContext' when reading scene context
 
 const ContextPanel: Component = () => {
-  const _bridge = useEditor(); // will read scene context in future iterations
-
   return (
     <div style={{
       width: '100%',
