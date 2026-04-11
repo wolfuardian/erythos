@@ -1,30 +1,25 @@
 import { createSignal, createEffect, type Component } from 'solid-js';
-import type { Object3D } from 'three';
 import { useEditor } from '../../../app/EditorContext';
-import { SetValueCommand } from '../../../core/commands/SetValueCommand';
+import { SetNodePropertyCommand } from '../../../core/commands/SetNodePropertyCommand';
 
 interface ObjectDrawProps {
-  object: Object3D;
+  uuid: string;
 }
 
 const ObjectDraw: Component<ObjectDrawProps> = (props) => {
-  const { editor } = useEditor();
-  const [name, setName] = createSignal(props.object.name);
-  const [visible, setVisible] = createSignal(props.object.visible);
+  const bridge = useEditor();
+  const { editor } = bridge;
+  const [name, setName] = createSignal('');
 
   createEffect(() => {
-    setName(props.object.name);
-    setVisible(props.object.visible);
+    bridge.objectVersion();
+    const node = bridge.getNode(props.uuid);
+    if (node) setName(node.name);
   });
 
   const handleNameChange = (value: string) => {
-    editor.execute(new SetValueCommand(editor, props.object, 'name', value));
+    editor.execute(new SetNodePropertyCommand(editor, props.uuid, 'name', value));
     setName(value);
-  };
-
-  const handleVisibleChange = (value: boolean) => {
-    editor.execute(new SetValueCommand(editor, props.object, 'visible', value));
-    setVisible(value);
   };
 
   return (
@@ -39,24 +34,6 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
           value={name()}
           onInput={(e) => handleNameChange(e.currentTarget.value)}
           style={textInput}
-        />
-      </div>
-
-      {/* Type (read-only) */}
-      <div style={fieldRow}>
-        <label style={fieldLabel}>Type</label>
-        <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>
-          {props.object.type}
-        </span>
-      </div>
-
-      {/* Visible */}
-      <div style={fieldRow}>
-        <label style={fieldLabel}>Visible</label>
-        <input
-          type="checkbox"
-          checked={visible()}
-          onChange={(e) => handleVisibleChange(e.currentTarget.checked)}
         />
       </div>
     </div>
