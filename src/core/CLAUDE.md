@@ -6,6 +6,17 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 自動記錄臨時場景（#29）
+  - 新增 `src/core/scene/AutoSave.ts`：
+    - 監聽 Editor 事件（`sceneGraphChanged`, `objectChanged`）來偵測場景變更
+    - 變更後用 debounce（例如 2 秒無操作後）自動保存場景到 localStorage
+    - key 格式：`erythos-autosave-v1`
+    - `saveSnapshot(editor: Editor): string` — 序列化當前場景為 JSON 字串
+    - `restoreSnapshot(editor: Editor, data: string): void` — 從 JSON 還原場景
+    - `hasSnapshot(): boolean` — 檢查是否有自動保存的快照
+  - 序列化方式：使用 Three.js 內建的 `object.toJSON()` / `ObjectLoader`
+  - 在 `src/core/Editor.ts` 中整合：Editor 初始化時檢查是否有 snapshot 可還原
+  - 注意：不依賴 #34 的 .scene 格式，這是獨立的臨時快照機制
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -17,6 +28,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
+- 工作分支：feat/autosave-scene
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
