@@ -31,6 +31,7 @@ export class Viewport {
   readonly scene: Scene;
   readonly sceneHelpers: Scene;
   private callbacks: ViewportCallbacks;
+  private _boxDragging = false;
 
   constructor(scene: Scene, callbacks: ViewportCallbacks) {
     this.scene = scene;
@@ -82,6 +83,12 @@ export class Viewport {
     this.boxSelector = new BoxSelector({
       requestRender,
       onBoxSelect: (objects, modifier) => this.callbacks.onBoxSelect?.(objects, modifier),
+      onBoxDragStart: () => { this._boxDragging = true; },
+      onBoxDragEnd: () => { this._boxDragging = false; },
+      onBoxHover: (objects) => {
+        this.postProcessing.setHoveredObjects(objects);
+        this.vpRenderer.requestRender();
+      },
     });
   }
 
@@ -130,6 +137,7 @@ export class Viewport {
   }
 
   setHoveredObject(object: Object3D | null): void {
+    if (this._boxDragging) return;
     this.postProcessing.setHoveredObjects(object ? [object] : []);
     this.vpRenderer.requestRender();
   }
