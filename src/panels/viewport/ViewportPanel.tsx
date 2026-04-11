@@ -85,7 +85,7 @@ const ViewportPanel: Component = () => {
       window.removeEventListener('keydown', onKeyDown);
     });
 
-    viewport = new Viewport(editor.scene, {
+    viewport = new Viewport(editor.threeScene, {
       onSelect: (obj, modifier) => {
         if (modifier.ctrl && obj) {
           editor.selection.toggle(obj);
