@@ -46,8 +46,7 @@ export function restoreSnapshot(editor: Editor, data: string): void {
   try {
     parsed = JSON.parse(data);
   } catch {
-    console.warn('[AutoSave] Failed to parse snapshot JSON — discarding.');
-    return;
+    throw new Error('Invalid snapshot JSON');
   }
 
   // Version gate: reject legacy or unversioned payloads
@@ -57,8 +56,7 @@ export function restoreSnapshot(editor: Editor, data: string): void {
     !('_version' in parsed) ||
     (parsed as Record<string, unknown>)['_version'] !== AUTOSAVE_VERSION
   ) {
-    console.warn('[AutoSave] Snapshot missing or mismatched _version — discarding legacy data.');
-    return;
+    throw new Error(`Incompatible snapshot format (expected version ${AUTOSAVE_VERSION})`);
   }
 
   const sceneJSON = (parsed as { _version: number; data: unknown }).data;
