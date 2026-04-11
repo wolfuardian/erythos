@@ -6,7 +6,8 @@ const ContextPanel: Component = () => {
 
   const sceneJson = createMemo(() => {
     const uuids = bridge.selectedUUIDs();
-    bridge.nodes(); // reactive dep — re-runs on any node add/remove/change
+    bridge.sceneVersion(); // reactive dep — re-runs on full scene replacement (load/import)
+    bridge.nodes();        // reactive dep — re-runs on any node add/remove/change
     if (uuids.length > 0) {
       const node = bridge.getNode(uuids[0]);
       return JSON.stringify(node, null, 2);
