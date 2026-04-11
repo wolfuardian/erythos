@@ -1,8 +1,13 @@
 import type { Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
+import { setConfirmBeforeLoad } from '../../bridge';
 
 const SettingsPanel: Component = () => {
-  useEditor(); // bridge available for future settings
+  const bridge = useEditor();
+
+  const handleConfirmToggle = () => {
+    setConfirmBeforeLoad(!bridge.confirmBeforeLoad());
+  };
 
   return (
     <div style={{
@@ -20,6 +25,23 @@ const SettingsPanel: Component = () => {
       }}>
         Settings
       </h3>
+
+      <label style={{
+        display: 'flex',
+        'align-items': 'center',
+        gap: 'var(--space-sm)',
+        'margin-top': 'var(--space-md)',
+        color: 'var(--text-secondary)',
+        'font-size': 'var(--font-size-sm)',
+        cursor: 'pointer',
+      }}>
+        <input
+          type="checkbox"
+          checked={bridge.confirmBeforeLoad()}
+          onChange={handleConfirmToggle}
+        />
+        Confirm before loading scene
+      </label>
     </div>
   );
 };

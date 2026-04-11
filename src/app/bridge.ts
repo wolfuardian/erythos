@@ -3,6 +3,16 @@ import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 
+export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
+const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
+  localStorage.getItem(CONFIRM_LOAD_KEY) !== 'false',
+);
+
+export function setConfirmBeforeLoad(value: boolean): void {
+  localStorage.setItem(CONFIRM_LOAD_KEY, String(value));
+  _setConfirmBeforeLoad(value);
+}
+
 export interface EditorBridge {
   editor: Editor;
   selectedObjects: Accessor<Object3D[]>;
@@ -14,6 +24,7 @@ export interface EditorBridge {
   canUndo: Accessor<boolean>;
   canRedo: Accessor<boolean>;
   autosaveStatus: Accessor<'idle' | 'pending' | 'saved'>;
+  confirmBeforeLoad: Accessor<boolean>;
   dispose: () => void;
 }
 
@@ -67,6 +78,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     canUndo,
     canRedo,
     autosaveStatus,
+    confirmBeforeLoad,
     dispose,
   };
 }
