@@ -29,6 +29,10 @@
 - 不得操作 main/master 分支
 - 不得 merge 其他分支
 
+## 備忘錄
+工作中若有 insight、意外發現、改進建議，寫入 `.ai/memos/#N-簡述.md`（N = issue 編號）。
+一個任務最多一個檔案，主腦 merge 後 review。
+
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
 
