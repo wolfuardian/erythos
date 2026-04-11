@@ -6,6 +6,13 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 工具列新增儲存/讀取場景按鈕（#47）
+  - 修改 `src/components/Toolbar.tsx`：
+    - 在 Import 按鈕後方（Divider 之前）新增 **Save** 和 **Load** 按鈕
+    - **Save**：將 `editor.scene.toJSON()` 序列化為 JSON，用 Blob + `<a>` download 下載為 `.scene` 檔案（檔名可用 `scene.json` 或提示輸入）
+    - **Load**：開啟檔案選擇器（accept=`.scene,.json`），讀取檔案內容後用 `restoreSnapshot(editor, data)` 還原場景（已有於 `src/core/scene/AutoSave.ts`）
+    - 按鈕樣式：沿用現有 `ToolbarBtn` 元件
+    - Load 失敗時用現有 `ErrorDialog` 顯示錯誤
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -19,6 +26,7 @@
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 
 ## Git 規則
+- 工作分支：feat/scene-toolbar
 - commit 訊息格式：`[components] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
