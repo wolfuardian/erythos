@@ -6,6 +6,12 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] AutoSave localStorage 版本閘門（#75）
+  - 修改 `src/core/scene/AutoSave.ts`：
+    - 將 localStorage key 改為帶版本號（例如 `erythos-autosave-v2`），或在儲存的 JSON 頂層加入 `{ _version: 2, data: ... }` 包裝
+    - `restoreSnapshot` 中：嘗試讀取時，若偵測到不含版本標記的舊資料 → `console.warn` 提示後靜默丟棄，不嘗試還原
+    - `saveSnapshot` 中：確保新存的 snapshot 帶有版本標記
+    - 舊 key（`erythos-autosave`）的資料不刪除，只是不再讀取
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -17,6 +23,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
+- 工作分支：fix/autosave-version-gate
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
