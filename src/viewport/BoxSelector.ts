@@ -3,6 +3,8 @@ import { Vector3, type Object3D, type Scene, type Camera } from 'three';
 export interface BoxSelectorCallbacks {
   onBoxSelect: (objects: Object3D[], modifier: { ctrl: boolean }) => void;
   onBoxHover: (objects: Object3D[]) => void;
+  onBoxDragStart: () => void;
+  onBoxDragEnd: () => void;
   requestRender: () => void;
 }
 
@@ -86,6 +88,7 @@ export class BoxSelector {
       const dy = this.currentY - this.startY;
       if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) {
         this.isActive = true;
+        this.callbacks.onBoxDragStart();
         this.createOverlay();
       }
     }
@@ -104,6 +107,7 @@ export class BoxSelector {
 
     if (this.isActive) {
       this.isActive = false;
+      this.callbacks.onBoxDragEnd();
       const rect = this.container.getBoundingClientRect();
       this.currentX = e.clientX - rect.left;
       this.currentY = e.clientY - rect.top;
@@ -186,6 +190,7 @@ export class BoxSelector {
   private cancel(): void {
     this.pointerDown = false;
     this.isActive = false;
+    this.callbacks.onBoxDragEnd();
     this.removeOverlay();
     this.callbacks.onBoxHover([]);
   }
