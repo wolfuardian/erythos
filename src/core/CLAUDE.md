@@ -6,6 +6,16 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 專案管理機制（#32）
+  - 新增 `src/core/project/ProjectManager.ts`：
+    - 專案目錄結構：`runtime/project_{name}/assets/{scenes,models,textures}/`
+    - `createProject(name: string): Promise<void>` — 建立專案目錄結構
+    - `listProjects(): Promise<string[]>` — 列出 runtime/ 下所有 project_ 開頭的目錄
+    - `openProject(name: string): Promise<ProjectInfo>` — 讀取專案資訊
+    - `interface ProjectInfo { name: string; path: string; }`
+  - 新增 `src/core/project/index.ts`：re-export
+  - 注意：這是 Vite dev server 環境，檔案系統操作需透過 Vite 的 server API 或自訂 API endpoint
+  - 如果無法直接操作檔案系統，先在上報區記錄，用 in-memory mock 實作 interface
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -17,6 +27,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
+- 工作分支：feat/project-mgmt
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
@@ -32,3 +43,9 @@
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+- **#32 ProjectManager 需要 server API 才能真正操作檔案系統**
+  - 目前以 in-memory Map 實作完整 interface（createProject / listProjects / openProject）
+  - 若要持久化或操作 `runtime/project_{name}/assets/` 目錄結構，需要：
+    1. 自訂 Vite plugin 或 Express server 提供 `POST /api/projects`、`GET /api/projects`、`GET /api/projects/:name` 等 endpoint
+    2. 或使用 File System Access API（Chrome 限定，需使用者授權）
+  - 建議由主腦決定技術路線後，再派 app 或 core agent 補實作
