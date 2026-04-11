@@ -8,12 +8,14 @@ import type { PanelComponent } from './layout/solid-dockview';
 import { ViewportPanel } from '../panels/viewport';
 import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
+import ProjectPanel from './panels/project/ProjectPanel';
 import Toolbar from '../components/Toolbar';
 
 const COMPONENTS: Record<string, PanelComponent> = {
   'viewport': () => <ViewportPanel />,
   'scene-tree': () => <SceneTreePanel />,
   'properties': () => <PropertiesPanel />,
+  'project': () => <ProjectPanel />,
 };
 
 const App: Component = () => {

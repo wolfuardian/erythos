@@ -36,6 +36,13 @@ export function applyDefaultLayout(api: DockviewApi): void {
     position: { referencePanel: viewport, direction: 'right' },
     initialWidth: 280,
   });
+
+  api.addPanel({
+    id: 'project',
+    component: 'project',
+    title: 'Project',
+    position: { referencePanel: 'scene-tree', direction: 'within' },
+  });
 }
 
 export function saveLayout(api: DockviewApi): void {
