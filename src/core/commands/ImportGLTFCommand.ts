@@ -17,15 +17,15 @@ export class ImportGLTFCommand extends Command {
     this.parent.add(this.group);
     this.editor.events.emit('objectAdded', this.group);
     this.editor.events.emit('sceneGraphChanged');
-    this.editor.selection.select(this.group);
+    this.editor.selection.select(this.group.uuid);
   }
 
   undo(): void {
     this.parent.remove(this.group);
     this.editor.events.emit('objectRemoved', this.group, this.parent);
     this.editor.events.emit('sceneGraphChanged');
-    if (this.editor.selection.has(this.group)) {
-      this.editor.selection.remove(this.group);
+    if (this.editor.selection.has(this.group.uuid)) {
+      this.editor.selection.remove(this.group.uuid);
     }
   }
 }
