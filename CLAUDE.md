@@ -181,7 +181,7 @@ attachMulti(objects: Object3D[]): void;
 | 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
 | 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
 | 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
-| QC agent | 審查分支品質，開/關 GitHub issue | 只讀 src/，可寫 qc/，可操作 gh issue |
+| QC agent | 審查分支品質，開 GitHub issue 回報問題 | 只讀 src/，可寫 qc/，可操作 `gh issue create` |
 
 ### 開發模組清單
 
@@ -253,7 +253,7 @@ attachMulti(objects: Object3D[]): void;
 
 merge 完成後，主腦依序執行：
 
-1. 關閉對應的 GitHub issue（`gh issue close #N`）
+1. 關閉對應的 GitHub issue（`gh issue close #N`），包含 QC 開的 bug issue
 2. 移除已 merge 分支的 worktree（`git worktree remove`）
 3. 刪除本地 feat 分支（`git branch -d`）
 4. 刪除遠端 feat 分支（`git push origin --delete`）
