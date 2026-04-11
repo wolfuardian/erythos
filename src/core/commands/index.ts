@@ -1,5 +1,7 @@
 export { AddObjectCommand } from './AddObjectCommand';
 export { RemoveObjectCommand } from './RemoveObjectCommand';
+export { AddNodeCommand } from './AddNodeCommand';
+export { RemoveNodeCommand } from './RemoveNodeCommand';
 export { SetPositionCommand } from './SetPositionCommand';
 export { SetRotationCommand } from './SetRotationCommand';
 export { SetScaleCommand } from './SetScaleCommand';
@@ -7,3 +9,4 @@ export { SetValueCommand } from './SetValueCommand';
 export { MultiCmdsCommand } from './MultiCmdsCommand';
 export { ImportGLTFCommand } from './ImportGLTFCommand';
 export { SetNodePropertyCommand } from './SetNodePropertyCommand';
+export { SetTransformCommand } from './SetTransformCommand';
