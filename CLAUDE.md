@@ -14,6 +14,7 @@
 - 面板佈局：Dockview
 - 建置工具：Vite
 - 樣式：inline style + CSS 變數 var(--bg-*), var(--text-*)
+- UI 文字預設使用英文（目前未導入本地化機制，所有使用者可見文字以英文撰寫）
 
 ## 架構原則
 
@@ -222,7 +223,7 @@ attachMulti(objects: Object3D[]): void;
 2. QC 在 PR 上留 comment 記錄完整審查結果（審查表格、問題描述、merge 建議等）：
    - 通過：comment 包含 **`QC PASS`** 標記
    - 不通過：comment 包含 **`QC FAIL`** 標記 + 開 issue 描述問題 + request changes
-3. 主腦主動檢查 PR comment（`gh pr view <N> --comments`）取得 QC 結果，不需指揮家轉達：
+3. 主腦主動檢查 PR comment 和 review（`gh pr view <N> --json comments,reviews`）取得 QC 結果，不需指揮家轉達：
    - **QC PASS** → 主腦向指揮家報告並建議 merge，指揮家同意後執行 `gh pr merge`
    - **QC FAIL** → 主腦從 comment 和 issue 取得問題細節，寫進模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
 
