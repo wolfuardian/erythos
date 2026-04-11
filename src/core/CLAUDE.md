@@ -6,6 +6,14 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 專案-場景讀取機制（#33）
+  - 新增 `src/core/scene/SceneLoader.ts`：
+    - `loadScene(path: string): Promise<SceneData>` — 讀取 .scene 檔案並解析
+    - `saveScene(path: string, data: SceneData): Promise<void>` — 將場景資料寫入 .scene 檔案
+    - 場景檔約定路徑：`runtime/project_{name}/assets/scenes/{場景檔}.scene`
+    - 使用 `src/core/scene/SceneFormat.ts` 中定義的型別（來自 #34）
+  - 如果 #34 尚未 merge，先自行在檔案內定義臨時型別，merge 後再對齊
+  - 檔案系統操作同 #32：優先用 Vite server API，不行就 mock + 上報
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -17,6 +25,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
+- 工作分支：feat/scene-read
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
