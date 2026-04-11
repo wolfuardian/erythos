@@ -4,9 +4,10 @@
 
 ## 一、開發（新功能）
 
-1. 讀自己模組的 CLAUDE.md，確認「當前任務」或「待修項」
-2. 每個任務對應一個 GitHub issue，確認 issue 內容再動手
-3. 實作完成後 commit，格式：
+1. **環境準備**：worktree 沒有 `node_modules`，進場後先跑 `npm install`
+2. 讀自己模組的 CLAUDE.md，確認「當前任務」或「待修項」
+3. 每個任務對應一個 GitHub issue，確認 issue 內容再動手
+4. 實作完成後 commit，格式：
    ```
    [模組] 簡述 (refs #N)
 
@@ -15,18 +16,18 @@
    - subject：what（做了什麼）
    - body：why（為什麼這樣做），至少一行。純機械性改動（如只改 import 路徑）可省略
    - 新增檔案、改架構、改設計決策的 commit 必須有 body
-4. 一律用 `refs #N`，不要用 `closes #N`。issue 的關閉由 QC 複審確認後執行
-5. 先驗證再 commit：確認 build 通過或至少 import 正確，不要 commit 後馬上再修自己的錯
-6. **還原模組 CLAUDE.md**：開 PR 前，將自己模組的 CLAUDE.md 恢復為乾淨狀態：
+5. 一律用 `refs #N`，不要用 `closes #N`。issue 的關閉由 QC 複審確認後執行
+6. 先驗證再 commit：確認 build 通過或至少 import 正確，不要 commit 後馬上再修自己的錯
+7. **還原模組 CLAUDE.md**：開 PR 前，將自己模組的 CLAUDE.md 恢復為乾淨狀態：
    - 使用 `git checkout -- <path>/CLAUDE.md` 還原，或手動清空「當前任務」內容（保留標題和 `<!-- -->` 註解）並移除 Git 規則中的「工作分支」行
    - 還原後用 `git diff <path>/CLAUDE.md` 確認無殘留差異
    - 若 CLAUDE.md 已與 HEAD 一致（無差異），不需要額外 commit
    - 目的：PR 不包含 CLAUDE.md 的 diff，避免 merge 時產生衝突
-7. push 後開 PR：
+8. push 後開 PR：
    ```bash
    gh pr create --title "[模組] 簡述 (refs #N)" --body "改動摘要"
    ```
-8. 等待 QC 在 PR 上審查
+9. 等待 QC 在 PR 上審查
 
 ## 二、修正（QC 退回）
 
