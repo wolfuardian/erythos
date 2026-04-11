@@ -1,4 +1,8 @@
 import { createSignal, For, Show, type Component } from 'solid-js';
+import { useEditor } from '../../EditorContext';
+import { restoreSnapshot } from '../../../core/scene/AutoSave';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { ErrorDialog } from '../../../components/ErrorDialog';
 
 // Static mock data — replace with ProjectManager signals once #32 merges
 interface FileNode {
@@ -157,7 +161,13 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 };
 
 const ProjectPanel: Component = () => {
+  const bridge = useEditor();
+  const { editor } = bridge;
   const [selectedPaths, setSelectedPaths] = createSignal<Set<string>>(new Set());
+  const [confirmOpen, setConfirmOpen] = createSignal(false);
+  const [pendingName, setPendingName] = createSignal('');
+  const [errorMsg, setErrorMsg] = createSignal('');
+  const [errorTitle, setErrorTitle] = createSignal('');
 
   const isSelected = (path: string) => selectedPaths().has(path);
 
@@ -175,9 +185,31 @@ const ProjectPanel: Component = () => {
     });
   };
 
+  const performLoad = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.scene,.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const data = await file.text();
+        restoreSnapshot(editor, data);
+      } catch (e) {
+        setErrorTitle('Load Failed');
+        setErrorMsg(e instanceof Error ? e.message : String(e));
+      }
+    };
+    input.click();
+  };
+
   const handleDblClick = (name: string) => {
-    // TODO: integrate with SceneLoader + confirmation dialog (#48)
-    console.log('load scene:', name);
+    if (bridge.confirmBeforeLoad()) {
+      setPendingName(name);
+      setConfirmOpen(true);
+    } else {
+      performLoad();
+    }
   };
 
   return (
@@ -201,6 +233,20 @@ const ProjectPanel: Component = () => {
           />
         )}
       </For>
+
+      <ConfirmDialog
+        open={confirmOpen()}
+        title="Load Scene"
+        message={`Load "${pendingName()}"? This will replace the current scene.`}
+        onConfirm={() => { setConfirmOpen(false); performLoad(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+      <ErrorDialog
+        open={!!errorMsg()}
+        title={errorTitle()}
+        message={errorMsg()}
+        onClose={() => setErrorMsg('')}
+      />
     </div>
   );
 };
