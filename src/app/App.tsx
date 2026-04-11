@@ -10,6 +10,7 @@ import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
 import ProjectPanel from './panels/project/ProjectPanel';
 import ContextPanel from './panels/context/ContextPanel';
+import SettingsPanel from './panels/settings/SettingsPanel';
 import Toolbar from '../components/Toolbar';
 
 const COMPONENTS: Record<string, PanelComponent> = {
@@ -18,6 +19,7 @@ const COMPONENTS: Record<string, PanelComponent> = {
   'properties': () => <PropertiesPanel />,
   'project': () => <ProjectPanel />,
   'context': () => <ContextPanel />,
+  'settings': () => <SettingsPanel />,
 };
 
 const App: Component = () => {
@@ -81,7 +83,7 @@ const App: Component = () => {
               'font-size': 'var(--font-size-sm)',
               'margin-right': 'var(--space-md)',
             }}>
-              {bridge.autosaveStatus() === 'pending' ? '儲存中…' : '已儲存'}
+              {bridge.autosaveStatus() === 'pending' ? 'Saving...' : 'Saved'}
             </span>
           </Show>
         </div>
