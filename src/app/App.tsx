@@ -4,16 +4,19 @@ import { RemoveObjectCommand } from '../core/commands/RemoveObjectCommand';
 import { createEditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import DockLayout from './layout/DockLayout';
+import { clearSavedLayout } from './layout/defaultLayout';
 import type { PanelComponent } from './layout/solid-dockview';
 import { ViewportPanel } from '../panels/viewport';
 import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
+import ProjectPanel from './panels/project/ProjectPanel';
 import Toolbar from '../components/Toolbar';
 
 const COMPONENTS: Record<string, PanelComponent> = {
   'viewport': () => <ViewportPanel />,
   'scene-tree': () => <SceneTreePanel />,
   'properties': () => <PropertiesPanel />,
+  'project': () => <ProjectPanel />,
 };
 
 const App: Component = () => {
@@ -70,6 +73,23 @@ const App: Component = () => {
           <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>
             Ready
           </span>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => { clearSavedLayout(); location.reload(); }}
+            title="清除已儲存的佈局，重新載入為預設配置"
+            style={{
+              padding: '1px 8px',
+              height: '20px',
+              background: 'var(--bg-section)',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-subtle)',
+              'border-radius': 'var(--radius-sm)',
+              'font-size': 'var(--font-size-xs)',
+              cursor: 'pointer',
+            }}
+          >
+            重設佈局
+          </button>
         </div>
       </div>
     </EditorProvider>
