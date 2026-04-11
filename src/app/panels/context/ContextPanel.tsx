@@ -1,8 +1,15 @@
-import { type Component } from 'solid-js';
-
-// TODO: import { useEditor } from '../../EditorContext' when reading scene context
+import { createMemo, type Component } from 'solid-js';
+import { useEditor } from '../../EditorContext';
 
 const ContextPanel: Component = () => {
+  const bridge = useEditor();
+
+  const sceneJson = createMemo(() => {
+    bridge.sceneVersion(); // reactive dependency — re-runs on sceneGraphChanged
+    const json = bridge.editor.scene.toJSON();
+    return JSON.stringify(json, null, 2);
+  });
+
   return (
     <div style={{
       width: '100%',
@@ -11,14 +18,15 @@ const ContextPanel: Component = () => {
       background: 'var(--bg-panel)',
       padding: 'var(--space-md)',
     }}>
-      <div style={{
-        color: 'var(--text-muted)',
+      <pre style={{
+        margin: '0',
+        color: 'var(--text-primary)',
         'font-size': 'var(--font-size-sm)',
-        'text-align': 'center',
-        'padding-top': 'var(--space-2xl)',
+        'white-space': 'pre-wrap',
+        'word-break': 'break-all',
       }}>
-        Context
-      </div>
+        {sceneJson()}
+      </pre>
     </div>
   );
 };
