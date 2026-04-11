@@ -20,6 +20,7 @@ export interface EditorEventMap {
   interactionModeChanged: [mode: InteractionMode];
   transformModeChanged:   [mode: TransformMode];
   editorCleared:          [];
+  autosaveStatusChanged:  [status: 'pending' | 'saved'];
 }
 
 // ── Typed EventEmitter ─────────────────────────────────
