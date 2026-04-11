@@ -77,6 +77,7 @@ export class AutoSave {
 
   /** Reset the debounce timer; on expiry, persist the current scene. */
   private scheduleSnapshot(): void {
+    this.editor.events.emit('autosaveStatusChanged', 'pending');
     if (this.timer !== null) {
       clearTimeout(this.timer);
     }
@@ -84,6 +85,7 @@ export class AutoSave {
       this.timer = null;
       const data = saveSnapshot(this.editor);
       localStorage.setItem(STORAGE_KEY, data);
+      this.editor.events.emit('autosaveStatusChanged', 'saved');
     }, DEBOUNCE_DELAY);
   }
 
