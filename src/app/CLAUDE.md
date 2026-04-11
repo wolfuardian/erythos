@@ -6,6 +6,16 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 設定面板：讀取場景是否詢問開關（#51）
+  - 修改 `src/app/panels/settings/SettingsPanel.tsx`：
+    - 新增 toggle 開關：「Confirm before loading scene」
+    - 預設為開啟（true）
+    - 設定值持久化到 localStorage（key 自訂，例如 `erythos-settings-confirmLoad`）
+    - 使用 createSignal 管理狀態，初始值從 localStorage 讀取
+    - toggle 變更時同步寫入 localStorage
+  - 修改 `src/app/bridge.ts`：
+    - 新增 `confirmBeforeLoad: Accessor<boolean>` signal，讀取 localStorage 同一個 key
+    - 供其他面板讀取此設定值（後續 ProjectPanel 雙擊讀取場景時會用到）
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -15,6 +25,7 @@
 - 不在 app 層寫業務邏輯，只做膠水和佈局
 
 ## Git 規則
+- 工作分支：feat/settings-confirm-toggle
 - commit 訊息格式：`[app] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
