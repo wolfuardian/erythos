@@ -74,10 +74,12 @@ export class Editor {
 
   addNode(node: SceneNode): void {
     this.sceneDocument.addNode(node);
+    this.events.emit('nodeAdded', node.id);
   }
 
   removeNode(uuid: string): void {
     this.sceneDocument.removeNode(uuid);
+    this.events.emit('nodeRemoved', uuid);
   }
 
   // ── Scene management (legacy Three.js API) ────────
@@ -121,6 +123,7 @@ export class Editor {
     }
 
     this.events.emit('editorCleared');
+    this.events.emit('sceneReplaced');
     this.events.emit('sceneGraphChanged');
   }
 

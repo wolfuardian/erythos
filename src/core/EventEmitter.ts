@@ -8,19 +8,34 @@ export type InteractionMode = 'object' | 'edit';
 // ── Event map ──────────────────────────────────────────
 
 export interface EditorEventMap {
-  objectAdded:            [object: Object3D];
-  objectRemoved:          [object: Object3D, previousParent: Object3D];
+  // ── New UUID-based events (Phase V2-1) ──────────────
+  nodeAdded:              [uuid: string];
+  nodeRemoved:            [uuid: string];
+  nodeChanged:            [uuid: string];
+  sceneReplaced:          [];
+  hoverChanged:           [uuid: string | null];
+
+  // ── Stable events (no change) ───────────────────────
   selectionChanged:       [objects: Object3D[]];
-  /** @deprecated Use selectionChanged — kept for backward compat until app branch migrates */
-  objectSelected:         [object: Object3D | null];
-  objectHovered:          [object: Object3D | null];
-  objectChanged:          [object: Object3D];
-  sceneGraphChanged:      [];
   historyChanged:         [];
   interactionModeChanged: [mode: InteractionMode];
   transformModeChanged:   [mode: TransformMode];
   editorCleared:          [];
-  autosaveStatusChanged:  [status: 'pending' | 'saved'];
+  autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved'];
+
+  // ── Deprecated legacy events — DO NOT remove until Phase V2 completes ──
+  /** @deprecated Use nodeAdded */
+  objectAdded:            [object: Object3D];
+  /** @deprecated Use nodeRemoved */
+  objectRemoved:          [object: Object3D, previousParent: Object3D];
+  /** @deprecated Use nodeChanged */
+  objectChanged:          [object: Object3D];
+  /** @deprecated Use sceneReplaced or nodeAdded/nodeRemoved */
+  sceneGraphChanged:      [];
+  /** @deprecated Use selectionChanged */
+  objectSelected:         [object: Object3D | null];
+  /** @deprecated Use hoverChanged */
+  objectHovered:          [object: Object3D | null];
 }
 
 // ── Typed EventEmitter ─────────────────────────────────
