@@ -8,4 +8,5 @@ export { SetScaleCommand } from './SetScaleCommand';
 export { SetValueCommand } from './SetValueCommand';
 export { MultiCmdsCommand } from './MultiCmdsCommand';
 export { ImportGLTFCommand } from './ImportGLTFCommand';
+export { SetNodePropertyCommand } from './SetNodePropertyCommand';
 export { SetTransformCommand } from './SetTransformCommand';
