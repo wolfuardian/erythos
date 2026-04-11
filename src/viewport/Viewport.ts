@@ -83,14 +83,10 @@ export class Viewport {
     this.boxSelector = new BoxSelector({
       requestRender,
       onBoxSelect: (objects, modifier) => this.callbacks.onBoxSelect?.(objects, modifier),
+      onBoxDragStart: () => { this._boxDragging = true; },
+      onBoxDragEnd: () => { this._boxDragging = false; },
       onBoxHover: (objects) => {
-        if (objects.length > 0) {
-          this._boxDragging = true;
-          this.postProcessing.setHoveredObjects(objects);
-        } else {
-          this._boxDragging = false;
-          this.postProcessing.setHoveredObjects([]);
-        }
+        this.postProcessing.setHoveredObjects(objects);
         this.vpRenderer.requestRender();
       },
     });
