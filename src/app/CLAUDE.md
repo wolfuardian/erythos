@@ -42,3 +42,7 @@
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+- **#44 前置條件缺失**：`autosaveStatusChanged` 事件未在 `src/core/EventEmitter.ts`（`EditorEventMap`）定義，且 `AutoSave.ts` 目前不發射此事件。app 側 bridge.ts 已用 `as any` 繞過型別檢查掛載 handler，build 通過，但功能需等核心側補齊才能真正運作。核心模組需：
+  1. 在 `EditorEventMap` 加入 `autosaveStatusChanged: [status: 'idle' | 'pending' | 'saved']`
+  2. `AutoSave.scheduleSnapshot()` 開始時 emit `'pending'`，寫入 localStorage 後 emit `'saved'`
+  這屬於 #43 的工作範疇。
