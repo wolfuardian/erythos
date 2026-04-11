@@ -1,6 +1,7 @@
 import { type Component, createSignal } from 'solid-js';
 import { ErrorDialog } from './ErrorDialog';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
+import { restoreSnapshot } from '../core/scene/AutoSave';
 import {
   BoxGeometry,
   SphereGeometry,
@@ -21,7 +22,9 @@ const Toolbar: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
   const [importing, setImporting] = createSignal(false);
+  const [loading, setLoading] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
+  const [errorTitle, setErrorTitle] = createSignal('');
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -34,9 +37,42 @@ const Toolbar: Component = () => {
       try {
         await loadGLTFFromFile(file, editor);
       } catch (e: any) {
+        setErrorTitle('Import Failed');
         setErrorMsg(e.message || String(e));
       } finally {
         setImporting(false);
+      }
+    };
+    input.click();
+  };
+
+  const handleSave = () => {
+    const json = JSON.stringify(editor.scene.toJSON());
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scene-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoad = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.scene,.json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setLoading(true);
+      try {
+        const data = await file.text();
+        restoreSnapshot(editor, data);
+      } catch (e: any) {
+        setErrorTitle('Load Failed');
+        setErrorMsg(e.message || String(e));
+      } finally {
+        setLoading(false);
       }
     };
     input.click();
@@ -155,6 +191,8 @@ const Toolbar: Component = () => {
 
       {/* Import */}
       <ToolbarBtn label="Import" onClick={handleImport} disabled={importing()} title="Import GLTF/GLB" />
+      <ToolbarBtn label="Save" onClick={handleSave} title="Save Scene" />
+      <ToolbarBtn label="Load" onClick={handleLoad} disabled={loading()} title="Load Scene" />
 
       <Divider />
 
@@ -172,7 +210,7 @@ const Toolbar: Component = () => {
 
       <ErrorDialog
         open={!!errorMsg()}
-        title="Import Failed"
+        title={errorTitle()}
         message={errorMsg()}
         onClose={() => setErrorMsg('')}
       />
