@@ -6,19 +6,6 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
-- [ ] 框選拖曳期間顯示 hover 預覽（#28）
-
-  ### 修改 `src/viewport/BoxSelector.ts`
-  - `BoxSelectorCallbacks` 新增 `onBoxHover: (objects: Object3D[]) => void`
-  - `onPointerMove`：當 `isActive` 時，呼叫 `collectHits()` 取得框內物體，傳給 `onBoxHover`
-  - `onPointerUp`（框選結束）和 `cancel()`：呼叫 `onBoxHover([])` 清除 hover
-
-  ### 修改 `src/viewport/Viewport.ts`
-  - 新增 `private _boxDragging = false` 旗標
-  - 接收 BoxSelector 的 `onBoxHover`：
-    - 陣列非空 → `_boxDragging = true`，呼叫 `postProcessing.setHoveredObjects(objects)` + requestRender
-    - 陣列為空 → `_boxDragging = false`，呼叫 `postProcessing.setHoveredObjects([])` + requestRender
-  - `setHoveredObject()` 中：如果 `_boxDragging` 為 true，直接 return（抑制 SelectionPicker 的單物體 hover）
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -30,7 +17,6 @@
 - 樣式用 inline style，配合現有 CSS 變數 var(--bg-*)
 
 ## Git 規則
-- 工作分支：feat/box-hover
 - commit 訊息格式：`[viewport] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
