@@ -9,6 +9,7 @@ import { ViewportPanel } from '../panels/viewport';
 import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
 import ProjectPanel from './panels/project/ProjectPanel';
+import SettingsPanel from './panels/settings/SettingsPanel';
 import Toolbar from '../components/Toolbar';
 
 const COMPONENTS: Record<string, PanelComponent> = {
@@ -16,6 +17,7 @@ const COMPONENTS: Record<string, PanelComponent> = {
   'scene-tree': () => <SceneTreePanel />,
   'properties': () => <PropertiesPanel />,
   'project': () => <ProjectPanel />,
+  'settings': () => <SettingsPanel />,
 };
 
 const App: Component = () => {
