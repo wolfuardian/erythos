@@ -6,13 +6,6 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
-- [ ] 場景檔案格式 .scene（#34）
-  - 新增 `src/core/scene/SceneFormat.ts`：
-    - 定義 `.scene` 檔案的 TypeScript interface（JSON-based）
-    - 最少包含 `version: number` 和 `metadata: { name: string; createdAt: string }` 欄位
-    - 場景內容欄位先用 `objects: unknown[]` 佔位，規格之後再設計
-  - 新增 `src/core/scene/index.ts`：re-export
-  - 不需要實作序列化/反序列化邏輯，本 issue 只定義型別
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -24,7 +17,6 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
-- 工作分支：feat/scene-format
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
