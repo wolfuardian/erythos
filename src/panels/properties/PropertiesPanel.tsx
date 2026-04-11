@@ -7,10 +7,7 @@ import MultiSelectDraw from './object/MultiSelectDraw';
 const PropertiesPanel: Component = () => {
   const bridge = useEditor();
 
-  const selectedObjects = createMemo(() => {
-    bridge.objectVersion();
-    return bridge.selectedObjects();
-  });
+  const selectedUUIDs = createMemo(() => bridge.selectedUUIDs());
 
   return (
     <div style={{
@@ -30,12 +27,12 @@ const PropertiesPanel: Component = () => {
           No object selected
         </div>
       }>
-        <Match when={selectedObjects().length === 1}>
-          <ObjectDraw object={selectedObjects()[0]} />
-          <TransformDraw object={selectedObjects()[0]} />
+        <Match when={selectedUUIDs().length === 1}>
+          <ObjectDraw uuid={selectedUUIDs()[0]!} />
+          <TransformDraw uuid={selectedUUIDs()[0]!} />
         </Match>
-        <Match when={selectedObjects().length > 1}>
-          <MultiSelectDraw objects={selectedObjects()} />
+        <Match when={selectedUUIDs().length > 1}>
+          <MultiSelectDraw uuids={selectedUUIDs()} />
         </Match>
       </Switch>
     </div>
