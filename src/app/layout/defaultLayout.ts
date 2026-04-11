@@ -50,3 +50,7 @@ export function saveLayout(api: DockviewApi): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(api.toJSON()));
   } catch { /* quota exceeded — silently ignore */ }
 }
+
+export function clearSavedLayout(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}
