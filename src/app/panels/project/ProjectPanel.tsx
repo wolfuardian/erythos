@@ -51,20 +51,23 @@ function extBadge(ext: string | undefined): { label: string; color: string } {
 interface TreeNodeProps {
   node: FileNode;
   depth: number;
+  path: string;
+  selected: boolean;
+  isSelected: (path: string) => boolean;
+  onSelect: (path: string, modifier: { ctrl: boolean }) => void;
 }
 
 const TreeNode: Component<TreeNodeProps> = (props) => {
   const [expanded, setExpanded] = createSignal(true);
-  const [selected, setSelected] = createSignal(false);
   const [hovered, setHovered] = createSignal(false);
 
   const isFolder = () => props.node.type === 'folder';
 
-  const handleClick = () => {
+  const handleClick = (e: MouseEvent) => {
     if (isFolder()) {
       setExpanded(v => !v);
     } else {
-      setSelected(v => !v);
+      props.onSelect(props.path, { ctrl: e.ctrlKey || e.metaKey });
     }
   };
 
@@ -84,7 +87,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           height: 'var(--row-height)',
           'padding-left': `${8 + props.depth * 16}px`,
           cursor: 'pointer',
-          background: selected()
+          background: props.selected
             ? 'var(--bg-selected)'
             : hovered()
             ? 'var(--bg-hover)'
@@ -113,7 +116,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
         {/* Name */}
         <span style={{
           'font-size': 'var(--font-size-md)',
-          color: selected() ? 'var(--text-primary)' : 'var(--text-secondary)',
+          color: props.selected ? 'var(--text-primary)' : 'var(--text-secondary)',
           overflow: 'hidden',
           'text-overflow': 'ellipsis',
           'white-space': 'nowrap',
@@ -125,7 +128,19 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       {/* Children */}
       <Show when={isFolder() && expanded() && props.node.children}>
         <For each={props.node.children}>
-          {(child) => <TreeNode node={child} depth={props.depth + 1} />}
+          {(child) => {
+            const childPath = `${props.path}/${child.name}`;
+            return (
+              <TreeNode
+                node={child}
+                depth={props.depth + 1}
+                path={childPath}
+                selected={props.isSelected(childPath)}
+                isSelected={props.isSelected}
+                onSelect={props.onSelect}
+              />
+            );
+          }}
         </For>
       </Show>
     </div>
@@ -133,6 +148,24 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 };
 
 const ProjectPanel: Component = () => {
+  const [selectedPaths, setSelectedPaths] = createSignal<Set<string>>(new Set());
+
+  const isSelected = (path: string) => selectedPaths().has(path);
+
+  const handleSelect = (path: string, modifier: { ctrl: boolean }) => {
+    setSelectedPaths(prev => {
+      const next = new Set(prev);
+      if (modifier.ctrl) {
+        if (next.has(path)) next.delete(path);
+        else next.add(path);
+      } else {
+        next.clear();
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
   return (
     <div style={{
       width: '100%',
@@ -142,7 +175,16 @@ const ProjectPanel: Component = () => {
       padding: 'var(--space-xs) 0',
     }}>
       <For each={MOCK_TREE}>
-        {(node) => <TreeNode node={node} depth={0} />}
+        {(node) => (
+          <TreeNode
+            node={node}
+            depth={0}
+            path={node.name}
+            selected={isSelected(node.name)}
+            isSelected={isSelected}
+            onSelect={handleSelect}
+          />
+        )}
       </For>
     </div>
   );
