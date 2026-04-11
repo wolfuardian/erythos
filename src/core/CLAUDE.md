@@ -6,17 +6,12 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
-- [ ] 引入 vitest 測試框架 + 基礎 snapshot test（#76）
-  - 安裝 vitest（dev dependency）：`npm install -D vitest`
-  - 新增 `vitest.config.ts`（專案根目錄）：
-    - 設定 test 環境（jsdom 或 node，視 Three.js 需求）
-    - include `src/**/*.test.ts`
-  - 在 `package.json` 加入 script：`"test": "vitest run"`
-  - 撰寫基礎測試 `src/core/scene/__tests__/AutoSave.test.ts`：
-    - Editor 建立 → 加物件 → saveSnapshot → clear → restoreSnapshot → 驗證 scene.children 一致
-  - 撰寫基礎測試 `src/core/__tests__/History.test.ts`：
-    - addObject → removeObject → undo → 驗證物件恢復
-  - 注意：Three.js 在 Node 環境可能需要 mock（沒有 WebGL context），用最簡單的方式處理，不要過度 mock
+- [ ] AutoSave localStorage 版本閘門（#75）
+  - 修改 `src/core/scene/AutoSave.ts`：
+    - 將 localStorage key 改為帶版本號（例如 `erythos-autosave-v2`），或在儲存的 JSON 頂層加入 `{ _version: 2, data: ... }` 包裝
+    - `restoreSnapshot` 中：嘗試讀取時，若偵測到不含版本標記的舊資料 → `console.warn` 提示後靜默丟棄，不嘗試還原
+    - `saveSnapshot` 中：確保新存的 snapshot 帶有版本標記
+    - 舊 key（`erythos-autosave`）的資料不刪除，只是不再讀取
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -28,7 +23,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
-- 工作分支：feat/vitest-setup
+- 工作分支：fix/autosave-version-gate
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit

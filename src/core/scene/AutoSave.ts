@@ -3,7 +3,13 @@ import type { Editor } from '../Editor';
 
 // ── Constants ──────────────────────────────────────────
 
-const STORAGE_KEY = 'erythos-autosave-v1';
+/**
+ * Storage key for the current autosave format.
+ * Exported so Editor.ts can read from the same key without duplication.
+ * Bump both this and AUTOSAVE_VERSION together whenever the stored format changes.
+ */
+export const STORAGE_KEY = 'erythos-autosave-v2';
+const AUTOSAVE_VERSION = 2;
 const DEBOUNCE_DELAY = 2000; // ms of idle before writing to localStorage
 
 // ── Snapshot utilities ─────────────────────────────────
@@ -14,35 +20,50 @@ export function hasSnapshot(): boolean {
 }
 
 /**
- * Serialize the current scene to a JSON string via Three.js's native
- * object.toJSON() pipeline and return it. Does NOT write to storage —
+ * Serialize the current scene to a versioned JSON string and return it.
+ * The envelope `{ _version, data }` lets restoreSnapshot reject snapshots
+ * from incompatible format versions. Does NOT write to storage —
  * the AutoSave class owns that responsibility.
  */
 export function saveSnapshot(editor: Editor): string {
-  return JSON.stringify(editor.scene.toJSON());
+  return JSON.stringify({ _version: AUTOSAVE_VERSION, data: editor.scene.toJSON() });
 }
 
 /**
  * Restore a previously saved snapshot into the editor's live scene.
  *
- * Design choices to consider when implementing:
- *  - `editor.scene` is the live scene; children must be swapped in-place
- *    because other systems hold a reference to this exact object.
- *  - ObjectLoader.parse() on a scene JSON returns a Scene; copy its
- *    .children into editor.scene (Three.js moves nodes, so clone the
- *    array before iterating).
- *  - Selection should be cleared — the restored UUIDs won't match any
- *    live selection state.
- *  - Emit 'sceneGraphChanged' so panels that are already mounted refresh.
- *  - Do NOT clear editor.history — undo history being slightly stale is
- *    less disruptive than wiping it entirely.
+ * Version gate: if the payload does not carry a matching `_version` marker,
+ * a warning is logged and the data is silently discarded. This prevents
+ * loading scenes serialised by an older code path whose format is no longer
+ * compatible.
  *
  * @param editor  The live Editor instance.
  * @param data    JSON string produced by saveSnapshot().
  */
 export function restoreSnapshot(editor: Editor, data: string): void {
+  // Parse the outer envelope
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    console.warn('[AutoSave] Failed to parse snapshot JSON — discarding.');
+    return;
+  }
+
+  // Version gate: reject legacy or unversioned payloads
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('_version' in parsed) ||
+    (parsed as Record<string, unknown>)['_version'] !== AUTOSAVE_VERSION
+  ) {
+    console.warn('[AutoSave] Snapshot missing or mismatched _version — discarding legacy data.');
+    return;
+  }
+
+  const sceneJSON = (parsed as { _version: number; data: unknown }).data;
   const loader = new ObjectLoader();
-  const restored = loader.parse(JSON.parse(data)) as Scene;
+  const restored = loader.parse(sceneJSON) as Scene;
 
   // Clone arrays — add/remove mutate the live children list during iteration
   for (const child of [...editor.scene.children]) {
