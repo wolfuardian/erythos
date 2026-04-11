@@ -7,3 +7,5 @@ export { Selection } from './Selection';
 export { KeybindingManager } from './KeybindingManager';
 export type { Keybinding } from './KeybindingManager';
 export * from './commands/index';
+export { ProjectManager } from './project';
+export type { ProjectInfo } from './project';
