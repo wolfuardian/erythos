@@ -6,6 +6,13 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] ProjectPanel 雙擊 scene 檔讀取場景（#48）
+  - 修改 `src/app/panels/project/ProjectPanel.tsx`：
+    - 檔案節點（type === 'file'）支援 `onDblClick` 事件
+    - 雙擊 `.scene` 或 `.json` 檔案時，觸發場景讀取
+    - 目前是 mock 資料，實際讀取邏輯先用 `console.log('load scene:', node.name)` 佔位
+    - 在上報區記錄：需要等 SceneLoader + 確認視窗整合後才能完成真正的讀取流程
+    - 非 scene 檔案的雙擊暫時不處理
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -15,6 +22,7 @@
 - 不在 app 層寫業務邏輯，只做膠水和佈局
 
 ## Git 規則
+- 工作分支：feat/project-scene-load
 - commit 訊息格式：`[app] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
