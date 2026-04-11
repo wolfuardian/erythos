@@ -2,6 +2,7 @@ import { Vector3, type Object3D, type Scene, type Camera } from 'three';
 
 export interface BoxSelectorCallbacks {
   onBoxSelect: (objects: Object3D[], modifier: { ctrl: boolean }) => void;
+  onBoxHover: (objects: Object3D[]) => void;
   requestRender: () => void;
 }
 
@@ -91,6 +92,9 @@ export class BoxSelector {
 
     if (this.isActive) {
       this.updateOverlay();
+      const hits = this.collectHits(rect.width, rect.height);
+      this.callbacks.onBoxHover(hits);
+      this.callbacks.requestRender();
     }
   }
 
@@ -106,6 +110,7 @@ export class BoxSelector {
 
       const hits = this.collectHits(rect.width, rect.height);
       this.removeOverlay();
+      this.callbacks.onBoxHover([]);
       this.callbacks.onBoxSelect(hits, { ctrl: e.ctrlKey || e.metaKey });
     }
   }
@@ -182,5 +187,6 @@ export class BoxSelector {
     this.pointerDown = false;
     this.isActive = false;
     this.removeOverlay();
+    this.callbacks.onBoxHover([]);
   }
 }
