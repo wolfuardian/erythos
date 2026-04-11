@@ -17,6 +17,7 @@ import {
 import { useEditor } from '../app/EditorContext';
 import { AddObjectCommand } from '../core/commands/AddObjectCommand';
 import type { TransformMode } from '../core/EventEmitter';
+import { clearSavedLayout } from '../app/layout/defaultLayout';
 
 const Toolbar: Component = () => {
   const bridge = useEditor();
@@ -200,6 +201,15 @@ const Toolbar: Component = () => {
       {transformBtn('translate', 'Move', 'W')}
       {transformBtn('rotate', 'Rotate', 'E')}
       {transformBtn('scale', 'Scale', 'R')}
+
+      <Divider />
+
+      {/* Reset layout */}
+      <ToolbarBtn
+        label="Reset Layout"
+        onClick={() => { clearSavedLayout(); location.reload(); }}
+        title="Reset panel layout to default"
+      />
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
