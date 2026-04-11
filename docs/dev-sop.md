@@ -18,9 +18,10 @@
 4. 一律用 `refs #N`，不要用 `closes #N`。issue 的關閉由 QC 複審確認後執行
 5. 先驗證再 commit：確認 build 通過或至少 import 正確，不要 commit 後馬上再修自己的錯
 6. **還原模組 CLAUDE.md**：開 PR 前，將自己模組的 CLAUDE.md 恢復為乾淨狀態：
-   - 清空「當前任務」內容（保留標題和 `<!-- -->` 註解）
-   - 移除 Git 規則中的「工作分支」行
-   - 這樣 PR 不會包含 CLAUDE.md 的 diff，避免 merge 時產生衝突
+   - 使用 `git checkout -- <path>/CLAUDE.md` 還原，或手動清空「當前任務」內容（保留標題和 `<!-- -->` 註解）並移除 Git 規則中的「工作分支」行
+   - 還原後用 `git diff <path>/CLAUDE.md` 確認無殘留差異
+   - 若 CLAUDE.md 已與 HEAD 一致（無差異），不需要額外 commit
+   - 目的：PR 不包含 CLAUDE.md 的 diff，避免 merge 時產生衝突
 7. push 後開 PR：
    ```bash
    gh pr create --title "[模組] 簡述 (refs #N)" --body "改動摘要"
