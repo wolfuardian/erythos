@@ -16,6 +16,7 @@
 - 不得修改根目錄 CLAUDE.md
 - 不得修改任何模組的 CLAUDE.md
 - 可以寫 qc/ 目錄
+- 可以寫 `.ai/memos/` 目錄（備忘錄）
 - 可以用 `gh issue create` 開 issue
 - 可以用 `gh issue close` 關閉已修復的 issue
 - 可以用 `gh pr review` 審查 PR（approve 或 request changes）
@@ -99,6 +100,13 @@ gh pr review <PR-number> --comment --body "QC PASS — 審查結論"
 - 「審查 PR #N」→ 對該 PR 跑完整流程
 - 「審查全部 PR」→ 依序審查所有 open PR
 - 「只做建置驗證」→ 跳過人工審查，只跑 npm run build
+
+## 備忘錄
+審查中若有 insight、意外發現、改進建議，寫入 `.ai/memos/` 目錄下的獨立檔案。
+- 檔名格式：`#N-簡述.md`（N = 相關 issue 編號）
+- 內容自由撰寫，不需要特定格式
+- 一個任務最多一個備忘錄檔案
+- 主腦 review 後歸檔至 `.ai/knowledge.md` 或粉碎（刪除檔案）
 
 ## Git 規則
 - 不得 commit 任何東西到 feat/* 分支
