@@ -13,13 +13,14 @@
 
 ## 事件系統過渡期注意事項（來源：#91 備忘錄）
 
-- `selectionChanged` payload 目前仍為 `Object3D[]`，V2-2 應一步到位改為 `string[]`，避免 bridge.ts 改兩次 ⏳ 適用至 V2-2 完成
+- ~~`selectionChanged` payload 改為 `string[]`~~ — V2-2 已完成 ✅
 - EditorEventMap 的 `nodeChanged` 仍無 caller — Command 直接操作 SceneDocument（觸發 SceneDocument 事件），Editor-level 事件未被使用。後續需決定：Bridge 監聽 SceneDocument 事件還是 Editor 事件 ⏳ 適用至 V2-6 Bridge 重構
 - `autosaveStatusChanged` 型別新增 `'idle'`，但 AutoSave 目前未 emit 此值，後續需確認是否補發 ⏳ 適用至 AutoSave 重構
 
 ## Command 設計慣例（來源：#93, #94 備忘錄）
 
 - Command 內直接呼叫 `sceneDocument.addNode/removeNode`，不透過 `editor.addNode`，讓 Command 責務限於資料變更。後續若需 Editor 層事件，再統一決策 ⏳ 適用至 Command 層事件策略定案
+- API 改動（如 Selection Object3D → UUID）前，主腦應 grep 所有呼叫點列進任務描述，避免 agent 漏改跨模組消費端 ⏳ 永久
 - RemoveNodeCommand 子孫快照用 BFS 收集，execute 反向移除（葉先），undo 正向恢復（父先），確保 parent 參照永遠有效 ⏳ 永久
 - 快照用 `structuredClone`（非 shallow spread），防止外部修改破壞 snapshot 不變性 ⏳ 永久
 - `Vec3` 是 tuple `[number, number, number]`，複製用 `[...value] as Vec3`，不能用 `.clone()` ⏳ 永久
