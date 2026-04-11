@@ -81,7 +81,7 @@ const App: Component = () => {
               'font-size': 'var(--font-size-sm)',
               'margin-right': 'var(--space-md)',
             }}>
-              {bridge.autosaveStatus() === 'pending' ? '儲存中…' : '已儲存'}
+              {bridge.autosaveStatus() === 'pending' ? 'Saving...' : 'Saved'}
             </span>
           </Show>
         </div>
