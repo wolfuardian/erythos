@@ -1,9 +1,9 @@
-import { createSignal, createEffect, For, Show, type Component } from 'solid-js';
-import type { Object3D } from 'three';
+import { createSignal, For, Show, type Component } from 'solid-js';
+import type { SceneNode } from '../../core/scene/SceneFormat';
 import { useEditor } from '../../app/EditorContext';
 
 interface TreeNodeProps {
-  object: Object3D;
+  node: SceneNode;
   depth: number;
 }
 
@@ -12,32 +12,36 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
   const { editor } = bridge;
   const [expanded, setExpanded] = createSignal(true);
 
-  const isSelected = () => bridge.selectedObjects().includes(props.object);
-  const isHovered = () => bridge.hoveredObject() === props.object;
-  const hasChildren = () => props.object.children.length > 0;
+  const isSelected = () => bridge.selectedUUIDs().includes(props.node.id);
+  const isHovered = () => bridge.hoveredUUID() === props.node.id;
+
+  const childNodes = () =>
+    bridge.nodes()
+      .filter(n => n.parent === props.node.id)
+      .sort((a, b) => a.order - b.order);
+
+  const hasChildren = () => childNodes().length > 0;
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
     if (e.ctrlKey || e.metaKey) {
-      editor.selection.toggle(props.object);
+      editor.selection.toggle(props.node.id);
     } else {
       if (isSelected()) {
         editor.selection.select(null);
       } else {
-        editor.selection.select(props.object);
+        editor.selection.select(props.node.id);
       }
     }
   };
 
-  const handleMouseEnter = () => editor.selection.hover(props.object);
+  const handleMouseEnter = () => editor.selection.hover(props.node.id);
   const handleMouseLeave = () => editor.selection.hover(null);
 
+  // Temporary: SceneNode has no type field; using structural heuristic.
+  // See 上報區 for tracking.
   const typeBadge = () => {
-    const t = props.object.type;
-    if (t.includes('Light')) return { label: 'L', color: 'var(--badge-light)' };
-    if (t.includes('Camera')) return { label: 'C', color: 'var(--badge-camera)' };
-    if (t === 'Mesh') return { label: 'M', color: 'var(--badge-mesh)' };
-    if (t === 'Group') return { label: 'G', color: 'var(--badge-group)' };
+    if (hasChildren()) return { label: 'G', color: 'var(--badge-group)' };
     return { label: 'O', color: 'var(--badge-empty)' };
   };
 
@@ -107,14 +111,14 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           'text-overflow': 'ellipsis',
           'white-space': 'nowrap',
         }}>
-          {props.object.name || props.object.type}
+          {props.node.name}
         </span>
       </div>
 
       {/* Children */}
       <Show when={expanded() && hasChildren()}>
-        <For each={props.object.children}>
-          {(child) => <TreeNode object={child} depth={props.depth + 1} />}
+        <For each={childNodes()}>
+          {(child) => <TreeNode node={child} depth={props.depth + 1} />}
         </For>
       </Show>
     </div>
@@ -123,13 +127,11 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
 const SceneTreePanel: Component = () => {
   const bridge = useEditor();
-  const { editor } = bridge;
-  const [children, setChildren] = createSignal<Object3D[]>([]);
 
-  createEffect(() => {
-    bridge.sceneVersion();
-    setChildren([...editor.scene.children]);
-  });
+  const rootNodes = () =>
+    bridge.nodes()
+      .filter(n => n.parent === null)
+      .sort((a, b) => a.order - b.order);
 
   return (
     <div style={{
@@ -139,10 +141,10 @@ const SceneTreePanel: Component = () => {
       background: 'var(--bg-panel)',
       padding: 'var(--space-xs) 0',
     }}>
-      <For each={children()}>
-        {(child) => <TreeNode object={child} depth={0} />}
+      <For each={rootNodes()}>
+        {(node) => <TreeNode node={node} depth={0} />}
       </For>
-      <Show when={children().length === 0}>
+      <Show when={rootNodes().length === 0}>
         <div style={{
           padding: 'var(--space-xl)',
           color: 'var(--text-muted)',
