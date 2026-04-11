@@ -3,11 +3,12 @@ import type { SceneNode, SceneFile } from './SceneFormat';
 // ── Internal generic emitter ──────────────────────────────────────────────────
 
 type Listener<T extends unknown[]> = (...args: T) => void;
+type EventArgs<M, K extends keyof M> = M[K] extends unknown[] ? M[K] : never;
 
-class MiniEmitter<M extends Record<string, unknown[]>> {
+class MiniEmitter<M> {
   private _listeners = new Map<keyof M, Set<Listener<any>>>();
 
-  on<K extends keyof M>(event: K, fn: Listener<M[K]>): void {
+  on<K extends keyof M>(event: K, fn: Listener<EventArgs<M, K>>): void {
     let set = this._listeners.get(event);
     if (!set) {
       set = new Set();
@@ -16,11 +17,11 @@ class MiniEmitter<M extends Record<string, unknown[]>> {
     set.add(fn);
   }
 
-  off<K extends keyof M>(event: K, fn: Listener<M[K]>): void {
+  off<K extends keyof M>(event: K, fn: Listener<EventArgs<M, K>>): void {
     this._listeners.get(event)?.delete(fn);
   }
 
-  emit<K extends keyof M>(event: K, ...args: M[K]): void {
+  emit<K extends keyof M>(event: K, ...args: EventArgs<M, K>): void {
     const set = this._listeners.get(event);
     if (!set) return;
     for (const fn of set) fn(...args);
