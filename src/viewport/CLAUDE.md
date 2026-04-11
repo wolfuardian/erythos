@@ -43,6 +43,16 @@
 
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
+- [ ] `_boxDragging` 應綁定拖曳生命週期而非命中結果（#36）
+  - **問題**：`onBoxHover` 回傳空陣列時就清除 `_boxDragging`，導致框選經過空白區域時 SelectionPicker 的單物體 hover 閃爍
+  - **修改 `src/viewport/BoxSelector.ts`**：
+    - `BoxSelectorCallbacks` 新增 `onBoxDragStart: () => void` 和 `onBoxDragEnd: () => void`
+    - 當拖曳距離超過 `DRAG_THRESHOLD` 進入 `isActive` 時，呼叫 `onBoxDragStart()`
+    - `onPointerUp`（框選結束）和 `cancel()` 中，呼叫 `onBoxDragEnd()`
+  - **修改 `src/viewport/Viewport.ts`**：
+    - `onBoxDragStart`: 設 `_boxDragging = true`
+    - `onBoxDragEnd`: 設 `_boxDragging = false`
+    - `onBoxHover`: 移除對 `_boxDragging` 的操作，只負責傳遞 hover 物體給 postProcessing
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
