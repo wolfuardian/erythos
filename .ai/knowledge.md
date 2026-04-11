@@ -30,3 +30,13 @@
 
 - Bridge 分兩層監聯：`editor.events`（UI 狀態）+ `editor.sceneDocument.events`（場景資料）。新 Command 直接操作 SceneDocument，Bridge 必須監聽 SceneDocument 事件才能收到變更 ⏳ 永久
 - `nodes` signal 在所有四個 SceneDocument 事件時都更新，面板只需讀 `nodes()` 即可。`sceneVersion` / `objectVersion` 保留供面板做細粒度最佳化 ⏳ 永久
+
+## SceneNode 欄位缺口（來源：#103 備忘錄）
+
+- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 目前用結構啟發式（有子節點 → G，否則 → O）。待 components 規範定案後改用 `'mesh' in node.components` 判斷 ⏳ 適用至 Phase 5 GLTF Import（components.mesh 會被寫入）
+
+## UUID ↔ Object3D 轉換層（來源：#105 備忘錄）
+
+- 轉換集中在 ViewportPanel（UI 層），core/Selection 和 bridge 完全不持有 Object3D，未來換 3D 引擎只需改 ViewportPanel ⏳ 永久
+- `sceneSync.getUUID(obj)` 回傳 null 是正常情境（helper 物件不在 SceneSync 中），null guard 是語意過濾非錯誤防護 ⏳ 永久
+- `.filter(Boolean)` 無法窄化 `(T | null)[] → T[]`，需用明確型別守衛 `.filter((o): o is T => o !== null)` ⏳ 永久
