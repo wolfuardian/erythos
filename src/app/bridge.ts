@@ -13,6 +13,7 @@ export interface EditorBridge {
   objectVersion: Accessor<number>;
   canUndo: Accessor<boolean>;
   canRedo: Accessor<boolean>;
+  autosaveStatus: Accessor<'idle' | 'pending' | 'saved'>;
   dispose: () => void;
 }
 
@@ -25,6 +26,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const [objectVersion, setObjectVersion] = createSignal(0);
   const [canUndo, setCanUndo] = createSignal(false);
   const [canRedo, setCanRedo] = createSignal(false);
+  const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved'>('idle');
 
   const bump = (setter: (fn: (v: number) => number) => void) =>
     setter((v) => v + 1);
@@ -40,6 +42,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
       setCanUndo(editor.history.canUndo);
       setCanRedo(editor.history.canRedo);
     },
+    autosaveStatusChanged: (status: 'idle' | 'pending' | 'saved') => setAutosaveStatus(status),
   } as const;
 
   // Subscribe
@@ -63,6 +66,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     objectVersion,
     canUndo,
     canRedo,
+    autosaveStatus,
     dispose,
   };
 }
