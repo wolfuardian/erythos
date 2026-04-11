@@ -54,6 +54,7 @@
 - 檔名格式：`#N-簡述.md`（例如 `#82-scene-document.md`）
 - 內容自由撰寫，不需要特定格式
 - 一個任務最多一個備忘錄檔案
+- **備忘錄必須在開 PR 之前 commit + push**，確保 merge 時檔案會帶入 master
 - 主腦 review 後歸檔至 `.ai/knowledge.md` 或粉碎（刪除檔案）
 
 此機制適用於所有角色（開發、QC、Advisor）。
