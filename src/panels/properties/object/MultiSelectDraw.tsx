@@ -1,35 +1,28 @@
 import { createMemo, type Component } from 'solid-js';
-import { MathUtils, type Object3D } from 'three';
+import { MathUtils } from 'three';
 import { useEditor } from '../../../app/EditorContext';
+import type { SceneNode } from '../../../core/scene/SceneFormat';
 
 interface MultiSelectDrawProps {
-  objects: Object3D[];
+  uuids: string[];
 }
 
 const MIXED = '\u2014'; // em dash
 
-function commonStr(objects: Object3D[], get: (o: Object3D) => string): string {
-  const v = get(objects[0]);
-  for (let i = 1; i < objects.length; i++) {
-    if (get(objects[i]) !== v) return MIXED;
+function commonStr(nodes: SceneNode[], get: (n: SceneNode) => string): string {
+  const v = get(nodes[0]);
+  for (let i = 1; i < nodes.length; i++) {
+    if (get(nodes[i]) !== v) return MIXED;
   }
   return v;
 }
 
-function commonNum(objects: Object3D[], get: (o: Object3D) => number): string {
-  const v = round(get(objects[0]));
-  for (let i = 1; i < objects.length; i++) {
-    if (round(get(objects[i])) !== v) return MIXED;
+function commonNum(nodes: SceneNode[], get: (n: SceneNode) => number): string {
+  const v = round(get(nodes[0]));
+  for (let i = 1; i < nodes.length; i++) {
+    if (round(get(nodes[i])) !== v) return MIXED;
   }
   return String(v);
-}
-
-function commonBool(objects: Object3D[], get: (o: Object3D) => boolean): boolean | null {
-  const v = get(objects[0]);
-  for (let i = 1; i < objects.length; i++) {
-    if (get(objects[i]) !== v) return null;
-  }
-  return v;
 }
 
 function round(v: number): number {
@@ -41,27 +34,28 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
 
   const info = createMemo(() => {
     bridge.objectVersion();
-    const objs = props.objects;
+    const nodes = props.uuids
+      .map((uuid) => bridge.getNode(uuid))
+      .filter((n): n is SceneNode => n !== null);
+    if (nodes.length === 0) return null;
     return {
-      name: commonStr(objs, (o) => o.name),
-      type: commonStr(objs, (o) => o.type),
-      visible: commonBool(objs, (o) => o.visible),
-      px: commonNum(objs, (o) => o.position.x),
-      py: commonNum(objs, (o) => o.position.y),
-      pz: commonNum(objs, (o) => o.position.z),
-      rx: commonNum(objs, (o) => MathUtils.radToDeg(o.rotation.x)),
-      ry: commonNum(objs, (o) => MathUtils.radToDeg(o.rotation.y)),
-      rz: commonNum(objs, (o) => MathUtils.radToDeg(o.rotation.z)),
-      sx: commonNum(objs, (o) => o.scale.x),
-      sy: commonNum(objs, (o) => o.scale.y),
-      sz: commonNum(objs, (o) => o.scale.z),
+      name: commonStr(nodes, (n) => n.name),
+      px: commonNum(nodes, (n) => n.position[0]),
+      py: commonNum(nodes, (n) => n.position[1]),
+      pz: commonNum(nodes, (n) => n.position[2]),
+      rx: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[0])),
+      ry: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[1])),
+      rz: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[2])),
+      sx: commonNum(nodes, (n) => n.scale[0]),
+      sy: commonNum(nodes, (n) => n.scale[1]),
+      sz: commonNum(nodes, (n) => n.scale[2]),
     };
   });
 
   return (
     <>
       <div style={summaryStyle}>
-        {props.objects.length} objects selected
+        {props.uuids.length} objects selected
       </div>
 
       {/* Object section */}
@@ -71,29 +65,11 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
         <div style={fieldRow}>
           <label style={fieldLabel}>Name</label>
           <span style={{
-            color: info().name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
+            color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
             'font-size': 'var(--font-size-sm)',
           }}>
-            {info().name}
+            {info()?.name ?? MIXED}
           </span>
-        </div>
-
-        <div style={fieldRow}>
-          <label style={fieldLabel}>Type</label>
-          <span style={{
-            color: info().type === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
-            'font-size': 'var(--font-size-sm)',
-          }}>
-            {info().type}
-          </span>
-        </div>
-
-        <div style={fieldRow}>
-          <label style={fieldLabel}>Visible</label>
-          {info().visible === null
-            ? <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>{MIXED}</span>
-            : <input type="checkbox" checked={info().visible!} disabled />
-          }
         </div>
       </div>
 
@@ -103,23 +79,23 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
 
         <div style={groupLabel}>Position</div>
         <div style={vectorRow}>
-          <ValueField label="X" value={info().px} color="#c04040" />
-          <ValueField label="Y" value={info().py} color="#3a9060" />
-          <ValueField label="Z" value={info().pz} color="#4a7fbf" />
+          <ValueField label="X" value={info()?.px ?? MIXED} color="#c04040" />
+          <ValueField label="Y" value={info()?.py ?? MIXED} color="#3a9060" />
+          <ValueField label="Z" value={info()?.pz ?? MIXED} color="#4a7fbf" />
         </div>
 
         <div style={groupLabel}>Rotation</div>
         <div style={vectorRow}>
-          <ValueField label="X" value={info().rx} color="#c04040" />
-          <ValueField label="Y" value={info().ry} color="#3a9060" />
-          <ValueField label="Z" value={info().rz} color="#4a7fbf" />
+          <ValueField label="X" value={info()?.rx ?? MIXED} color="#c04040" />
+          <ValueField label="Y" value={info()?.ry ?? MIXED} color="#3a9060" />
+          <ValueField label="Z" value={info()?.rz ?? MIXED} color="#4a7fbf" />
         </div>
 
         <div style={groupLabel}>Scale</div>
         <div style={vectorRow}>
-          <ValueField label="X" value={info().sx} color="#c04040" />
-          <ValueField label="Y" value={info().sy} color="#3a9060" />
-          <ValueField label="Z" value={info().sz} color="#4a7fbf" />
+          <ValueField label="X" value={info()?.sx ?? MIXED} color="#c04040" />
+          <ValueField label="Y" value={info()?.sy ?? MIXED} color="#3a9060" />
+          <ValueField label="Z" value={info()?.sz ?? MIXED} color="#4a7fbf" />
         </div>
       </div>
     </>

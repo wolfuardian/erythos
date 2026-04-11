@@ -1,13 +1,14 @@
 import { createSignal, createEffect, type Component } from 'solid-js';
-import { MathUtils, type Object3D } from 'three';
+import { MathUtils } from 'three';
 import { useEditor } from '../../../app/EditorContext';
-import { SetPositionCommand } from '../../../core/commands/SetPositionCommand';
-import { SetRotationCommand } from '../../../core/commands/SetRotationCommand';
-import { SetScaleCommand } from '../../../core/commands/SetScaleCommand';
+import { SetTransformCommand } from '../../../core/commands/SetTransformCommand';
+import type { Vec3 } from '../../../core/scene/SceneFormat';
 
 interface TransformDrawProps {
-  object: Object3D;
+  uuid: string;
 }
+
+const axisToIndex = { x: 0, y: 1, z: 2 } as const;
 
 const TransformDraw: Component<TransformDrawProps> = (props) => {
   const bridge = useEditor();
@@ -24,40 +25,43 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   const [sy, setSy] = createSignal(1);
   const [sz, setSz] = createSignal(1);
 
-  const syncFromObject = () => {
-    const o = props.object;
-    setPx(round(o.position.x));
-    setPy(round(o.position.y));
-    setPz(round(o.position.z));
-    setRx(round(MathUtils.radToDeg(o.rotation.x)));
-    setRy(round(MathUtils.radToDeg(o.rotation.y)));
-    setRz(round(MathUtils.radToDeg(o.rotation.z)));
-    setSx(round(o.scale.x));
-    setSy(round(o.scale.y));
-    setSz(round(o.scale.z));
-  };
-
   createEffect(() => {
     bridge.objectVersion();
-    syncFromObject();
+    const node = bridge.getNode(props.uuid);
+    if (!node) return;
+    setPx(round(node.position[0]));
+    setPy(round(node.position[1]));
+    setPz(round(node.position[2]));
+    setRx(round(MathUtils.radToDeg(node.rotation[0])));
+    setRy(round(MathUtils.radToDeg(node.rotation[1])));
+    setRz(round(MathUtils.radToDeg(node.rotation[2])));
+    setSx(round(node.scale[0]));
+    setSy(round(node.scale[1]));
+    setSz(round(node.scale[2]));
   });
 
   const setPosition = (axis: 'x' | 'y' | 'z', value: number) => {
-    const pos = props.object.position.clone();
-    pos[axis] = value;
-    editor.execute(new SetPositionCommand(editor, props.object, pos));
+    const node = bridge.getNode(props.uuid);
+    if (!node) return;
+    const newVec: Vec3 = [...node.position];
+    newVec[axisToIndex[axis]] = value;
+    editor.execute(new SetTransformCommand(editor, props.uuid, 'position', newVec, node.position));
   };
 
   const setRotation = (axis: 'x' | 'y' | 'z', valueDeg: number) => {
-    const rot = props.object.rotation.clone();
-    rot[axis] = MathUtils.degToRad(valueDeg);
-    editor.execute(new SetRotationCommand(editor, props.object, rot));
+    const node = bridge.getNode(props.uuid);
+    if (!node) return;
+    const newVec: Vec3 = [...node.rotation];
+    newVec[axisToIndex[axis]] = MathUtils.degToRad(valueDeg);
+    editor.execute(new SetTransformCommand(editor, props.uuid, 'rotation', newVec, node.rotation));
   };
 
   const setScale = (axis: 'x' | 'y' | 'z', value: number) => {
-    const s = props.object.scale.clone();
-    s[axis] = value;
-    editor.execute(new SetScaleCommand(editor, props.object, s));
+    const node = bridge.getNode(props.uuid);
+    if (!node) return;
+    const newVec: Vec3 = [...node.scale];
+    newVec[axisToIndex[axis]] = value;
+    editor.execute(new SetTransformCommand(editor, props.uuid, 'scale', newVec, node.scale));
   };
 
   return (
