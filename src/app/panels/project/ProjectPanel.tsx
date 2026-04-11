@@ -55,6 +55,7 @@ interface TreeNodeProps {
   selected: boolean;
   isSelected: (path: string) => boolean;
   onSelect: (path: string, modifier: { ctrl: boolean }) => void;
+  onDblClick?: (name: string) => void;
 }
 
 const TreeNode: Component<TreeNodeProps> = (props) => {
@@ -71,6 +72,12 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
     }
   };
 
+  const handleDblClick = () => {
+    if (!isFolder() && (props.node.ext === 'scene' || props.node.ext === 'json')) {
+      props.onDblClick?.(props.node.name);
+    }
+  };
+
   const badge = () => isFolder()
     ? { label: expanded() ? '▾' : '▸', color: 'var(--badge-group)' }
     : extBadge(props.node.ext);
@@ -79,6 +86,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
     <div>
       <div
         onClick={handleClick}
+        onDblClick={handleDblClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -138,6 +146,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
                 selected={props.isSelected(childPath)}
                 isSelected={props.isSelected}
                 onSelect={props.onSelect}
+                onDblClick={props.onDblClick}
               />
             );
           }}
@@ -166,6 +175,11 @@ const ProjectPanel: Component = () => {
     });
   };
 
+  const handleDblClick = (name: string) => {
+    // TODO: integrate with SceneLoader + confirmation dialog (#48)
+    console.log('load scene:', name);
+  };
+
   return (
     <div style={{
       width: '100%',
@@ -183,6 +197,7 @@ const ProjectPanel: Component = () => {
             selected={isSelected(node.name)}
             isSelected={isSelected}
             onSelect={handleSelect}
+            onDblClick={handleDblClick}
           />
         )}
       </For>
