@@ -33,8 +33,11 @@ const App: Component = () => {
       { key: 'y', ctrl: true, action: () => editor.redo(), description: 'Redo' },
       { key: 'z', ctrl: true, shift: true, action: () => editor.redo(), description: 'Redo (alt)' },
       { key: 'Delete', action: () => {
-        const obj = editor.selection.selected;
-        if (obj) editor.execute(new RemoveObjectCommand(editor, obj));
+        const uuid = editor.selection.primary;
+        if (uuid) {
+          const obj = editor.sceneSync.getObject3D(uuid);
+          if (obj) editor.execute(new RemoveObjectCommand(editor, obj));
+        }
       }, description: 'Delete selected' },
       { key: 'w', action: () => editor.setTransformMode('translate'), description: 'Translate mode' },
       { key: 'e', action: () => editor.setTransformMode('rotate'), description: 'Rotate mode' },
