@@ -38,3 +38,4 @@
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+- **#48 後續整合**：ProjectPanel 雙擊 scene 檔目前使用 `console.log` 佔位。需等 SceneLoader（`src/core/scene/SceneLoader.ts`）完工，以及確認是否需要「確認對話框」（未儲存變更提示）後，才能完成真正的場景讀取流程。屆時需在 bridge 層（或直接透過 editor 參照）呼叫 `SceneLoader.loadScene(path)`。
