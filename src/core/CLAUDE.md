@@ -6,6 +6,12 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] AutoSave 發送狀態事件（#43）
+  - 修改 `src/core/EventEmitter.ts`：
+    - `EditorEventMap` 新增 `autosaveStatusChanged: [status: 'pending' | 'saved']`
+  - 修改 `src/core/scene/AutoSave.ts`：
+    - `scheduleSnapshot()` 開頭：`this.editor.events.emit('autosaveStatusChanged', 'pending')`
+    - debounce callback 中寫入 localStorage 後：`this.editor.events.emit('autosaveStatusChanged', 'saved')`
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -17,6 +23,7 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
+- 工作分支：feat/autosave-status
 - commit 訊息格式：`[core] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
