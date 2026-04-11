@@ -5,6 +5,7 @@ import { History } from './History';
 import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import type { Command } from './Command';
+import { AutoSave, restoreSnapshot } from './scene/AutoSave';
 
 export class Editor {
   readonly scene: Scene;
@@ -12,6 +13,7 @@ export class Editor {
   readonly history: History;
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
+  readonly autosave: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
 
@@ -22,6 +24,13 @@ export class Editor {
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
+
+    // Restore autosaved snapshot before any UI mounts, then start listening.
+    const saved = localStorage.getItem('erythos-autosave-v1');
+    if (saved !== null) {
+      restoreSnapshot(this, saved);
+    }
+    this.autosave = new AutoSave(this);
   }
 
   // ── Transform mode ────────────────────────────────
@@ -93,6 +102,7 @@ export class Editor {
   }
 
   dispose(): void {
+    this.autosave.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
   }
