@@ -216,6 +216,7 @@ attachMulti(objects: Object3D[]): void;
 - **「當前任務」與「待修項」用途不同，不可混用：**
   - 「當前任務」：初始任務指派，主腦準備 worktree 時寫入
   - 「待修項」：QC 審查回報問題後，主腦根據 QC issue 寫入的修正項
+- **開發 agent 開 PR 前須還原 CLAUDE.md**：清空當前任務、移除工作分支名稱，確保 PR 不包含 CLAUDE.md 的 diff（避免 merge 衝突）
 
 ### Merge 流程
 
