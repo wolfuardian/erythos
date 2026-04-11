@@ -6,14 +6,6 @@
 - GitHub CLI (`gh`) — 用於開 issue、建 PR。安裝：`winget install GitHub.cli`，首次需 `gh auth login`
 - `gh` 安裝後需重啟 shell 才能找到，路徑：`/c/Program Files/GitHub CLI`
 
-## ⚠ 臨時通知：build 預期失敗（Phase 2→3 過渡期）
-
-Selection API 已從 Object3D 改為 UUID（V2-2），但下游面板（ViewportPanel、SceneTreePanel）尚未適配，導致 `npm run build` 型別錯誤。這是預期狀態，Phase 3 面板適配完成後會恢復。
-
-**目前驗證方式**：用 `npm test` 確認自己模組的測試通過，取代 `npm run build`。
-
-<!-- 此通知在 Phase 3 面板適配完成後由主腦移除 -->
-
 ## 專案慣例
 
 - 語言：TypeScript（strict mode）
