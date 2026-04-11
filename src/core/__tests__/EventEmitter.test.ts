@@ -113,30 +113,29 @@ describe('Selection — emits hoverChanged', () => {
     vi.useRealTimers();
   });
 
-  it('hover(obj) emits hoverChanged with obj.uuid', () => {
-    const obj = new Object3D();
+  it('hover(uuid) emits hoverChanged with that uuid', () => {
+    const uuid = 'test-uuid-hover-1';
     const received: Array<string | null> = [];
-    editor.events.on('hoverChanged', (uuid) => received.push(uuid));
-    editor.selection.hover(obj);
-    expect(received).toEqual([obj.uuid]);
+    editor.events.on('hoverChanged', (u) => received.push(u));
+    editor.selection.hover(uuid);
+    expect(received).toEqual([uuid]);
   });
 
   it('hover(null) emits hoverChanged with null', () => {
-    const obj = new Object3D();
-    editor.selection.hover(obj); // set first
+    editor.selection.hover('some-uuid');
 
     const received: Array<string | null> = [];
-    editor.events.on('hoverChanged', (uuid) => received.push(uuid));
+    editor.events.on('hoverChanged', (u) => received.push(u));
     editor.selection.hover(null);
     expect(received).toEqual([null]);
   });
 
-  it('hover with same object does not emit again', () => {
-    const obj = new Object3D();
-    editor.selection.hover(obj);
+  it('hover with same uuid does not emit again', () => {
+    const uuid = 'test-uuid-hover-2';
+    editor.selection.hover(uuid);
     let count = 0;
     editor.events.on('hoverChanged', () => { count++; });
-    editor.selection.hover(obj); // same — no-op
+    editor.selection.hover(uuid); // same — no-op
     expect(count).toBe(0);
   });
 });
@@ -182,19 +181,5 @@ describe('EventEmitter — deprecated legacy events still work', () => {
     expect(fired).toBe(true);
   });
 
-  it('objectHovered still fires via selection.hover (legacy path)', () => {
-    const obj = new Object3D();
-    let received: Object3D | null = null;
-    editor.events.on('objectHovered', (o) => { received = o; });
-    editor.selection.hover(obj);
-    expect(received).toBe(obj);
-  });
-
-  it('objectSelected still fires via selection.select (legacy path)', () => {
-    const obj = new Object3D();
-    let received: Object3D | null | undefined = undefined;
-    editor.events.on('objectSelected', (o) => { received = o; });
-    editor.selection.select(obj);
-    expect(received).toBe(obj);
-  });
+  // objectHovered and objectSelected removed from EventMap (V2-3) — no legacy path tests
 });
