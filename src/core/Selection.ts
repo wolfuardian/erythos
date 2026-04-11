@@ -86,6 +86,7 @@ export class Selection {
   hover(object: Object3D | null): void {
     if (this._hovered === object) return;
     this._hovered = object;
+    this.events.emit('hoverChanged', object?.uuid ?? null);
     this.events.emit('objectHovered', object);
   }
 
