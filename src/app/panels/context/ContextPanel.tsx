@@ -6,8 +6,9 @@ const ContextPanel: Component = () => {
 
   const sceneJson = createMemo(() => {
     bridge.sceneVersion(); // reactive dependency — re-runs on sceneGraphChanged
-    const json = bridge.editor.scene.toJSON();
-    return JSON.stringify(json, null, 2);
+    const objects = bridge.selectedObjects();
+    const target = objects.length > 0 ? objects[0] : bridge.editor.scene;
+    return JSON.stringify(target.toJSON(), null, 2);
   });
 
   return (
