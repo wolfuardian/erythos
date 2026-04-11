@@ -6,6 +6,11 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] 移除 status bar 的重設佈局按鈕（#60）
+  - 修改 `src/app/App.tsx`：
+    - 移除 status bar 中的「重設佈局」`<button>` 元素（約第 77-92 行）
+    - 移除 `clearSavedLayout` 的 import（如果該檔不再使用的話）
+    - status bar 保留 "Ready" 文字和自動儲存狀態顯示
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -15,6 +20,7 @@
 - 不在 app 層寫業務邏輯，只做膠水和佈局
 
 ## Git 規則
+- 工作分支：fix/remove-statusbar-reset
 - commit 訊息格式：`[app] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
