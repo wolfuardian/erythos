@@ -6,12 +6,6 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
-- [ ] 重設佈局按鈕移至工具列（#59）
-  - 修改 `src/components/Toolbar.tsx`：
-    - 在 transform mode 按鈕群組（Move / Rotate / Scale）右側、spacer 之前，新增 "Reset Layout" 按鈕
-    - 點擊行為：`clearSavedLayout()` + `location.reload()`
-    - `clearSavedLayout` 從 `../app/layout/defaultLayout` import
-    - 按鈕樣式用現有 `ToolbarBtn` 元件
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -25,7 +19,6 @@
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 
 ## Git 規則
-- 工作分支：feat/toolbar-reset
 - commit 訊息格式：`[components] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
