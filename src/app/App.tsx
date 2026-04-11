@@ -1,4 +1,4 @@
-import { type Component, onMount, onCleanup } from 'solid-js';
+import { type Component, onMount, onCleanup, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
 import { RemoveObjectCommand } from '../core/commands/RemoveObjectCommand';
 import { createEditorBridge } from './bridge';
@@ -74,6 +74,15 @@ const App: Component = () => {
             Ready
           </span>
           <div style={{ flex: 1 }} />
+          <Show when={bridge.autosaveStatus() !== 'idle'}>
+            <span style={{
+              color: bridge.autosaveStatus() === 'pending' ? 'var(--text-muted)' : 'var(--accent-green)',
+              'font-size': 'var(--font-size-sm)',
+              'margin-right': 'var(--space-md)',
+            }}>
+              {bridge.autosaveStatus() === 'pending' ? '儲存中…' : '已儲存'}
+            </span>
+          </Show>
           <button
             onClick={() => { clearSavedLayout(); location.reload(); }}
             title="清除已儲存的佈局，重新載入為預設配置"
