@@ -54,11 +54,12 @@
 Erythos 是一個 3D 編輯器，使用 SolidJS + Three.js + Dockview。
 
 ### 當前進度（2026-04-12）
-- Scene Format Refactor Phase 1 進行中
-  - 已完成：V1-1 型別定義（#81）、V1-2 SceneDocument（#82）、V1-3 SceneSync（#83）
-  - 進行中：V1-4 Editor 重構（#84）、V1-5 Viewport 適配（#85）
-- Phase 0 前置作業已完成：AutoSave 版本閘門（#75）、vitest 引入（#76）、restoreSnapshot throw（#79）
-- GLTF 導入、場景存讀、多選功能等早期 feature 已完成
+- Scene Format Refactor Phase 0~3 全部完成，build 正常，127 測試通過
+  - P1：SceneDocument → SceneSync → Editor → Viewport 垂直切片
+  - P2：EventEmitter / Selection / Commands / Bridge 全部 UUID 化
+  - P3：SceneTree / Properties / Viewport / Context 面板全部適配
+- 下一步：Phase 4 IO（Save/Load + AutoSave 重構）
+- GLTF 導入、多選功能等早期 feature 已完成
 
 ### 開發循環
 1. 開發 agent 完成 → commit + push → 開 PR
