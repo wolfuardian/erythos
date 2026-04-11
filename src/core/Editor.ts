@@ -28,7 +28,11 @@ export class Editor {
     // Restore autosaved snapshot before any UI mounts, then start listening.
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved !== null) {
-      restoreSnapshot(this, saved);
+      try {
+        restoreSnapshot(this, saved);
+      } catch (err) {
+        console.warn('[Editor] Could not restore autosave snapshot:', err);
+      }
     }
     this.autosave = new AutoSave(this);
   }

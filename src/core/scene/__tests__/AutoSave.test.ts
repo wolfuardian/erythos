@@ -68,4 +68,13 @@ describe('AutoSave', () => {
     restoreSnapshot(editor, snapshot);
     expect(emitted).toBe(true);
   });
+
+  it('restoreSnapshot throws on invalid JSON', () => {
+    expect(() => restoreSnapshot(editor, 'not valid json{{')).toThrow('Invalid snapshot JSON');
+  });
+
+  it('restoreSnapshot throws on incompatible version', () => {
+    const oldFormatData = JSON.stringify({ _version: 1, data: {} });
+    expect(() => restoreSnapshot(editor, oldFormatData)).toThrow('Incompatible snapshot format');
+  });
 });
