@@ -5,10 +5,13 @@ const ContextPanel: Component = () => {
   const bridge = useEditor();
 
   const sceneJson = createMemo(() => {
-    bridge.sceneVersion(); // reactive dependency — re-runs on sceneGraphChanged
-    const objects = bridge.selectedObjects();
-    const target = objects.length > 0 ? objects[0] : bridge.editor.scene;
-    return JSON.stringify(target.toJSON(), null, 2);
+    const uuids = bridge.selectedUUIDs();
+    bridge.nodes(); // reactive dep — re-runs on any node add/remove/change
+    if (uuids.length > 0) {
+      const node = bridge.getNode(uuids[0]);
+      return JSON.stringify(node, null, 2);
+    }
+    return JSON.stringify(bridge.editor.sceneDocument.serialize(), null, 2);
   });
 
   return (

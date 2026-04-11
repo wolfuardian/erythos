@@ -1,7 +1,7 @@
 import { createSignal, type Accessor } from 'solid-js';
-import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
+import type { SceneNode } from '../core/scene/SceneFormat';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -15,8 +15,10 @@ export function setConfirmBeforeLoad(value: boolean): void {
 
 export interface EditorBridge {
   editor: Editor;
-  selectedObjects: Accessor<Object3D[]>;
-  hoveredObject: Accessor<Object3D | null>;
+  selectedUUIDs: Accessor<string[]>;
+  hoveredUUID: Accessor<string | null>;
+  nodes: Accessor<SceneNode[]>;
+  getNode: (uuid: string) => SceneNode | null;
   interactionMode: Accessor<InteractionMode>;
   transformMode: Accessor<TransformMode>;
   sceneVersion: Accessor<number>;
@@ -29,8 +31,9 @@ export interface EditorBridge {
 }
 
 export function createEditorBridge(editor: Editor): EditorBridge {
-  const [selectedObjects, setSelectedObjects] = createSignal<Object3D[]>([]);
-  const [hoveredObject, setHovered] = createSignal<Object3D | null>(null);
+  const [selectedUUIDs, setSelectedUUIDs] = createSignal<string[]>([]);
+  const [hoveredUUID, setHoveredUUID] = createSignal<string | null>(null);
+  const [nodes, setNodes] = createSignal<SceneNode[]>([]);
   const [interactionMode, setMode] = createSignal<InteractionMode>('object');
   const [transformMode, setTransformMode] = createSignal<TransformMode>('translate');
   const [sceneVersion, setSceneVersion] = createSignal(0);
@@ -42,13 +45,12 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const bump = (setter: (fn: (v: number) => number) => void) =>
     setter((v) => v + 1);
 
-  const handlers = {
-    selectionChanged: (objects: Object3D[]) => setSelectedObjects(objects),
-    objectHovered: (obj: Object3D | null) => setHovered(obj),
+  // Editor UI-state event handlers
+  const editorHandlers = {
+    selectionChanged: (uuids: string[]) => setSelectedUUIDs(uuids),
+    hoverChanged: (uuid: string | null) => setHoveredUUID(uuid),
     interactionModeChanged: (mode: InteractionMode) => setMode(mode),
     transformModeChanged: (mode: TransformMode) => setTransformMode(mode),
-    sceneGraphChanged: () => bump(setSceneVersion),
-    objectChanged: () => bump(setObjectVersion),
     historyChanged: () => {
       setCanUndo(editor.history.canUndo);
       setCanRedo(editor.history.canRedo);
@@ -56,21 +58,46 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     autosaveStatusChanged: (status: 'idle' | 'pending' | 'saved') => setAutosaveStatus(status),
   } as const;
 
-  // Subscribe
-  for (const [event, handler] of Object.entries(handlers)) {
+  // SceneDocument event handlers — Commands operate on SceneDocument directly,
+  // so only these events capture all scene changes (not editor.events).
+  const onNodeAdded = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
+  const onNodeRemoved = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
+  const onNodeChanged = (_uuid: string, _changed: Partial<SceneNode>) => {
+    setNodes(editor.sceneDocument.getAllNodes());
+    bump(setObjectVersion);
+  };
+  const onSceneReplaced = () => {
+    setNodes(editor.sceneDocument.getAllNodes());
+    bump(setSceneVersion);
+  };
+
+  // Subscribe to editor events
+  for (const [event, handler] of Object.entries(editorHandlers)) {
     editor.events.on(event as any, handler as any);
   }
 
+  // Subscribe to SceneDocument events
+  editor.sceneDocument.events.on('nodeAdded', onNodeAdded);
+  editor.sceneDocument.events.on('nodeRemoved', onNodeRemoved);
+  editor.sceneDocument.events.on('nodeChanged', onNodeChanged);
+  editor.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
+
   const dispose = () => {
-    for (const [event, handler] of Object.entries(handlers)) {
+    for (const [event, handler] of Object.entries(editorHandlers)) {
       editor.events.off(event as any, handler as any);
     }
+    editor.sceneDocument.events.off('nodeAdded', onNodeAdded);
+    editor.sceneDocument.events.off('nodeRemoved', onNodeRemoved);
+    editor.sceneDocument.events.off('nodeChanged', onNodeChanged);
+    editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
   };
 
   return {
     editor,
-    selectedObjects,
-    hoveredObject,
+    selectedUUIDs,
+    hoveredUUID,
+    nodes,
+    getNode: (uuid) => editor.sceneDocument.getNode(uuid),
     interactionMode,
     transformMode,
     sceneVersion,
