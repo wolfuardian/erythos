@@ -6,9 +6,14 @@ import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import type { Command } from './Command';
 import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
+import { SceneDocument } from './scene/SceneDocument';
+import { SceneSync } from './scene/SceneSync';
+import type { SceneNode } from './scene/SceneFormat';
 
 export class Editor {
   readonly scene: Scene;
+  readonly sceneDocument: SceneDocument;
+  readonly sceneSync: SceneSync;
   readonly events: EventEmitter;
   readonly history: History;
   readonly selection: Selection;
@@ -20,6 +25,8 @@ export class Editor {
   constructor() {
     this.scene = new Scene();
     this.scene.name = 'Scene';
+    this.sceneDocument = new SceneDocument();
+    this.sceneSync = new SceneSync(this.sceneDocument, this.scene);
     this.events = new EventEmitter();
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
@@ -61,7 +68,19 @@ export class Editor {
     this.history.redo();
   }
 
-  // ── Scene management ──────────────────────────────
+  // ── Scene document API ────────────────────────────
+
+  get threeScene(): Scene { return this.scene; }
+
+  addNode(node: SceneNode): void {
+    this.sceneDocument.addNode(node);
+  }
+
+  removeNode(uuid: string): void {
+    this.sceneDocument.removeNode(uuid);
+  }
+
+  // ── Scene management (legacy Three.js API) ────────
 
   addObject(object: Object3D, parent?: Object3D): void {
     const target = parent ?? this.scene;
@@ -107,6 +126,7 @@ export class Editor {
 
   dispose(): void {
     this.autosave.dispose();
+    this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
   }
