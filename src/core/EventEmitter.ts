@@ -16,7 +16,7 @@ export interface EditorEventMap {
   hoverChanged:           [uuid: string | null];
 
   // ── Stable events (no change) ───────────────────────
-  selectionChanged:       [objects: Object3D[]];
+  selectionChanged:       [uuids: string[]];
   historyChanged:         [];
   interactionModeChanged: [mode: InteractionMode];
   transformModeChanged:   [mode: TransformMode];
@@ -32,10 +32,7 @@ export interface EditorEventMap {
   objectChanged:          [object: Object3D];
   /** @deprecated Use sceneReplaced or nodeAdded/nodeRemoved */
   sceneGraphChanged:      [];
-  /** @deprecated Use selectionChanged */
-  objectSelected:         [object: Object3D | null];
-  /** @deprecated Use hoverChanged */
-  objectHovered:          [object: Object3D | null];
+  // objectSelected and objectHovered removed — Selection now emits only selectionChanged / hoverChanged
 }
 
 // ── Typed EventEmitter ─────────────────────────────────
