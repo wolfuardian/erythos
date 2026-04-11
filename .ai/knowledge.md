@@ -33,7 +33,8 @@
 
 ## SceneNode 欄位缺口（來源：#103 備忘錄）
 
-- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 目前用結構啟發式（有子節點 → G，否則 → O）。待 components 規範定案後改用 `'mesh' in node.components` 判斷 ⏳ 適用至 Phase 5 GLTF Import（components.mesh 會被寫入）
+- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 和 PropertiesPanel 都已移除 type/visible 顯示。恢復方式：components 推導或新增 `nodeType` / `visible` 欄位 ⏳ 適用至 Phase 5 GLTF Import（components.mesh 會被寫入）
+- SetTransformCommand 的 oldValue 需呼叫端傳入（因 canMerge 合併機制，oldValue 必須是操作開始時的快照）。面板場景直接讀 `node.position` 即可，Gizmo 拖曳場景需用拖曳開始時的值 ⏳ 永久
 
 ## UUID ↔ Object3D 轉換層（來源：#105 備忘錄）
 
