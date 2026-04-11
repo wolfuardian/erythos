@@ -43,3 +43,9 @@
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+- **#32 ProjectManager 需要 server API 才能真正操作檔案系統**
+  - 目前以 in-memory Map 實作完整 interface（createProject / listProjects / openProject）
+  - 若要持久化或操作 `runtime/project_{name}/assets/` 目錄結構，需要：
+    1. 自訂 Vite plugin 或 Express server 提供 `POST /api/projects`、`GET /api/projects`、`GET /api/projects/:name` 等 endpoint
+    2. 或使用 File System Access API（Chrome 限定，需使用者授權）
+  - 建議由主腦決定技術路線後，再派 app 或 core agent 補實作
