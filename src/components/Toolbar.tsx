@@ -53,7 +53,7 @@ const Toolbar: Component = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `scene-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.json`;
+    a.download = `scene-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.scene`;
     a.click();
     URL.revokeObjectURL(url);
   };

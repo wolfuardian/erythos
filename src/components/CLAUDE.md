@@ -6,6 +6,10 @@
 
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
+- [ ] Save/Load 統一使用 .scene 副檔名（#72）
+  - 修改 `src/components/Toolbar.tsx`：
+    - Save 按鈕：下載檔名從 `scene-{timestamp}.json` 改為 `scene-{timestamp}.scene`
+    - Load 按鈕：accept 維持 `.scene,.json`（向後相容舊檔案）
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -19,6 +23,7 @@
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 
 ## Git 規則
+- 工作分支：feat/scene-ext
 - commit 訊息格式：`[components] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
