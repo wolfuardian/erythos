@@ -1,4 +1,5 @@
 import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
+import type { Object3D } from 'three';
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetPositionCommand } from '../../core/commands/SetPositionCommand';
@@ -53,10 +54,11 @@ const ViewportPanel: Component = () => {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
       if (e.key === 'f' || e.key === 'F') {
-        const objects = bridge.selectedObjects();
-        const primary = objects.length > 0 ? objects[objects.length - 1] : null;
-        if (primary && viewport) {
-          viewport.focusObject(primary);
+        const uuids = bridge.selectedUUIDs();
+        const primaryUUID = uuids.length > 0 ? uuids[uuids.length - 1] : null;
+        if (primaryUUID && viewport) {
+          const obj = editor.sceneSync.getObject3D(primaryUUID);
+          if (obj) viewport.focusObject(obj);
         }
       }
 
@@ -88,18 +90,23 @@ const ViewportPanel: Component = () => {
     viewport = new Viewport(editor.threeScene, {
       onSelect: (obj, modifier) => {
         if (modifier.ctrl && obj) {
-          editor.selection.toggle(obj);
+          const uuid = editor.sceneSync.getUUID(obj);
+          if (uuid) editor.selection.toggle(uuid);
         } else {
-          editor.selection.select(obj);
+          const uuid = obj ? editor.sceneSync.getUUID(obj) : null;
+          editor.selection.select(uuid);
         }
       },
-      onHover: (obj) => editor.selection.hover(obj),
+      onHover: (obj) => {
+        editor.selection.hover(obj ? editor.sceneSync.getUUID(obj) : null);
+      },
       onBoxSelect: (objects, modifier) => {
         if (!modifier.ctrl) {
           editor.selection.select(null);
         }
         for (const obj of objects) {
-          editor.selection.add(obj);
+          const uuid = editor.sceneSync.getUUID(obj);
+          if (uuid) editor.selection.add(uuid);
         }
       },
       onMultiTransformEnd: (objects, startTransforms) => {
@@ -134,14 +141,17 @@ const ViewportPanel: Component = () => {
     viewport.mount(containerRef);
   });
 
-  // Sync selection → viewport
+  // Sync selection → viewport (UUID → Object3D)
   createEffect(() => {
-    const objects = bridge.selectedObjects();
+    const objects = bridge.selectedUUIDs()
+      .map(uuid => editor.sceneSync.getObject3D(uuid))
+      .filter((o): o is Object3D => o !== null);
     viewport?.setSelectedObjects(objects);
   });
 
   createEffect(() => {
-    const obj = bridge.hoveredObject();
+    const uuid = bridge.hoveredUUID();
+    const obj = uuid ? editor.sceneSync.getObject3D(uuid) : null;
     viewport?.setHoveredObject(obj);
   });
 
