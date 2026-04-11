@@ -5,7 +5,7 @@ import { History } from './History';
 import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import type { Command } from './Command';
-import { AutoSave, restoreSnapshot } from './scene/AutoSave';
+import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
 
 export class Editor {
   readonly scene: Scene;
@@ -26,7 +26,7 @@ export class Editor {
     this.keybindings = new KeybindingManager();
 
     // Restore autosaved snapshot before any UI mounts, then start listening.
-    const saved = localStorage.getItem('erythos-autosave-v1');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved !== null) {
       restoreSnapshot(this, saved);
     }
