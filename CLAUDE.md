@@ -15,6 +15,7 @@
 - 建置工具：Vite
 - 樣式：inline style + CSS 變數 var(--bg-*), var(--text-*)
 - UI 文字預設使用英文（目前未導入本地化機制，所有使用者可見文字以英文撰寫）
+- 型別檢查用 `npm run build`，不要用 `npx tsc`（專案未直接安裝 typescript CLI）
 
 ## 架構原則
 
