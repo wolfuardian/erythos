@@ -181,7 +181,7 @@ attachMulti(objects: Object3D[]): void;
 |------|------|------|
 | 指揮家（使用者） | 提出意圖與方向，做最終決策 | 全部 |
 | 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
-| 參謀 | 幫指揮家轉化意圖為有效指令、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
+| 參謀 | 合成 dispatch prompt、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
 | 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
 | QC agent | 審查分支品質，開 GitHub issue 回報問題 | 只讀 src/，可寫 qc/，可操作 `gh issue create` |
 
@@ -209,15 +209,13 @@ attachMulti(objects: Object3D[]): void;
 
 ### 模組 CLAUDE.md 編寫原則（主腦職責）
 
-開發 agent 在獨立 worktree 中運作，**只依賴 worktree 內的 CLAUDE.md**，不一定會追 SOP 連結。因此主腦在寫模組 CLAUDE.md 時必須確保：
+模組 CLAUDE.md 只放**範圍限制、任務描述、慣例**。操作性規則全在 dev-sop.md，不重複。
 
-- Git 規則中包含完整的開 PR 步驟（含指令範例），不能只靠引用 dev-sop.md
-- 任務描述足夠具體，agent 不需要額外查閱其他文件就能開工
-- 工作分支名稱明確寫在 Git 規則中
-- **「當前任務」與「待修項」用途不同，不可混用：**
-  - 「當前任務」：初始任務指派，主腦準備 worktree 時寫入
-  - 「待修項」：QC 審查回報問題後，主腦根據 QC issue 寫入的修正項
-- **開發 agent 開 PR 前須還原 CLAUDE.md**：清空當前任務、移除工作分支名稱，確保 PR 不包含 CLAUDE.md 的 diff（避免 merge 衝突）
+主腦準備 worktree 時在「當前任務」寫入任務描述（含工作分支名稱）；QC 退回時在「待修項」寫入修正項。兩者不混用。
+
+### Advisor Dispatch Prompt（參謀職責）
+
+指揮家派 dev agent 前，請 Advisor 合成自包含 prompt。Advisor 讀取 worktree 的 CLAUDE.md + dev-sop.md + knowledge.md，產出一份 agent 不需要再查任何文件就能開工的指令。操作性步驟附一句理由（why），讓 agent 理解而非盲從。
 
 ### Merge 流程
 
@@ -247,14 +245,16 @@ attachMulti(objects: Object3D[]): void;
 **Bug / 小功能（單一模組可完成）：**
 1. 主腦調查後開 GitHub issue（帶 label）
 2. 建 fix 或 feat 分支 + worktree，寫進模組 CLAUDE.md 待修項或當前任務
-3. 開發 agent 實作 → commit + push → 開 PR
-4. QC 審查 PR → approved 後 merge
+3. 指揮家請 Advisor 合成 dispatch prompt → 派 dev agent
+4. 開發 agent 實作 → commit + push → 開 PR
+5. QC 審查 PR → approved 後 merge
 
 **大功能（跨模組）：**
 1. 主腦設計介面契約，更新根 CLAUDE.md
 2. 拆分支（每模組一條），建 worktree，寫各模組 CLAUDE.md 當前任務
-3. 開發 agent 各自實作 → commit + push → 各自開 PR
-4. QC 逐 PR 審查 → 全部 approved 後依序 merge
+3. 指揮家請 Advisor 合成各模組 dispatch prompt → 派 dev agent
+4. 開發 agent 各自實作 → commit + push → 各自開 PR
+5. QC 逐 PR 審查 → 全部 approved 後依序 merge
 
 ### Merge 後收尾
 
@@ -268,7 +268,6 @@ merge 完成後，主腦依序執行：
 6. 清理各模組 CLAUDE.md：
    - 清空「當前任務」（保留標題和註解佔位）
    - 清空「待修項」和「上報區」的內容
-   - 移除 Git 規則中已過期的工作分支名稱
 7. 拜讀 `.ai/memos/` 目錄下的備忘錄檔案：
    - 有價值 → 歸檔至 `.ai/knowledge.md`（按主題分類，標註來源，加 `⏳ 適用至 <條件>`）
    - 已處理或瑣碎 → 粉碎（刪除該檔案）
@@ -279,7 +278,7 @@ merge 完成後，主腦依序執行：
 ### 文件維護流程
 
 - 主腦更新文件後 → 主腦自行校閱文字品質 + 檢視文件間一致性 → **主腦將 master merge 進所有 active feat 分支**
-- 指揮家需要下指令時 → 參謀提供 prompt 建議
+- 指揮家要派 dev agent → 參謀合成 dispatch prompt（讀 CLAUDE.md + dev-sop + knowledge.md）
 - 指揮家與成員溝通不順時 → 參謀診斷問題根因
 
 ### 開發成員 SOP
