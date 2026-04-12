@@ -6,10 +6,41 @@
 
 ## 當前任務
 
-<!-- 無 -->
+**Issue #128 — 移除 deprecated API + legacy commands**
+
+### 目標
+所有消費端已遷移，刪除 deprecated 事件、legacy Editor 方法、舊 Command 檔案。
+
+### 步驟
+
+#### 1. 刪除舊 Command 檔案
+- `src/core/commands/AddObjectCommand.ts`
+- `src/core/commands/RemoveObjectCommand.ts`
+- `src/core/commands/SetPositionCommand.ts`
+- `src/core/commands/SetRotationCommand.ts`
+- `src/core/commands/SetScaleCommand.ts`
+- `src/core/commands/SetValueCommand.ts`
+- 更新 `src/core/commands/index.ts` 移除匯出
+- 更新 `src/core/index.ts` 移除 re-export
+
+#### 2. EventEmitter.ts 移除 deprecated 事件
+- 刪除：objectAdded, objectRemoved, objectChanged, sceneGraphChanged
+- 移除 Object3D import（如果不再需要）
+
+#### 3. Editor.ts 移除 legacy 方法
+- 刪除 `addObject()`, `removeObject()`, `objectChanged()`
+- 保留 `readonly scene: Scene`（SceneSync constructor 仍需要）
+- 保留 `threeScene` getter
+
+#### 4. 更新測試
+- `EventEmitter.test.ts`：移除 deprecated 事件相關測試
+- `Editor.test.ts` / `History.test.ts`：如果引用了舊 Command 或方法，更新
+
+#### 5. 刪除前先確認
+每刪一個檔案前 grep 確認無外部 import（模組範圍外的消費端已遷移：ViewportPanel 用 SetTransformCommand、Toolbar 用 AddNodeCommand）
 
 ## 通用 SOP
-遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+遵守 [開發成員 SOP](../../docs/dev-sop.md)。**進場第一步：`npm install`**
 
 ## 慣例
 - 遵循現有 Command 模式（參考 AddObjectCommand.ts）
@@ -18,7 +49,8 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
-- commit 訊息格式：`[core] 簡述 (refs #N)`
+- 工作分支：`feat/remove-deprecated-api`
+- commit 訊息格式：`[core] 簡述 (refs #128)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - build 通過後開 PR：
@@ -37,3 +69,18 @@
 
 ## 上報區（供主腦 review）
 <!-- Agent 在此記錄跨模組需求或發現 -->
+
+### [#128] src/app/App.tsx 仍使用 RemoveObjectCommand（build 阻斷）
+
+`src/app/App.tsx:39` — Delete 快捷鍵仍用舊 API：
+```typescript
+const obj = editor.sceneSync.getObject3D(uuid);
+if (obj) editor.execute(new RemoveObjectCommand(editor, obj));
+```
+應改為：
+```typescript
+editor.execute(new RemoveNodeCommand(editor, uuid));
+```
+（`uuid` 已從 `editor.selection.primary` 取得，`sceneSync.getObject3D` 不再需要。）
+
+**影響**：build 失敗，無法開 PR。**需要 app 模組處理後我才能繼續。**
