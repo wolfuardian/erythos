@@ -1,15 +1,14 @@
-import { ObjectLoader, Scene, Object3D } from 'three';
 import type { Editor } from '../Editor';
+import type { SceneFile } from './SceneFormat';
 
 // ── Constants ──────────────────────────────────────────
 
 /**
  * Storage key for the current autosave format.
  * Exported so Editor.ts can read from the same key without duplication.
- * Bump both this and AUTOSAVE_VERSION together whenever the stored format changes.
+ * Bump this whenever the stored format changes incompatibly.
  */
-export const STORAGE_KEY = 'erythos-autosave-v2';
-const AUTOSAVE_VERSION = 2;
+export const STORAGE_KEY = 'erythos-autosave-v3';
 const DEBOUNCE_DELAY = 2000; // ms of idle before writing to localStorage
 
 // ── Snapshot utilities ─────────────────────────────────
@@ -20,78 +19,54 @@ export function hasSnapshot(): boolean {
 }
 
 /**
- * Serialize the current scene to a versioned JSON string and return it.
- * The envelope `{ _version, data }` lets restoreSnapshot reject snapshots
- * from incompatible format versions. Does NOT write to storage —
- * the AutoSave class owns that responsibility.
+ * Serialize the current scene to a JSON string via SceneDocument.
+ * SceneFile carries its own `version: 1` — no extra envelope needed.
+ * Does NOT write to storage — the AutoSave class owns that responsibility.
  */
 export function saveSnapshot(editor: Editor): string {
-  return JSON.stringify({ _version: AUTOSAVE_VERSION, data: editor.scene.toJSON() });
+  return JSON.stringify(editor.sceneDocument.serialize());
 }
 
 /**
- * Restore a previously saved snapshot into the editor's live scene.
- *
- * Version gate: if the payload does not carry a matching `_version` marker,
- * a warning is logged and the data is silently discarded. This prevents
- * loading scenes serialised by an older code path whose format is no longer
- * compatible.
+ * Restore a previously saved snapshot into the editor.
+ * Delegates version validation and deserialization to editor.loadScene().
  *
  * @param editor  The live Editor instance.
  * @param data    JSON string produced by saveSnapshot().
  */
 export function restoreSnapshot(editor: Editor, data: string): void {
-  // Parse the outer envelope
   let parsed: unknown;
   try {
     parsed = JSON.parse(data);
   } catch {
     throw new Error('Invalid snapshot JSON');
   }
-
-  // Version gate: reject legacy or unversioned payloads
-  if (
-    typeof parsed !== 'object' ||
-    parsed === null ||
-    !('_version' in parsed) ||
-    (parsed as Record<string, unknown>)['_version'] !== AUTOSAVE_VERSION
-  ) {
-    throw new Error(`Incompatible snapshot format (expected version ${AUTOSAVE_VERSION})`);
-  }
-
-  const sceneJSON = (parsed as { _version: number; data: unknown }).data;
-  const loader = new ObjectLoader();
-  const restored = loader.parse(sceneJSON) as Scene;
-
-  // Clone arrays — add/remove mutate the live children list during iteration
-  for (const child of [...editor.scene.children]) {
-    editor.scene.remove(child);
-  }
-  for (const child of [...restored.children]) {
-    editor.scene.add(child);
-  }
-
-  editor.selection.clear();
-  editor.events.emit('sceneGraphChanged');
+  editor.loadScene(parsed as SceneFile);
 }
 
 // ── AutoSave class ─────────────────────────────────────
 
 /**
- * Attaches to an Editor and debounces scene changes into localStorage.
+ * Attaches to an Editor's SceneDocument and debounces scene changes into localStorage.
  * Call dispose() when the editor tears down.
  */
 export class AutoSave {
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private readonly onSceneGraphChanged: () => void;
-  private readonly onObjectChanged: (object: Object3D) => void;
+  private readonly onNodeAdded:     () => void;
+  private readonly onNodeRemoved:   () => void;
+  private readonly onNodeChanged:   () => void;
+  private readonly onSceneReplaced: () => void;
 
   constructor(private readonly editor: Editor) {
-    this.onSceneGraphChanged = () => { this.scheduleSnapshot(); };
-    this.onObjectChanged = (_object: Object3D) => { this.scheduleSnapshot(); };
+    this.onNodeAdded = () => this.scheduleSnapshot();
+    this.onNodeRemoved = () => this.scheduleSnapshot();
+    this.onNodeChanged = () => this.scheduleSnapshot();
+    this.onSceneReplaced = () => this.scheduleSnapshot();
 
-    this.editor.events.on('sceneGraphChanged', this.onSceneGraphChanged);
-    this.editor.events.on('objectChanged', this.onObjectChanged);
+    editor.sceneDocument.events.on('nodeAdded', this.onNodeAdded);
+    editor.sceneDocument.events.on('nodeRemoved', this.onNodeRemoved);
+    editor.sceneDocument.events.on('nodeChanged', this.onNodeChanged);
+    editor.sceneDocument.events.on('sceneReplaced', this.onSceneReplaced);
   }
 
   /** Reset the debounce timer; on expiry, persist the current scene. */
@@ -114,7 +89,9 @@ export class AutoSave {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    this.editor.events.off('sceneGraphChanged', this.onSceneGraphChanged);
-    this.editor.events.off('objectChanged', this.onObjectChanged);
+    this.editor.sceneDocument.events.off('nodeAdded', this.onNodeAdded);
+    this.editor.sceneDocument.events.off('nodeRemoved', this.onNodeRemoved);
+    this.editor.sceneDocument.events.off('nodeChanged', this.onNodeChanged);
+    this.editor.sceneDocument.events.off('sceneReplaced', this.onSceneReplaced);
   }
 }
