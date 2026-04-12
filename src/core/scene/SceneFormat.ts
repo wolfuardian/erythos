@@ -16,6 +16,27 @@ export interface MeshComponent {
   source: string;
 }
 
+export interface GeometryComponent {
+  type: 'box' | 'sphere' | 'plane' | 'cylinder';
+}
+
+export interface MaterialComponent {
+  color: number;
+}
+
+export interface LightComponent {
+  type: 'directional' | 'ambient';
+  color: number;
+  intensity: number;
+}
+
+export interface CameraComponent {
+  type: 'perspective';
+  fov: number;
+  near: number;
+  far: number;
+}
+
 export interface SceneFile {
   version: number;
   nodes: SceneNode[];
