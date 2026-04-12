@@ -5,7 +5,8 @@
 不得修改 src/panels/、src/viewport/、src/components/、src/app/。
 
 ## 當前任務
-<!-- 主腦指派任務時填寫，開 PR 前清空 -->
+
+<!-- 目前無任務 -->
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。**進場第一步：`npm install`**
@@ -17,7 +18,8 @@
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
 ## Git 規則
-- commit 訊息格式：`[core] 簡述 (refs #N)`
+- 工作分支：`feat/glb-persistence`
+- commit 訊息格式：`[core] 簡述 (refs #119)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - build 通過後開 PR：
@@ -35,4 +37,13 @@
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
 
 ## 上報區（供主腦 review）
-<!-- Agent 在此記錄跨模組需求或發現 -->
+
+**#119 跨模組需求：App 層需呼叫 `editor.init()`**
+
+`Editor.init()` 是 async，目前 app 層（`src/app/`）仍直接使用 `new Editor()`，
+autosave 尚未初始化就提供 context 給 UI 會導致：
+1. autosave 為 `undefined`，dispose 時 crash
+2. 場景 restore 未完成，UI 顯示空場景
+
+需要協調 app 模組，在 `editor.init()` resolve 後再 mount UI / provide context。
+詳見 `.ai/memos/#119-glb-persistence.md`。
