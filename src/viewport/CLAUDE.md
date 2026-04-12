@@ -7,7 +7,7 @@
 ## 當前任務
 
 ## 通用 SOP
-遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+遵守 [開發成員 SOP](../../docs/dev-sop.md)。**進場第一步：`npm install`**
 
 ## 慣例
 - 用 SolidJS 的 onMount/onCleanup 管理 DOM 事件監聽
