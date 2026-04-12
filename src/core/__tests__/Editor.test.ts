@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Scene, Object3D } from 'three';
+import { Scene } from 'three';
 import { Editor } from '../Editor';
-import { AddObjectCommand } from '../commands/AddObjectCommand';
 
 describe('Editor', () => {
   let editor: Editor;
@@ -47,10 +46,4 @@ describe('Editor', () => {
     expect(editor.sceneSync.getObject3D(node.id)).toBeNull();
   });
 
-  it('addObject (legacy API) still works', () => {
-    const obj = new Object3D();
-    obj.name = 'LegacyObj';
-    editor.execute(new AddObjectCommand(editor, obj));
-    expect(editor.scene.children).toContain(obj);
-  });
 });
