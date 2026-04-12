@@ -12,8 +12,8 @@
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
 
 ## 慣例
-- 遵循現有 Command 模式（參考 AddObjectCommand.ts）
-- 事件發射順序：objectAdded → sceneGraphChanged（不能反過來）
+- 遵循現有 Command 模式（參考 AddNodeCommand.ts）
+- Command 直接操作 SceneDocument（addNode/removeNode/updateNode），不透過 Editor wrapper
 - Command 的 undo 中要檢查 selection 狀態並清除
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 
