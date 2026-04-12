@@ -48,7 +48,7 @@ const Toolbar: Component = () => {
   };
 
   const handleSave = () => {
-    const json = JSON.stringify(editor.scene.toJSON());
+    const json = JSON.stringify(editor.sceneDocument.serialize());
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
