@@ -1,7 +1,23 @@
-import { Scene, Object3D } from 'three';
-import type { SceneNode, MeshComponent } from './SceneFormat';
+import {
+  Scene, Object3D, Mesh, MeshStandardMaterial,
+  BoxGeometry, SphereGeometry, PlaneGeometry, CylinderGeometry,
+  DirectionalLight, AmbientLight, PerspectiveCamera,
+} from 'three';
+import type {
+  SceneNode, MeshComponent,
+  GeometryComponent, MaterialComponent, LightComponent, CameraComponent,
+} from './SceneFormat';
 import type { SceneDocument } from './SceneDocument';
 import type { ResourceCache } from './ResourceCache';
+
+function createGeometry(type: GeometryComponent['type']) {
+  switch (type) {
+    case 'box':      return new BoxGeometry();
+    case 'sphere':   return new SphereGeometry();
+    case 'plane':    return new PlaneGeometry();
+    case 'cylinder': return new CylinderGeometry();
+  }
+}
 
 /**
  * SceneSync — one-way sync from SceneDocument to Three.js Scene.
@@ -83,8 +99,21 @@ export class SceneSync {
     obj.name = node.name;
     this.applyTransform(obj, node);
 
-    // Attach mesh subtree from ResourceCache if available (graceful fallback on miss)
-    if (this.resourceCache && node.components.mesh) {
+    // Attach visual child based on component type (order: geometry > light > camera > mesh)
+    if (node.components.geometry && node.components.material) {
+      const geoComp = node.components.geometry as GeometryComponent;
+      const matComp = node.components.material as MaterialComponent;
+      obj.add(new Mesh(createGeometry(geoComp.type), new MeshStandardMaterial({ color: matComp.color })));
+    } else if (node.components.light) {
+      const lightComp = node.components.light as LightComponent;
+      const light = lightComp.type === 'directional'
+        ? new DirectionalLight(lightComp.color, lightComp.intensity)
+        : new AmbientLight(lightComp.color, lightComp.intensity);
+      obj.add(light);
+    } else if (node.components.camera) {
+      const camComp = node.components.camera as CameraComponent;
+      obj.add(new PerspectiveCamera(camComp.fov, 1, camComp.near, camComp.far));
+    } else if (this.resourceCache && node.components.mesh) {
       const meshComp = node.components.mesh as MeshComponent;
       const colonIdx = meshComp.source.indexOf(':');
       const filePath = colonIdx === -1 ? meshComp.source : meshComp.source.slice(0, colonIdx);
