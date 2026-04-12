@@ -5,7 +5,7 @@
 ## 一、開發（新功能）
 
 1. **環境準備**：worktree 沒有 `node_modules`，進場後先跑 `npm install`
-2. 讀自己模組的 CLAUDE.md，確認「當前任務」或「待修項」
+2. 讀自己模組的 CLAUDE.md，確認「當前任務」或「待修項」。若任務註明依賴其他 issue，確認該 issue 已 merge 進 master 再開工（否則 build 不會通過）
 3. 每個任務對應一個 GitHub issue，確認 issue 內容再動手
 4. 實作完成後 commit，格式：
    ```
