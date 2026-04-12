@@ -1,6 +1,7 @@
 import { Scene, Object3D } from 'three';
-import type { SceneNode } from './SceneFormat';
+import type { SceneNode, MeshComponent } from './SceneFormat';
 import type { SceneDocument } from './SceneDocument';
+import type { ResourceCache } from './ResourceCache';
 
 /**
  * SceneSync — one-way sync from SceneDocument to Three.js Scene.
@@ -11,6 +12,7 @@ import type { SceneDocument } from './SceneDocument';
 export class SceneSync {
   private readonly document: SceneDocument;
   private readonly threeScene: Scene;
+  private readonly resourceCache: ResourceCache | null;
 
   private readonly uuidToObj = new Map<string, Object3D>();
   private readonly objToUuid = new Map<Object3D, string>();
@@ -18,9 +20,10 @@ export class SceneSync {
   // Orphan tracking: child UUID → set of Object3D waiting for this parent
   private readonly pendingChildren = new Map<string, Set<Object3D>>();
 
-  constructor(document: SceneDocument, threeScene: Scene) {
+  constructor(document: SceneDocument, threeScene: Scene, resourceCache?: ResourceCache) {
     this.document = document;
     this.threeScene = threeScene;
+    this.resourceCache = resourceCache ?? null;
 
     // Bind named handlers so off() can match them
     this.onNodeAdded = this.onNodeAdded.bind(this);
@@ -79,6 +82,18 @@ export class SceneSync {
     const obj = new Object3D();
     obj.name = node.name;
     this.applyTransform(obj, node);
+
+    // Attach mesh subtree from ResourceCache if available (graceful fallback on miss)
+    if (this.resourceCache && node.components.mesh) {
+      const meshComp = node.components.mesh as MeshComponent;
+      const colonIdx = meshComp.source.indexOf(':');
+      const filePath = colonIdx === -1 ? meshComp.source : meshComp.source.slice(0, colonIdx);
+      const nodePath = colonIdx === -1 ? undefined : meshComp.source.slice(colonIdx + 1);
+      if (this.resourceCache.has(filePath)) {
+        const meshObj = this.resourceCache.cloneSubtree(filePath, nodePath);
+        if (meshObj) obj.add(meshObj);
+      }
+    }
 
     // Register in maps
     this.uuidToObj.set(node.id, obj);
