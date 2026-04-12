@@ -33,7 +33,7 @@
 
 ## SceneNode 欄位缺口（來源：#103 備忘錄）
 
-- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 和 PropertiesPanel 都已移除 type/visible 顯示。恢復方式：components 推導或新增 `nodeType` / `visible` 欄位 ⏳ 適用至 Phase 5 GLTF Import（components.mesh 會被寫入）
+- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 和 PropertiesPanel 都已移除 type/visible 顯示。Phase 5 已實作 `components.mesh`，可透過 `node.components.mesh` 推導節點是否為 Mesh。恢復 badge 為後續 UI 工作 ⏳ 適用至場景樹 badge 恢復
 - SetTransformCommand 的 oldValue 需呼叫端傳入（因 canMerge 合併機制，oldValue 必須是操作開始時的快照）。面板場景直接讀 `node.position` 即可，Gizmo 拖曳場景需用拖曳開始時的值 ⏳ 永久
 
 ## AutoSave / IO 架構（來源：#111 備忘錄）
@@ -41,6 +41,16 @@
 - AutoSave 監聽 `sceneDocument.events`（nodeAdded/nodeRemoved/nodeChanged/sceneReplaced），不監聯 editor.events 的 deprecated 事件 ⏳ 永久
 - `editor.clear()` 委派 `sceneDocument.deserialize({ version: 1, nodes: [] })`，由 SceneSync 自動清空 Three.js scene，不手動遍歷 `scene.children` ⏳ 永久
 - Storage key `erythos-autosave-v3` 使用 SceneFile 格式（`{ version: 1, nodes: [...] }`），v2 格式（Three.js JSON envelope）自動廢棄 ⏳ 適用至下次格式變更
+
+## SceneSync mesh 渲染架構（來源：#117 備忘錄）
+
+- SceneSync 替每個 SceneNode 建立 `new Object3D()` 作為 entity；有 `components.mesh` 時，cloned GLTF 子樹掛在它下面作為 child。transform/parent-child 由 SceneDocument 主導，渲染內容由 ResourceCache 提供 ⏳ 永久
+- `MeshComponent.source` 的 `filePath:nodePath` 切割邏輯放在 SceneSync，ResourceCache 只知道 filePath 為快取鍵 ⏳ 永久
+- ResourceCache 測試用 module-level `_mockParser` / `_clearParser` 注入 mock，避免 jsdom 無 WebGL 問題 ⏳ 永久
+
+## GLTF 轉換器注意事項（來源：#118 備忘錄）
+
+- GLTF 節點無 name 時，gltfConverter 用 `obj.type` 作 nodePath 片段（best-effort）。同 parent 下多個同 type 無名節點，cloneSubtree 路徑可能取到第一個——可考慮加 index 後綴改善 ⏳ 適用至 nodePath 精確化
 
 ## UUID ↔ Object3D 轉換層（來源：#105 備忘錄）
 
