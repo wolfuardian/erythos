@@ -5,7 +5,7 @@
 不得修改 src/panels/、src/viewport/、src/components/、src/app/。
 
 ## 當前任務
-<!-- 由主腦在派工時填寫 -->
+<!-- 由主腦在派任前填寫，開發完成後清空 -->
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
