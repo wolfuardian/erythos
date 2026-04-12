@@ -19,8 +19,8 @@
 
 ## Command 設計慣例（來源：#93, #94 備忘錄）
 
-- Command 內直接呼叫 `sceneDocument.addNode/removeNode`，不透過 `editor.addNode`，讓 Command 責務限於資料變更。後續若需 Editor 層事件，再統一決策 ⏳ 適用至 Command 層事件策略定案
-- API 改動（如 Selection Object3D → UUID）前，主腦應 grep 所有呼叫點列進任務描述，避免 agent 漏改跨模組消費端 ⏳ 永久
+- Command 內直接呼叫 `sceneDocument.addNode/removeNode`，不透過 `editor.addNode`。Phase 6 已移除 `editor.addNode/removeObject`，此為唯一正確路徑 ⏳ 永久
+- API 改動前，主腦應 grep 所有呼叫點列進任務描述，避免 agent 漏改跨模組消費端。**grep 必須包含 `.tsx`**（`--include="*.ts" --include="*.tsx"`），SolidJS 業務邏輯常在 .tsx 中（來源：#128 教訓） ⏳ 永久
 - RemoveNodeCommand 子孫快照用 BFS 收集，execute 反向移除（葉先），undo 正向恢復（父先），確保 parent 參照永遠有效 ⏳ 永久
 - 快照用 `structuredClone`（非 shallow spread），防止外部修改破壞 snapshot 不變性 ⏳ 永久
 - `Vec3` 是 tuple `[number, number, number]`，複製用 `[...value] as Vec3`，不能用 `.clone()` ⏳ 永久
