@@ -50,7 +50,7 @@
 
 ## Editor.init() 非同步初始化（來源：#119 備忘錄）
 
-- `Editor.init()` 是 async：hydrate → autosave restore → AutoSave 啟動。App 層必須 `await editor.init()` 後再提供 context，否則 `editor.autosave` 為 undefined 會 crash ⏳ 適用至 App.tsx 接線完成
+- `Editor.init()` 是 async：hydrate → autosave restore → AutoSave 啟動。App.tsx 在組件作用域呼叫 `editor.init()`，onCleanup 用 `void initPromise.then(() => editor.dispose())` 確保 init 完成後才 dispose ⏳ 永久
 - `Editor.autosave` 從 `readonly` 改為 `autosave!: AutoSave`（non-null assertion），因 async init 無法在 constructor 初始化 ⏳ 永久
 - vitest jsdom 無完整 IndexedDB，GlbStore 測試需 `fake-indexeddb` 套件或 mock ⏳ 永久
 
