@@ -1,6 +1,5 @@
 import { createSignal, For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
-import { restoreSnapshot } from '../../../core/scene/AutoSave';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { ErrorDialog } from '../../../components/ErrorDialog';
 
@@ -194,7 +193,8 @@ const ProjectPanel: Component = () => {
       if (!file) return;
       try {
         const data = await file.text();
-        restoreSnapshot(editor, data);
+        const parsed = JSON.parse(data);
+        editor.loadScene(parsed);
       } catch (e) {
         setErrorTitle('Load Failed');
         setErrorMsg(e instanceof Error ? e.message : String(e));
