@@ -1,7 +1,6 @@
 import { type Component, createSignal } from 'solid-js';
 import { ErrorDialog } from './ErrorDialog';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
-import { restoreSnapshot } from '../core/scene/AutoSave';
 import {
   BoxGeometry,
   SphereGeometry,
