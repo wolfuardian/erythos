@@ -5,7 +5,6 @@
 不得修改 src/core/、src/components/、src/app/、src/panels/properties/、src/panels/scene-tree/。
 
 ## 當前任務
-<!-- 由主腦填寫，無任務時留空 -->
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
