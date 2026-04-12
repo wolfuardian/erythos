@@ -103,6 +103,50 @@ describe('ResourceCache', () => {
     });
   });
 
+  // ── pipe-separated nodePath ──────────────────────────────────────────────────
+
+  describe('pipe-separated nodePath', () => {
+    beforeEach(async () => {
+      // root → Body → Arm → Hand
+      _mockParser(async () => {
+        const root = new Group();
+        root.name = 'root';
+        const body = new Object3D();
+        body.name = 'Body';
+        const arm = new Object3D();
+        arm.name = 'Arm';
+        const hand = new Object3D();
+        hand.name = 'Hand';
+        arm.add(hand);
+        body.add(arm);
+        root.add(body);
+        return { scene: root };
+      });
+      cache = new ResourceCache();
+      await cache.loadFromBuffer('model.glb', new ArrayBuffer(0));
+    });
+
+    it('finds two-level nested node (Body|Arm)', () => {
+      const clone = cache.cloneSubtree('model.glb', 'Body|Arm');
+      expect(clone).not.toBeNull();
+      expect(clone!.name).toBe('Arm');
+    });
+
+    it('finds three-level nested node (Body|Arm|Hand)', () => {
+      const clone = cache.cloneSubtree('model.glb', 'Body|Arm|Hand');
+      expect(clone).not.toBeNull();
+      expect(clone!.name).toBe('Hand');
+    });
+
+    it('returns null when first segment not found', () => {
+      expect(cache.cloneSubtree('model.glb', 'Nonexistent|Arm')).toBeNull();
+    });
+
+    it('returns null when intermediate segment not found', () => {
+      expect(cache.cloneSubtree('model.glb', 'Body|Nonexistent|Hand')).toBeNull();
+    });
+  });
+
   // ── evict ────────────────────────────────────────────────────────────────────
 
   describe('evict', () => {
