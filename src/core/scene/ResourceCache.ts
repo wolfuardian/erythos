@@ -46,7 +46,7 @@ export class ResourceCache {
    * 從快取中 clone 子樹並回傳。
    *
    * @param source  filePath（快取鍵，不含 nodePath）
-   * @param nodePath 可選；深度優先搜尋 name 相符的節點，省略時 clone 整個 scene root
+   * @param nodePath 可選；`|` 分隔的逐層路徑（如 `"Body|Arm|Hand"`），省略時 clone 整個 scene root
    * @returns 深度 clone 的 Object3D，快取未命中或節點不存在時回傳 null
    */
   cloneSubtree(source: string, nodePath?: string): Object3D | null {
@@ -55,7 +55,7 @@ export class ResourceCache {
 
     if (!nodePath) return root.clone(true);
 
-    const target = findByName(root, nodePath);
+    const target = findByPath(root, nodePath);
     return target ? target.clone(true) : null;
   }
 
@@ -75,12 +75,17 @@ export class ResourceCache {
   }
 }
 
-/** 深度優先搜尋：在 root 子樹中找到第一個 name 相符的節點。 */
-function findByName(root: Object3D, name: string): Object3D | null {
-  if (root.name === name) return root;
-  for (const child of root.children) {
-    const found = findByName(child, name);
-    if (found) return found;
+/**
+ * 按 `|` 分隔的路徑逐層導航：每個 segment 在當前節點的直接 children 中比對名稱。
+ * 例如 `"Body|Arm|Hand"` → root.children 找 Body → Body.children 找 Arm → Arm.children 找 Hand。
+ */
+function findByPath(root: Object3D, nodePath: string): Object3D | null {
+  const segments = nodePath.split('|');
+  let current: Object3D = root;
+  for (const segment of segments) {
+    const child = current.children.find(c => c.name === segment);
+    if (!child) return null;
+    current = child;
   }
-  return null;
+  return current;
 }
