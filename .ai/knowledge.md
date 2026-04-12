@@ -15,7 +15,7 @@
 
 - ~~`selectionChanged` payload 改為 `string[]`~~ — V2-2 已完成 ✅
 - ~~EditorEventMap nodeChanged / Bridge 監聽策略~~ — V2-6 已定案：Bridge 分兩層監聽（editor.events 管 UI 狀態，sceneDocument.events 管場景資料） ✅
-- `autosaveStatusChanged` 型別新增 `'idle'`，但 AutoSave 目前未 emit 此值，後續需確認是否補發 ⏳ 適用至 AutoSave 重構
+- ~~`autosaveStatusChanged` idle 狀態~~ — Phase 4 AutoSave 重構已定案：AutoSave 不需 emit `'idle'`，Bridge signal 初始值 `createSignal('idle')` 已覆蓋語意（來源：#111 備忘錄） ✅
 
 ## Command 設計慣例（來源：#93, #94 備忘錄）
 
@@ -35,6 +35,12 @@
 
 - SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 和 PropertiesPanel 都已移除 type/visible 顯示。恢復方式：components 推導或新增 `nodeType` / `visible` 欄位 ⏳ 適用至 Phase 5 GLTF Import（components.mesh 會被寫入）
 - SetTransformCommand 的 oldValue 需呼叫端傳入（因 canMerge 合併機制，oldValue 必須是操作開始時的快照）。面板場景直接讀 `node.position` 即可，Gizmo 拖曳場景需用拖曳開始時的值 ⏳ 永久
+
+## AutoSave / IO 架構（來源：#111 備忘錄）
+
+- AutoSave 監聽 `sceneDocument.events`（nodeAdded/nodeRemoved/nodeChanged/sceneReplaced），不監聯 editor.events 的 deprecated 事件 ⏳ 永久
+- `editor.clear()` 委派 `sceneDocument.deserialize({ version: 1, nodes: [] })`，由 SceneSync 自動清空 Three.js scene，不手動遍歷 `scene.children` ⏳ 永久
+- Storage key `erythos-autosave-v3` 使用 SceneFile 格式（`{ version: 1, nodes: [...] }`），v2 格式（Three.js JSON envelope）自動廢棄 ⏳ 適用至下次格式變更
 
 ## UUID ↔ Object3D 轉換層（來源：#105 備忘錄）
 

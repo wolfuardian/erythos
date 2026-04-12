@@ -5,13 +5,7 @@
 不得修改 src/core/、src/viewport/、src/components/、src/panels/。
 
 ## 當前任務
-
-**Issue #113 — ProjectPanel Load 適配 SceneDocument 格式**（依賴 #111）
-
-改動檔案：`src/app/panels/project/ProjectPanel.tsx`
-
-1. `performLoad`（行 188）：`restoreSnapshot(editor, data)` → `JSON.parse(data)` + `editor.loadScene(parsed)`
-2. 移除 `import { restoreSnapshot } from '../../../core/scene/AutoSave'`
+<!-- 由主腦在指派任務時填寫 -->
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。
@@ -21,8 +15,7 @@
 - 不在 app 層寫業務邏輯，只做膠水和佈局
 
 ## Git 規則
-- 工作分支：`feat/projectpanel-sceneformat`
-- commit 訊息格式：`[app] 簡述 (refs #113)`
+- commit 訊息格式：`[app] 簡述 (refs #N)`
 - 每完成一個任務步驟就 commit + push，不要等全部做完才一次 commit
 - 完成所有任務後，做一次 `npm run build` 確認無錯誤，再做最終 commit
 - build 通過後開 PR：
