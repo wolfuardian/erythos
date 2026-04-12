@@ -20,7 +20,7 @@ export class Editor {
   readonly history: History;
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
-  readonly autosave: AutoSave;
+  autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
 
@@ -34,8 +34,17 @@ export class Editor {
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
+  }
 
-    // Restore autosaved snapshot before any UI mounts, then start listening.
+  /**
+   * 非同步初始化：從 IndexedDB hydrate GLB 快取，再還原 autosave snapshot，最後啟動 AutoSave。
+   * App 層需在 editor 對外提供 context 前 await 此方法。
+   */
+  async init(): Promise<void> {
+    // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
+    await this.resourceCache.hydrate();
+
+    // 2. Restore autosaved scene snapshot (depends on resourceCache being populated).
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved !== null) {
       try {
@@ -44,6 +53,8 @@ export class Editor {
         console.warn('[Editor] Could not restore autosave snapshot:', err);
       }
     }
+
+    // 3. Start listening for scene changes and persisting them.
     this.autosave = new AutoSave(this);
   }
 
