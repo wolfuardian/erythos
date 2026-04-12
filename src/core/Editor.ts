@@ -8,7 +8,7 @@ import type { Command } from './Command';
 import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
-import type { SceneNode } from './scene/SceneFormat';
+import type { SceneNode, SceneFile } from './scene/SceneFormat';
 
 export class Editor {
   readonly scene: Scene;
@@ -109,22 +109,24 @@ export class Editor {
     this.events.emit('objectChanged', object);
   }
 
-  // ── Clear ─────────────────────────────────────────
+  // ── Scene load / clear ────────────────────────────
+
+  loadScene(data: SceneFile): void {
+    this.selection.clear();
+    this.selection.hover(null);
+    this.history.clear();
+    if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
+    // SceneSync listens to sceneReplaced on sceneDocument.events and rebuilds Three.js scene
+    this.sceneDocument.deserialize(data);
+  }
 
   clear(): void {
     this.selection.clear();
     this.selection.hover(null);
     this.history.clear();
-
-    // Remove all user objects (keep default children like lights if any)
-    const children = [...this.scene.children];
-    for (const child of children) {
-      this.scene.remove(child);
-    }
-
+    // sceneDocument.deserialize emits sceneReplaced → SceneSync.rebuild() clears Three.js scene
+    this.sceneDocument.deserialize({ version: 1, nodes: [] });
     this.events.emit('editorCleared');
-    this.events.emit('sceneReplaced');
-    this.events.emit('sceneGraphChanged');
   }
 
   dispose(): void {

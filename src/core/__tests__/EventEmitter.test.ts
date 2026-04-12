@@ -89,9 +89,9 @@ describe('Editor — emits UUID-based events', () => {
     expect(received).toEqual([node.id]);
   });
 
-  it('clear() emits sceneReplaced', () => {
+  it('clear() emits sceneReplaced on sceneDocument', () => {
     let called = false;
-    editor.events.on('sceneReplaced', () => { called = true; });
+    editor.sceneDocument.events.on('sceneReplaced', () => { called = true; });
     editor.clear();
     expect(called).toBe(true);
   });
