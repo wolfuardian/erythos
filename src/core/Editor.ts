@@ -1,4 +1,4 @@
-import { Scene, Object3D } from 'three';
+import { Scene } from 'three';
 import { EventEmitter } from './EventEmitter';
 import type { TransformMode } from './EventEmitter';
 import { History } from './History';
@@ -83,33 +83,6 @@ export class Editor {
   removeNode(uuid: string): void {
     this.sceneDocument.removeNode(uuid);
     this.events.emit('nodeRemoved', uuid);
-  }
-
-  // ── Scene management (legacy Three.js API) ────────
-
-  addObject(object: Object3D, parent?: Object3D): void {
-    const target = parent ?? this.scene;
-    target.add(object);
-    this.events.emit('objectAdded', object);
-    this.events.emit('sceneGraphChanged');
-  }
-
-  removeObject(object: Object3D): void {
-    const parent = object.parent;
-    if (!parent) return;
-    parent.remove(object);
-    if (this.selection.has(object.uuid)) {
-      this.selection.remove(object.uuid);
-    }
-    if (this.selection.hovered === object.uuid) {
-      this.selection.hover(null);
-    }
-    this.events.emit('objectRemoved', object, parent);
-    this.events.emit('sceneGraphChanged');
-  }
-
-  objectChanged(object: Object3D): void {
-    this.events.emit('objectChanged', object);
   }
 
   // ── Scene load / clear ────────────────────────────
