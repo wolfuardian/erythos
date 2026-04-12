@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Object3D } from 'three';
 import { Editor } from '../../Editor';
 import { saveSnapshot, restoreSnapshot, hasSnapshot } from '../AutoSave';
 
@@ -21,34 +20,32 @@ describe('AutoSave', () => {
     expect(hasSnapshot()).toBe(false);
   });
 
-  it('saveSnapshot serializes scene children by name', () => {
-    const obj = new Object3D();
-    obj.name = 'TestObject';
-    editor.addObject(obj);
+  it('saveSnapshot serializes scene nodes by name', () => {
+    const node = editor.sceneDocument.createNode('TestObject');
+    editor.sceneDocument.addNode(node);
 
     const snapshot = saveSnapshot(editor);
     expect(snapshot).toContain('TestObject');
   });
 
-  it('restoreSnapshot round-trips scene children', () => {
-    const obj = new Object3D();
-    obj.name = 'TestObject';
-    editor.addObject(obj);
+  it('restoreSnapshot round-trips scene nodes', () => {
+    const node = editor.sceneDocument.createNode('TestObject');
+    editor.sceneDocument.addNode(node);
 
     const snapshot = saveSnapshot(editor);
 
     editor.clear();
-    expect(editor.scene.children).toHaveLength(0);
+    expect(editor.sceneDocument.getAllNodes()).toHaveLength(0);
 
     restoreSnapshot(editor, snapshot);
-    expect(editor.scene.children).toHaveLength(1);
-    expect(editor.scene.children[0].name).toBe('TestObject');
+    expect(editor.sceneDocument.getAllNodes()).toHaveLength(1);
+    expect(editor.sceneDocument.getAllNodes()[0].name).toBe('TestObject');
   });
 
   it('restoreSnapshot clears selection', () => {
-    const obj = new Object3D();
-    editor.addObject(obj);
-    editor.selection.select(obj.uuid);
+    const node = editor.sceneDocument.createNode('TestObject');
+    editor.sceneDocument.addNode(node);
+    editor.selection.select(node.id);
     expect(editor.selection.count).toBe(1);
 
     const snapshot = saveSnapshot(editor);
@@ -57,13 +54,13 @@ describe('AutoSave', () => {
     expect(editor.selection.count).toBe(0);
   });
 
-  it('restoreSnapshot emits sceneGraphChanged', () => {
-    const obj = new Object3D();
-    editor.addObject(obj);
+  it('restoreSnapshot emits sceneReplaced on sceneDocument', () => {
+    const node = editor.sceneDocument.createNode('TestObject');
+    editor.sceneDocument.addNode(node);
     const snapshot = saveSnapshot(editor);
 
     let emitted = false;
-    editor.events.on('sceneGraphChanged', () => { emitted = true; });
+    editor.sceneDocument.events.on('sceneReplaced', () => { emitted = true; });
 
     restoreSnapshot(editor, snapshot);
     expect(emitted).toBe(true);
@@ -74,7 +71,7 @@ describe('AutoSave', () => {
   });
 
   it('restoreSnapshot throws on incompatible version', () => {
-    const oldFormatData = JSON.stringify({ _version: 1, data: {} });
-    expect(() => restoreSnapshot(editor, oldFormatData)).toThrow('Incompatible snapshot format');
+    const wrongVersion = JSON.stringify({ version: 99, nodes: [] });
+    expect(() => restoreSnapshot(editor, wrongVersion)).toThrow('Unsupported scene version: 99');
   });
 });
