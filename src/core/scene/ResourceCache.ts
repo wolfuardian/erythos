@@ -1,5 +1,6 @@
 import { Group, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as GlbStore from './GlbStore';
 
 type ParserFn = (buffer: ArrayBuffer, path: string) => Promise<{ scene: Group }>;
 
@@ -39,7 +40,38 @@ export class ResourceCache {
     const parser = getParser();
     const gltf = await parser(buffer, '');
     this.cache.set(source, gltf.scene);
+    // Fire-and-forget: persist buffer to IndexedDB for cross-reload recovery.
+    GlbStore.put(source, buffer).catch(err =>
+      console.warn('[ResourceCache] GlbStore.put failed:', err)
+    );
     return gltf.scene;
+  }
+
+  /**
+   * 從 IndexedDB 讀取所有已存的 GLB buffer，解析後填充記憶體快取。
+   * 應在 autosave restore 前呼叫，確保 SceneSync rebuild 時 mesh 已就位。
+   */
+  async hydrate(): Promise<void> {
+    let allKeys: string[];
+    try {
+      allKeys = await GlbStore.keys();
+    } catch (err) {
+      console.warn('[ResourceCache] hydrate: failed to read IndexedDB keys:', err);
+      return;
+    }
+    console.log(`[ResourceCache] hydrate: restoring ${allKeys.length} GLB(s) from IndexedDB`);
+    const parser = getParser();
+    for (const source of allKeys) {
+      try {
+        const buffer = await GlbStore.get(source);
+        if (!buffer) continue;
+        const gltf = await parser(buffer, '');
+        this.cache.set(source, gltf.scene);
+        console.log(`[ResourceCache] hydrate: restored "${source}"`);
+      } catch (err) {
+        console.warn(`[ResourceCache] hydrate: failed to restore "${source}":`, err);
+      }
+    }
   }
 
   /**
@@ -67,11 +99,17 @@ export class ResourceCache {
   /** 移除快取中的特定 source；source 不存在時為 no-op。 */
   evict(source: string): void {
     this.cache.delete(source);
+    GlbStore.remove(source).catch(err =>
+      console.warn('[ResourceCache] GlbStore.remove failed:', err)
+    );
   }
 
   /** 清除所有快取項目。 */
   clear(): void {
     this.cache.clear();
+    GlbStore.clear().catch(err =>
+      console.warn('[ResourceCache] GlbStore.clear failed:', err)
+    );
   }
 }
 
