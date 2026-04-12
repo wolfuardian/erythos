@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Scene, Object3D, Group } from 'three';
+import { Scene, Object3D, Group, Mesh, DirectionalLight, AmbientLight, PerspectiveCamera } from 'three';
 import { SceneDocument } from '../SceneDocument';
 import { SceneSync } from '../SceneSync';
 import type { SceneNode } from '../SceneFormat';
@@ -323,6 +323,71 @@ describe('SceneSync', () => {
       const obj = sync.getObject3D('mesh-node');
       expect(obj).not.toBeNull();
       expect(obj!.children).toHaveLength(0);
+    });
+  });
+
+  // ── geometry + material component ───────────────────────────────────────────
+
+  describe('components.geometry + material', () => {
+    it('attaches a Mesh child to the entity Object3D', () => {
+      doc.addNode(makeNode({
+        id: 'geo-node',
+        components: { geometry: { type: 'box' }, material: { color: 0xff0000 } },
+      }));
+      const obj = sync.getObject3D('geo-node')!;
+      expect(obj.children).toHaveLength(1);
+      expect(obj.children[0]).toBeInstanceOf(Mesh);
+    });
+
+    it('supports all geometry types without throwing', () => {
+      for (const type of ['box', 'sphere', 'plane', 'cylinder'] as const) {
+        doc.addNode(makeNode({
+          id: `geo-${type}`,
+          components: { geometry: { type }, material: { color: 0xffffff } },
+        }));
+        const obj = sync.getObject3D(`geo-${type}`)!;
+        expect(obj.children).toHaveLength(1);
+      }
+    });
+  });
+
+  // ── light component ──────────────────────────────────────────────────────────
+
+  describe('components.light', () => {
+    it('attaches DirectionalLight for type directional', () => {
+      doc.addNode(makeNode({
+        id: 'dir-light',
+        components: { light: { type: 'directional', color: 0xffffff, intensity: 1 } },
+      }));
+      const obj = sync.getObject3D('dir-light')!;
+      expect(obj.children).toHaveLength(1);
+      expect(obj.children[0]).toBeInstanceOf(DirectionalLight);
+      expect((obj.children[0] as DirectionalLight).intensity).toBe(1);
+    });
+
+    it('attaches AmbientLight for type ambient', () => {
+      doc.addNode(makeNode({
+        id: 'amb-light',
+        components: { light: { type: 'ambient', color: 0x404040, intensity: 0.5 } },
+      }));
+      const obj = sync.getObject3D('amb-light')!;
+      expect(obj.children).toHaveLength(1);
+      expect(obj.children[0]).toBeInstanceOf(AmbientLight);
+    });
+  });
+
+  // ── camera component ─────────────────────────────────────────────────────────
+
+  describe('components.camera', () => {
+    it('attaches PerspectiveCamera with correct fov', () => {
+      doc.addNode(makeNode({
+        id: 'cam-node',
+        components: { camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 } },
+      }));
+      const obj = sync.getObject3D('cam-node')!;
+      expect(obj.children).toHaveLength(1);
+      expect(obj.children[0]).toBeInstanceOf(PerspectiveCamera);
+      expect((obj.children[0] as PerspectiveCamera).fov).toBe(50);
     });
   });
 });
