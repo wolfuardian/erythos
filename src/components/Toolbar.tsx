@@ -68,8 +68,7 @@ const Toolbar: Component = () => {
       try {
         const data = await file.text();
         const parsed = JSON.parse(data);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (editor as any).loadScene(parsed); // loadScene added by #111
+        editor.loadScene(parsed);
       } catch (e: any) {
         setErrorTitle('Load Failed');
         setErrorMsg(e.message || String(e));
