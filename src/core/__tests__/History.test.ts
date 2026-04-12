@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Object3D } from 'three';
 import { Editor } from '../Editor';
-import { AddObjectCommand } from '../commands/AddObjectCommand';
-import { RemoveObjectCommand } from '../commands/RemoveObjectCommand';
+import { AddNodeCommand } from '../commands/AddNodeCommand';
+import { RemoveNodeCommand } from '../commands/RemoveNodeCommand';
 
 describe('History', () => {
   let editor: Editor;
@@ -18,50 +17,44 @@ describe('History', () => {
     vi.useRealTimers();
   });
 
-  it('addObject then undo removes the object', () => {
-    const obj = new Object3D();
-    obj.name = 'Cube';
-
-    editor.execute(new AddObjectCommand(editor, obj));
-    expect(editor.scene.children).toHaveLength(1);
+  it('addNode then undo removes the node', () => {
+    const node = editor.sceneDocument.createNode('Cube');
+    editor.execute(new AddNodeCommand(editor, node));
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
 
     editor.undo();
-    expect(editor.scene.children).toHaveLength(0);
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
   });
 
-  it('addObject → removeObject → undo restores the object', () => {
-    const obj = new Object3D();
-    obj.name = 'Cube';
-
-    editor.execute(new AddObjectCommand(editor, obj));
-    editor.execute(new RemoveObjectCommand(editor, obj));
-    expect(editor.scene.children).toHaveLength(0);
+  it('addNode → removeNode → undo restores the node', () => {
+    const node = editor.sceneDocument.createNode('Cube');
+    editor.execute(new AddNodeCommand(editor, node));
+    editor.execute(new RemoveNodeCommand(editor, node.id));
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
 
     editor.undo();
-    expect(editor.scene.children).toHaveLength(1);
-    expect(editor.scene.children[0]).toBe(obj);
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
   });
 
   it('redo re-applies the last undone command', () => {
-    const obj = new Object3D();
+    const node = editor.sceneDocument.createNode('Cube');
+    editor.execute(new AddNodeCommand(editor, node));
+    editor.execute(new RemoveNodeCommand(editor, node.id));
+    editor.undo(); // undo remove → node restored
+    editor.redo(); // redo remove → node gone again
 
-    editor.execute(new AddObjectCommand(editor, obj));
-    editor.execute(new RemoveObjectCommand(editor, obj));
-    editor.undo(); // undo remove → obj restored
-    editor.redo(); // redo remove → obj gone again
-
-    expect(editor.scene.children).toHaveLength(0);
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
   });
 
   it('executing a new command clears the redo stack', () => {
-    const obj1 = new Object3D();
-    const obj2 = new Object3D();
+    const node1 = editor.sceneDocument.createNode('Cube1');
+    const node2 = editor.sceneDocument.createNode('Cube2');
 
-    editor.execute(new AddObjectCommand(editor, obj1));
+    editor.execute(new AddNodeCommand(editor, node1));
     editor.undo();
     expect(editor.history.canRedo).toBe(true);
 
-    editor.execute(new AddObjectCommand(editor, obj2));
+    editor.execute(new AddNodeCommand(editor, node2));
     expect(editor.history.canRedo).toBe(false);
   });
 });
