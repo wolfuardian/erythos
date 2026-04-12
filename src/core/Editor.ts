@@ -8,12 +8,14 @@ import type { Command } from './Command';
 import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
+import { ResourceCache } from './scene/ResourceCache';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
 
 export class Editor {
   readonly scene: Scene;
   readonly sceneDocument: SceneDocument;
   readonly sceneSync: SceneSync;
+  readonly resourceCache: ResourceCache;
   readonly events: EventEmitter;
   readonly history: History;
   readonly selection: Selection;
@@ -26,7 +28,8 @@ export class Editor {
     this.scene = new Scene();
     this.scene.name = 'Scene';
     this.sceneDocument = new SceneDocument();
-    this.sceneSync = new SceneSync(this.sceneDocument, this.scene);
+    this.resourceCache = new ResourceCache();
+    this.sceneSync = new SceneSync(this.sceneDocument, this.scene, this.resourceCache);
     this.events = new EventEmitter();
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
