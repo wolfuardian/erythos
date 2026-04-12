@@ -25,6 +25,7 @@ const COMPONENTS: Record<string, PanelComponent> = {
 const App: Component = () => {
   const editor = new Editor();
   const bridge = createEditorBridge(editor);
+  const initPromise = editor.init();
 
   onMount(() => {
     // Register keybindings
@@ -47,7 +48,7 @@ const App: Component = () => {
 
   onCleanup(() => {
     bridge.dispose();
-    editor.dispose();
+    void initPromise.then(() => editor.dispose());
   });
 
   return (
