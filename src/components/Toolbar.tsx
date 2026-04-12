@@ -1,20 +1,8 @@
 import { type Component, createSignal } from 'solid-js';
 import { ErrorDialog } from './ErrorDialog';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
-import {
-  BoxGeometry,
-  SphereGeometry,
-  PlaneGeometry,
-  CylinderGeometry,
-  Mesh,
-  MeshStandardMaterial,
-  DirectionalLight,
-  AmbientLight,
-  PerspectiveCamera,
-  Group,
-} from 'three';
 import { useEditor } from '../app/EditorContext';
-import { AddObjectCommand } from '../core/commands/AddObjectCommand';
+import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import type { TransformMode } from '../core/EventEmitter';
 import { clearSavedLayout } from '../app/layout/defaultLayout';
 
@@ -79,51 +67,49 @@ const Toolbar: Component = () => {
     input.click();
   };
 
-  const addMesh = (name: string, geometry: BoxGeometry | SphereGeometry | PlaneGeometry | CylinderGeometry) => {
-    const material = new MeshStandardMaterial({ color: 0x808080 });
-    const mesh = new Mesh(geometry, material);
-    mesh.name = name;
-    editor.execute(new AddObjectCommand(editor, mesh));
+  const addMesh = (name: string, type: 'box' | 'sphere' | 'plane' | 'cylinder') => {
+    const node = editor.sceneDocument.createNode(name);
+    node.components = { geometry: { type }, material: { color: 0x808080 } };
+    editor.execute(new AddNodeCommand(editor, node));
   };
 
   const addObject = (type: string) => {
     switch (type) {
       case 'cube':
-        addMesh('Cube', new BoxGeometry(1, 1, 1));
+        addMesh('Cube', 'box');
         break;
       case 'sphere':
-        addMesh('Sphere', new SphereGeometry(0.5, 32, 16));
+        addMesh('Sphere', 'sphere');
         break;
       case 'plane':
-        addMesh('Plane', new PlaneGeometry(2, 2));
+        addMesh('Plane', 'plane');
         break;
       case 'cylinder':
-        addMesh('Cylinder', new CylinderGeometry(0.5, 0.5, 1, 32));
+        addMesh('Cylinder', 'cylinder');
         break;
       case 'directional-light': {
-        const light = new DirectionalLight(0xffffff, 1);
-        light.name = 'Directional Light';
-        light.position.set(2, 4, 3);
-        editor.execute(new AddObjectCommand(editor, light));
+        const node = editor.sceneDocument.createNode('Directional Light');
+        node.components = { light: { type: 'directional', color: 0xffffff, intensity: 1 } };
+        node.position = [2, 4, 3];
+        editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'ambient-light': {
-        const light = new AmbientLight(0xffffff, 0.4);
-        light.name = 'Ambient Light';
-        editor.execute(new AddObjectCommand(editor, light));
+        const node = editor.sceneDocument.createNode('Ambient Light');
+        node.components = { light: { type: 'ambient', color: 0xffffff, intensity: 0.4 } };
+        editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'camera': {
-        const cam = new PerspectiveCamera(50, 1, 0.1, 100);
-        cam.name = 'Camera';
-        cam.position.set(0, 2, 5);
-        editor.execute(new AddObjectCommand(editor, cam));
+        const node = editor.sceneDocument.createNode('Camera');
+        node.components = { camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 } };
+        node.position = [0, 2, 5];
+        editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'group': {
-        const group = new Group();
-        group.name = 'Group';
-        editor.execute(new AddObjectCommand(editor, group));
+        const node = editor.sceneDocument.createNode('Group');
+        editor.execute(new AddNodeCommand(editor, node));
         break;
       }
     }
