@@ -1,31 +1,29 @@
-import type { Group, Object3D } from 'three';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
+import type { SceneNode } from '../scene/SceneFormat';
 
 export class ImportGLTFCommand extends Command {
   readonly type = 'ImportGLTF';
-  private group: Group;
-  private parent: Object3D;
+  private readonly nodes: SceneNode[];
 
-  constructor(editor: Editor, group: Group, parent?: Object3D) {
+  constructor(editor: Editor, nodes: SceneNode[]) {
     super(editor);
-    this.group = group;
-    this.parent = parent ?? editor.scene;
+    this.nodes = structuredClone(nodes);
   }
 
   execute(): void {
-    this.parent.add(this.group);
-    this.editor.events.emit('objectAdded', this.group);
-    this.editor.events.emit('sceneGraphChanged');
-    this.editor.selection.select(this.group.uuid);
+    for (const node of this.nodes) {
+      this.editor.sceneDocument.addNode(node);
+    }
+    if (this.nodes.length > 0) {
+      this.editor.selection.select(this.nodes[0].id);
+    }
   }
 
   undo(): void {
-    this.parent.remove(this.group);
-    this.editor.events.emit('objectRemoved', this.group, this.parent);
-    this.editor.events.emit('sceneGraphChanged');
-    if (this.editor.selection.has(this.group.uuid)) {
-      this.editor.selection.remove(this.group.uuid);
+    this.editor.selection.clear();
+    for (const node of [...this.nodes].reverse()) {
+      this.editor.sceneDocument.removeNode(node.id);
     }
   }
 }
