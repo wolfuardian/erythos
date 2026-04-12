@@ -1,5 +1,3 @@
-import type { Object3D } from 'three';
-
 // ── Interaction types ──────────────────────────────────
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
@@ -23,16 +21,6 @@ export interface EditorEventMap {
   editorCleared:          [];
   autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved'];
 
-  // ── Deprecated legacy events — DO NOT remove until Phase V2 completes ──
-  /** @deprecated Use nodeAdded */
-  objectAdded:            [object: Object3D];
-  /** @deprecated Use nodeRemoved */
-  objectRemoved:          [object: Object3D, previousParent: Object3D];
-  /** @deprecated Use nodeChanged */
-  objectChanged:          [object: Object3D];
-  /** @deprecated Use sceneReplaced or nodeAdded/nodeRemoved */
-  sceneGraphChanged:      [];
-  // objectSelected and objectHovered removed — Selection now emits only selectionChanged / hoverChanged
 }
 
 // ── Typed EventEmitter ─────────────────────────────────
