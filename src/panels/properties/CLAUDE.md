@@ -8,7 +8,7 @@
 <!-- 由主腦填寫，無任務時留空 -->
 
 ## 通用 SOP
-遵守 [開發成員 SOP](../../../docs/dev-sop.md)。
+遵守 [開發成員 SOP](../../../docs/dev-sop.md)。**進場第一步：`npm install`**
 
 ## 慣例
 - 透過 bridge signal 取得選中物體，不直接操作 core
