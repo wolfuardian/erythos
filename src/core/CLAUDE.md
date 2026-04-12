@@ -5,7 +5,8 @@
 不得修改 src/panels/、src/viewport/、src/components/、src/app/。
 
 ## 當前任務
-<!-- 主腦指派任務時填寫，開 PR 前清空 -->
+
+<!-- 由主腦於任務開始時填寫 -->
 
 ## 通用 SOP
 遵守 [開發成員 SOP](../../docs/dev-sop.md)。**進場第一步：`npm install`**
