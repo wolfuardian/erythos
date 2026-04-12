@@ -2,9 +2,8 @@ import { onMount, onCleanup, createEffect, createSignal, Show, type Component } 
 import type { Object3D } from 'three';
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
-import { SetPositionCommand } from '../../core/commands/SetPositionCommand';
-import { SetRotationCommand } from '../../core/commands/SetRotationCommand';
-import { SetScaleCommand } from '../../core/commands/SetScaleCommand';
+import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
+import type { Vec3 } from '../../core/scene/SceneFormat';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 
@@ -113,27 +112,42 @@ const ViewportPanel: Component = () => {
         for (let i = 0; i < objects.length; i++) {
           const obj = objects[i];
           const start = startTransforms[i];
+          const uuid = editor.sceneSync.getUUID(obj);
+          if (!uuid) continue;
           if (!obj.position.equals(start.pos)) {
-            editor.execute(new SetPositionCommand(editor, obj, obj.position.clone(), start.pos));
+            const newPos: Vec3 = [obj.position.x, obj.position.y, obj.position.z];
+            const oldPos: Vec3 = [start.pos.x, start.pos.y, start.pos.z];
+            editor.execute(new SetTransformCommand(editor, uuid, 'position', newPos, oldPos));
           }
           if (!obj.rotation.equals(start.rot)) {
-            editor.execute(new SetRotationCommand(editor, obj, obj.rotation.clone(), start.rot));
+            const newRot: Vec3 = [obj.rotation.x, obj.rotation.y, obj.rotation.z];
+            const oldRot: Vec3 = [start.rot.x, start.rot.y, start.rot.z];
+            editor.execute(new SetTransformCommand(editor, uuid, 'rotation', newRot, oldRot));
           }
           if (!obj.scale.equals(start.scale)) {
-            editor.execute(new SetScaleCommand(editor, obj, obj.scale.clone(), start.scale));
+            const newScale: Vec3 = [obj.scale.x, obj.scale.y, obj.scale.z];
+            const oldScale: Vec3 = [start.scale.x, start.scale.y, start.scale.z];
+            editor.execute(new SetTransformCommand(editor, uuid, 'scale', newScale, oldScale));
           }
         }
       },
       onTransformEnd: (obj, startPos, startRot, startScale) => {
-        // Create appropriate command based on what changed
+        const uuid = editor.sceneSync.getUUID(obj);
+        if (!uuid) return;
         if (!obj.position.equals(startPos)) {
-          editor.execute(new SetPositionCommand(editor, obj, obj.position.clone(), startPos));
+          const newPos: Vec3 = [obj.position.x, obj.position.y, obj.position.z];
+          const oldPos: Vec3 = [startPos.x, startPos.y, startPos.z];
+          editor.execute(new SetTransformCommand(editor, uuid, 'position', newPos, oldPos));
         }
         if (!obj.rotation.equals(startRot)) {
-          editor.execute(new SetRotationCommand(editor, obj, obj.rotation.clone(), startRot));
+          const newRot: Vec3 = [obj.rotation.x, obj.rotation.y, obj.rotation.z];
+          const oldRot: Vec3 = [startRot.x, startRot.y, startRot.z];
+          editor.execute(new SetTransformCommand(editor, uuid, 'rotation', newRot, oldRot));
         }
         if (!obj.scale.equals(startScale)) {
-          editor.execute(new SetScaleCommand(editor, obj, obj.scale.clone(), startScale));
+          const newScale: Vec3 = [obj.scale.x, obj.scale.y, obj.scale.z];
+          const oldScale: Vec3 = [startScale.x, startScale.y, startScale.z];
+          editor.execute(new SetTransformCommand(editor, uuid, 'scale', newScale, oldScale));
         }
       },
     });
