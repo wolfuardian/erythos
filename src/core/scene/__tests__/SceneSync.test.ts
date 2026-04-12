@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Scene, Object3D } from 'three';
+import { Scene, Object3D, Group } from 'three';
 import { SceneDocument } from '../SceneDocument';
 import { SceneSync } from '../SceneSync';
 import type { SceneNode } from '../SceneFormat';
+import type { ResourceCache } from '../ResourceCache';
 
 function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
   return {
@@ -245,6 +246,83 @@ describe('SceneSync', () => {
       doc.addNode(makeNode({ id: 'a' }));
       sync.dispose();
       expect(sync.getObject3D('a')).toBeNull();
+    });
+  });
+
+  // ── mesh component ───────────────────────────────────────────────────────────
+
+  describe('components.mesh', () => {
+    function makeMockCache(hit: boolean): ResourceCache {
+      const meshObj = new Object3D();
+      meshObj.name = 'cloned-mesh';
+      return {
+        has: () => hit,
+        cloneSubtree: () => (hit ? meshObj.clone(true) : null),
+        loadFromBuffer: async () => new Group(),
+        evict: () => {},
+        clear: () => {},
+      } as unknown as ResourceCache;
+    }
+
+    it('cache hit: attaches cloned subtree as child of node Object3D', () => {
+      const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
+      doc.addNode(makeNode({
+        id: 'mesh-node',
+        components: { mesh: { source: 'model.glb' } },
+      }));
+      const obj = syncWithCache.getObject3D('mesh-node')!;
+      expect(obj.children).toHaveLength(1);
+      expect(obj.children[0].name).toBe('cloned-mesh');
+    });
+
+    it('cache hit with nodePath: parses filePath:nodePath correctly', () => {
+      let capturedFilePath = '';
+      let capturedNodePath: string | undefined;
+      const meshObj = new Object3D();
+      meshObj.name = 'Torso';
+      const mockCache = {
+        has: (fp: string) => { capturedFilePath = fp; return true; },
+        cloneSubtree: (_fp: string, np?: string) => { capturedNodePath = np; return meshObj.clone(true); },
+        loadFromBuffer: async () => new Group(),
+        evict: () => {},
+        clear: () => {},
+      } as unknown as ResourceCache;
+
+      const syncWithCache = new SceneSync(doc, scene, mockCache);
+      doc.addNode(makeNode({
+        id: 'mesh-node',
+        components: { mesh: { source: 'character.glb:Torso' } },
+      }));
+      expect(capturedFilePath).toBe('character.glb');
+      expect(capturedNodePath).toBe('Torso');
+    });
+
+    it('cache miss: falls back to empty Object3D (no children)', () => {
+      const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
+      doc.addNode(makeNode({
+        id: 'mesh-node',
+        components: { mesh: { source: 'missing.glb' } },
+      }));
+      const obj = syncWithCache.getObject3D('mesh-node')!;
+      expect(obj.children).toHaveLength(0);
+    });
+
+    it('no mesh component: Object3D has no extra children', () => {
+      const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
+      doc.addNode(makeNode({ id: 'plain-node', components: {} }));
+      const obj = syncWithCache.getObject3D('plain-node')!;
+      expect(obj.children).toHaveLength(0);
+    });
+
+    it('no resourceCache: node with mesh component still creates Object3D', () => {
+      // sync (no cache) is the default created in beforeEach
+      doc.addNode(makeNode({
+        id: 'mesh-node',
+        components: { mesh: { source: 'model.glb' } },
+      }));
+      const obj = sync.getObject3D('mesh-node');
+      expect(obj).not.toBeNull();
+      expect(obj!.children).toHaveLength(0);
     });
   });
 });
