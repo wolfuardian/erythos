@@ -48,6 +48,12 @@
 - `MeshComponent.source` 的 `filePath:nodePath` 切割邏輯放在 SceneSync，ResourceCache 只知道 filePath 為快取鍵 ⏳ 永久
 - ResourceCache 測試用 module-level `_mockParser` / `_clearParser` 注入 mock，避免 jsdom 無 WebGL 問題 ⏳ 永久
 
+## Editor.init() 非同步初始化（來源：#119 備忘錄）
+
+- `Editor.init()` 是 async：hydrate → autosave restore → AutoSave 啟動。App 層必須 `await editor.init()` 後再提供 context，否則 `editor.autosave` 為 undefined 會 crash ⏳ 適用至 App.tsx 接線完成
+- `Editor.autosave` 從 `readonly` 改為 `autosave!: AutoSave`（non-null assertion），因 async init 無法在 constructor 初始化 ⏳ 永久
+- vitest jsdom 無完整 IndexedDB，GlbStore 測試需 `fake-indexeddb` 套件或 mock ⏳ 永久
+
 ## GLTF 轉換器注意事項（來源：#118 備忘錄）
 
 - GLTF 節點無 name 時，gltfConverter 用 `obj.type` 作 nodePath 片段（best-effort）。同 parent 下多個同 type 無名節點，cloneSubtree 路徑可能取到第一個——可考慮加 index 後綴改善 ⏳ 適用至 nodePath 精確化
