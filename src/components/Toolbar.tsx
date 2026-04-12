@@ -1,7 +1,6 @@
 import { type Component, createSignal } from 'solid-js';
 import { ErrorDialog } from './ErrorDialog';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
-import { restoreSnapshot } from '../core/scene/AutoSave';
 import {
   BoxGeometry,
   SphereGeometry,
@@ -48,7 +47,7 @@ const Toolbar: Component = () => {
   };
 
   const handleSave = () => {
-    const json = JSON.stringify(editor.scene.toJSON());
+    const json = JSON.stringify(editor.sceneDocument.serialize());
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -68,7 +67,8 @@ const Toolbar: Component = () => {
       setLoading(true);
       try {
         const data = await file.text();
-        restoreSnapshot(editor, data);
+        const parsed = JSON.parse(data);
+        editor.loadScene(parsed);
       } catch (e: any) {
         setErrorTitle('Load Failed');
         setErrorMsg(e.message || String(e));
