@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Object3D } from 'three';
 import { EventEmitter } from '../EventEmitter';
 import { Editor } from '../Editor';
 
@@ -140,46 +139,3 @@ describe('Selection — emits hoverChanged', () => {
   });
 });
 
-// ── Backward compat: deprecated legacy events still fire ─────────────────────
-
-describe('EventEmitter — deprecated legacy events still work', () => {
-  let editor: Editor;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    localStorage.clear();
-    editor = new Editor();
-  });
-
-  afterEach(() => {
-    editor.dispose();
-    vi.useRealTimers();
-  });
-
-  it('objectAdded still fires via addObject (legacy path)', () => {
-    const obj = new Object3D();
-    let fired = false;
-    editor.events.on('objectAdded', () => { fired = true; });
-    editor.addObject(obj);
-    expect(fired).toBe(true);
-  });
-
-  it('objectRemoved still fires via removeObject (legacy path)', () => {
-    const obj = new Object3D();
-    editor.addObject(obj);
-    let fired = false;
-    editor.events.on('objectRemoved', () => { fired = true; });
-    editor.removeObject(obj);
-    expect(fired).toBe(true);
-  });
-
-  it('sceneGraphChanged still fires via addObject (legacy path)', () => {
-    const obj = new Object3D();
-    let fired = false;
-    editor.events.on('sceneGraphChanged', () => { fired = true; });
-    editor.addObject(obj);
-    expect(fired).toBe(true);
-  });
-
-  // objectHovered and objectSelected removed from EventMap (V2-3) — no legacy path tests
-});

@@ -1,6 +1,6 @@
 import { type Component, onMount, onCleanup, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
-import { RemoveObjectCommand } from '../core/commands/RemoveObjectCommand';
+import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import DockLayout from './layout/DockLayout';
@@ -35,8 +35,7 @@ const App: Component = () => {
       { key: 'Delete', action: () => {
         const uuid = editor.selection.primary;
         if (uuid) {
-          const obj = editor.sceneSync.getObject3D(uuid);
-          if (obj) editor.execute(new RemoveObjectCommand(editor, obj));
+          editor.execute(new RemoveNodeCommand(editor, uuid));
         }
       }, description: 'Delete selected' },
       { key: 'w', action: () => editor.setTransformMode('translate'), description: 'Translate mode' },
