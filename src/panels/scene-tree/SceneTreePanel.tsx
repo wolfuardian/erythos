@@ -2,10 +2,20 @@ import { createSignal, For, Show, type Component } from 'solid-js';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
 import { useEditor } from '../../app/EditorContext';
+import { MoveNodeCommand } from '../../core/commands/MoveNodeCommand';
+
+interface DropIndicator {
+  targetId: string;
+  position: 'before' | 'inside' | 'after';
+}
 
 interface TreeNodeProps {
   node: SceneNode;
   depth: number;
+  draggedId: () => string | null;
+  dropIndicator: () => DropIndicator | null;
+  setDraggedId: (id: string | null) => void;
+  setDropIndicator: (v: DropIndicator | null) => void;
 }
 
 const TreeNode: Component<TreeNodeProps> = (props) => {
@@ -22,6 +32,9 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       .sort((a, b) => a.order - b.order);
 
   const hasChildren = () => childNodes().length > 0;
+
+  const indicator = () => props.dropIndicator();
+  const isDropTarget = () => indicator()?.targetId === props.node.id;
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
@@ -54,26 +67,153 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
     }
   };
 
+  const onDragStart = (e: DragEvent) => {
+    e.stopPropagation();
+    props.setDraggedId(props.node.id);
+    e.dataTransfer!.effectAllowed = 'move';
+  };
+
+  const onDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (props.draggedId() === props.node.id) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = (e.clientY - rect.top) / rect.height;
+
+    let position: 'before' | 'inside' | 'after';
+    if (y < 0.25) position = 'before';
+    else if (y > 0.75) position = 'after';
+    else position = 'inside';
+
+    props.setDropIndicator({ targetId: props.node.id, position });
+  };
+
+  const onDragLeave = (e: DragEvent) => {
+    // Only clear when truly leaving this row, not just entering a child element.
+    const row = e.currentTarget as HTMLElement;
+    if (!row.contains(e.relatedTarget as Node)) {
+      const ind = props.dropIndicator();
+      if (ind && ind.targetId === props.node.id) {
+        props.setDropIndicator(null);
+      }
+    }
+  };
+
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dragId = props.draggedId();
+    const ind = props.dropIndicator();
+    props.setDraggedId(null);
+    props.setDropIndicator(null);
+
+    if (!dragId || !ind || dragId === props.node.id) return;
+
+    // Cycle check: walk target's ancestors; reject if dragged node is one of them.
+    const nodes = bridge.nodes();
+    let cursor: string | null = props.node.id;
+    while (cursor !== null) {
+      if (cursor === dragId) return;
+      const n = nodes.find(n => n.id === cursor);
+      cursor = n?.parent ?? null;
+    }
+
+    let newParentId: string | null;
+    let insertIndex: number;
+
+    if (ind.position === 'inside') {
+      newParentId = props.node.id;
+      insertIndex = childNodes().length;
+    } else {
+      newParentId = props.node.parent;
+      // Filter dragId from siblings so findIndex matches MoveNodeCommand's own filter.
+      const siblings = nodes
+        .filter(n => n.parent === props.node.parent && n.id !== dragId)
+        .sort((a, b) => a.order - b.order);
+      const idx = siblings.findIndex(n => n.id === props.node.id);
+      insertIndex = ind.position === 'before' ? idx : idx + 1;
+    }
+
+    // No-op check: same parent and same effective position → skip.
+    const draggedNode = nodes.find(n => n.id === dragId);
+    if (draggedNode && newParentId === draggedNode.parent) {
+      const allSiblings = nodes
+        .filter(n => n.parent === newParentId)
+        .sort((a, b) => a.order - b.order);
+      const currentIdx = allSiblings.findIndex(n => n.id === dragId);
+      if (insertIndex === currentIdx) return;
+    }
+
+    editor.execute(new MoveNodeCommand(editor, dragId, newParentId, insertIndex));
+  };
+
+  const onDragEnd = () => {
+    props.setDraggedId(null);
+    props.setDropIndicator(null);
+  };
+
+  const rowBackground = () => {
+    if (isDropTarget() && indicator()?.position === 'inside') {
+      return 'var(--bg-drop-target, rgba(74, 158, 255, 0.15))';
+    }
+    if (isSelected()) return 'var(--bg-selected)';
+    if (isHovered()) return 'var(--bg-hover)';
+    return 'transparent';
+  };
+
   return (
     <div>
       <div
+        draggable={true}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
         style={{
+          position: 'relative',
           display: 'flex',
           'align-items': 'center',
           height: 'var(--row-height)',
           'padding-left': `${8 + props.depth * 16}px`,
           cursor: 'pointer',
-          background: isSelected()
-            ? 'var(--bg-selected)'
-            : isHovered()
-            ? 'var(--bg-hover)'
-            : 'transparent',
+          background: rowBackground(),
           'border-radius': 'var(--radius-sm)',
+          opacity: props.draggedId() === props.node.id ? 0.4 : 1,
+          'user-select': 'none',
         }}
       >
+        {/* Drop indicator: before */}
+        <Show when={isDropTarget() && indicator()?.position === 'before'}>
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: `${8 + props.depth * 16}px`,
+            right: '0',
+            height: '2px',
+            background: 'var(--accent-primary, #4a9eff)',
+            'pointer-events': 'none',
+          }} />
+        </Show>
+
+        {/* Drop indicator: after */}
+        <Show when={isDropTarget() && indicator()?.position === 'after'}>
+          <div style={{
+            position: 'absolute',
+            bottom: '0',
+            left: `${8 + props.depth * 16}px`,
+            right: '0',
+            height: '2px',
+            background: 'var(--accent-primary, #4a9eff)',
+            'pointer-events': 'none',
+          }} />
+        </Show>
+
         {/* Expand toggle */}
         <Show when={hasChildren()}>
           <span
@@ -127,7 +267,16 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       {/* Children */}
       <Show when={expanded() && hasChildren()}>
         <For each={childNodes()}>
-          {(child) => <TreeNode node={child} depth={props.depth + 1} />}
+          {(child) => (
+            <TreeNode
+              node={child}
+              depth={props.depth + 1}
+              draggedId={props.draggedId}
+              dropIndicator={props.dropIndicator}
+              setDraggedId={props.setDraggedId}
+              setDropIndicator={props.setDropIndicator}
+            />
+          )}
         </For>
       </Show>
     </div>
@@ -136,6 +285,9 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
 const SceneTreePanel: Component = () => {
   const bridge = useEditor();
+
+  const [draggedId, setDraggedId] = createSignal<string | null>(null);
+  const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
 
   const rootNodes = () =>
     bridge.nodes()
@@ -151,7 +303,16 @@ const SceneTreePanel: Component = () => {
       padding: 'var(--space-xs) 0',
     }}>
       <For each={rootNodes()}>
-        {(node) => <TreeNode node={node} depth={0} />}
+        {(node) => (
+          <TreeNode
+            node={node}
+            depth={0}
+            draggedId={draggedId}
+            dropIndicator={dropIndicator}
+            setDraggedId={setDraggedId}
+            setDropIndicator={setDropIndicator}
+          />
+        )}
       </For>
       <Show when={rootNodes().length === 0}>
         <div style={{
