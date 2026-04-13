@@ -96,8 +96,19 @@ const ViewportPanel: Component = () => {
           editor.selection.select(uuid);
         }
       },
-      onHover: (obj) => {
+      onHover: (obj, _modifier) => {
         editor.selection.hover(obj ? editor.sceneSync.getUUID(obj) : null);
+      },
+      isEntity: (obj) => editor.sceneSync.getUUID(obj) !== null,
+      resolveTarget: (obj, modifier) => {
+        // Ctrl: phase 1 already stopped at the nearest entity — return as-is.
+        if (modifier.ctrl) return obj;
+        // No Ctrl: walk up to the scene root child (original behaviour).
+        let cur = obj;
+        while (cur.parent && cur.parent !== editor.threeScene) {
+          cur = cur.parent;
+        }
+        return cur;
       },
       onBoxSelect: (objects, modifier) => {
         if (!modifier.ctrl) {
