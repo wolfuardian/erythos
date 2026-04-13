@@ -2,6 +2,13 @@ import { createMemo, createSignal, type Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
 import type { SceneNode } from '../../../core/scene/SceneFormat';
 
+function compactJson(json: string): string {
+  return json.replace(
+    /\[\n\s+(-?[\d.]+(?:e[+-]?\d+)?),\n\s+(-?[\d.]+(?:e[+-]?\d+)?),\n\s+(-?[\d.]+(?:e[+-]?\d+)?)\n\s+\]/g,
+    '[$1, $2, $3]',
+  );
+}
+
 function buildTree(root: SceneNode, allNodes: SceneNode[]): object {
   const children = allNodes
     .filter(n => n.parent === root.id)
@@ -16,19 +23,25 @@ function buildTree(root: SceneNode, allNodes: SceneNode[]): object {
 const ContextPanel: Component = () => {
   const bridge = useEditor();
   const [showTree, setShowTree] = createSignal(false);
+  const [compact, setCompact] = createSignal(false);
 
   const sceneJson = createMemo(() => {
     const uuids = bridge.selectedUUIDs();
     bridge.sceneVersion(); // reactive dep — re-runs on full scene replacement (load/import)
     bridge.nodes();        // reactive dep — re-runs on any node add/remove/change
+
+    let raw: string;
     if (uuids.length > 0) {
       const node = bridge.getNode(uuids[0]);
       if (showTree() && node) {
-        return JSON.stringify(buildTree(node, bridge.nodes()), null, 2);
+        raw = JSON.stringify(buildTree(node, bridge.nodes()), null, 2);
+      } else {
+        raw = JSON.stringify(node, null, 2);
       }
-      return JSON.stringify(node, null, 2);
+    } else {
+      raw = JSON.stringify(bridge.editor.sceneDocument.serialize(), null, 2);
     }
-    return JSON.stringify(bridge.editor.sceneDocument.serialize(), null, 2);
+    return compact() ? compactJson(raw) : raw;
   });
 
   return (
@@ -62,6 +75,25 @@ const ContextPanel: Component = () => {
         >
           Show Tree
         </label>
+
+        <input
+          type="checkbox"
+          checked={compact()}
+          onChange={(e) => setCompact(e.currentTarget.checked)}
+          id="compact-toggle"
+          style={{ 'margin-left': 'var(--space-md)' }}
+        />
+        <label
+          for="compact-toggle"
+          style={{
+            color: 'var(--text-secondary)',
+            'font-size': 'var(--font-size-sm)',
+            cursor: 'pointer',
+            'user-select': 'none',
+          }}
+        >
+          Compact
+        </label>
       </div>
 
       <pre style={{
@@ -70,6 +102,7 @@ const ContextPanel: Component = () => {
         'font-size': 'var(--font-size-sm)',
         'white-space': 'pre-wrap',
         'word-break': 'break-all',
+        'user-select': 'text',
       }}>
         {sceneJson()}
       </pre>
