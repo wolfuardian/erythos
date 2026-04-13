@@ -8,8 +8,10 @@ import {
 
 export interface PickerCallbacks {
   onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
-  onHover: (object: Object3D | null) => void;
-  resolveTarget?: (object: Object3D) => Object3D;
+  onHover: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
+  /** Return true if obj is a SceneSync entity (i.e. getUUID returns non-null). */
+  isEntity?: (object: Object3D) => boolean;
+  resolveTarget?: (object: Object3D, modifier: { ctrl: boolean }) => Object3D;
   requestRender: () => void;
 }
 
@@ -57,7 +59,7 @@ export class SelectionPicker {
     this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   }
 
-  private pick(): Object3D | null {
+  private pick(modifier: { ctrl: boolean }): Object3D | null {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const intersects = this.raycaster.intersectObjects(
       this.scene.children,
@@ -66,14 +68,23 @@ export class SelectionPicker {
 
     for (const hit of intersects) {
       let obj: Object3D | null = hit.object;
-      // Walk up to find a non-ignored ancestor
+
+      // Phase 1: walk up from hit to find the nearest valid target.
+      // If isEntity is provided, stop at the nearest SceneSync entity;
+      // otherwise fall back to the original behaviour (scene root child).
       while (obj) {
         if (this.ignoreObjects.has(obj)) { obj = null; break; }
-        if (obj.parent === this.scene) break;
+        if (this.callbacks.isEntity) {
+          if (this.callbacks.isEntity(obj)) break;   // found nearest entity
+        } else {
+          if (obj.parent === this.scene) break;       // original: root child
+        }
         obj = obj.parent;
       }
+
+      // Phase 2: hand the entity to resolveTarget for final resolution.
       if (obj) {
-        return this.callbacks.resolveTarget?.(obj) ?? obj;
+        return this.callbacks.resolveTarget?.(obj, modifier) ?? obj;
       }
     }
     return null;
@@ -95,19 +106,21 @@ export class SelectionPicker {
     // Only count as click if pointer barely moved and within time threshold
     if (dist < 4 && elapsed < 500) {
       this.updatePointer(e);
-      const hit = this.pick();
-      this.callbacks.onSelect(hit, { ctrl: e.ctrlKey || e.metaKey });
+      const modifier = { ctrl: e.ctrlKey || e.metaKey };
+      const hit = this.pick(modifier);
+      this.callbacks.onSelect(hit, modifier);
     }
   }
 
   private onPointerMove(e: PointerEvent): void {
     this.updatePointer(e);
-    const hit = this.pick();
-    this.callbacks.onHover(hit);
+    const modifier = { ctrl: e.ctrlKey || e.metaKey };
+    const hit = this.pick(modifier);
+    this.callbacks.onHover(hit, modifier);
   }
 
   private onPointerLeave(): void {
-    this.callbacks.onHover(null);
+    this.callbacks.onHover(null, { ctrl: false });
   }
 
   dispose(): void {
