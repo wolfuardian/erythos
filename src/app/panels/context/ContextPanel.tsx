@@ -9,21 +9,47 @@ function compactJson(json: string): string {
   );
 }
 
-function buildTree(root: SceneNode, allNodes: SceneNode[]): object {
+function isVec3(value: unknown, def: [number, number, number]): boolean {
+  return Array.isArray(value) && value.length === 3
+    && value[0] === def[0] && value[1] === def[1] && value[2] === def[2];
+}
+
+function isEmptyObject(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
+}
+
+function stripDefaults(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'id' || key === 'name') { result[key] = value; continue; }
+    if (key === 'parent' && value === null) continue;
+    if (key === 'order' && value === 0) continue;
+    if (key === 'position' && isVec3(value, [0, 0, 0])) continue;
+    if (key === 'rotation' && isVec3(value, [0, 0, 0])) continue;
+    if (key === 'scale' && isVec3(value, [1, 1, 1])) continue;
+    if ((key === 'components' || key === 'userData') && isEmptyObject(value)) continue;
+    result[key] = value;
+  }
+  return result;
+}
+
+function buildTree(root: SceneNode, allNodes: SceneNode[], strip: boolean): object {
+  const base = strip ? stripDefaults(root as unknown as Record<string, unknown>) : { ...root };
   const children = allNodes
     .filter(n => n.parent === root.id)
     .sort((a, b) => a.order - b.order)
-    .map(child => buildTree(child, allNodes));
+    .map(child => buildTree(child, allNodes, strip));
   if (children.length > 0) {
-    return { ...root, children };
+    return { ...base, children };
   }
-  return { ...root };
+  return base;
 }
 
 const ContextPanel: Component = () => {
   const bridge = useEditor();
   const [showTree, setShowTree] = createSignal(false);
   const [compact, setCompact] = createSignal(false);
+  const [hideDefaults, setHideDefaults] = createSignal(false);
 
   const sceneJson = createMemo(() => {
     const uuids = bridge.selectedUUIDs();
@@ -34,9 +60,12 @@ const ContextPanel: Component = () => {
     if (uuids.length > 0) {
       const node = bridge.getNode(uuids[0]);
       if (showTree() && node) {
-        raw = JSON.stringify(buildTree(node, bridge.nodes()), null, 2);
+        raw = JSON.stringify(buildTree(node, bridge.nodes(), hideDefaults()), null, 2);
+      } else if (node) {
+        const data = hideDefaults() ? stripDefaults(node as unknown as Record<string, unknown>) : node;
+        raw = JSON.stringify(data, null, 2);
       } else {
-        raw = JSON.stringify(node, null, 2);
+        raw = JSON.stringify(null, null, 2);
       }
     } else {
       raw = JSON.stringify(bridge.editor.sceneDocument.serialize(), null, 2);
@@ -93,6 +122,25 @@ const ContextPanel: Component = () => {
           }}
         >
           Compact
+        </label>
+
+        <input
+          type="checkbox"
+          checked={hideDefaults()}
+          onChange={(e) => setHideDefaults(e.currentTarget.checked)}
+          id="hide-defaults-toggle"
+          style={{ 'margin-left': 'var(--space-md)' }}
+        />
+        <label
+          for="hide-defaults-toggle"
+          style={{
+            color: 'var(--text-secondary)',
+            'font-size': 'var(--font-size-sm)',
+            cursor: 'pointer',
+            'user-select': 'none',
+          }}
+        >
+          Hide Defaults
         </label>
       </div>
 
