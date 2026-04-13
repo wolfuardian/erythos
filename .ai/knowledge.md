@@ -33,7 +33,7 @@
 
 ## SceneNode 欄位缺口（來源：#103 備忘錄）
 
-- SceneNode 無 `type` 欄位（Mesh/Group/Light 等），場景樹 badge 和 PropertiesPanel 都已移除 type/visible 顯示。Phase 5 已實作 `components.mesh`，可透過 `node.components.mesh` 推導節點是否為 Mesh。恢復 badge 為後續 UI 工作 ⏳ 適用至場景樹 badge 恢復
+- SceneNode 無 `type` 欄位，類型從 components 推導。`inferNodeType(node)` 工具函式在 `src/core/scene/inferNodeType.ts`，場景樹 badge 和 Properties 面板已使用 ⏳ 永久
 - SetTransformCommand 的 oldValue 需呼叫端傳入（因 canMerge 合併機制，oldValue 必須是操作開始時的快照）。面板場景直接讀 `node.position` 即可，Gizmo 拖曳場景需用拖曳開始時的值 ⏳ 永久
 
 ## AutoSave / IO 架構（來源：#111 備忘錄）
