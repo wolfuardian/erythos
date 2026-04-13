@@ -1,6 +1,7 @@
 import { createSignal, createEffect, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { SetNodePropertyCommand } from '../../../core/commands/SetNodePropertyCommand';
+import { inferNodeType } from '../../../core/scene/inferNodeType';
 
 interface ObjectDrawProps {
   uuid: string;
@@ -10,11 +11,15 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   const bridge = useEditor();
   const { editor } = bridge;
   const [name, setName] = createSignal('');
+  const [type, setType] = createSignal('');
 
   createEffect(() => {
     bridge.objectVersion();
     const node = bridge.getNode(props.uuid);
-    if (node) setName(node.name);
+    if (node) {
+      setName(node.name);
+      setType(inferNodeType(node));
+    }
   });
 
   const handleNameChange = (value: string) => {
@@ -35,6 +40,18 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
           onInput={(e) => handleNameChange(e.currentTarget.value)}
           style={textInput}
         />
+      </div>
+
+      {/* Type */}
+      <div style={fieldRow}>
+        <label style={fieldLabel}>Type</label>
+        <span style={{
+          flex: '1',
+          color: 'var(--text-secondary)',
+          'font-size': 'var(--font-size-sm)',
+        }}>
+          {type()}
+        </span>
       </div>
     </div>
   );
