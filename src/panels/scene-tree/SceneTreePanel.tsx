@@ -1,5 +1,6 @@
 import { createSignal, For, Show, type Component } from 'solid-js';
 import type { SceneNode } from '../../core/scene/SceneFormat';
+import { inferNodeType } from '../../core/scene/inferNodeType';
 import { useEditor } from '../../app/EditorContext';
 
 interface TreeNodeProps {
@@ -38,11 +39,19 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
   const handleMouseEnter = () => editor.selection.hover(props.node.id);
   const handleMouseLeave = () => editor.selection.hover(null);
 
-  // Temporary: SceneNode has no type field; using structural heuristic.
-  // See 上報區 for tracking.
   const typeBadge = () => {
-    if (hasChildren()) return { label: 'G', color: 'var(--badge-group)' };
-    return { label: 'O', color: 'var(--badge-empty)' };
+    switch (inferNodeType(props.node)) {
+      case 'Group':             return { label: 'G', color: 'var(--badge-group)' };
+      case 'Mesh':              return { label: 'M', color: 'var(--badge-mesh, #4a9eff)' };
+      case 'Box':               return { label: 'B', color: 'var(--badge-geometry, #f5a623)' };
+      case 'Sphere':            return { label: 'S', color: 'var(--badge-geometry, #f5a623)' };
+      case 'Plane':             return { label: 'P', color: 'var(--badge-geometry, #f5a623)' };
+      case 'Cylinder':          return { label: 'C', color: 'var(--badge-geometry, #f5a623)' };
+      case 'DirectionalLight':  return { label: 'L', color: 'var(--badge-light, #f7dc6f)' };
+      case 'AmbientLight':      return { label: 'L', color: 'var(--badge-light, #f7dc6f)' };
+      case 'PerspectiveCamera': return { label: 'C', color: 'var(--badge-camera, #a29bfe)' };
+      default:                  return { label: 'O', color: 'var(--badge-empty)' };
+    }
   };
 
   return (
