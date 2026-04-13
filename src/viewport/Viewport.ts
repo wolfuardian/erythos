@@ -11,11 +11,13 @@ import type { TransformMode } from '../core/EventEmitter';
 
 export interface ViewportCallbacks {
   onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
-  onHover: (object: Object3D | null) => void;
+  onHover: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
   onTransformEnd: (object: Object3D, startPos: Vector3, startRot: Euler, startScale: Vector3) => void;
   onBoxSelect?: (objects: Object3D[], modifier: { ctrl: boolean }) => void;
   onMultiTransformEnd?: (objects: Object3D[], startTransforms: { pos: Vector3; rot: Euler; scale: Vector3 }[]) => void;
-  resolveTarget?: (object: Object3D) => Object3D;
+  /** Return true if obj is a SceneSync entity. Used by picker to find the nearest entity. */
+  isEntity?: (object: Object3D) => boolean;
+  resolveTarget?: (object: Object3D, modifier: { ctrl: boolean }) => Object3D;
 }
 
 export class Viewport {
@@ -76,7 +78,8 @@ export class Viewport {
     this.picker = new SelectionPicker({
       requestRender,
       onSelect: (obj, modifier) => this.callbacks.onSelect(obj, modifier),
-      onHover: (obj) => this.callbacks.onHover(obj),
+      onHover: (obj, modifier) => this.callbacks.onHover(obj, modifier),
+      isEntity: callbacks.isEntity,
       resolveTarget: callbacks.resolveTarget,
     });
 
