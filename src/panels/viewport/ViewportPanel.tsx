@@ -409,29 +409,31 @@ const ViewportPanel: Component = () => {
         </Show>
 
         {/* 品質切換 */}
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
-        <For each={(['low', 'normal', 'high'] as QualityLevel[])}>
-          {(q) => (
-            <button
-              onClick={() => setQuality(q)}
-              style={{
-                background: quality() === q ? 'rgba(255,255,255,0.18)' : 'transparent',
-                border: 'none',
-                color: quality() === q ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
-                padding: '3px 6px',
-                cursor: 'pointer',
-                'border-radius': '3px',
-                'font-size': '10px',
-                'font-weight': quality() === q ? '600' : '400',
-                transition: 'background 0.1s',
-                'text-transform': 'uppercase',
-                'letter-spacing': '0.5px',
-              }}
-            >
-              {q === 'low' ? 'L' : q === 'normal' ? 'N' : 'H'}
-            </button>
-          )}
-        </For>
+        <Show when={renderMode() === 'rendering'}>
+          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
+          <For each={(['low', 'normal', 'high'] as QualityLevel[])}>
+            {(q) => (
+              <button
+                onClick={() => setQuality(q)}
+                style={{
+                  background: quality() === q ? 'rgba(255,255,255,0.18)' : 'transparent',
+                  border: 'none',
+                  color: quality() === q ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
+                  padding: '3px 6px',
+                  cursor: 'pointer',
+                  'border-radius': '3px',
+                  'font-size': '10px',
+                  'font-weight': quality() === q ? '600' : '400',
+                  transition: 'background 0.1s',
+                  'text-transform': 'uppercase',
+                  'letter-spacing': '0.5px',
+                }}
+              >
+                {q === 'low' ? 'L' : q === 'normal' ? 'N' : 'H'}
+              </button>
+            )}
+          </For>
+        </Show>
       </div>
       <ErrorDialog
         open={errorMessage() !== null}
