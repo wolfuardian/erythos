@@ -411,8 +411,16 @@ const SceneTreePanel: Component = () => {
 
   return (
     <div
+      onClick={(e) => {
+        if (!(e.target as Element).closest('[draggable]')) {
+          editor.selection.select(null);
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
+        if (!(e.target as Element).closest('[draggable]')) {
+          editor.selection.select(null);
+        }
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
       style={{
