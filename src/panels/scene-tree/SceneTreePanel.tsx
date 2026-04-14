@@ -312,7 +312,7 @@ const SceneTreePanel: Component = () => {
 
   const menuItems = (): MenuItem[] => {
     const selected = bridge.selectedUUIDs();
-    const hasClip = editor.clipboard.hasContent;
+    const hasClip = bridge.hasClipboard();
     return [
       {
         label: 'Create Empty',
