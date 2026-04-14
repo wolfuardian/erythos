@@ -110,6 +110,12 @@ export class GizmoManager {
     this.callbacks.requestRender();
   }
 
+  setVisible(visible: boolean): void {
+    if (!visible && this.controls.dragging) return;
+    this.controls.getHelper().visible = visible;
+    this.callbacks.requestRender();
+  }
+
   get object(): Object3D | undefined {
     return this.controls.object;
   }
