@@ -4,6 +4,7 @@ import type { TransformMode } from './EventEmitter';
 import { History } from './History';
 import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
+import { Clipboard } from './Clipboard';
 import type { Command } from './Command';
 import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
 import { SceneDocument } from './scene/SceneDocument';
@@ -20,6 +21,7 @@ export class Editor {
   readonly history: History;
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
+  readonly clipboard: Clipboard;
   autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
@@ -34,6 +36,7 @@ export class Editor {
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
+    this.clipboard = new Clipboard();
   }
 
   /**
