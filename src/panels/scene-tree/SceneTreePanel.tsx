@@ -1,4 +1,5 @@
-import { createSignal, For, Show, type Component } from 'solid-js';
+import { createSignal, For, Show, onMount, onCleanup, type Component } from 'solid-js';
+import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
 import { useEditor } from '../../app/EditorContext';
@@ -307,6 +308,7 @@ const SceneTreePanel: Component = () => {
   const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
+  const [isFileDragging, setIsFileDragging] = createSignal(false);
 
   const isExpanded = (id: string): boolean => expandedMap()[id] ?? false;
 
@@ -488,6 +490,53 @@ const SceneTreePanel: Component = () => {
 
   let containerRef!: HTMLDivElement;
 
+  onMount(() => {
+    const panelEl = containerRef;
+
+    const onDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes('Files')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    };
+
+    const onDragEnter = (e: DragEvent) => {
+      if (!e.dataTransfer?.types.includes('Files')) return;
+      e.preventDefault();
+      setIsFileDragging(true);
+    };
+
+    const onDragLeave = (e: DragEvent) => {
+      if (!panelEl.contains(e.relatedTarget as Node)) {
+        setIsFileDragging(false);
+      }
+    };
+
+    const onDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      setIsFileDragging(false);
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      const gltfFile = files.find(f => /\.(glb|gltf)$/i.test(f.name));
+      if (!gltfFile) return;
+      try {
+        await loadGLTFFromFile(gltfFile, editor);
+      } catch (err) {
+        console.error('Failed to import GLB:', err);
+      }
+    };
+
+    panelEl.addEventListener('dragover', onDragOver);
+    panelEl.addEventListener('dragenter', onDragEnter);
+    panelEl.addEventListener('dragleave', onDragLeave);
+    panelEl.addEventListener('drop', onDrop);
+
+    onCleanup(() => {
+      panelEl.removeEventListener('dragover', onDragOver);
+      panelEl.removeEventListener('dragenter', onDragEnter);
+      panelEl.removeEventListener('dragleave', onDragLeave);
+      panelEl.removeEventListener('drop', onDrop);
+    });
+  });
+
   return (
     <div
       ref={containerRef}
@@ -554,6 +603,7 @@ const SceneTreePanel: Component = () => {
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
       style={{
+        position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'auto',
@@ -593,6 +643,24 @@ const SceneTreePanel: Component = () => {
           onClose={() => setContextMenu(null)}
           align={{ itemIndex: 0, xPercent: 0.65 }}
         />
+      </Show>
+      <Show when={isFileDragging()}>
+        <div style={{
+          position: 'absolute',
+          inset: '0',
+          background: 'rgba(100, 149, 237, 0.15)',
+          border: '2px dashed rgba(100, 149, 237, 0.6)',
+          display: 'flex',
+          'align-items': 'center',
+          'justify-content': 'center',
+          color: 'var(--text-secondary, #aaa)',
+          'font-size': '13px',
+          'pointer-events': 'none',
+          'z-index': '10',
+          'border-radius': '4px',
+        }}>
+          Drop GLB to import
+        </div>
       </Show>
     </div>
   );
