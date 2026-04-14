@@ -5,6 +5,8 @@ import { useEditor } from '../../app/EditorContext';
 import { MoveNodeCommand } from '../../core/commands/MoveNodeCommand';
 import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
+import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
+import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 
 interface DropIndicator {
   targetId: string;
@@ -308,25 +310,41 @@ const SceneTreePanel: Component = () => {
     editor.selection.select(node.id);
   };
 
-  const menuItems = (): MenuItem[] => [
-    {
-      label: 'Create Empty',
-      action: () => {
-        const node = editor.sceneDocument.createNode('Empty');
-        editor.execute(new AddNodeCommand(editor, node));
-        editor.selection.select(node.id);
+  const menuItems = (): MenuItem[] => {
+    const selected = bridge.selectedUUIDs();
+    return [
+      {
+        label: 'Create Empty',
+        action: () => {
+          const node = editor.sceneDocument.createNode('Empty');
+          editor.execute(new AddNodeCommand(editor, node));
+          editor.selection.select(node.id);
+        },
       },
-    },
-    {
-      label: 'Create Primitive',
-      children: [
-        { label: 'Box', action: () => createPrimitive('box', 'Box') },
-        { label: 'Sphere', action: () => createPrimitive('sphere', 'Sphere') },
-        { label: 'Plane', action: () => createPrimitive('plane', 'Plane') },
-        { label: 'Cylinder', action: () => createPrimitive('cylinder', 'Cylinder') },
-      ],
-    },
-  ];
+      {
+        label: 'Create Primitive',
+        children: [
+          { label: 'Box', action: () => createPrimitive('box', 'Box') },
+          { label: 'Sphere', action: () => createPrimitive('sphere', 'Sphere') },
+          { label: 'Plane', action: () => createPrimitive('plane', 'Plane') },
+          { label: 'Cylinder', action: () => createPrimitive('cylinder', 'Cylinder') },
+        ],
+      },
+      {
+        label: 'Delete',
+        disabled: selected.length === 0,
+        action: () => {
+          if (selected.length === 1) {
+            editor.execute(new RemoveNodeCommand(editor, selected[0]));
+          } else if (selected.length > 1) {
+            const cmds = selected.map(id => new RemoveNodeCommand(editor, id));
+            editor.execute(new MultiCmdsCommand(editor, cmds));
+          }
+          editor.selection.select(null);
+        },
+      },
+    ];
+  };
 
   return (
     <div
