@@ -57,6 +57,13 @@ export function applyDefaultLayout(api: DockviewApi): void {
     title: 'Settings',
     position: { referencePanel: 'properties', direction: 'within' },
   });
+
+  api.addPanel({
+    id: 'leaf',
+    component: 'leaf',
+    title: 'Leaves',
+    position: { referencePanel: 'scene-tree', direction: 'within' },
+  });
 }
 
 export function saveLayout(api: DockviewApi): void {
