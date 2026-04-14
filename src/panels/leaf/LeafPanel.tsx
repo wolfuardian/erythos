@@ -200,13 +200,18 @@ const LeafPanel: Component = () => {
                 const isActive = () => activeId() === asset.id;
                 return (
                   <div
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer!.setData('application/erythos-leaf', asset.id);
+                      e.dataTransfer!.effectAllowed = 'copy';
+                    }}
                     onClick={() => setActiveId(isActive() ? null : asset.id)}
                     style={{
                       display: 'flex',
                       'align-items': 'center',
                       gap: '6px',
                       padding: '5px 8px',
-                      cursor: 'pointer',
+                      cursor: 'grab',
                       background: isActive()
                         ? 'var(--bg-selected, rgba(74,127,191,0.2))'
                         : 'transparent',
