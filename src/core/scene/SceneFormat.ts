@@ -37,6 +37,10 @@ export interface CameraComponent {
   far: number;
 }
 
+export interface LeafComponent {
+  id: string; // 對應 LeafAsset.id，標記此節點為某 leaf 的實例根
+}
+
 export interface SceneFile {
   version: number;
   nodes: SceneNode[];
