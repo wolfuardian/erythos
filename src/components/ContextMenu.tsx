@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal, onCleanup, type Component } from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup, onMount, type Component } from 'solid-js';
 
 export interface MenuItem {
   label: string;
@@ -11,6 +11,10 @@ export interface ContextMenuProps {
   items: MenuItem[];
   position: { x: number; y: number };
   onClose: () => void;
+  align?: {
+    itemIndex: number;
+    xPercent: number;
+  };
 }
 
 // Shared submenu container style — mirrors the root menu's appearance.
@@ -45,6 +49,7 @@ const MenuItemRow: Component<{ item: MenuItem; onClose: () => void }> = (props) 
     // exits the combined area — preventing the submenu from closing mid-transit.
     <div
       ref={rowRef}
+      data-menu-item="true"
       style={{ position: 'relative' }}
       onMouseEnter={() => { if (hasChildren()) setShowSub(true); }}
       onMouseLeave={() => setShowSub(false)}
@@ -102,6 +107,24 @@ const MenuItemRow: Component<{ item: MenuItem; onClose: () => void }> = (props) 
 
 const ContextMenu: Component<ContextMenuProps> = (props) => {
   let menuRef!: HTMLDivElement;
+  const [extraOffset, setExtraOffset] = createSignal({ x: 0, y: 0 });
+
+  onMount(() => {
+    if (!props.align) return;
+    requestAnimationFrame(() => {
+      const items = menuRef.querySelectorAll('[data-menu-item]');
+      const target = items[props.align!.itemIndex] as HTMLElement | undefined;
+      if (!target) return;
+      const menuRect = menuRef.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const itemCenterFromTop = targetRect.top - menuRect.top + targetRect.height / 2;
+      const menuWidth = menuRect.width;
+      setExtraOffset({
+        x: -(menuWidth * props.align!.xPercent),
+        y: -itemCenterFromTop,
+      });
+    });
+  });
 
   // Click outside to close.
   // setTimeout(0): the contextmenu event may be followed by a click event in the
@@ -131,11 +154,11 @@ const ContextMenu: Component<ContextMenuProps> = (props) => {
     onCleanup(() => document.removeEventListener('keydown', onKeyDown));
   });
 
-  // Keep the menu within the viewport using estimated dimensions (200 × 300)
-  // to avoid a second render pass for exact measurement.
   const adjustedPosition = () => {
-    const x = Math.min(props.position.x, window.innerWidth - 200);
-    const y = Math.min(props.position.y, window.innerHeight - 300);
+    const ox = extraOffset().x;
+    const oy = extraOffset().y;
+    const x = Math.min(props.position.x + ox, window.innerWidth - 200);
+    const y = Math.min(props.position.y + oy, window.innerHeight - 300);
     return { x: Math.max(0, x), y: Math.max(0, y) };
   };
 
