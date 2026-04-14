@@ -371,10 +371,18 @@ const SceneTreePanel: Component = () => {
             .map(id => editor.sceneDocument.getNode(id))
             .filter((n): n is SceneNode => n !== null);
           editor.clipboard.cut(nodes);
-          if (selected.length === 1) {
-            editor.execute(new RemoveNodeCommand(editor, selected[0]));
-          } else {
-            const cmds = selected.map(id => new RemoveNodeCommand(editor, id));
+          const topLevel = selected.filter(id => {
+            let cursor = editor.sceneDocument.getNode(id)?.parent;
+            while (cursor) {
+              if (selected.includes(cursor)) return false;
+              cursor = editor.sceneDocument.getNode(cursor)?.parent ?? null;
+            }
+            return true;
+          });
+          if (topLevel.length === 1) {
+            editor.execute(new RemoveNodeCommand(editor, topLevel[0]));
+          } else if (topLevel.length > 1) {
+            const cmds = topLevel.map(id => new RemoveNodeCommand(editor, id));
             editor.execute(new MultiCmdsCommand(editor, cmds));
           }
           editor.selection.select(null);
