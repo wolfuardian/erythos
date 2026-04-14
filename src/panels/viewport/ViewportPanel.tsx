@@ -1,5 +1,6 @@
 import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
 import type { Object3D } from 'three';
+import { Raycaster, Plane, Vector3, Vector2 } from 'three';
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
@@ -41,8 +42,32 @@ const ViewportPanel: Component = () => {
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
       if (!gltfFile) return;
 
+      // 計算 NDC 座標（-1 到 1）
+      const rect = containerRef.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Raycast 對 y=0 平面
+      let dropPosition: Vec3 = [0, 0, 0];
+      if (viewport) {
+        const raycaster = new Raycaster();
+        raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
+        const groundPlane = new Plane(new Vector3(0, 1, 0), 0); // normal=(0,1,0), constant=0 → y=0
+        const hitPoint = new Vector3();
+        const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
+        if (hit) {
+          dropPosition = [hitPoint.x, 0, hitPoint.z];
+        }
+      }
+
       try {
-        await loadGLTFFromFile(gltfFile, editor);
+        const groupUUID = await loadGLTFFromFile(gltfFile, editor);
+
+        // 只有 hit 到 y=0 平面時才設定位置（fallback 原點不需 command）
+        if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
+          const oldPos: Vec3 = [0, 0, 0]; // 新導入節點始終從原點開始
+          editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
+        }
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
       }
