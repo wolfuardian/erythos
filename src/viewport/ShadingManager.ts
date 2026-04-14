@@ -107,9 +107,11 @@ export class ShadingManager {
   private addHeadlight(): void {
     this.camera.add(this.headlight);
     this.camera.add(this.headlightTarget);
+    this.scene.add(this.camera);  // 讓 camera 的子節點（headlight）被 renderer 處理
   }
 
   private removeHeadlight(): void {
+    this.scene.remove(this.camera);  // 移除 camera 避免影響其他模式
     this.camera.remove(this.headlight);
     this.camera.remove(this.headlightTarget);
   }
