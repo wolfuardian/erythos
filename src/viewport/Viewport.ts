@@ -108,6 +108,9 @@ export class Viewport {
     // Wire up post-processing as render override
     this.vpRenderer.setRenderOverride(() => this.postProcessing.render());
     this.vpRenderer.setBeforeRender(() => this.cameraCtrl.update());
+    this.vpRenderer.setOnResize((w, h) => {
+      this.postProcessing.setSize(w, h);
+    });
 
     // Mount submodules
     this.gridHelpers.mount(this.sceneHelpers);
@@ -151,6 +154,11 @@ export class Viewport {
 
   setShadingMode(mode: ShadingMode): void {
     this.shading.setMode(mode);
+    this.vpRenderer.syncRender();
+  }
+
+  setQuality(quality: import('./PostProcessing').QualityLevel): void {
+    this.postProcessing.setQuality(quality);
     this.vpRenderer.syncRender();
   }
 

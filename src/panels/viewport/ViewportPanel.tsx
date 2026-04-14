@@ -1,5 +1,6 @@
 import { onMount, onCleanup, createEffect, createSignal, Show, For, type Component } from 'solid-js';
 import type { ShadingMode } from '../../viewport/ShadingManager';
+import type { QualityLevel } from '../../viewport/PostProcessing';
 import type { Object3D } from 'three';
 import { Raycaster, Plane, Vector3, Vector2 } from 'three';
 import { Viewport } from '../../viewport/Viewport';
@@ -20,6 +21,7 @@ const ViewportPanel: Component = () => {
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
   const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
   const [ppOn, setPpOn] = createSignal(true);
+  const [quality, setQuality] = createSignal<QualityLevel>('normal');
 
   onMount(() => {
     const onDragOver = (e: DragEvent) => {
@@ -260,6 +262,10 @@ const ViewportPanel: Component = () => {
     viewport?.setPostProcessingEnabled(ppOn());
   });
 
+  createEffect(() => {
+    viewport?.setQuality(quality());
+  });
+
   onCleanup(() => {
     viewport?.dispose();
     viewport = null;
@@ -369,6 +375,31 @@ const ViewportPanel: Component = () => {
             Post FX
           </button>
         </Show>
+
+        {/* 品質切換 */}
+        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
+        <For each={(['low', 'normal', 'high'] as QualityLevel[])}>
+          {(q) => (
+            <button
+              onClick={() => setQuality(q)}
+              style={{
+                background: quality() === q ? 'rgba(255,255,255,0.18)' : 'transparent',
+                border: 'none',
+                color: quality() === q ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
+                padding: '3px 6px',
+                cursor: 'pointer',
+                'border-radius': '3px',
+                'font-size': '10px',
+                'font-weight': quality() === q ? '600' : '400',
+                transition: 'background 0.1s',
+                'text-transform': 'uppercase',
+                'letter-spacing': '0.5px',
+              }}
+            >
+              {q === 'low' ? 'L' : q === 'normal' ? 'N' : 'H'}
+            </button>
+          )}
+        </For>
       </div>
       <ErrorDialog
         open={errorMessage() !== null}

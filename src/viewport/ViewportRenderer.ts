@@ -17,6 +17,7 @@ export class ViewportRenderer {
   private animFrameId = 0;
   private onBeforeRender?: () => void;
   private renderOverride?: () => void;
+  private onResizeCallback?: (w: number, h: number) => void;
 
   constructor() {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: false });
@@ -57,6 +58,10 @@ export class ViewportRenderer {
   /** Override the default render call (used by PostProcessing). */
   setRenderOverride(fn: (() => void) | undefined): void {
     this.renderOverride = fn;
+  }
+
+  setOnResize(fn: (w: number, h: number) => void): void {
+    this.onResizeCallback = fn;
   }
 
   requestRender(): void {
@@ -111,6 +116,7 @@ export class ViewportRenderer {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.onResizeCallback?.(w, h);
   }
 
   dispose(): void {
