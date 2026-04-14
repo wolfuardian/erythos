@@ -7,7 +7,7 @@ import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
-import { loadGLTFFromFile } from '../../utils/gltfLoader';
+import { loadGLTFFromFile, loadGLTFFromCache } from '../../utils/gltfLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 
 const ViewportPanel: Component = () => {
@@ -44,38 +44,70 @@ const ViewportPanel: Component = () => {
       e.preventDefault();
       setIsDragging(false);
 
+      // 路徑 1：OS 檔案拖放（現有邏輯）
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
-      if (!gltfFile) return;
+      if (gltfFile) {
+        // 計算 NDC 座標（-1 到 1）
+        const rect = containerRef.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-      // 計算 NDC 座標（-1 到 1）
-      const rect = containerRef.getBoundingClientRect();
-      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      // Raycast 對 y=0 平面
-      let dropPosition: Vec3 = [0, 0, 0];
-      if (viewport) {
-        const raycaster = new Raycaster();
-        raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
-        const groundPlane = new Plane(new Vector3(0, 1, 0), 0); // normal=(0,1,0), constant=0 → y=0
-        const hitPoint = new Vector3();
-        const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
-        if (hit) {
-          dropPosition = [hitPoint.x, 0, hitPoint.z];
+        // Raycast 對 y=0 平面
+        let dropPosition: Vec3 = [0, 0, 0];
+        if (viewport) {
+          const raycaster = new Raycaster();
+          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
+          const groundPlane = new Plane(new Vector3(0, 1, 0), 0); // normal=(0,1,0), constant=0 → y=0
+          const hitPoint = new Vector3();
+          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
+          if (hit) {
+            dropPosition = [hitPoint.x, 0, hitPoint.z];
+          }
         }
+
+        try {
+          const groupUUID = await loadGLTFFromFile(gltfFile, editor);
+
+          // 只有 hit 到 y=0 平面時才設定位置（fallback 原點不需 command）
+          if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
+            const oldPos: Vec3 = [0, 0, 0]; // 新導入節點始終從原點開始
+            editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
+          }
+        } catch (err) {
+          setErrorMessage(err instanceof Error ? err.message : String(err));
+        }
+        return;
       }
 
-      try {
-        const groupUUID = await loadGLTFFromFile(gltfFile, editor);
+      // 路徑 2：內部 GLB 拖曳（從 Project 面板）
+      const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
+      if (internalGlb) {
+        // 同 OS drop：計算 NDC 座標 + raycast y=0 平面
+        const rect = containerRef.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-        // 只有 hit 到 y=0 平面時才設定位置（fallback 原點不需 command）
-        if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
-          const oldPos: Vec3 = [0, 0, 0]; // 新導入節點始終從原點開始
-          editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
+        let dropPosition: Vec3 = [0, 0, 0];
+        if (viewport) {
+          const raycaster = new Raycaster();
+          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
+          const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+          const hitPoint = new Vector3();
+          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
+          if (hit) dropPosition = [hitPoint.x, 0, hitPoint.z];
         }
-      } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : String(err));
+
+        try {
+          const groupUUID = await loadGLTFFromCache(internalGlb, editor);
+          if (groupUUID && (dropPosition[0] !== 0 || dropPosition[2] !== 0)) {
+            const oldPos: Vec3 = [0, 0, 0];
+            editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
+          }
+        } catch (err) {
+          setErrorMessage(err instanceof Error ? err.message : String(err));
+        }
+        return;
       }
     };
 
