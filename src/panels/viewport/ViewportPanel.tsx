@@ -20,7 +20,6 @@ const ViewportPanel: Component = () => {
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
   const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
-  const [ppOn, setPpOn] = createSignal(true);
   const [quality, setQuality] = createSignal<QualityLevel>('normal');
 
   onMount(() => {
@@ -297,11 +296,6 @@ const ViewportPanel: Component = () => {
     viewport?.requestRender();
   });
 
-  // PP 只在 rendering 模式有效；ppOn 記住使用者設定，切換回 rendering 時自動還原
-  createEffect(() => {
-    viewport?.setPostProcessingEnabled(renderMode() === 'rendering' && ppOn());
-  });
-
   createEffect(() => {
     viewport?.setQuality(quality());
   });
@@ -394,25 +388,6 @@ const ViewportPanel: Component = () => {
             }}
           >
             Lights
-          </button>
-        </Show>
-
-        <Show when={renderMode() === 'rendering'}>
-          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
-          <button
-            onClick={() => setPpOn(v => !v)}
-            style={{
-              background: ppOn() ? 'rgba(100,180,255,0.2)' : 'transparent',
-              border: 'none',
-              color: ppOn() ? 'rgba(130,200,255,1)' : 'var(--text-secondary, #aaa)',
-              padding: '3px 8px',
-              cursor: 'pointer',
-              'border-radius': '3px',
-              'font-size': '11px',
-              transition: 'background 0.1s',
-            }}
-          >
-            Post FX
           </button>
         </Show>
 
