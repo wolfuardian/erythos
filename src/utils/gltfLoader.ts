@@ -2,7 +2,7 @@ import { ImportGLTFCommand } from '../core/commands/ImportGLTFCommand';
 import { convertGLTFToNodes } from './gltfConverter';
 import type { Editor } from '../core/Editor';
 
-export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void> {
+export async function loadGLTFFromFile(file: File, editor: Editor): Promise<string> {
   const source = file.name;
   const fileName = source.replace(/\.[^.]+$/, '');
 
@@ -13,4 +13,5 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void
   const childNodes = convertGLTFToNodes(gltfScene, groupNode.id, source);
 
   editor.execute(new ImportGLTFCommand(editor, [groupNode, ...childNodes]));
+  return groupNode.id;
 }
