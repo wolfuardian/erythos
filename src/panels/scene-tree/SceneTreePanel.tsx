@@ -413,7 +413,7 @@ const SceneTreePanel: Component = () => {
     <div
       onContextMenu={(e) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX - 104, y: e.clientY - 10 });
+        setContextMenu({ x: e.clientX, y: e.clientY });
       }}
       style={{
         width: '100%',
@@ -450,6 +450,7 @@ const SceneTreePanel: Component = () => {
           items={menuItems()}
           position={contextMenu()!}
           onClose={() => setContextMenu(null)}
+          align={{ itemIndex: 0, xPercent: 0.65 }}
         />
       </Show>
     </div>
