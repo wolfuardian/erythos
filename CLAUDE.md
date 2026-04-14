@@ -24,166 +24,19 @@
 - **事件順序**：objectAdded → sceneGraphChanged（不能反過來）
 - **模組邊界**：core/ 不依賴 UI，panels/ 透過 bridge 取得狀態，viewport/ 不處理檔案 I/O
 
-## 介面契約：GLTF 導入
-
-### 共用工具函式（src/utils/gltfLoader.ts）
-
-```typescript
-export async function loadGLTFFromFile(file: File, editor: Editor): Promise<void>
-```
-- 職責：讀取檔案 → GLTFLoader 解析 → 包成 Group → 執行 ImportGLTFCommand
-- 成功：模型加入場景，自動選取頂層 Group
-- 失敗：throw Error('具體原因')
-
-### 新 Command（src/core/commands/ImportGLTFCommand.ts）
-
-- 整個 GLTF 包成一個 Group 節點，Group.name = 檔名去副檔名
-- execute: add to scene → emit objectAdded → emit sceneGraphChanged → select group
-- undo: remove from scene → emit objectRemoved → emit sceneGraphChanged → deselect
-
-### 錯誤對話框（src/components/ErrorDialog.tsx）
-
-```typescript
-interface ErrorDialogProps {
-  open: boolean;
-  title: string;
-  message: string;
-  onClose: () => void;
-}
-```
-- 通用元件，不綁定 GLTF 邏輯
-
-### 分支策略
-
-| 分支 | 負責模組 | 改動檔案 |
-|------|---------|---------|
-| feat/gltf-core | src/core/, src/utils/ | ImportGLTFCommand, gltfLoader, commands/index |
-| feat/gltf-viewport | src/viewport/, src/panels/viewport/ | ViewportPanel 拖放 |
-| feat/gltf-ui | src/components/ | ErrorDialog, Toolbar Import 按鈕 |
-
-合併順序：core 先 merge，然後 viewport 和 components 可同時 merge。
-
-## 介面契約：多選功能（#9）
-
-### Selection 改造（src/core/Selection.ts）
-
-```typescript
-class Selection {
-  // 內部改為 Set
-  private _selected: Set<Object3D>;
-
-  // 取代舊的 select(obj | null)
-  select(object: Object3D | null): void;       // 取代選取（清除舊的，選新的）
-  add(object: Object3D): void;                  // 追加選取（Ctrl+Click）
-  remove(object: Object3D): void;               // 移除單個
-  toggle(object: Object3D): void;               // 切換（有就移除，沒就加）
-  has(object: Object3D): boolean;               // 是否在選取集合中
-  clear(): void;                                // 清除全部
-  get all(): readonly Object3D[];               // 取得全部（陣列）
-  get count(): number;                          // 數量
-  get primary(): Object3D | null;               // 最後加入的（gizmo 附著對象）
-}
-```
-- `select(obj)` = 清除舊選取 + 選新的（普通點擊）
-- `select(null)` = `clear()`
-- 事件：改發 `selectionChanged`，payload 為 `Object3D[]`
-
-### EventEmitter 新增事件（src/core/EventEmitter.ts）
-
-```typescript
-interface EditorEventMap {
-  // 取代 objectSelected
-  selectionChanged: [objects: Object3D[]];
-  // objectHovered 不變
-}
-```
-
-### Editor 調整（src/core/Editor.ts）
-
-- `removeObject()` 中：如果被移除的物體在選取集合中，從集合移除
-- 保持向後相容：如果有其他地方呼叫 `selection.select()`，行為不變
-
-### Bridge 改造（src/app/bridge.ts）
-
-```typescript
-interface EditorBridge {
-  selectedObjects: Accessor<Object3D[]>;   // 取代 selectedObject
-  // 其餘不變
-}
-```
-- 監聽 `selectionChanged` 事件，更新 signal
-
-### SelectionPicker 改造（src/viewport/SelectionPicker.ts）
-
-```typescript
-interface PickerCallbacks {
-  onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
-  // onHover 不變
-}
-```
-- `onPointerUp` 中讀取 `e.ctrlKey`（Mac 上同時支援 `e.metaKey`）
-- 傳給 callback，由 Viewport 層決定呼叫 `select()` 或 `toggle()`
-
-### Viewport 層整合（src/viewport/Viewport.ts）
-
-```typescript
-setSelectedObjects(objects: Object3D[]): void {
-  this.postProcessing.setSelectedObjects(objects);  // 已支援陣列
-  if (objects.length === 1) {
-    this.gizmo.attach(objects[0]);
-  } else if (objects.length > 1) {
-    this.gizmo.attachMulti(objects);                // 新方法
-  } else {
-    this.gizmo.detach();
-  }
-}
-```
-
-### GizmoManager 多物體 Transform（src/viewport/GizmoManager.ts）
-
-```typescript
-attachMulti(objects: Object3D[]): void;
-```
-- 計算所有物體的包圍盒中心，建立一個臨時 pivot Object3D
-- 將 TransformControls 附著到 pivot
-- 拖曳時：計算 pivot 的 transform delta，同步套用到所有 objects
-- 拖曳結束：回傳所有物體的 startPos/startRot/startScale 供 undo
-
-### SceneTreePanel（src/panels/scene-tree/SceneTreePanel.tsx）
-
-- 普通點擊：`selection.select(obj)`（取代選取）
-- Ctrl+Click：`selection.toggle(obj)`（追加/移除）
-- 視覺：所有在 `selectedObjects` 中的項目都高亮
-
-### PropertiesPanel（src/panels/properties/PropertiesPanel.tsx）
-
-- `selectedObjects.length === 0`：顯示「No object selected」
-- `selectedObjects.length === 1`：現有行為不變
-- `selectedObjects.length > 1`：顯示共同屬性，值不同的欄位顯示「—」
-
-### 分支策略
-
-| 分支 | 模組 | 改動 |
-|------|------|------|
-| feat/multiselect-core | core | Selection, EventEmitter, Editor |
-| feat/multiselect-app | app | bridge.ts |
-| feat/multiselect-viewport | viewport | SelectionPicker, GizmoManager, Viewport |
-| feat/multiselect-scene-tree | scene-tree | SceneTreePanel |
-| feat/multiselect-properties | properties | PropertiesPanel |
-
-合併順序：core → app → viewport / scene-tree / properties（可同時）
-
 ## 協作角色與流程
 
 ### 角色分工
 
-| 角色 | 職責 | 權限 |
-|------|------|------|
-| 指揮家（使用者） | 提出意圖與方向，做最終決策 | 全部 |
-| 主腦（主控 session） | 理解全貌、編輯文件、建置規範、協調成員、檢視文件一致性、建議並執行 merge | 全部 |
-| 參謀 | 合成 dispatch prompt、模擬測試、診斷溝通問題 | 只讀所有文件，可寫 advisor/ |
-| 開發 agent | 在指定分支實作功能，完成後 commit + push + 開 PR | 只改自己模組允許的檔案 |
-| QC agent | 審查分支品質，開 GitHub issue 回報問題 | 只讀 src/，可寫 qc/，可操作 `gh issue create` |
+| 角色 | 代號 | 模型 | 職責 |
+|------|------|------|------|
+| 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 |
+| 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、寫 CLAUDE.md、spawn AD/QC、執行 merge |
+| 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） |
+| 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR |
+| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment |
+
+> AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
 
 ### 開發模組清單
 
@@ -207,79 +60,84 @@ attachMulti(objects: Object3D[]): void;
 
 分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
 
-### 模組 CLAUDE.md 編寫原則（主腦職責）
+### 模組 CLAUDE.md 編寫原則
 
-模組 CLAUDE.md 只放**範圍限制、任務描述、慣例**。操作性規則全在 dev-sop.md，不重複。
+模組 CLAUDE.md 只放**範圍限制、任務描述、慣例**。「當前任務」區塊須**完整自包含**（含精確修法、程式碼片段、commit 格式、PR 開法），AD 讀完即可開工，不需查其他文件。
 
-主腦準備 worktree 時在「當前任務」寫入任務描述（含工作分支名稱）；QC 退回時在「待修項」寫入修正項。兩者不混用。
+主腦準備 worktree 時在「當前任務」寫入任務描述；QC 退回時在「待修項」寫入修正項。兩者不混用。
 
-### Advisor Dispatch Prompt（參謀職責）
+### 流水線流程
 
-指揮家派 dev agent 前，請 Advisor 合成自包含 prompt。Advisor 讀取 worktree 的 CLAUDE.md + dev-sop.md + knowledge.md，產出一份 agent 不需要再查任何文件就能開工的指令。操作性步驟附一句理由（why），讓 agent 理解而非盲從。
+**Bug / 小功能（單一模組）：**
+1. AH 調查後開 GitHub issue（帶 label）
+2. AH 建 worktree，寫模組 CLAUDE.md 當前任務
+3. AH spawn AD subagent → 實作 → commit + push → 開 PR
+4. AH spawn QC subagent → 審查 PR → 留 QC PASS / QC FAIL comment
+5. QC PASS → AH 直接 merge + cleanup
+6. QC FAIL → AH 更新 CLAUDE.md 待修項 → 回到步驟 3
+
+**大功能（跨模組）：**
+1. AH 設計介面契約，更新根 CLAUDE.md
+2. 拆分支（每模組一條），建 worktree，寫各模組 CLAUDE.md 當前任務
+3. AH 同時 spawn 多個 AD subagent（各 worktree 並行）
+4. 各 AD 開 PR 後，AH spawn QC subagents 逐 PR 審查
+5. 依合併順序（有依賴的先合）逐一 merge
 
 ### Merge 流程
 
-1. 開發 agent 完成實作 → commit + push → **開 PR**（`gh pr create`）
-2. QC 在 PR 上留 comment 記錄完整審查結果（審查表格、問題描述、merge 建議等）：
-   - 通過：comment 包含 **`QC PASS`** 標記
-   - 不通過：comment 包含 **`QC FAIL`** 標記 + 開 issue 描述問題 + request changes
-3. 主腦主動檢查 PR comment 和 review（`gh pr view <N> --json comments,reviews`）取得 QC 結果，不需指揮家轉達：
-   - **QC PASS** → 主腦向指揮家報告並建議 merge，指揮家同意後執行 `gh pr merge`
-   - **QC FAIL** → 主腦從 comment 和 issue 取得問題細節，寫進模組 CLAUDE.md 待修項 → 開發 agent 修復 + push → QC 再次 review
+1. AD 完成實作 → commit + push → 開 PR（`gh pr create`）
+2. QC 在 PR 上留 comment：
+   - 通過：包含 **`QC PASS`** 標記
+   - 不通過：包含 **`QC FAIL`** 標記 + 問題說明 + 開 issue
+3. AH 直接處理結果，無需指揮家轉達：
+   - **QC PASS** → AH 執行 merge + cleanup
+   - **QC FAIL** → AH 更新模組 CLAUDE.md 待修項 → spawn AD 修復 → QC 再次 review
 
-> 註：所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 PR comment 中的 `QC PASS` / `QC FAIL` 標記代替。
-
-### 主腦職責邊界
-
-主腦的執行範圍到「準備 worktree + 寫好模組 CLAUDE.md 任務描述」為止。
-**不得自行派開發 agent 實作**，由指揮家決定何時、派誰去做。
-
-準備 worktree 前，主腦須先讀 `.ai/knowledge.md`，將相關注意事項寫進任務描述，避免 agent 踩已知的坑。
-
-### 指揮家提案
-
-指揮家用自然語言描述意圖（不需要寫技術細節），主腦判斷規模後走對應流程。
-
-開 issue 時必須加 label：`bug`、`feature`（全新功能）、`enhancement`（改進現有功能）。
-
-**Bug / 小功能（單一模組可完成）：**
-1. 主腦調查後開 GitHub issue（帶 label）
-2. 建 fix 或 feat 分支 + worktree，寫進模組 CLAUDE.md 待修項或當前任務
-3. 指揮家請 Advisor 合成 dispatch prompt → 派 dev agent
-4. 開發 agent 實作 → commit + push → 開 PR
-5. QC 審查 PR → approved 後 merge
-
-**大功能（跨模組）：**
-1. 主腦設計介面契約，更新根 CLAUDE.md
-2. 拆分支（每模組一條），建 worktree，寫各模組 CLAUDE.md 當前任務
-3. 指揮家請 Advisor 合成各模組 dispatch prompt → 派 dev agent
-4. 開發 agent 各自實作 → commit + push → 各自開 PR
-5. QC 逐 PR 審查 → 全部 approved 後依序 merge
+> 所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 PR comment 中的 `QC PASS` / `QC FAIL` 標記代替。
 
 ### Merge 後收尾
 
-merge 完成後，主腦依序執行：
+merge 完成後，AH 依序執行：
 
 1. 關閉對應的 GitHub issue（`gh issue close #N`），包含 QC 開的 bug issue
 2. 移除已 merge 分支的 worktree（`git worktree remove`）
 3. 刪除本地 feat 分支（`git branch -d`）
 4. 刪除遠端 feat 分支（`git push origin --delete`）
 5. pull master 取得 merge commit
-6. 清理各模組 CLAUDE.md：
-   - 清空「當前任務」（保留標題和註解佔位）
-   - 清空「待修項」和「上報區」的內容
-7. 拜讀 `.ai/memos/` 目錄下的備忘錄檔案：
-   - 有價值 → 歸檔至 `.ai/knowledge.md`（按主題分類，標註來源，加 `⏳ 適用至 <條件>`）
-   - 已處理或瑣碎 → 粉碎（刪除該檔案）
-8. 審查 `.ai/knowledge.md`：檢查本次 merge 是否滿足某條知識的過期條件（`⏳`），已過期則移除
+6. 清理各模組 CLAUDE.md：清空「當前任務」、「待修項」、「上報區」
+7. 拜讀 `.ai/memos/` 目錄：有價值 → 歸檔至 `.ai/knowledge.md`；瑣碎 → 刪除
+8. 審查 `.ai/knowledge.md`：移除已過期（`⏳`）條目
 9. 跑一次整合 build 確認無錯誤
 10. commit 收尾改動並 push
 
 ### 文件維護流程
 
-- 主腦更新文件後 → 主腦自行校閱文字品質 + 檢視文件間一致性 → **主腦將 master merge 進所有 active feat 分支**
-- 指揮家要派 dev agent → 參謀合成 dispatch prompt（讀 CLAUDE.md + dev-sop + knowledge.md）
-- 指揮家與成員溝通不順時 → 參謀診斷問題根因
+- AH 更新文件後 → 自行校閱一致性 → 將 master merge 進所有 active feat 分支
+- 指揮家與成員溝通不順時 → AA 診斷問題根因
 
 ### 開發成員 SOP
 所有開發 agent 遵守 [docs/dev-sop.md](docs/dev-sop.md)。
+
+## AH Session Startup SOP
+
+**每次 session 開始（含 /clear 後）必須執行：**
+
+```bash
+git worktree list          # 哪些 worktree 活著（= 哪些 issue 在開發中）
+gh pr list                 # 哪些 PR 待 QC 或待 merge
+gh issue list              # 哪些 issue 開著
+```
+
+對每個 active worktree，讀其模組 CLAUDE.md（當前任務 + 待修項）。
+
+重建 pipeline 狀態：
+
+| 狀態 | 判斷條件 | 下一步 |
+|------|---------|--------|
+| 開發中 | worktree 存在，無 PR | spawn AD |
+| 等 QC | PR open，無 QC comment | spawn QC |
+| 等 merge | PR 有 QC PASS | merge + cleanup |
+| 等修復 | PR 有 QC FAIL，CLAUDE.md 有待修項 | spawn AD fix |
+| 閒置 | 無 worktree，無 open PR | 等指揮家指示 |
+
+重建完畢後向指揮家報告現況，或直接繼續推進。
