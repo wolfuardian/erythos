@@ -56,6 +56,12 @@ export class ShadingManager {
     this.applyMode();
   }
 
+  /** 強制重新套用目前模式，繞過 early return。場景替換後使用。 */
+  forceApply(): void {
+    this.restoreAll();
+    this.applyMode();
+  }
+
   /** 僅 shading 模式下有效，切換場景燈影響 */
   setSceneLightsEnabled(enabled: boolean): void {
     if (this._mode !== 'shading') return;

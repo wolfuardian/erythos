@@ -280,6 +280,13 @@ const ViewportPanel: Component = () => {
     viewport?.requestRender();
   });
 
+  // autosave restore 或場景替換後重新套用 shading mode（讓材質覆蓋/頭燈正確初始化）
+  createEffect(() => {
+    bridge.sceneVersion();
+    viewport?.shading.forceApply();
+    viewport?.requestRender();
+  });
+
   createEffect(() => {
     viewport?.setShadingMode(renderMode());
     viewport?.requestRender();
