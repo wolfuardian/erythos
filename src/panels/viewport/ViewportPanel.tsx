@@ -9,6 +9,8 @@ import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
 import { loadGLTFFromFile, loadGLTFFromCache } from '../../utils/gltfLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
+import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafCommand';
+import * as LeafStore from '../../core/scene/LeafStore';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
@@ -102,6 +104,35 @@ const ViewportPanel: Component = () => {
           if (groupUUID && (dropPosition[0] !== 0 || dropPosition[2] !== 0)) {
             const oldPos: Vec3 = [0, 0, 0];
             editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
+          }
+        } catch (err) {
+          setErrorMessage(err instanceof Error ? err.message : String(err));
+        }
+        return;
+      }
+
+      // 路徑 3：Leaf 拖曳（從 Leaf Panel）
+      const leafId = e.dataTransfer?.getData('application/erythos-leaf');
+      if (leafId) {
+        // 計算 NDC 座標（與路徑 1、2 相同公式）
+        const rect = containerRef.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        let dropPosition: Vec3 = [0, 0, 0];
+        if (viewport) {
+          const raycaster = new Raycaster();
+          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
+          const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+          const hitPoint = new Vector3();
+          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
+          if (hit) dropPosition = [hitPoint.x, 0, hitPoint.z];
+        }
+
+        try {
+          const asset = await LeafStore.get(leafId);
+          if (asset) {
+            editor.execute(new InstantiateLeafCommand(editor, asset, dropPosition));
           }
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));
