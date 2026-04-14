@@ -27,6 +27,7 @@ export interface EditorBridge {
   canRedo: Accessor<boolean>;
   autosaveStatus: Accessor<'idle' | 'pending' | 'saved'>;
   confirmBeforeLoad: Accessor<boolean>;
+  hasClipboard: Accessor<boolean>;
   dispose: () => void;
 }
 
@@ -41,6 +42,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const [canUndo, setCanUndo] = createSignal(false);
   const [canRedo, setCanRedo] = createSignal(false);
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved'>('idle');
+  const [hasClipboard, setHasClipboard] = createSignal(false);
 
   const bump = (setter: (fn: (v: number) => number) => void) =>
     setter((v) => v + 1);
@@ -82,6 +84,10 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   editor.sceneDocument.events.on('nodeChanged', onNodeChanged);
   editor.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
+  // Subscribe to Clipboard events
+  const onClipboardChanged = () => setHasClipboard(editor.clipboard.hasContent);
+  editor.clipboard.on('clipboardChanged', onClipboardChanged);
+
   const dispose = () => {
     for (const [event, handler] of Object.entries(editorHandlers)) {
       editor.events.off(event as any, handler as any);
@@ -90,6 +96,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     editor.sceneDocument.events.off('nodeRemoved', onNodeRemoved);
     editor.sceneDocument.events.off('nodeChanged', onNodeChanged);
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
+    editor.clipboard.off('clipboardChanged', onClipboardChanged);
   };
 
   return {
@@ -106,6 +113,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     canRedo,
     autosaveStatus,
     confirmBeforeLoad,
+    hasClipboard,
     dispose,
   };
 }
