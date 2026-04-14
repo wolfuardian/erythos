@@ -111,6 +111,8 @@ export class Viewport {
     this.vpRenderer.setOnResize((w, h) => {
       this.postProcessing.setSize(w, h);
     });
+    // 觸發初始尺寸，確保 LOW 模式從一開始就有正確的 render target 大小
+    this.postProcessing.setSize(this.vpRenderer.width, this.vpRenderer.height);
 
     // Mount submodules
     this.gridHelpers.mount(this.sceneHelpers);
