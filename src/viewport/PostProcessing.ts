@@ -4,6 +4,12 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
+import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
+import { ACESFilmicToneMapping, NoToneMapping } from 'three';
+import type { RenderSettings } from './RenderSettings';
 
 export type QualityLevel = 'low' | 'normal' | 'high';
 
@@ -12,6 +18,10 @@ export class PostProcessing {
   private selectOutline: OutlinePass;
   private hoverOutline: OutlinePass;
   private fxaaPass: ShaderPass;
+  private bloomPass: UnrealBloomPass;
+  private ssaoPass: SSAOPass;
+  private bokehPass: BokehPass;
+  private afterimagePass: AfterimagePass;
   private sceneHelpers: Scene;
   private camera: Camera;
   private renderer: WebGLRenderer;
@@ -30,6 +40,33 @@ export class PostProcessing {
 
     const renderPass = new RenderPass(scene, camera);
     this.composer.addPass(renderPass);
+
+    // SSAO (Ambient Occlusion) — 在 outline 前
+    this.ssaoPass = new SSAOPass(scene, camera, size.x, size.y);
+    this.ssaoPass.kernelRadius = 0.1;
+    this.ssaoPass.minDistance = 0.001;
+    this.ssaoPass.maxDistance = 0.1;
+    this.ssaoPass.enabled = false;
+    this.composer.addPass(this.ssaoPass);
+
+    // DOF (Depth of Field)
+    this.bokehPass = new BokehPass(scene, camera, {
+      focus: 5.0,
+      aperture: 0.025,
+      maxblur: 0.01,
+    });
+    this.bokehPass.enabled = false;
+    this.composer.addPass(this.bokehPass);
+
+    // Bloom
+    this.bloomPass = new UnrealBloomPass(size, 0.5, 0.4, 0.85);
+    this.bloomPass.enabled = false;
+    this.composer.addPass(this.bloomPass);
+
+    // Motion Blur (Afterimage)
+    this.afterimagePass = new AfterimagePass(0.7);
+    this.afterimagePass.enabled = false;
+    this.composer.addPass(this.afterimagePass);
 
     this.selectOutline = new OutlinePass(size, scene, camera);
     this.selectOutline.edgeStrength = 3;
@@ -59,6 +96,37 @@ export class PostProcessing {
     this.applySize();
   }
 
+  applyRenderSettings(settings: RenderSettings): void {
+    // Tone mapping
+    this.renderer.toneMapping = settings.toneMapping.enabled
+      ? ACESFilmicToneMapping
+      : NoToneMapping;
+    this.renderer.toneMappingExposure = settings.toneMapping.exposure;
+
+    // Bloom
+    this.bloomPass.enabled = settings.bloom.enabled;
+    this.bloomPass.strength = settings.bloom.strength;
+    this.bloomPass.radius = settings.bloom.radius;
+    this.bloomPass.threshold = settings.bloom.threshold;
+
+    // AO
+    this.ssaoPass.enabled = settings.ao.enabled;
+    this.ssaoPass.kernelRadius = settings.ao.radius;
+    // SSAOPass intensity is controlled via output property
+    this.ssaoPass.minDistance = settings.ao.intensity * 0.001;
+    this.ssaoPass.maxDistance = settings.ao.intensity * 0.1;
+
+    // DOF
+    this.bokehPass.enabled = settings.dof.enabled;
+    (this.bokehPass.uniforms as Record<string, { value: number }>)['focus'].value = settings.dof.focus;
+    (this.bokehPass.uniforms as Record<string, { value: number }>)['aperture'].value = settings.dof.aperture;
+    (this.bokehPass.uniforms as Record<string, { value: number }>)['maxblur'].value = settings.dof.maxBlur;
+
+    // Motion Blur
+    this.afterimagePass.enabled = settings.motionBlur.enabled;
+    (this.afterimagePass.uniforms as Record<string, { value: number }>)['damp'].value = settings.motionBlur.strength;
+  }
+
   /** 由 ViewportRenderer resize callback 呼叫，傳入邏輯像素（CSS px） */
   setSize(logicalW: number, logicalH: number): void {
     this._logicalW = logicalW;
@@ -71,6 +139,8 @@ export class PostProcessing {
     const w = Math.max(1, Math.round(this._logicalW * pixelRatio));
     const h = Math.max(1, Math.round(this._logicalH * pixelRatio));
     this.composer.setSize(w, h);
+    if (this.ssaoPass) this.ssaoPass.setSize(w, h);
+    if (this.bokehPass) this.bokehPass.setSize(w, h);
     if (this.fxaaPass.enabled) {
       this.fxaaPass.material.uniforms['resolution'].value.set(1 / w, 1 / h);
     }
