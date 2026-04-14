@@ -55,7 +55,7 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    this.shading = new ShadingManager(this.vpRenderer.renderer, this.scene);
+    this.shading = new ShadingManager(this.vpRenderer.renderer, this.scene, this.cameraCtrl.camera);
 
     this.gizmo = new GizmoManager(
       this.cameraCtrl.camera,
@@ -152,6 +152,19 @@ export class Viewport {
   setShadingMode(mode: ShadingMode): void {
     this.shading.setMode(mode);
     this.vpRenderer.syncRender();
+  }
+
+  private _ppEnabled = true;
+
+  setPostProcessingEnabled(enabled: boolean): void {
+    if (this._ppEnabled === enabled) return;
+    this._ppEnabled = enabled;
+    if (enabled) {
+      this.vpRenderer.setRenderOverride(() => this.postProcessing.render());
+    } else {
+      this.vpRenderer.setRenderOverride(undefined);
+    }
+    this.vpRenderer.requestRender();
   }
 
   focusObject(object: Object3D): void {

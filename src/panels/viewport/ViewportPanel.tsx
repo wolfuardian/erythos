@@ -1,4 +1,5 @@
-import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
+import { onMount, onCleanup, createEffect, createSignal, Show, For, type Component } from 'solid-js';
+import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { Object3D } from 'three';
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
@@ -15,6 +16,9 @@ const ViewportPanel: Component = () => {
 
   const [isDragging, setIsDragging] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
+  const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
+  const [ppOn, setPpOn] = createSignal(true);
 
   onMount(() => {
     const onDragOver = (e: DragEvent) => {
@@ -217,6 +221,20 @@ const ViewportPanel: Component = () => {
     viewport?.requestRender();
   });
 
+  createEffect(() => {
+    viewport?.setShadingMode(renderMode());
+    viewport?.requestRender();
+  });
+
+  createEffect(() => {
+    viewport?.shading.setSceneLightsEnabled(sceneLightsOn());
+    viewport?.requestRender();
+  });
+
+  createEffect(() => {
+    viewport?.setPostProcessingEnabled(ppOn());
+  });
+
   onCleanup(() => {
     viewport?.dispose();
     viewport = null;
@@ -252,6 +270,81 @@ const ViewportPanel: Component = () => {
           放開以導入模型
         </div>
       </Show>
+      {/* 渲染模式工具列 */}
+      <div style={{
+        position: 'absolute',
+        top: '8px',
+        right: '8px',
+        display: 'flex',
+        'align-items': 'center',
+        gap: '2px',
+        background: 'rgba(20,20,20,0.75)',
+        'border-radius': '5px',
+        padding: '3px',
+        'z-index': '5',
+        'user-select': 'none',
+      }}>
+        <For each={(['wireframe', 'solid', 'shading', 'rendering'] as ShadingMode[])}>
+          {(mode) => (
+            <button
+              onClick={() => setRenderMode(mode)}
+              style={{
+                background: renderMode() === mode ? 'rgba(255,255,255,0.18)' : 'transparent',
+                border: 'none',
+                color: renderMode() === mode ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
+                padding: '3px 8px',
+                cursor: 'pointer',
+                'border-radius': '3px',
+                'font-size': '11px',
+                'font-weight': renderMode() === mode ? '600' : '400',
+                transition: 'background 0.1s',
+              }}
+            >
+              {mode === 'wireframe' ? 'Wire' :
+               mode === 'solid' ? 'Solid' :
+               mode === 'shading' ? 'Shading' : 'Render'}
+            </button>
+          )}
+        </For>
+
+        <Show when={renderMode() === 'shading'}>
+          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
+          <button
+            onClick={() => setSceneLightsOn(v => !v)}
+            style={{
+              background: sceneLightsOn() ? 'rgba(255,200,50,0.2)' : 'transparent',
+              border: 'none',
+              color: sceneLightsOn() ? 'rgba(255,200,100,1)' : 'var(--text-secondary, #aaa)',
+              padding: '3px 8px',
+              cursor: 'pointer',
+              'border-radius': '3px',
+              'font-size': '11px',
+              transition: 'background 0.1s',
+            }}
+          >
+            Lights
+          </button>
+        </Show>
+
+        <Show when={renderMode() === 'rendering'}>
+          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)', margin: '0 2px' }} />
+          <button
+            onClick={() => setPpOn(v => !v)}
+            style={{
+              background: ppOn() ? 'rgba(100,180,255,0.2)' : 'transparent',
+              border: 'none',
+              color: ppOn() ? 'rgba(130,200,255,1)' : 'var(--text-secondary, #aaa)',
+              padding: '3px 8px',
+              cursor: 'pointer',
+              'border-radius': '3px',
+              'font-size': '11px',
+              transition: 'background 0.1s',
+            }}
+          >
+            Post FX
+          </button>
+        </Show>
+      </div>
       <ErrorDialog
         open={errorMessage() !== null}
         title="導入失敗"
