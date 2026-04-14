@@ -394,6 +394,24 @@ const SceneTreePanel: Component = () => {
         action: () => {
           const nodes = editor.clipboard.paste();
           if (!nodes || nodes.length === 0) return;
+
+          const selected = bridge.selectedUUIDs();
+          if (selected.length === 1) {
+            const parentId = selected[0];
+            const existingChildren = bridge.nodes().filter(n => n.parent === parentId);
+            const maxOrder = existingChildren.length > 0
+              ? Math.max(...existingChildren.map(n => n.order))
+              : -1;
+            let offset = 1;
+            for (const node of nodes) {
+              if (node.parent === null) {
+                node.parent = parentId;
+                node.order = maxOrder + offset;
+                offset++;
+              }
+            }
+          }
+
           const cmds = nodes.map(n => new AddNodeCommand(editor, n));
           if (cmds.length === 1) {
             editor.execute(cmds[0]);
