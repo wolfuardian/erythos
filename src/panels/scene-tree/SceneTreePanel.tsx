@@ -310,6 +310,21 @@ const SceneTreePanel: Component = () => {
     editor.selection.select(node.id);
   };
 
+  const collectSubtree = (rootId: string): SceneNode[] => {
+    const all = editor.sceneDocument.getAllNodes();
+    const result: SceneNode[] = [];
+    const queue = [rootId];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      const node = editor.sceneDocument.getNode(cur);
+      if (node) {
+        result.push(node);
+        all.filter(n => n.parent === cur).forEach(n => queue.push(n.id));
+      }
+    }
+    return result;
+  };
+
   const menuItems = (): MenuItem[] => {
     const selected = bridge.selectedUUIDs();
     const hasClip = bridge.hasClipboard();
@@ -357,20 +372,6 @@ const SceneTreePanel: Component = () => {
         label: 'Copy',
         disabled: selected.length === 0,
         action: () => {
-          const nodes = selected
-            .map(id => editor.sceneDocument.getNode(id))
-            .filter((n): n is SceneNode => n !== null);
-          editor.clipboard.copy(nodes);
-        },
-      },
-      {
-        label: 'Cut',
-        disabled: selected.length === 0,
-        action: () => {
-          const nodes = selected
-            .map(id => editor.sceneDocument.getNode(id))
-            .filter((n): n is SceneNode => n !== null);
-          editor.clipboard.cut(nodes);
           const topLevel = selected.filter(id => {
             let cursor = editor.sceneDocument.getNode(id)?.parent;
             while (cursor) {
@@ -379,6 +380,24 @@ const SceneTreePanel: Component = () => {
             }
             return true;
           });
+          const allNodes = topLevel.flatMap(id => collectSubtree(id));
+          editor.clipboard.copy(allNodes);
+        },
+      },
+      {
+        label: 'Cut',
+        disabled: selected.length === 0,
+        action: () => {
+          const topLevel = selected.filter(id => {
+            let cursor = editor.sceneDocument.getNode(id)?.parent;
+            while (cursor) {
+              if (selected.includes(cursor)) return false;
+              cursor = editor.sceneDocument.getNode(cursor)?.parent ?? null;
+            }
+            return true;
+          });
+          const allNodes = topLevel.flatMap(id => collectSubtree(id));
+          editor.clipboard.cut(allNodes);
           if (topLevel.length === 1) {
             editor.execute(new RemoveNodeCommand(editor, topLevel[0]));
           } else if (topLevel.length > 1) {
