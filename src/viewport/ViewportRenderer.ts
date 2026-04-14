@@ -55,7 +55,7 @@ export class ViewportRenderer {
   }
 
   /** Override the default render call (used by PostProcessing). */
-  setRenderOverride(fn: () => void): void {
+  setRenderOverride(fn: (() => void) | undefined): void {
     this.renderOverride = fn;
   }
 
