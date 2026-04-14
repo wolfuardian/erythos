@@ -8,6 +8,7 @@ import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
+import { SaveAsLeafCommand } from '../../core/commands/SaveAsLeafCommand';
 
 interface DropIndicator {
   targetId: string;
@@ -408,6 +409,16 @@ const SceneTreePanel: Component = () => {
             editor.execute(new MultiCmdsCommand(editor, cmds));
           }
           editor.selection.select(null);
+        },
+      },
+      {
+        label: 'Save as Leaf',
+        disabled: selected.length !== 1,
+        action: () => {
+          const uuid = selected[0];
+          const node = editor.sceneDocument.getNode(uuid);
+          if (!node) return;
+          editor.execute(new SaveAsLeafCommand(editor, uuid, node.name));
         },
       },
       {
