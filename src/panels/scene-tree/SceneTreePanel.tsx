@@ -172,6 +172,15 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       <div
         draggable={true}
         onClick={handleClick}
+        onContextMenu={(e) => {
+          if (e.ctrlKey || e.metaKey) {
+            editor.selection.toggle(props.node.id);
+          } else {
+            if (!isSelected()) {
+              editor.selection.select(props.node.id);
+            }
+          }
+        }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onDragStart={onDragStart}
