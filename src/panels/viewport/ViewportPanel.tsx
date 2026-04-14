@@ -48,6 +48,8 @@ const ViewportPanel: Component = () => {
       }
     };
 
+    let ctrlPressed = false;
+
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -70,6 +72,25 @@ const ViewportPanel: Component = () => {
       if (e.key === 'r' || e.key === 'R') {
         editor.setTransformMode('scale');
       }
+
+      if (e.key === 'Control' && !ctrlPressed) {
+        ctrlPressed = true;
+        viewport?.gizmo.setVisible(false);
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') {
+        ctrlPressed = false;
+        viewport?.gizmo.setVisible(true);
+      }
+    };
+
+    const onBlur = () => {
+      if (ctrlPressed) {
+        ctrlPressed = false;
+        viewport?.gizmo.setVisible(true);
+      }
     };
 
     containerRef.addEventListener('dragover', onDragOver);
@@ -77,6 +98,8 @@ const ViewportPanel: Component = () => {
     containerRef.addEventListener('dragleave', onDragLeave);
     containerRef.addEventListener('drop', onDrop);
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
 
     onCleanup(() => {
       containerRef.removeEventListener('dragover', onDragOver);
@@ -84,6 +107,8 @@ const ViewportPanel: Component = () => {
       containerRef.removeEventListener('dragleave', onDragLeave);
       containerRef.removeEventListener('drop', onDrop);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     });
 
     viewport = new Viewport(editor.threeScene, {
