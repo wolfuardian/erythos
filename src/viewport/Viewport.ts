@@ -8,6 +8,7 @@ import { GridHelpers } from './GridHelpers';
 import { PostProcessing } from './PostProcessing';
 import { ShadingManager, type ShadingMode } from './ShadingManager';
 import type { TransformMode } from '../core/EventEmitter';
+import type { RenderSettings } from './RenderSettings';
 
 export interface ViewportCallbacks {
   onSelect: (object: Object3D | null, modifier: { ctrl: boolean }) => void;
@@ -157,6 +158,11 @@ export class Viewport {
   setShadingMode(mode: ShadingMode): void {
     this.shading.setMode(mode);
     this.vpRenderer.syncRender();
+  }
+
+  setRenderSettings(settings: RenderSettings): void {
+    this.postProcessing.applyRenderSettings(settings);
+    this.vpRenderer.requestRender();
   }
 
   setQuality(quality: import('./PostProcessing').QualityLevel): void {
