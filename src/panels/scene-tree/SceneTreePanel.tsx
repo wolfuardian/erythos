@@ -20,12 +20,13 @@ interface TreeNodeProps {
   dropIndicator: () => DropIndicator | null;
   setDraggedId: (id: string | null) => void;
   setDropIndicator: (v: DropIndicator | null) => void;
+  isExpanded: (id: string) => boolean;
+  toggleExpanded: (id: string) => void;
 }
 
 const TreeNode: Component<TreeNodeProps> = (props) => {
   const bridge = useEditor();
   const { editor } = bridge;
-  const [expanded, setExpanded] = createSignal(true);
 
   const isSelected = () => bridge.selectedUUIDs().includes(props.node.id);
   const isHovered = () => bridge.hoveredUUID() === props.node.id;
@@ -230,7 +231,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
         {/* Expand toggle */}
         <Show when={hasChildren()}>
           <span
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded()); }}
+            onClick={(e) => { e.stopPropagation(); props.toggleExpanded(props.node.id); }}
             style={{
               width: '14px',
               'font-size': '8px',
@@ -240,7 +241,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
               'user-select': 'none',
             }}
           >
-            {expanded() ? '\u25BC' : '\u25B6'}
+            {props.isExpanded(props.node.id) ? '\u25BC' : '\u25B6'}
           </span>
         </Show>
         <Show when={!hasChildren()}>
@@ -278,7 +279,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       </div>
 
       {/* Children */}
-      <Show when={expanded() && hasChildren()}>
+      <Show when={props.isExpanded(props.node.id) && hasChildren()}>
         <For each={childNodes()}>
           {(child) => (
             <TreeNode
@@ -288,6 +289,8 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
               dropIndicator={props.dropIndicator}
               setDraggedId={props.setDraggedId}
               setDropIndicator={props.setDropIndicator}
+              isExpanded={props.isExpanded}
+              toggleExpanded={props.toggleExpanded}
             />
           )}
         </For>
@@ -303,6 +306,13 @@ const SceneTreePanel: Component = () => {
   const [draggedId, setDraggedId] = createSignal<string | null>(null);
   const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
+  const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
+
+  const isExpanded = (id: string): boolean => expandedMap()[id] ?? true;
+
+  const toggleExpanded = (id: string): void => {
+    setExpandedMap(prev => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  };
 
   const rootNodes = () =>
     bridge.nodes()
@@ -486,6 +496,8 @@ const SceneTreePanel: Component = () => {
             dropIndicator={dropIndicator}
             setDraggedId={setDraggedId}
             setDropIndicator={setDropIndicator}
+            isExpanded={isExpanded}
+            toggleExpanded={toggleExpanded}
           />
         )}
       </For>
