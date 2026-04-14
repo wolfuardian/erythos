@@ -1,7 +1,6 @@
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import { serializeToLeaf } from '../scene/LeafSerializer';
-import * as LeafStore from '../scene/LeafStore';
 import type { LeafAsset } from '../scene/LeafFormat';
 
 export class SaveAsLeafCommand extends Command {
@@ -24,8 +23,8 @@ export class SaveAsLeafCommand extends Command {
     // 序列化子樹為 LeafAsset
     this.savedAsset = serializeToLeaf(this.rootUUID, allNodes, this.name);
 
-    // 持久化到 IndexedDB（fire-and-forget，非同步不阻塞 undo/redo）
-    void LeafStore.put(this.savedAsset.id, this.savedAsset);
+    // 持久化到 IndexedDB（透過 editor.registerLeaf，同時更新記憶體快取並觸發事件）
+    this.editor.registerLeaf(this.savedAsset);
 
     // 在 root node 標記 leaf 實例
     const newComponents = {
@@ -38,8 +37,8 @@ export class SaveAsLeafCommand extends Command {
   undo(): void {
     if (!this.savedAsset) return;
 
-    // 從 store 移除（fire-and-forget）
-    void LeafStore.remove(this.savedAsset.id);
+    // 從記憶體快取與 IndexedDB 移除
+    this.editor.unregisterLeaf(this.savedAsset.id);
 
     // 移除 root node 的 leaf 標記
     const root = this.editor.sceneDocument.getNode(this.rootUUID);

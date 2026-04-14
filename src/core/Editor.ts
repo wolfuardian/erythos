@@ -11,6 +11,8 @@ import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
+import type { LeafAsset } from './scene/LeafFormat';
+import * as LeafStore from './scene/LeafStore';
 
 export class Editor {
   readonly scene: Scene;
@@ -25,6 +27,7 @@ export class Editor {
   autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
+  private _leafAssets = new Map<string, LeafAsset>();
 
   constructor() {
     this.scene = new Scene();
@@ -44,6 +47,12 @@ export class Editor {
    * App 層需在 editor 對外提供 context 前 await 此方法。
    */
   async init(): Promise<void> {
+    // 0. Restore leaf assets from IndexedDB
+    const leafAssets = await LeafStore.getAll();
+    for (const asset of leafAssets) {
+      this._leafAssets.set(asset.id, asset);
+    }
+
     // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
     await this.resourceCache.hydrate();
 
@@ -69,6 +78,24 @@ export class Editor {
     if (this._transformMode === mode) return;
     this._transformMode = mode;
     this.events.emit('transformModeChanged', mode);
+  }
+
+  // ── Leaf asset API ────────────────────────────────
+
+  registerLeaf(asset: LeafAsset): void {
+    this._leafAssets.set(asset.id, asset);
+    void LeafStore.put(asset.id, asset);
+    this.events.emit('leafStoreChanged');
+  }
+
+  unregisterLeaf(id: string): void {
+    this._leafAssets.delete(id);
+    void LeafStore.remove(id);
+    this.events.emit('leafStoreChanged');
+  }
+
+  getAllLeafAssets(): LeafAsset[] {
+    return Array.from(this._leafAssets.values());
   }
 
   // ── Command execution ─────────────────────────────
