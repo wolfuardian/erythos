@@ -308,7 +308,7 @@ const SceneTreePanel: Component = () => {
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
 
-  const isExpanded = (id: string): boolean => expandedMap()[id] ?? true;
+  const isExpanded = (id: string): boolean => expandedMap()[id] ?? false;
 
   const toggleExpanded = (id: string): void => {
     setExpandedMap(prev => ({ ...prev, [id]: !(prev[id] ?? true) }));
