@@ -297,8 +297,9 @@ const ViewportPanel: Component = () => {
     viewport?.requestRender();
   });
 
+  // PP 只在 rendering 模式有效；ppOn 記住使用者設定，切換回 rendering 時自動還原
   createEffect(() => {
-    viewport?.setPostProcessingEnabled(ppOn());
+    viewport?.setPostProcessingEnabled(renderMode() === 'rendering' && ppOn());
   });
 
   createEffect(() => {
