@@ -121,7 +121,7 @@ const ContextMenu: Component<ContextMenuProps> = (props) => {
       const menuWidth = menuRect.width;
       setExtraOffset({
         x: -(menuWidth * props.align!.xPercent),
-        y: -itemCenterFromTop,
+        y: props.position.y - menuRect.top - itemCenterFromTop,
       });
     });
   });
