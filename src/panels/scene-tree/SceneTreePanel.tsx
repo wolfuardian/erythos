@@ -298,6 +298,16 @@ const SceneTreePanel: Component = () => {
       .filter(n => n.parent === null)
       .sort((a, b) => a.order - b.order);
 
+  const createPrimitive = (type: string, name: string) => {
+    const node = editor.sceneDocument.createNode(name);
+    node.components = {
+      geometry: { type },
+      material: { color: 0xcccccc },
+    };
+    editor.execute(new AddNodeCommand(editor, node));
+    editor.selection.select(node.id);
+  };
+
   const menuItems = (): MenuItem[] => [
     {
       label: 'Create Empty',
@@ -306,6 +316,15 @@ const SceneTreePanel: Component = () => {
         editor.execute(new AddNodeCommand(editor, node));
         editor.selection.select(node.id);
       },
+    },
+    {
+      label: 'Create Primitive',
+      children: [
+        { label: 'Box', action: () => createPrimitive('box', 'Box') },
+        { label: 'Sphere', action: () => createPrimitive('sphere', 'Sphere') },
+        { label: 'Plane', action: () => createPrimitive('plane', 'Plane') },
+        { label: 'Cylinder', action: () => createPrimitive('cylinder', 'Cylinder') },
+      ],
     },
   ];
 
