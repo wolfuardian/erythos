@@ -3,6 +3,8 @@ import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
 import { useEditor } from '../../app/EditorContext';
 import { MoveNodeCommand } from '../../core/commands/MoveNodeCommand';
+import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
+import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 
 interface DropIndicator {
   targetId: string;
@@ -285,23 +287,42 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
 const SceneTreePanel: Component = () => {
   const bridge = useEditor();
+  const { editor } = bridge;
 
   const [draggedId, setDraggedId] = createSignal<string | null>(null);
   const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
+  const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
 
   const rootNodes = () =>
     bridge.nodes()
       .filter(n => n.parent === null)
       .sort((a, b) => a.order - b.order);
 
+  const menuItems = (): MenuItem[] => [
+    {
+      label: 'Create Empty',
+      action: () => {
+        const node = editor.sceneDocument.createNode('Empty');
+        editor.execute(new AddNodeCommand(editor, node));
+        editor.selection.select(node.id);
+      },
+    },
+  ];
+
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      overflow: 'auto',
-      background: 'var(--bg-panel)',
-      padding: 'var(--space-xs) 0',
-    }}>
+    <div
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }}
+      style={{
+        width: '100%',
+        height: '100%',
+        overflow: 'auto',
+        background: 'var(--bg-panel)',
+        padding: 'var(--space-xs) 0',
+      }}
+    >
       <For each={rootNodes()}>
         {(node) => (
           <TreeNode
@@ -323,6 +344,13 @@ const SceneTreePanel: Component = () => {
         }}>
           Empty scene
         </div>
+      </Show>
+      <Show when={contextMenu()}>
+        <ContextMenu
+          items={menuItems()}
+          position={contextMenu()!}
+          onClose={() => setContextMenu(null)}
+        />
       </Show>
     </div>
   );
