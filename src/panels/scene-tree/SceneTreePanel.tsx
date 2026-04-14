@@ -314,6 +314,27 @@ const SceneTreePanel: Component = () => {
     setExpandedMap(prev => ({ ...prev, [id]: !(prev[id] ?? true) }));
   };
 
+  const setNodeExpanded = (id: string, value: boolean): void => {
+    setExpandedMap(prev => ({ ...prev, [id]: value }));
+  };
+
+  const flatVisibleNodes = (): SceneNode[] => {
+    const result: SceneNode[] = [];
+    const visit = (parentId: string | null) => {
+      const children = bridge.nodes()
+        .filter(n => n.parent === parentId)
+        .sort((a, b) => a.order - b.order);
+      for (const child of children) {
+        result.push(child);
+        if (isExpanded(child.id)) {
+          visit(child.id);
+        }
+      }
+    };
+    visit(null);
+    return result;
+  };
+
   const rootNodes = () =>
     bridge.nodes()
       .filter(n => n.parent === null)
@@ -465,12 +486,65 @@ const SceneTreePanel: Component = () => {
     ];
   };
 
+  let containerRef!: HTMLDivElement;
+
   return (
     <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.ctrlKey || e.metaKey) return;
+
+        const flat = flatVisibleNodes();
+        const selected = bridge.selectedUUIDs();
+        const currentId = selected.length > 0 ? selected[selected.length - 1] : null;
+        const currentIdx = currentId ? flat.findIndex(n => n.id === currentId) : -1;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = flat[currentIdx + 1];
+          if (next) editor.selection.select(next.id);
+          else if (currentIdx === -1 && flat.length > 0) editor.selection.select(flat[0].id);
+        }
+
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (currentIdx > 0) editor.selection.select(flat[currentIdx - 1].id);
+        }
+
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (!currentId) return;
+          const node = flat.find(n => n.id === currentId);
+          if (!node) return;
+          const hasKids = bridge.nodes().some(n => n.parent === currentId);
+          if (hasKids && isExpanded(currentId)) {
+            setNodeExpanded(currentId, false);
+          } else if (node.parent) {
+            editor.selection.select(node.parent);
+          }
+        }
+
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (!currentId) return;
+          const hasKids = bridge.nodes().some(n => n.parent === currentId);
+          if (!hasKids) return;
+          if (!isExpanded(currentId)) {
+            setNodeExpanded(currentId, true);
+          } else {
+            const children = bridge.nodes()
+              .filter(n => n.parent === currentId)
+              .sort((a, b) => a.order - b.order);
+            if (children.length > 0) editor.selection.select(children[0].id);
+          }
+        }
+      }}
       onClick={(e) => {
         if (!(e.target as Element).closest('[draggable]')) {
           editor.selection.select(null);
         }
+        containerRef.focus();
       }}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -485,6 +559,7 @@ const SceneTreePanel: Component = () => {
         overflow: 'auto',
         background: 'var(--bg-panel)',
         padding: 'var(--space-xs) 0',
+        outline: 'none',
       }}
     >
       <For each={rootNodes()}>
