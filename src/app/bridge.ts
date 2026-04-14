@@ -3,6 +3,7 @@ import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
 import type { LeafAsset } from '../core/scene/LeafFormat';
+import * as GlbStore from '../core/scene/GlbStore';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -30,6 +31,7 @@ export interface EditorBridge {
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   leafAssets: Accessor<LeafAsset[]>;
+  glbKeys: Accessor<string[]>;
   dispose: () => void;
 }
 
@@ -46,6 +48,10 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
   const [leafAssets, setLeafAssets] = createSignal<LeafAsset[]>(editor.getAllLeafAssets());
+  const [glbKeys, setGlbKeys] = createSignal<string[]>([]);
+
+  // 非同步初始化（fire-and-forget）
+  void GlbStore.keys().then(setGlbKeys);
 
   const bump = (setter: (fn: (v: number) => number) => void) =>
     setter((v) => v + 1);
@@ -65,7 +71,10 @@ export function createEditorBridge(editor: Editor): EditorBridge {
 
   // SceneDocument event handlers — Commands operate on SceneDocument directly,
   // so only these events capture all scene changes (not editor.events).
-  const onNodeAdded = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
+  const onNodeAdded = (_node: SceneNode) => {
+    setNodes(editor.sceneDocument.getAllNodes());
+    void GlbStore.keys().then(setGlbKeys);
+  };
   const onNodeRemoved = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
   const onNodeChanged = (_uuid: string, _changed: Partial<SceneNode>) => {
     setNodes(editor.sceneDocument.getAllNodes());
@@ -74,6 +83,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const onSceneReplaced = () => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setSceneVersion);
+    void GlbStore.keys().then(setGlbKeys);
   };
 
   // Subscribe to editor events
@@ -123,6 +133,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     confirmBeforeLoad,
     hasClipboard,
     leafAssets,
+    glbKeys,
     dispose,
   };
 }
