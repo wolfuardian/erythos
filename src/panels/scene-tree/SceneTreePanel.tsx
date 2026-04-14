@@ -312,6 +312,7 @@ const SceneTreePanel: Component = () => {
 
   const menuItems = (): MenuItem[] => {
     const selected = bridge.selectedUUIDs();
+    const hasClip = editor.clipboard.hasContent;
     return [
       {
         label: 'Create Empty',
@@ -350,6 +351,51 @@ const SceneTreePanel: Component = () => {
             editor.execute(new MultiCmdsCommand(editor, cmds));
           }
           editor.selection.select(null);
+        },
+      },
+      {
+        label: 'Copy',
+        disabled: selected.length === 0,
+        action: () => {
+          const nodes = selected
+            .map(id => editor.sceneDocument.getNode(id))
+            .filter((n): n is SceneNode => n !== null);
+          editor.clipboard.copy(nodes);
+        },
+      },
+      {
+        label: 'Cut',
+        disabled: selected.length === 0,
+        action: () => {
+          const nodes = selected
+            .map(id => editor.sceneDocument.getNode(id))
+            .filter((n): n is SceneNode => n !== null);
+          editor.clipboard.cut(nodes);
+          if (selected.length === 1) {
+            editor.execute(new RemoveNodeCommand(editor, selected[0]));
+          } else {
+            const cmds = selected.map(id => new RemoveNodeCommand(editor, id));
+            editor.execute(new MultiCmdsCommand(editor, cmds));
+          }
+          editor.selection.select(null);
+        },
+      },
+      {
+        label: 'Paste',
+        disabled: !hasClip,
+        action: () => {
+          const nodes = editor.clipboard.paste();
+          if (!nodes || nodes.length === 0) return;
+          const cmds = nodes.map(n => new AddNodeCommand(editor, n));
+          if (cmds.length === 1) {
+            editor.execute(cmds[0]);
+          } else {
+            editor.execute(new MultiCmdsCommand(editor, cmds));
+          }
+          editor.selection.select(null);
+          for (const n of nodes) {
+            editor.selection.add(n.id);
+          }
         },
       },
     ];
