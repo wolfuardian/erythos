@@ -332,7 +332,7 @@ const SceneTreePanel: Component = () => {
     <div
       onContextMenu={(e) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY });
+        setContextMenu({ x: e.clientX - 104, y: e.clientY - 15 });
       }}
       style={{
         width: '100%',
