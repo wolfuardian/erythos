@@ -164,19 +164,6 @@ export class Viewport {
     this.vpRenderer.syncRender();
   }
 
-  private _ppEnabled = true;
-
-  setPostProcessingEnabled(enabled: boolean): void {
-    if (this._ppEnabled === enabled) return;
-    this._ppEnabled = enabled;
-    if (enabled) {
-      this.vpRenderer.setRenderOverride(() => this.postProcessing.render());
-    } else {
-      this.vpRenderer.setRenderOverride(undefined);
-    }
-    this.vpRenderer.requestRender();
-  }
-
   focusObject(object: Object3D): void {
     this.cameraCtrl.focusObject(object);
   }
