@@ -165,6 +165,16 @@ export class Viewport {
     this.vpRenderer.requestRender();
   }
 
+  setEnvironmentIntensity(intensity: number): void {
+    this.shading.setEnvironmentIntensity(intensity);
+    this.vpRenderer.requestRender();
+  }
+
+  setEnvironmentRotation(angleRadians: number): void {
+    this.shading.setEnvironmentRotation(angleRadians);
+    this.vpRenderer.requestRender();
+  }
+
   setQuality(quality: import('./PostProcessing').QualityLevel): void {
     this.postProcessing.setQuality(quality);
     this.vpRenderer.syncRender();
