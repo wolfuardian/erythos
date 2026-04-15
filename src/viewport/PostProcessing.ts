@@ -98,7 +98,7 @@ export class PostProcessing {
 
   applyRenderSettings(settings: RenderSettings): void {
     // Tone mapping
-    this.renderer.toneMapping = settings.toneMapping.enabled
+    this.renderer.toneMapping = settings.toneMapping.mode === 'aces'
       ? ACESFilmicToneMapping
       : NoToneMapping;
     this.renderer.toneMappingExposure = settings.toneMapping.exposure;
