@@ -505,149 +505,163 @@ const ViewportPanel: Component = () => {
               </Show>
             </div>
 
-            {/* ── 以下每個效果群組用同樣模式 ── */}
-
-            {/* Tone Mapping */}
+            {/* ── Effects 群組（包裹所有效果子群組） ── */}
             <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
               <div
-                onClick={() => toggleGroup('toneMapping')}
+                onClick={() => toggleGroup('effects')}
                 style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
               >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('toneMapping') ? '\u25BE' : '\u25B8'}</span>
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <input type="checkbox" checked={renderSettings().toneMapping.enabled}
-                    onChange={e => updateSetting('toneMapping', { enabled: e.target.checked })} />
-                  <span style={{ color: 'var(--text-primary, #fff)' }}>Tone Mapping</span>
-                </label>
+                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('effects') ? '\u25BE' : '\u25B8'}</span>
+                <span style={{ color: 'var(--text-primary, #fff)' }}>Effects</span>
               </div>
-              <Show when={isGroupOpen('toneMapping') && renderSettings().toneMapping.enabled}>
-                <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
-                  <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                    <span>Exposure</span><span>{renderSettings().toneMapping.exposure.toFixed(2)}</span>
-                  </div>
-                  <input type="range" min="0.1" max="3" step="0.05"
-                    value={renderSettings().toneMapping.exposure}
-                    onInput={e => updateSetting('toneMapping', { exposure: parseFloat(e.target.value) })}
-                    style={{ width: '100%' }} />
-                </div>
-              </Show>
-            </div>
+              <Show when={isGroupOpen('effects')}>
+                <div style={{ 'padding-left': '10px' }}>
 
-            {/* Bloom */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div
-                onClick={() => toggleGroup('bloom')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
-              >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('bloom') ? '\u25BE' : '\u25B8'}</span>
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <input type="checkbox" checked={renderSettings().bloom.enabled}
-                    onChange={e => updateSetting('bloom', { enabled: e.target.checked })} />
-                  <span style={{ color: 'var(--text-primary, #fff)' }}>Bloom</span>
-                </label>
-              </div>
-              <Show when={isGroupOpen('bloom') && renderSettings().bloom.enabled}>
-                <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                  <For each={[
-                    { key: 'strength' as const, min: 0, max: 3 },
-                    { key: 'radius' as const, min: 0, max: 1 },
-                    { key: 'threshold' as const, min: 0, max: 1 },
-                  ]}>
-                    {(item) => (
-                      <div>
-                        <div style={{ display: 'flex', 'justify-content': 'space-between' }}>
-                          <span style={{ 'text-transform': 'capitalize' }}>{item.key}</span>
-                          <span>{(renderSettings().bloom[item.key] as number).toFixed(2)}</span>
+                  {/* Tone Mapping */}
+                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                    <div
+                      onClick={() => toggleGroup('toneMapping')}
+                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
+                    >
+                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('toneMapping') ? '\u25BE' : '\u25B8'}</span>
+                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <input type="checkbox" checked={renderSettings().toneMapping.enabled}
+                          onChange={e => updateSetting('toneMapping', { enabled: e.target.checked })} />
+                        <span style={{ color: 'var(--text-primary, #fff)' }}>Tone Mapping</span>
+                      </label>
+                    </div>
+                    <Show when={isGroupOpen('toneMapping') && renderSettings().toneMapping.enabled}>
+                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
+                        <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+                          <span>Exposure</span><span>{renderSettings().toneMapping.exposure.toFixed(2)}</span>
                         </div>
-                        <input type="range" min={item.min} max={item.max} step="0.01"
-                          value={renderSettings().bloom[item.key] as number}
-                          onInput={e => updateSetting('bloom', { [item.key]: parseFloat(e.target.value) })}
+                        <input type="range" min="0.1" max="3" step="0.05"
+                          value={renderSettings().toneMapping.exposure}
+                          onInput={e => updateSetting('toneMapping', { exposure: parseFloat(e.target.value) })}
                           style={{ width: '100%' }} />
                       </div>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </div>
+                    </Show>
+                  </div>
 
-            {/* AO — 同 Bloom 模式（兩個滑桿：radius 0.01-0.5, intensity 0-1） */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div onClick={() => toggleGroup('ao')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('ao') ? '\u25BE' : '\u25B8'}</span>
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <input type="checkbox" checked={renderSettings().ao.enabled}
-                    onChange={e => updateSetting('ao', { enabled: e.target.checked })} />
-                  <span style={{ color: 'var(--text-primary, #fff)' }}>Ambient Occlusion</span>
-                </label>
-              </div>
-              <Show when={isGroupOpen('ao') && renderSettings().ao.enabled}>
-                <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                  <div>
-                    <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Radius</span><span>{renderSettings().ao.radius.toFixed(3)}</span></div>
-                    <input type="range" min="0.01" max="0.5" step="0.005" value={renderSettings().ao.radius}
-                      onInput={e => updateSetting('ao', { radius: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                  {/* Bloom */}
+                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                    <div
+                      onClick={() => toggleGroup('bloom')}
+                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
+                    >
+                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('bloom') ? '\u25BE' : '\u25B8'}</span>
+                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <input type="checkbox" checked={renderSettings().bloom.enabled}
+                          onChange={e => updateSetting('bloom', { enabled: e.target.checked })} />
+                        <span style={{ color: 'var(--text-primary, #fff)' }}>Bloom</span>
+                      </label>
+                    </div>
+                    <Show when={isGroupOpen('bloom') && renderSettings().bloom.enabled}>
+                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                        <For each={[
+                          { key: 'strength' as const, min: 0, max: 3 },
+                          { key: 'radius' as const, min: 0, max: 1 },
+                          { key: 'threshold' as const, min: 0, max: 1 },
+                        ]}>
+                          {(item) => (
+                            <div>
+                              <div style={{ display: 'flex', 'justify-content': 'space-between' }}>
+                                <span style={{ 'text-transform': 'capitalize' }}>{item.key}</span>
+                                <span>{(renderSettings().bloom[item.key] as number).toFixed(2)}</span>
+                              </div>
+                              <input type="range" min={item.min} max={item.max} step="0.01"
+                                value={renderSettings().bloom[item.key] as number}
+                                onInput={e => updateSetting('bloom', { [item.key]: parseFloat(e.target.value) })}
+                                style={{ width: '100%' }} />
+                            </div>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Intensity</span><span>{renderSettings().ao.intensity.toFixed(2)}</span></div>
-                    <input type="range" min="0" max="1" step="0.01" value={renderSettings().ao.intensity}
-                      onInput={e => updateSetting('ao', { intensity: parseFloat(e.target.value) })} style={{ width: '100%' }} />
-                  </div>
-                </div>
-              </Show>
-            </div>
 
-            {/* DOF — 三個滑桿 */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div onClick={() => toggleGroup('dof')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('dof') ? '\u25BE' : '\u25B8'}</span>
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <input type="checkbox" checked={renderSettings().dof.enabled}
-                    onChange={e => updateSetting('dof', { enabled: e.target.checked })} />
-                  <span style={{ color: 'var(--text-primary, #fff)' }}>Depth of Field</span>
-                </label>
-              </div>
-              <Show when={isGroupOpen('dof') && renderSettings().dof.enabled}>
-                <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                  <div>
-                    <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Focus</span><span>{renderSettings().dof.focus.toFixed(1)}</span></div>
-                    <input type="range" min="0.1" max="100" step="0.1" value={renderSettings().dof.focus}
-                      onInput={e => updateSetting('dof', { focus: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                  {/* AO */}
+                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                    <div onClick={() => toggleGroup('ao')}
+                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
+                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('ao') ? '\u25BE' : '\u25B8'}</span>
+                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <input type="checkbox" checked={renderSettings().ao.enabled}
+                          onChange={e => updateSetting('ao', { enabled: e.target.checked })} />
+                        <span style={{ color: 'var(--text-primary, #fff)' }}>Ambient Occlusion</span>
+                      </label>
+                    </div>
+                    <Show when={isGroupOpen('ao') && renderSettings().ao.enabled}>
+                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                        <div>
+                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Radius</span><span>{renderSettings().ao.radius.toFixed(3)}</span></div>
+                          <input type="range" min="0.01" max="0.5" step="0.005" value={renderSettings().ao.radius}
+                            onInput={e => updateSetting('ao', { radius: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Intensity</span><span>{renderSettings().ao.intensity.toFixed(2)}</span></div>
+                          <input type="range" min="0" max="1" step="0.01" value={renderSettings().ao.intensity}
+                            onInput={e => updateSetting('ao', { intensity: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                      </div>
+                    </Show>
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Aperture</span><span>{renderSettings().dof.aperture.toFixed(3)}</span></div>
-                    <input type="range" min="0.001" max="0.1" step="0.001" value={renderSettings().dof.aperture}
-                      onInput={e => updateSetting('dof', { aperture: parseFloat(e.target.value) })} style={{ width: '100%' }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Max Blur</span><span>{renderSettings().dof.maxBlur.toFixed(3)}</span></div>
-                    <input type="range" min="0.001" max="0.05" step="0.001" value={renderSettings().dof.maxBlur}
-                      onInput={e => updateSetting('dof', { maxBlur: parseFloat(e.target.value) })} style={{ width: '100%' }} />
-                  </div>
-                </div>
-              </Show>
-            </div>
 
-            {/* Motion Blur */}
-            <div>
-              <div onClick={() => toggleGroup('motionBlur')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('motionBlur') ? '\u25BE' : '\u25B8'}</span>
-                <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                  <input type="checkbox" checked={renderSettings().motionBlur.enabled}
-                    onChange={e => updateSetting('motionBlur', { enabled: e.target.checked })} />
-                  <span style={{ color: 'var(--text-primary, #fff)' }}>Motion Blur</span>
-                </label>
-              </div>
-              <Show when={isGroupOpen('motionBlur') && renderSettings().motionBlur.enabled}>
-                <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
-                  <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                    <span>Strength</span><span>{renderSettings().motionBlur.strength.toFixed(2)}</span>
+                  {/* DOF */}
+                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                    <div onClick={() => toggleGroup('dof')}
+                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
+                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('dof') ? '\u25BE' : '\u25B8'}</span>
+                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <input type="checkbox" checked={renderSettings().dof.enabled}
+                          onChange={e => updateSetting('dof', { enabled: e.target.checked })} />
+                        <span style={{ color: 'var(--text-primary, #fff)' }}>Depth of Field</span>
+                      </label>
+                    </div>
+                    <Show when={isGroupOpen('dof') && renderSettings().dof.enabled}>
+                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                        <div>
+                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Focus</span><span>{renderSettings().dof.focus.toFixed(1)}</span></div>
+                          <input type="range" min="0.1" max="100" step="0.1" value={renderSettings().dof.focus}
+                            onInput={e => updateSetting('dof', { focus: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Aperture</span><span>{renderSettings().dof.aperture.toFixed(3)}</span></div>
+                          <input type="range" min="0.001" max="0.1" step="0.001" value={renderSettings().dof.aperture}
+                            onInput={e => updateSetting('dof', { aperture: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Max Blur</span><span>{renderSettings().dof.maxBlur.toFixed(3)}</span></div>
+                          <input type="range" min="0.001" max="0.05" step="0.001" value={renderSettings().dof.maxBlur}
+                            onInput={e => updateSetting('dof', { maxBlur: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                      </div>
+                    </Show>
                   </div>
-                  <input type="range" min="0" max="1" step="0.01" value={renderSettings().motionBlur.strength}
-                    onInput={e => updateSetting('motionBlur', { strength: parseFloat(e.target.value) })}
-                    style={{ width: '100%' }} />
+
+                  {/* Motion Blur */}
+                  <div>
+                    <div onClick={() => toggleGroup('motionBlur')}
+                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
+                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('motionBlur') ? '\u25BE' : '\u25B8'}</span>
+                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                        <input type="checkbox" checked={renderSettings().motionBlur.enabled}
+                          onChange={e => updateSetting('motionBlur', { enabled: e.target.checked })} />
+                        <span style={{ color: 'var(--text-primary, #fff)' }}>Motion Blur</span>
+                      </label>
+                    </div>
+                    <Show when={isGroupOpen('motionBlur') && renderSettings().motionBlur.enabled}>
+                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
+                        <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+                          <span>Strength</span><span>{renderSettings().motionBlur.strength.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.01" value={renderSettings().motionBlur.strength}
+                          onInput={e => updateSetting('motionBlur', { strength: parseFloat(e.target.value) })}
+                          style={{ width: '100%' }} />
+                      </div>
+                    </Show>
+                  </div>
+
                 </div>
               </Show>
             </div>
