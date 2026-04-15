@@ -1,5 +1,6 @@
 import {
   DirectionalLight,
+  Euler,
   MeshBasicMaterial,
   MeshLambertMaterial,
   ACESFilmicToneMapping,
@@ -71,6 +72,18 @@ export class ShadingManager {
       this.restoreSceneLights();
     } else {
       this.disableSceneLights();
+    }
+  }
+
+  setEnvironmentIntensity(intensity: number): void {
+    (this.scene as any).environmentIntensity = intensity;
+  }
+
+  setEnvironmentRotation(angleRadians: number): void {
+    if (!(this.scene as any).environmentRotation) {
+      (this.scene as any).environmentRotation = new Euler(0, angleRadians, 0);
+    } else {
+      (this.scene as any).environmentRotation.y = angleRadians;
     }
   }
 

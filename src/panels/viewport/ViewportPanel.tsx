@@ -22,9 +22,12 @@ const ViewportPanel: Component = () => {
   const [isDragging, setIsDragging] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
-  const [sceneLightsOn, _setSceneLightsOn] = createSignal(true);
+  const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
   const [quality, setQuality] = createSignal<QualityLevel>('normal');
   const [renderSettings, setRenderSettings] = createSignal<RenderSettings>(DEFAULT_RENDER_SETTINGS);
+  const [shadingExpanded, setShadingExpanded] = createSignal(true);
+  const [hdrIntensity, setHdrIntensity] = createSignal(1.0);
+  const [hdrRotation, setHdrRotation] = createSignal(0);
   const [panelExpanded, setPanelExpanded] = createSignal(true);
   const [groupCollapsed, setGroupCollapsed] = createSignal<Record<string, boolean>>({});
   const isGroupOpen = (key: string) => !groupCollapsed()[key];
@@ -337,6 +340,18 @@ const ViewportPanel: Component = () => {
 
   createEffect(() => {
     viewport?.shading.setSceneLightsEnabled(sceneLightsOn());
+    viewport?.requestRender();
+  });
+
+  createEffect(() => {
+    if (renderMode() !== 'shading') return;
+    viewport?.setEnvironmentIntensity(hdrIntensity());
+    viewport?.requestRender();
+  });
+
+  createEffect(() => {
+    if (renderMode() !== 'shading') return;
+    viewport?.setEnvironmentRotation(hdrRotation() * Math.PI / 180); // deg → rad
     viewport?.requestRender();
   });
 
@@ -664,6 +679,93 @@ const ViewportPanel: Component = () => {
 
                 </div>
               </Show>
+            </div>
+          </Show>
+        </div>
+      </Show>
+      {/* Shading 懸浮面板 */}
+      <Show when={renderMode() === 'shading'}>
+        <div style={{
+          position: 'absolute',
+          top: '40px',
+          right: '8px',
+          width: '220px',
+          'max-height': 'calc(100% - 56px)',
+          'overflow-y': 'auto',
+          background: 'rgba(20,20,20,0.92)',
+          'border-radius': '6px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          'z-index': '6',
+          'font-size': '11px',
+          color: 'var(--text-secondary, #aaa)',
+          'user-select': 'none',
+        }}>
+          {/* 面板 Header */}
+          <div
+            onClick={() => setShadingExpanded(v => !v)}
+            style={{
+              padding: '8px 10px',
+              display: 'flex',
+              'align-items': 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              'border-bottom': shadingExpanded() ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            }}
+          >
+            <span style={{ 'font-size': '9px', width: '10px' }}>{shadingExpanded() ? '\u25BE' : '\u25B8'}</span>
+            <span style={{ color: 'var(--text-primary, #fff)', 'font-weight': '600' }}>Shading Controls</span>
+          </div>
+
+          <Show when={shadingExpanded()}>
+            {/* Scene Lights */}
+            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+              <label style={{ display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={sceneLightsOn()}
+                  onChange={e => setSceneLightsOn(e.target.checked)} />
+                <span style={{ color: 'var(--text-primary, #fff)' }}>Scene Lights</span>
+              </label>
+            </div>
+
+            {/* HDR Preset */}
+            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ 'margin-bottom': '6px', color: 'var(--text-primary, #fff)' }}>HDR Preset</div>
+              <select
+                style={{
+                  width: '100%',
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'var(--text-primary, #fff)',
+                  padding: '3px 6px',
+                  'border-radius': '3px',
+                  'font-size': '11px',
+                }}
+              >
+                <option value="room">Room</option>
+              </select>
+            </div>
+
+            {/* HDR Intensity */}
+            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+                <span>Intensity</span>
+                <span>{hdrIntensity().toFixed(2)}</span>
+              </div>
+              <input type="range" min="0" max="3" step="0.05"
+                value={hdrIntensity()}
+                onInput={e => setHdrIntensity(parseFloat(e.target.value))}
+                style={{ width: '100%' }} />
+            </div>
+
+            {/* HDR Rotation */}
+            <div style={{ padding: '8px 10px' }}>
+              <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+                <span>Rotation</span>
+                <span>{hdrRotation()}&deg;</span>
+              </div>
+              <input type="range" min="0" max="360" step="1"
+                value={hdrRotation()}
+                onInput={e => setHdrRotation(parseInt(e.target.value))}
+                style={{ width: '100%' }} />
             </div>
           </Show>
         </div>
