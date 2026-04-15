@@ -368,7 +368,7 @@ const ViewportPanel: Component = () => {
       viewport?.setRenderSettings(s);
     } else {
       viewport?.setRenderSettings({
-        toneMapping:  { ...s.toneMapping,  enabled: false },
+        toneMapping:  { ...s.toneMapping,  mode: 'none' as const },
         bloom:        { ...s.bloom,        enabled: false },
         ao:           { ...s.ao,           enabled: false },
         dof:          { ...s.dof,          enabled: false },
@@ -540,12 +540,25 @@ const ViewportPanel: Component = () => {
                     >
                       <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('toneMapping') ? '\u25BE' : '\u25B8'}</span>
                       <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().toneMapping.enabled}
-                          onChange={e => updateSetting('toneMapping', { enabled: e.target.checked })} />
+                        <select
+                          value={renderSettings().toneMapping.mode}
+                          onChange={e => updateSetting('toneMapping', { mode: e.target.value as 'none' | 'aces' })}
+                          style={{
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            color: 'var(--text-primary, #fff)',
+                            padding: '2px 4px',
+                            'border-radius': '3px',
+                            'font-size': '10px',
+                          }}
+                        >
+                          <option value="none">None</option>
+                          <option value="aces">ACES</option>
+                        </select>
                         <span style={{ color: 'var(--text-primary, #fff)' }}>Tone Mapping</span>
                       </label>
                     </div>
-                    <Show when={isGroupOpen('toneMapping') && renderSettings().toneMapping.enabled}>
+                    <Show when={isGroupOpen('toneMapping') && renderSettings().toneMapping.mode === 'aces'}>
                       <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
                         <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
                           <span>Exposure</span><span>{renderSettings().toneMapping.exposure.toFixed(2)}</span>
