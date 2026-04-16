@@ -5,6 +5,7 @@ import type { SceneNode } from '../core/scene/SceneFormat';
 import type { LeafAsset } from '../core/scene/LeafFormat';
 import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import * as GlbStore from '../core/scene/GlbStore';
+import type { ProjectFile } from '../core/project/ProjectFile';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -34,6 +35,9 @@ export interface EditorBridge {
   leafAssets: Accessor<LeafAsset[]>;
   environmentSettings: Accessor<EnvironmentSettings>;
   glbKeys: Accessor<string[]>;
+  projectOpen: Accessor<boolean>;
+  projectName: Accessor<string | null>;
+  projectFiles: Accessor<ProjectFile[]>;
   dispose: () => void;
 }
 
@@ -51,6 +55,9 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const [hasClipboard, setHasClipboard] = createSignal(false);
   const [leafAssets, setLeafAssets] = createSignal<LeafAsset[]>(editor.getAllLeafAssets());
   const [glbKeys, setGlbKeys] = createSignal<string[]>([]);
+  const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
+  const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
+  const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
 
   // 非同步初始化（fire-and-forget）
   void GlbStore.keys().then(setGlbKeys);
@@ -114,6 +121,14 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
   editor.events.on('environmentChanged', onEnvChanged);
 
+  // Subscribe to ProjectManager events
+  const onProjectChanged = () => {
+    setProjectOpen(editor.projectManager.isOpen);
+    setProjectName(editor.projectManager.name);
+    setProjectFiles(editor.projectManager.getFiles());
+  };
+  const unsubProject = editor.projectManager.onChange(onProjectChanged);
+
   const dispose = () => {
     for (const [event, handler] of Object.entries(editorHandlers)) {
       editor.events.off(event as any, handler as any);
@@ -125,6 +140,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('leafStoreChanged', onLeafStoreChanged);
     editor.events.off('environmentChanged', onEnvChanged);
+    unsubProject();
   };
 
   return {
@@ -145,6 +161,9 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     leafAssets,
     environmentSettings,
     glbKeys,
+    projectOpen,
+    projectName,
+    projectFiles,
     dispose,
   };
 }
