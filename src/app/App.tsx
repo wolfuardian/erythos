@@ -9,6 +9,7 @@ import { ViewportPanel } from '../panels/viewport';
 import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
 import { LeafPanel } from '../panels/leaf';
+import { EnvironmentPanel } from '../panels/environment';
 import ProjectPanel from './panels/project/ProjectPanel';
 import ContextPanel from './panels/context/ContextPanel';
 import SettingsPanel from './panels/settings/SettingsPanel';
@@ -22,6 +23,7 @@ const COMPONENTS: Record<string, PanelComponent> = {
   'context': () => <ContextPanel />,
   'settings': () => <SettingsPanel />,
   'leaf': () => <LeafPanel />,
+  'environment': () => <EnvironmentPanel />,
 };
 
 const App: Component = () => {

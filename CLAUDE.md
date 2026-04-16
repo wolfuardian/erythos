@@ -51,6 +51,7 @@
 | scene-tree | src/panels/scene-tree/ | `[scene-tree]` |
 | properties | src/panels/properties/ | `[properties]` |
 | leaf-panel | src/panels/leaf/ | `[leaf-panel]` |
+| environment-panel | src/panels/environment/ | `[environment]` |
 
 ### 分支規則
 
