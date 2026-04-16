@@ -1,8 +1,15 @@
+export interface ProjectStatus {
+  hasScenes: boolean;
+  hasStructure: boolean;
+  hasErrorLog: boolean;
+}
+
 export interface ProjectEntry {
   id: string;
   name: string;
   handle: FileSystemDirectoryHandle;
   lastOpened: number;
+  status?: ProjectStatus;
 }
 
 const DB_NAME = 'erythos-project';
