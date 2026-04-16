@@ -104,7 +104,9 @@ export class ViewportRenderer {
     } else {
       this.renderer.render(this.scene, this.camera);
       this.renderer.autoClear = false;
+      this.renderer.autoClearDepth = false;
       this.renderer.render(this.sceneHelpers, this.camera);
+      this.renderer.autoClearDepth = true;
       this.renderer.autoClear = true;
     }
   }
