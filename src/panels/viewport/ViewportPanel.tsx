@@ -8,6 +8,7 @@ import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
 import { loadGLTFFromFile, loadGLTFFromCache } from '../../utils/gltfLoader';
+import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafCommand';
 import * as LeafStore from '../../core/scene/LeafStore';
@@ -375,6 +376,41 @@ const ViewportPanel: Component = () => {
         motionBlur:   { ...s.motionBlur,   enabled: false },
       });
     }
+  });
+
+  // 監聽 Environment 面板設定 → 載入 HDRI + 套用參數
+  createEffect(() => {
+    const env = bridge.environmentSettings();
+    if (!viewport) return;
+
+    // Intensity + Rotation（每次都套用，不管 hdrUrl 有沒有變）
+    viewport.setEnvironmentIntensity(env.intensity);
+    viewport.setEnvironmentRotation(env.rotation * Math.PI / 180);
+  });
+
+  // hdrUrl 變更時載入/清除 HDRI（獨立 effect 避免每次 intensity 變更都重新載入 HDR）
+  let lastHdrUrl: string | null = null;
+  createEffect(() => {
+    const env = bridge.environmentSettings();
+    const url = env.hdrUrl;
+    if (url === lastHdrUrl) return; // 沒變就不重新載入
+    lastHdrUrl = url;
+
+    if (!viewport) return;
+
+    if (!url) {
+      viewport.setCustomHDRI(null);
+      return;
+    }
+
+    void loadHDRI(url)
+      .then(texture => {
+        viewport?.setCustomHDRI(texture);
+      })
+      .catch(err => {
+        console.warn('[ViewportPanel] Failed to load HDRI:', err);
+        viewport?.setCustomHDRI(null);
+      });
   });
 
   onCleanup(() => {
