@@ -37,6 +37,7 @@
 | 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
 | Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
+| Reader | RD | Sonnet | 精準讀取工人，被其他角色批量 spawn | [.ai/roles/reader.md](.ai/roles/reader.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
 
@@ -91,7 +92,7 @@
 
 ### Subagent 執行原則
 
-- **所有 subagent 用 `run_in_background: true`**，AH 不阻塞等待
+- **AH spawn 的 subagent 用 `run_in_background: true`**，AH 不阻塞等待
 - AH 在等待期間可與指揮家對話、處理其他事務
 - Agent 完成後 AH 會收到通知，再接續下一步
 - **Dispatch prompt 必須指向角色規範**：
@@ -100,6 +101,23 @@
   - QC → 讀取 `.ai/roles/pr-qc.md`
   - PM → 讀取 `.ai/roles/pr-merge.md`
 - AT / AD / QC / PM 均使用 Sonnet 模型，節省 token
+
+### Reader 大軍模式
+
+**任何角色**需要讀取多個檔案時，可批量 spawn Reader（RD）subagent 並行讀取：
+
+```
+角色收到任務
+  → spawn RD-1（讀 fileA L1-200）  ┐
+  → spawn RD-2（讀 fileB L50-150） ├── 並行
+  → spawn RD-3（grep pattern → 讀上下文）┘
+  → 收到三段摘要 → 綜合處理
+```
+
+Reader 藍圖：[.ai/roles/reader.md](.ai/roles/reader.md)
+- 每個 RD 讀取 ≤ 200 行，回傳 ≤ 30 行摘要
+- 派遣 agent 的 context 只收到摘要，不會被原始碼灌爆
+- RD 不會再 spawn 其他 agent（只有一層深度）
 
 ### Merge 流程
 
