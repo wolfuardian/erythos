@@ -1,36 +1,17 @@
-# Session 狀態（2026-04-16）
+# Session 狀態（2026-04-17）
 
 ## 本次完成的 issue
 
 | # | 標題 | PR |
 |---|------|-----|
-| #273 | ProjectManager（File System Access API） | #274 |
-| #279 | Editor 整合 ProjectManager | #281 |
-| #280 | Toolbar Save 整合 ProjectManager | #282 |
-| #283 | ProjectManager 多專案支援（Hub 後端） | #285 |
-| #284 | Project Panel — Hub 清單 + 檔案瀏覽器 | #286 |
-| #287 | ProjectManager — createProject / addFromDisk / 驗證 | #289 |
-| #288 | Project Panel — New / Add / Status | #290 |
-| #291 | New Project 路徑預覽 | #292 |
-| #293 | New Project overlay 浮動面板 | #294 |
-| #295 | New Project overlay 滑入動畫 | #296 |
+| #297 | New Project overlay 缺少滑出動畫 | #299 |
+| #298 | Grid / Axes helper 渲染在模型前面 | #300 |
 
-## 本次基礎建設改動
+## 本次驗證
 
-- `.ai/roles/` 建立並統一存放所有角色規範
-  - AT（Tasker）、AD（Developer）、QC（pr-qc）、PM（pr-merge）、AA（Advisor）、RD（Reader）
-- 舊的 `advisor/`、`qc/`、`docs/` 已搬遷並刪除
-- CLAUDE.md 大幅更新：
-  - 角色表加入 AT、PM、RD
-  - Subagent 執行原則（背景執行、dispatch 規範）
-  - Reader 大軍模式（任何角色可批量 spawn RD 並行讀取）
-  - AH Context 保護規則
-  - Session 交接機制（.ai/session/）
-  - Merge 後收尾拆分 PM/AH 職責
-- 各角色加入 Context 預算限制
-- `.gitignore` 加入 `samples`、`settings.local.json`
-- 根目錄散落的 GLB/HDR 搬入 `samples/`
-- `Erythos.bat` 加入 git
+- 雙 pipeline 並行壓力測試通過（#297 + #298 同時推進，無衝突無卡關）
+- 所有角色（AT、AD、QC、PM）均正常運作
+- RD（Reader）用於調查 grid 實作，運作正常
 
 ## 當前 pipeline 狀態
 
@@ -38,9 +19,9 @@
 
 ## 未解決 / 待討論
 
-- **AT 調教**：首次實測發現模組邊界問題，已修正規範但仍需多次實戰驗證
-- **PM 角色**：已建規範但從未實測
-- **RD 大軍模式**：已建規範但從未實測
+- **AT 調教**：本次兩個 AT 產出品質良好，但仍需更多實戰驗證
+- **PM 角色**：本次首次實測兩次，均正常完成（無需 commit 的情境）
+- **RD 大軍模式**：本次單隻 RD 使用正常，尚未測試批量 spawn
 - **Project Hub 尚未實作的功能**：
   - Textures 點擊設為 HDRI（需 viewport 配合）
   - Models 從專案目錄拖曳到 viewport（需 viewport 新 drop path）
@@ -48,10 +29,5 @@
 
 ## 指揮家偏好
 
-- subagent 一律背景執行，AH 不阻塞等待
-- AH 做指揮和決策，重活全部外包給 Sonnet 角色
-- 角色檔名要完整描述性（不精簡縮寫）
-- memo 機制確保所有角色都有
-- 所有設置要能交接給全新 session
-- 理解需求 + 拆 issue + 建 worktree 是 AH 核心工作，不外包
-- PR 相關角色用 `pr-` 前綴命名（pr-qc、pr-merge）
+- 沿用上次所有偏好（背景執行、AH 做指揮不做實作、完整流程等）
+- 對多工並行能力感到好奇，擔心脈絡追蹤 → 確認 git 狀態是 source of truth，不需改 subagent 回傳格式
