@@ -28,13 +28,14 @@
 
 ### 角色分工
 
-| 角色 | 代號 | 模型 | 職責 |
-|------|------|------|------|
-| 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 |
-| 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、寫 CLAUDE.md、spawn AD/QC、執行 merge |
-| 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） |
-| 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR |
-| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment |
+| 角色 | 代號 | 模型 | 職責 | 規範 |
+|------|------|------|------|------|
+| 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 | — |
+| 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、dispatch agent、執行 merge | — |
+| 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
+| 任務撰寫 | TW | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/task-writer.md](.ai/roles/task-writer.md) |
+| 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [docs/dev-sop.md](docs/dev-sop.md) |
+| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/quality-control.md](.ai/roles/quality-control.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
 
