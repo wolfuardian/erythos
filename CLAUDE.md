@@ -33,7 +33,7 @@
 | 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 | — |
 | 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、dispatch agent、執行 merge | — |
 | 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
-| 任務撰寫 | TW | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/task-writer.md](.ai/roles/task-writer.md) |
+| Tasker | AT | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/tasker.md](.ai/roles/tasker.md) |
 | 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
 | Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
@@ -74,8 +74,8 @@
 
 **Bug / 小功能（單一模組）：**
 1. AH 調查後開 GitHub issue（帶 label）
-2. AH 建 worktree + spawn TW（背景）撰寫任務描述
-3. AH 審閱 TW 產出 → 寫入模組 CLAUDE.md 當前任務
+2. AH 建 worktree + spawn AT（背景）撰寫任務描述
+3. AH 審閱 AT 產出 → 寫入模組 CLAUDE.md 當前任務
 4. AH spawn AD（背景）→ 實作 → commit + push → 開 PR
 5. AH spawn QC（背景）→ 審查 PR → 留 QC PASS / QC FAIL comment
 6. QC PASS → AH 直接 merge + cleanup
@@ -83,7 +83,7 @@
 
 **大功能（跨模組）：**
 1. AH 設計介面契約，更新根 CLAUDE.md
-2. 拆分支（每模組一條），建 worktree，spawn TW 撰寫各模組任務
+2. 拆分支（每模組一條），建 worktree，spawn AT 撰寫各模組任務
 3. AH 審閱 → 寫入各模組 CLAUDE.md
 4. AH 同時 spawn 多個 AD（各 worktree 並行，背景）
 5. 各 AD 開 PR 後，AH spawn QC（背景）逐 PR 審查
@@ -95,11 +95,11 @@
 - AH 在等待期間可與指揮家對話、處理其他事務
 - Agent 完成後 AH 會收到通知，再接續下一步
 - **Dispatch prompt 必須指向角色規範**：
-  - TW → 讀取 `.ai/roles/task-writer.md`
+  - AT → 讀取 `.ai/roles/tasker.md`
   - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
   - QC → 讀取 `.ai/roles/pr-qc.md`
   - PM → 讀取 `.ai/roles/pr-merge.md`
-- TW / AD / QC / PM 均使用 Sonnet 模型，節省 token
+- AT / AD / QC / PM 均使用 Sonnet 模型，節省 token
 
 ### Merge 流程
 
