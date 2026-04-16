@@ -34,7 +34,7 @@
 | 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、dispatch agent、執行 merge | — |
 | 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
 | 任務撰寫 | TW | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/task-writer.md](.ai/roles/task-writer.md) |
-| 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [docs/dev-sop.md](docs/dev-sop.md) |
+| 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/quality-control.md](.ai/roles/quality-control.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
@@ -119,7 +119,7 @@ merge 完成後，AH 依序執行：
 - 指揮家與成員溝通不順時 → AA 診斷問題根因
 
 ### 開發成員 SOP
-所有開發 agent 遵守 [docs/dev-sop.md](docs/dev-sop.md)。
+所有開發 agent 遵守 [.ai/roles/developer.md](.ai/roles/developer.md)。
 
 ## AH Session Startup SOP
 

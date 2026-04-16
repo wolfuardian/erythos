@@ -8,7 +8,7 @@
 <!-- 由主腦在準備 worktree 時填寫 -->
 
 ## 通用 SOP
-遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+遵守 [開發成員 SOP](../../.ai/roles/developer.md)。
 
 ## 慣例
 - 遵循 Toolbar.tsx 現有的元件風格和按鈕寫法

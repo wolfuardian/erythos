@@ -9,7 +9,7 @@
 <!-- 由主腦於任務開始時填寫 -->
 
 ## 通用 SOP
-遵守 [開發成員 SOP](../../docs/dev-sop.md)。
+遵守 [開發成員 SOP](../../.ai/roles/developer.md)。
 
 ## 慣例
 - 遵循現有 Command 模式（參考 AddNodeCommand.ts）
