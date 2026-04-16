@@ -71,10 +71,7 @@ export class Editor {
       }
     }
 
-    // 4. Restore last opened project directory (if permission still granted).
-    await this.projectManager.restore();
-
-    // 5. Start listening for scene changes and persisting them.
+    // 4. Start listening for scene changes and persisting them.
     this.autosave = new AutoSave(this);
   }
 
@@ -167,7 +164,6 @@ export class Editor {
 
   dispose(): void {
     this.autosave.dispose();
-    this.projectManager.close();
     this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
