@@ -138,6 +138,13 @@ merge 完成後，AH 依序執行：
 
 **每次 session 開始（含 /clear 後）必須執行：**
 
+### 0. 讀取上一個 session 的交接筆記
+```bash
+ls .ai/session/
+```
+如果有檔案，逐一讀取，了解上次做了什麼、遇到什麼問題、待辦是什麼。讀完後刪除（保證上下文新鮮）。
+
+### 1. 重建 pipeline 狀態
 ```bash
 git worktree list          # 哪些 worktree 活著（= 哪些 issue 在開發中）
 gh pr list                 # 哪些 PR 待 QC 或待 merge
@@ -155,5 +162,14 @@ gh issue list              # 哪些 issue 開著
 | 等 merge | PR 有 QC PASS | merge + cleanup |
 | 等修復 | PR 有 QC FAIL，CLAUDE.md 有待修項 | spawn AD fix |
 | 閒置 | 無 worktree，無 open PR | 等指揮家指示 |
+
+重建完畢後向指揮家報告現況，或直接繼續推進。
+
+### 2. Session 結束前
+在 `.ai/session/` 寫入交接筆記，供下一個 session 讀取：
+- 本次完成了什麼（issue / PR 清單）
+- 遇到的問題和解決方式
+- 未完成的待辦
+- 觀察到的指揮家偏好
 
 重建完畢後向指揮家報告現況，或直接繼續推進。
