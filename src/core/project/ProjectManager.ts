@@ -9,7 +9,7 @@ declare global {
 import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
-import type { ProjectEntry } from './ProjectHandleStore';
+import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 
 type Listener = () => void;
 
@@ -35,29 +35,44 @@ export class ProjectManager {
     return ProjectHandleStore.loadProjects();
   }
 
-  /** Open project: user picks a directory */
-  async open(): Promise<void> {
-    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-    this._handle = handle;
-    await this.scan();
+  /** Create a new project: create directory + standard subfolders + open */
+  async createProject(name: string, parentHandle: FileSystemDirectoryHandle): Promise<void> {
+    const projectHandle = await parentHandle.getDirectoryHandle(name, { create: true });
 
-    // Dedup: find existing entry for this directory
-    const existing = await ProjectHandleStore.loadProjects();
-    let id: string = crypto.randomUUID();
-    for (const entry of existing) {
-      try {
-        if (await (handle as any).isSameEntry(entry.handle)) {
-          id = entry.id;
-          break;
-        }
-      } catch { /* ignore comparison errors */ }
-    }
+    await projectHandle.getDirectoryHandle('scenes', { create: true });
+    await projectHandle.getDirectoryHandle('models', { create: true });
+    await projectHandle.getDirectoryHandle('textures', { create: true });
+
+    this._handle = projectHandle;
+    this._files = await this.collectFiles(projectHandle);
+
+    const status = this.computeStatus(this._files);
+    const id = await this.dedup(projectHandle);
+
+    void ProjectHandleStore.saveProject({
+      id,
+      name: projectHandle.name,
+      handle: projectHandle,
+      lastOpened: Date.now(),
+      status,
+    });
+    this.emit();
+  }
+
+  /** Add existing directory to list without opening */
+  async addFromDisk(): Promise<void> {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+
+    const files = await this.collectFiles(handle);
+    const status = this.computeStatus(files);
+    const id = await this.dedup(handle);
 
     void ProjectHandleStore.saveProject({
       id,
       name: handle.name,
       handle,
       lastOpened: Date.now(),
+      status,
     });
     this.emit();
   }
@@ -73,8 +88,10 @@ export class ProjectManager {
       if (perm !== 'granted') return false;
 
       this._handle = entry.handle;
-      await this.scan();
-      void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now() });
+      this._files = await this.collectFiles(entry.handle);
+
+      const status = this.computeStatus(this._files);
+      void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now(), status });
       this.emit();
       return true;
     } catch {
@@ -97,7 +114,7 @@ export class ProjectManager {
   /** Rescan directory */
   async rescan(): Promise<void> {
     if (!this._handle) return;
-    await this.scan();
+    this._files = await this.collectFiles(this._handle);
     this.emit();
   }
 
@@ -135,21 +152,43 @@ export class ProjectManager {
 
   // -- Private --
 
-  private async scan(): Promise<void> {
-    if (!this._handle) return;
-    this._files = [];
-    await this.scanDir(this._handle, '');
+  private async collectFiles(handle: FileSystemDirectoryHandle): Promise<ProjectFile[]> {
+    const files: ProjectFile[] = [];
+    await this.scanDir(handle, '', files);
+    return files;
   }
 
-  private async scanDir(dir: FileSystemDirectoryHandle, prefix: string): Promise<void> {
+  private async scanDir(dir: FileSystemDirectoryHandle, prefix: string, files: ProjectFile[]): Promise<void> {
     for await (const [name, handle] of (dir as any).entries()) {
       const path = prefix ? `${prefix}/${name}` : name;
       if (handle.kind === 'directory') {
-        await this.scanDir(handle as FileSystemDirectoryHandle, path);
+        await this.scanDir(handle as FileSystemDirectoryHandle, path, files);
       } else {
-        this._files.push({ path, name, type: inferFileType(name) });
+        files.push({ path, name, type: inferFileType(name) });
       }
     }
+  }
+
+  private computeStatus(files: ProjectFile[]): ProjectStatus {
+    return {
+      hasScenes: files.some(f => f.path.startsWith('scenes/') && f.type === 'scene'),
+      hasStructure: files.some(f =>
+        f.path.startsWith('scenes/') || f.path.startsWith('models/') || f.path.startsWith('textures/'),
+      ),
+      hasErrorLog: files.some(f => f.name === 'error_log'),
+    };
+  }
+
+  private async dedup(handle: FileSystemDirectoryHandle): Promise<string> {
+    const existing = await ProjectHandleStore.loadProjects();
+    for (const entry of existing) {
+      try {
+        if (await (handle as any).isSameEntry(entry.handle)) {
+          return entry.id;
+        }
+      } catch { /* ignore */ }
+    }
+    return crypto.randomUUID();
   }
 
   private emit(): void {
