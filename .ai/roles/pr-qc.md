@@ -37,8 +37,10 @@ gh issue list --state open
 
 ### 1. Diff 審查
 ```bash
-git diff master...<branch-name> -- .
+gh pr diff <PR-number>
 ```
+**Context 保護**：若 diff 超過 300 行，先看統計（`gh pr diff <N> | head -50`），再逐檔重點讀取改動區段。不要一次讀完巨型 diff。
+
 逐檔檢查：
 - 是否只改了該分支被允許改的檔案（對照根 CLAUDE.md 分支策略表）
 - 有沒有越權修改其他模組的檔案

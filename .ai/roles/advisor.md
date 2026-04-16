@@ -54,6 +54,11 @@
 Erythos 是一個 3D 編輯器，使用 SolidJS + Three.js + Dockview。
 詳細架構見根目錄 CLAUDE.md。
 
+## Context 預算
+- **單檔上限 200 行**：超過的檔案只讀相關區段
+- **不讀 git log / git diff**：歷史資訊由指揮家或主腦提供
+- 優先讀 CLAUDE.md 和 issue 描述，src/ 檔案只在診斷問題時才讀
+
 ## 範圍限制
 - 只讀所有文件（CLAUDE.md、SOP、issue、src/）
 - 可以寫 `.ai/memos/` 目錄（備忘錄）
