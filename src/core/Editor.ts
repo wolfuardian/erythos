@@ -7,6 +7,7 @@ import { KeybindingManager } from './KeybindingManager';
 import { Clipboard } from './Clipboard';
 import type { Command } from './Command';
 import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
+import { ProjectManager } from './project/ProjectManager';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
@@ -25,6 +26,7 @@ export class Editor {
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
+  readonly projectManager: ProjectManager;
   autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
@@ -42,6 +44,7 @@ export class Editor {
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
     this.clipboard = new Clipboard();
+    this.projectManager = new ProjectManager();
   }
 
   /**
@@ -68,7 +71,10 @@ export class Editor {
       }
     }
 
-    // 3. Start listening for scene changes and persisting them.
+    // 4. Restore last opened project directory (if permission still granted).
+    await this.projectManager.restore();
+
+    // 5. Start listening for scene changes and persisting them.
     this.autosave = new AutoSave(this);
   }
 
@@ -161,6 +167,7 @@ export class Editor {
 
   dispose(): void {
     this.autosave.dispose();
+    this.projectManager.close();
     this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
