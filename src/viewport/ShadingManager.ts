@@ -11,6 +11,7 @@ import {
   type Scene,
   type Camera,
   type Material,
+  type DataTexture,
   type Mesh,
   type Light,
 } from 'three';
@@ -31,6 +32,7 @@ export class ShadingManager {
   private headlight: DirectionalLight;
   private headlightTarget: Object3D;
   private defaultEnv: ReturnType<PMREMGenerator['fromScene']> | null = null;
+  private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
   private _sceneLightsEnabled = true;
 
   constructor(renderer: WebGLRenderer, scene: Scene, camera: Camera) {
@@ -87,6 +89,24 @@ export class ShadingManager {
     }
   }
 
+  setCustomHDRI(hdrTexture: DataTexture | null): void {
+    // 清除舊的自訂環境
+    this.customEnv?.dispose();
+    this.customEnv = null;
+
+    if (hdrTexture) {
+      const pmrem = new PMREMGenerator(this.renderer);
+      this.customEnv = pmrem.fromEquirectangular(hdrTexture);
+      pmrem.dispose();
+      hdrTexture.dispose(); // DataTexture 不再需要
+    }
+
+    // 如果目前在 rendering 模式，立即更新場景環境
+    if (this._mode === 'rendering') {
+      this.scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
+    }
+  }
+
   private restoreAll(): void {
     this.restoreMaterials();
     this.restoreSceneLights();
@@ -118,7 +138,8 @@ export class ShadingManager {
       case 'rendering':
         this.renderer.toneMapping = ACESFilmicToneMapping;
         this.ensureDefaultEnv();
-        this.scene.environment = this.defaultEnv?.texture ?? null;
+        // 優先用自訂 HDRI，無則用預設 RoomEnvironment
+        this.scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
         break;
     }
   }
@@ -181,5 +202,6 @@ export class ShadingManager {
     this.restoreSceneLights();
     this.removeHeadlight();
     this.defaultEnv?.dispose();
+    this.customEnv?.dispose();
   }
 }
