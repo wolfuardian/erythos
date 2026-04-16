@@ -13,6 +13,7 @@ const ProjectPanel: Component = () => {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCreate, setShowCreate] = createSignal(false);
+  const [closing, setClosing] = createSignal(false);
   const [newName, setNewName] = createSignal('');
   const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
 
@@ -58,19 +59,25 @@ const ProjectPanel: Component = () => {
     if (!parent || !name) return;
     try {
       await editor.projectManager.createProject(name, parent);
-      setShowCreate(false);
-      setNewName('');
-      setParentHandle(null);
+      closeOverlay();
     } catch (e: any) {
       setErrorTitle('Create Failed');
       setErrorMsg(e.message || String(e));
     }
   };
 
+  const closeOverlay = () => {
+    setClosing(true);
+    setTimeout(() => {
+      setShowCreate(false);
+      setClosing(false);
+      setNewName('');
+      setParentHandle(null);
+    }, 200);
+  };
+
   const handleCancelCreate = () => {
-    setShowCreate(false);
-    setNewName('');
-    setParentHandle(null);
+    closeOverlay();
   };
 
   const handleOpenRecent = async (id: string) => {
@@ -274,7 +281,9 @@ const ProjectPanel: Component = () => {
                 display: 'flex',
                 'flex-direction': 'column',
                 overflow: 'auto',
-                animation: 'overlaySlideIn 200ms ease forwards',
+                animation: closing()
+                  ? 'overlaySlideOut 200ms ease forwards'
+                  : 'overlaySlideIn 200ms ease forwards',
               }}>
                 {/* Overlay header */}
                 <div style={{
