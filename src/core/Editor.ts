@@ -13,6 +13,7 @@ import { ResourceCache } from './scene/ResourceCache';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
 import type { LeafAsset } from './scene/LeafFormat';
 import * as LeafStore from './scene/LeafStore';
+import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
 
 export class Editor {
   readonly scene: Scene;
@@ -28,6 +29,7 @@ export class Editor {
 
   private _transformMode: TransformMode = 'translate';
   private _leafAssets = new Map<string, LeafAsset>();
+  private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
 
   constructor() {
     this.scene = new Scene();
@@ -96,6 +98,17 @@ export class Editor {
 
   getAllLeafAssets(): LeafAsset[] {
     return Array.from(this._leafAssets.values());
+  }
+
+  // ── Environment settings ──────────────────────────
+
+  getEnvironmentSettings(): EnvironmentSettings {
+    return { ...this._envSettings };
+  }
+
+  setEnvironmentSettings(patch: Partial<EnvironmentSettings>): void {
+    Object.assign(this._envSettings, patch);
+    this.events.emit('environmentChanged');
   }
 
   // ── Command execution ─────────────────────────────

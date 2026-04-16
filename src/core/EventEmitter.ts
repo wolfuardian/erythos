@@ -21,6 +21,7 @@ export interface EditorEventMap {
   editorCleared:          [];
   autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved'];
   leafStoreChanged:       [];
+  environmentChanged:     [];
 
 }
 
