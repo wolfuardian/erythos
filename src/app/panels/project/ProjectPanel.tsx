@@ -274,6 +274,7 @@ const ProjectPanel: Component = () => {
                 display: 'flex',
                 'flex-direction': 'column',
                 overflow: 'auto',
+                animation: 'overlaySlideIn 200ms ease forwards',
               }}>
                 {/* Overlay header */}
                 <div style={{
