@@ -1,4 +1,4 @@
-import { Scene, type Object3D, type Vector3, type Euler } from 'three';
+import { Scene, type Object3D, type Vector3, type Euler, type DataTexture } from 'three';
 import { ViewportRenderer } from './ViewportRenderer';
 import { CameraController } from './CameraController';
 import { GizmoManager } from './GizmoManager';
@@ -172,6 +172,11 @@ export class Viewport {
 
   setEnvironmentRotation(angleRadians: number): void {
     this.shading.setEnvironmentRotation(angleRadians);
+    this.vpRenderer.requestRender();
+  }
+
+  setCustomHDRI(hdrTexture: DataTexture | null): void {
+    this.shading.setCustomHDRI(hdrTexture);
     this.vpRenderer.requestRender();
   }
 
