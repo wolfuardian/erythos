@@ -3,6 +3,7 @@ import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
 import type { LeafAsset } from '../core/scene/LeafFormat';
+import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import * as GlbStore from '../core/scene/GlbStore';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
@@ -31,6 +32,7 @@ export interface EditorBridge {
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   leafAssets: Accessor<LeafAsset[]>;
+  environmentSettings: Accessor<EnvironmentSettings>;
   glbKeys: Accessor<string[]>;
   dispose: () => void;
 }
@@ -105,6 +107,13 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const onLeafStoreChanged = () => setLeafAssets(editor.getAllLeafAssets());
   editor.events.on('leafStoreChanged', onLeafStoreChanged);
 
+  // Subscribe to EnvironmentSettings events
+  const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
+    editor.getEnvironmentSettings()
+  );
+  const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
+  editor.events.on('environmentChanged', onEnvChanged);
+
   const dispose = () => {
     for (const [event, handler] of Object.entries(editorHandlers)) {
       editor.events.off(event as any, handler as any);
@@ -115,6 +124,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('leafStoreChanged', onLeafStoreChanged);
+    editor.events.off('environmentChanged', onEnvChanged);
   };
 
   return {
@@ -133,6 +143,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     confirmBeforeLoad,
     hasClipboard,
     leafAssets,
+    environmentSettings,
     glbKeys,
     dispose,
   };
