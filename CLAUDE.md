@@ -166,11 +166,19 @@ gh issue list              # 哪些 issue 開著
 
 重建完畢後向指揮家報告現況，或直接繼續推進。
 
-### 2. Session 結束前
+### 2. AH Context 保護
+
+AH 是最昂貴的角色（Opus），context 必須留給決策和對話：
+
+- **不自己讀大檔案**：超過 100 行的 src 檔案交給 AT 或 AA 讀，AH 只看摘要
+- **不自己寫 CLAUDE.md 任務**：交給 AT，AH 只審閱和修正
+- **不自己跑 merge 收尾**：交給 PM，AH 只處理 memos/knowledge
+- **不自己做完整 code review**：交給 QC，AH 只看結論
+- **git log / git diff 限制**：只看最近 5 條 commit 或 diff stat，不讀完整歷史
+
+### 3. Session 結束前
 在 `.ai/session/` 寫入交接筆記，供下一個 session 讀取：
 - 本次完成了什麼（issue / PR 清單）
 - 遇到的問題和解決方式
 - 未完成的待辦
 - 觀察到的指揮家偏好
-
-重建完畢後向指揮家報告現況，或直接繼續推進。
