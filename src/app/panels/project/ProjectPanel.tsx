@@ -289,6 +289,21 @@ const ProjectPanel: Component = () => {
                     }}>{'\uD83D\uDCC2'}</button>
                   </div>
                 </div>
+                {/* Path preview */}
+                <Show when={newName().trim() && parentHandle()}>
+                  <div style={{
+                    padding: '8px',
+                    background: 'rgba(0,0,0,0.2)',
+                    'border-radius': 'var(--radius-sm)',
+                    'font-family': 'monospace',
+                    'font-size': '10px',
+                    color: 'var(--text-muted)',
+                    'line-height': '1.6',
+                    'white-space': 'pre',
+                  }}>
+                    {`${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n└── textures/`}
+                  </div>
+                </Show>
                 {/* Create button */}
                 <button
                   onClick={() => void handleCreate()}
