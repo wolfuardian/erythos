@@ -35,7 +35,8 @@
 | 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
 | 任務撰寫 | TW | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/task-writer.md](.ai/roles/task-writer.md) |
 | 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
-| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/quality-control.md](.ai/roles/quality-control.md) |
+| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
+| Merge 操作 | MO | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
 
@@ -96,8 +97,9 @@
 - **Dispatch prompt 必須指向角色規範**：
   - TW → 讀取 `.ai/roles/task-writer.md`
   - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
-  - QC → 讀取 `.ai/roles/quality-control.md`
-- TW / AD / QC 均使用 Sonnet 模型，節省 token
+  - QC → 讀取 `.ai/roles/pr-qc.md`
+  - MO → 讀取 `.ai/roles/pr-merge.md`
+- TW / AD / QC / MO 均使用 Sonnet 模型，節省 token
 
 ### Merge 流程
 
@@ -113,18 +115,17 @@
 
 ### Merge 後收尾
 
-merge 完成後，AH 依序執行：
+QC PASS 後，AH spawn MO（背景）執行機械操作，然後 AH 自行處理需要判斷的部分。
 
-1. 關閉對應的 GitHub issue（`gh issue close #N`），包含 QC 開的 bug issue
-2. 移除已 merge 分支的 worktree（`git worktree remove`）
-3. 刪除本地 feat 分支（`git branch -d`）
-4. 刪除遠端 feat 分支（`git push origin --delete`）
-5. pull master 取得 merge commit
-6. 清理各模組 CLAUDE.md：清空「當前任務」、「待修項」、「上報區」
-7. 拜讀 `.ai/memos/` 目錄：有價值 → 歸檔至 `.ai/knowledge.md`；瑣碎 → 刪除
-8. 審查 `.ai/knowledge.md`：移除已過期（`⏳`）條目
-9. 跑一次整合 build 確認無錯誤
-10. commit 收尾改動並 push
+**MO 執行（背景）：**
+1. `gh pr merge` → `gh issue close` → `git worktree remove` → `git pull` → 刪分支
+2. 清理模組 CLAUDE.md（清空當前任務/待修項/上報區）
+3. `npm run build` 驗證
+4. commit 收尾改動並 push
+
+**AH 在 MO 完成後執行：**
+5. 拜讀 `.ai/memos/` 目錄：有價值 → 歸檔至 `.ai/knowledge.md`；瑣碎 → 刪除
+6. 審查 `.ai/knowledge.md`：移除已過期（`⏳`）條目
 
 ### 文件維護流程
 
