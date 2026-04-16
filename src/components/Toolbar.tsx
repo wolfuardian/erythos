@@ -34,8 +34,20 @@ const Toolbar: Component = () => {
     input.click();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const json = JSON.stringify(editor.sceneDocument.serialize());
+
+    if (editor.projectManager.isOpen) {
+      try {
+        await editor.projectManager.writeFile('scene.erythos', json);
+      } catch (e: any) {
+        setErrorTitle('Save Failed');
+        setErrorMsg(e.message || String(e));
+      }
+      return;
+    }
+
+    // Fallback：瀏覽器下載
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
