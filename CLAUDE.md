@@ -73,18 +73,31 @@
 
 **Bug / 小功能（單一模組）：**
 1. AH 調查後開 GitHub issue（帶 label）
-2. AH 建 worktree，寫模組 CLAUDE.md 當前任務
-3. AH spawn AD subagent → 實作 → commit + push → 開 PR
-4. AH spawn QC subagent → 審查 PR → 留 QC PASS / QC FAIL comment
-5. QC PASS → AH 直接 merge + cleanup
-6. QC FAIL → AH 更新 CLAUDE.md 待修項 → 回到步驟 3
+2. AH 建 worktree + spawn TW（背景）撰寫任務描述
+3. AH 審閱 TW 產出 → 寫入模組 CLAUDE.md 當前任務
+4. AH spawn AD（背景）→ 實作 → commit + push → 開 PR
+5. AH spawn QC（背景）→ 審查 PR → 留 QC PASS / QC FAIL comment
+6. QC PASS → AH 直接 merge + cleanup
+7. QC FAIL → AH 更新 CLAUDE.md 待修項 → 回到步驟 4
 
 **大功能（跨模組）：**
 1. AH 設計介面契約，更新根 CLAUDE.md
-2. 拆分支（每模組一條），建 worktree，寫各模組 CLAUDE.md 當前任務
-3. AH 同時 spawn 多個 AD subagent（各 worktree 並行）
-4. 各 AD 開 PR 後，AH spawn QC subagents 逐 PR 審查
-5. 依合併順序（有依賴的先合）逐一 merge
+2. 拆分支（每模組一條），建 worktree，spawn TW 撰寫各模組任務
+3. AH 審閱 → 寫入各模組 CLAUDE.md
+4. AH 同時 spawn 多個 AD（各 worktree 並行，背景）
+5. 各 AD 開 PR 後，AH spawn QC（背景）逐 PR 審查
+6. 依合併順序（有依賴的先合）逐一 merge
+
+### Subagent 執行原則
+
+- **所有 subagent 用 `run_in_background: true`**，AH 不阻塞等待
+- AH 在等待期間可與指揮家對話、處理其他事務
+- Agent 完成後 AH 會收到通知，再接續下一步
+- **Dispatch prompt 必須指向角色規範**：
+  - TW → 讀取 `.ai/roles/task-writer.md`
+  - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
+  - QC → 讀取 `.ai/roles/quality-control.md`
+- TW / AD / QC 均使用 Sonnet 模型，節省 token
 
 ### Merge 流程
 
