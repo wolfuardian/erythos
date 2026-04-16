@@ -9,6 +9,7 @@ declare global {
 import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
+import type { ProjectEntry } from './ProjectHandleStore';
 
 type Listener = () => void;
 
@@ -29,42 +30,68 @@ export class ProjectManager {
     return this._files;
   }
 
+  /** Get recent projects list from IndexedDB */
+  async getRecentProjects(): Promise<ProjectEntry[]> {
+    return ProjectHandleStore.loadProjects();
+  }
+
   /** Open project: user picks a directory */
   async open(): Promise<void> {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
     this._handle = handle;
     await this.scan();
-    void ProjectHandleStore.saveHandle(handle);
+
+    // Dedup: find existing entry for this directory
+    const existing = await ProjectHandleStore.loadProjects();
+    let id: string = crypto.randomUUID();
+    for (const entry of existing) {
+      try {
+        if (await (handle as any).isSameEntry(entry.handle)) {
+          id = entry.id;
+          break;
+        }
+      } catch { /* ignore comparison errors */ }
+    }
+
+    void ProjectHandleStore.saveProject({
+      id,
+      name: handle.name,
+      handle,
+      lastOpened: Date.now(),
+    });
     this.emit();
   }
 
-  /** Close project */
-  close(): void {
-    this._handle = null;
-    this._files = [];
-    void ProjectHandleStore.clearHandle();
-    this.emit();
-  }
-
-  /** Restore last opened project from IndexedDB */
-  async restore(): Promise<boolean> {
+  /** Open a recent project from stored handle */
+  async openRecent(id: string): Promise<boolean> {
     try {
-      const handle = await ProjectHandleStore.loadHandle();
-      if (!handle) return false;
+      const entries = await ProjectHandleStore.loadProjects();
+      const entry = entries.find(e => e.id === id);
+      if (!entry) return false;
 
-      const perm = await (handle as any).queryPermission({ mode: 'readwrite' });
-      if (perm === 'granted') {
-        this._handle = handle;
-        await this.scan();
-        this.emit();
-        return true;
-      }
+      const perm = await (entry.handle as any).requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') return false;
 
-      // Requires user gesture to requestPermission — defer to UI button
-      return false;
+      this._handle = entry.handle;
+      await this.scan();
+      void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now() });
+      this.emit();
+      return true;
     } catch {
       return false;
     }
+  }
+
+  /** Remove a project from the recent list */
+  async removeRecent(id: string): Promise<void> {
+    await ProjectHandleStore.removeProject(id);
+  }
+
+  /** Close project (does not remove from recent list) */
+  close(): void {
+    this._handle = null;
+    this._files = [];
+    this.emit();
   }
 
   /** Rescan directory */
@@ -94,9 +121,7 @@ export class ProjectManager {
     for (let i = 0; i < parts.length - 1; i++) {
       dir = await dir.getDirectoryHandle(parts[i], { create: true });
     }
-    const fileHandle = await dir.getFileHandle(parts[parts.length - 1], {
-      create: true,
-    });
+    const fileHandle = await dir.getFileHandle(parts[parts.length - 1], { create: true });
     const writable = await fileHandle.createWritable();
     await writable.write(data);
     await writable.close();
@@ -116,10 +141,7 @@ export class ProjectManager {
     await this.scanDir(this._handle, '');
   }
 
-  private async scanDir(
-    dir: FileSystemDirectoryHandle,
-    prefix: string,
-  ): Promise<void> {
+  private async scanDir(dir: FileSystemDirectoryHandle, prefix: string): Promise<void> {
     for await (const [name, handle] of (dir as any).entries()) {
       const path = prefix ? `${prefix}/${name}` : name;
       if (handle.kind === 'directory') {
