@@ -39,7 +39,7 @@ gh issue list --state open
 ```bash
 gh pr diff <PR-number>
 ```
-**Context 保護**：若 diff 超過 300 行，先看統計（`gh pr diff <N> | head -50`），再逐檔重點讀取改動區段。不要一次讀完巨型 diff。
+**Context 保護**：若 diff 超過 300 行，先看統計（`gh pr diff <N> | head -50`），再逐檔重點讀取改動區段。不要一次讀完巨型 diff。需要讀多個檔案時，可 spawn 多個 Reader（RD）subagent 並行讀取（參考 `.ai/roles/reader.md`）。
 
 逐檔檢查：
 - 是否只改了該分支被允許改的檔案（對照根 CLAUDE.md 分支策略表）
