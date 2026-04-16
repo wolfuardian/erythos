@@ -137,209 +137,50 @@ const ProjectPanel: Component = () => {
       <Show when={bridge.projectOpen()} fallback={
         /* ── Hub mode ── */
         <>
-          <Show when={showCreate()} fallback={
-            /* ── Hub: project list ── */
-            <>
+          {/* Hub header — 永遠顯示 */}
+          <div style={{
+            padding: '6px 10px',
+            'border-bottom': '1px solid var(--border-subtle)',
+            display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+          }}>
+            <span style={{
+              color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
+              'text-transform': 'uppercase', 'letter-spacing': '0.5px',
+            }}>Projects</span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={() => setShowCreate(true)} style={{
+                background: 'var(--accent-blue)', color: '#fff', border: 'none',
+                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+              }}>New</button>
+              <button onClick={() => void handleAdd()} style={{
+                background: 'var(--bg-section)', color: 'var(--text-muted)',
+                border: '1px solid var(--border-subtle)',
+                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+              }}>Add</button>
+            </div>
+          </div>
+
+          {/* Content area — relative 容器，overlay 以此為基準 */}
+          <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+            {/* 專案清單（永遠渲染） */}
+            <Show when={recentProjects().length > 0} fallback={
               <div style={{
-                padding: '6px 10px',
-                'border-bottom': '1px solid var(--border-subtle)',
-                display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+                padding: '16px 12px', color: 'var(--text-muted)',
+                'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
               }}>
-                <span style={{
-                  color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
-                  'text-transform': 'uppercase', 'letter-spacing': '0.5px',
-                }}>Projects</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => setShowCreate(true)} style={{
-                    background: 'var(--accent-blue)', color: '#fff', border: 'none',
-                    padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                    'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-                  }}>New</button>
-                  <button onClick={() => void handleAdd()} style={{
-                    background: 'var(--bg-section)', color: 'var(--text-muted)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                    'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-                  }}>Add</button>
-                </div>
+                No recent projects.<br />
+                Click New to create or<br />Add to open a project.
               </div>
-              <div style={{ overflow: 'auto', padding: '4px 0' }}>
-                <Show when={recentProjects().length > 0} fallback={
-                  <div style={{
-                    padding: '16px 12px', color: 'var(--text-muted)',
-                    'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
-                  }}>
-                    No recent projects.<br />
-                    Click New to create or<br />Add to open a project.
-                  </div>
-                }>
-                  <For each={recentProjects()}>
-                    {(entry) => (
-                      <div
-                        onClick={() => void handleOpenRecent(entry.id)}
-                        style={{
-                          display: 'flex', 'align-items': 'center', gap: '8px',
-                          padding: '6px 10px', cursor: 'pointer',
-                        }}
-                      >
-                        <span style={{
-                          width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
-                          background: 'var(--badge-mesh, #4a6fa5)', color: 'var(--text-inverse)',
-                          'font-size': '9px', 'font-weight': 'bold',
-                          display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                          'flex-shrink': '0',
-                        }}>P</span>
-                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{
-                            'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-                            overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
-                          }}>{entry.name}</div>
-                          <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
-                            {formatDate(entry.lastOpened)}
-                          </div>
-                        </div>
-                        {/* Status indicator */}
-                        {entry.status?.hasErrorLog && (
-                          <span title="Has error log" style={{
-                            width: '6px', height: '6px', 'border-radius': '50%',
-                            background: '#e55', 'flex-shrink': '0',
-                          }} />
-                        )}
-                        {!entry.status?.hasStructure && !entry.status?.hasErrorLog && (
-                          <span style={{ 'font-size': '9px', color: 'var(--text-muted)' }}>empty</span>
-                        )}
-                        <button
-                          onClick={(e: MouseEvent) => void handleRemove(entry.id, e)}
-                          title="Remove from list"
-                          style={{
-                            background: 'none', border: 'none', color: 'var(--text-muted)',
-                            cursor: 'pointer', padding: '2px 4px', 'font-size': '12px',
-                          }}
-                        >{'\u00D7'}</button>
-                      </div>
-                    )}
-                  </For>
-                </Show>
-              </div>
-            </>
-          }>
-            {/* ── Hub: Create form ── */}
-            <>
-              {/* Header */}
-              <div style={{
-                padding: '6px 10px',
-                'border-bottom': '1px solid var(--border-subtle)',
-                display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
-              }}>
-                <span style={{
-                  color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
-                  'text-transform': 'uppercase', 'letter-spacing': '0.5px',
-                }}>New Project</span>
-                <button onClick={handleCancelCreate} style={{
-                  background: 'none', border: 'none', color: 'var(--text-muted)',
-                  cursor: 'pointer', 'font-size': '12px',
-                }}>{'\u00D7'}</button>
-              </div>
-              {/* Form */}
-              <div style={{ padding: '12px 10px', display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
-                {/* Project name */}
-                <div>
-                  <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)', 'margin-bottom': '4px' }}>
-                    Project name
-                  </div>
-                  <input
-                    type="text"
-                    value={newName()}
-                    onInput={(e) => setNewName(e.target.value)}
-                    placeholder="My project"
-                    style={{
-                      width: '100%', padding: '4px 8px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      'border-radius': 'var(--radius-sm)',
-                      color: 'var(--text-primary, #fff)',
-                      'font-size': 'var(--font-size-sm)',
-                      'box-sizing': 'border-box',
-                    }}
-                  />
-                </div>
-                {/* Location */}
-                <div>
-                  <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)', 'margin-bottom': '4px' }}>
-                    Location
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <div style={{
-                      flex: 1, padding: '4px 8px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      'border-radius': 'var(--radius-sm)',
-                      color: parentHandle() ? 'var(--text-secondary)' : 'var(--text-muted)',
-                      'font-size': 'var(--font-size-sm)',
-                      overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
-                    }}>
-                      {parentHandle()?.name ?? 'Select location...'}
-                    </div>
-                    <button onClick={() => void handlePickLocation()} title="Browse" style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      'border-radius': 'var(--radius-sm)',
-                      color: 'var(--text-secondary)', cursor: 'pointer',
-                      padding: '4px 8px', 'font-size': 'var(--font-size-sm)',
-                    }}>{'\uD83D\uDCC2'}</button>
-                  </div>
-                </div>
-                {/* Path preview */}
-                <Show when={newName().trim() && parentHandle()}>
-                  <div style={{
-                    padding: '8px',
-                    background: 'rgba(0,0,0,0.2)',
-                    'border-radius': 'var(--radius-sm)',
-                    'font-family': 'monospace',
-                    'font-size': '10px',
-                    color: 'var(--text-muted)',
-                    'line-height': '1.6',
-                    'white-space': 'pre',
-                  }}>
-                    {`${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n└── textures/`}
-                  </div>
-                </Show>
-                {/* Create button */}
-                <button
-                  onClick={() => void handleCreate()}
-                  disabled={!newName().trim() || !parentHandle()}
-                  style={{
-                    width: '100%', padding: '6px',
-                    background: (!newName().trim() || !parentHandle()) ? 'rgba(255,255,255,0.05)' : 'var(--accent-blue)',
-                    color: (!newName().trim() || !parentHandle()) ? 'var(--text-muted)' : '#fff',
-                    border: 'none', 'border-radius': 'var(--radius-sm)',
-                    cursor: (!newName().trim() || !parentHandle()) ? 'default' : 'pointer',
-                    'font-size': 'var(--font-size-sm)', 'font-weight': 'bold',
-                  }}
-                >+ Create Project</button>
-              </div>
-            </>
-          </Show>
-          {/* Imported Models (GlbStore) — draggable to viewport, always visible in Hub */}
-          <Show when={bridge.glbKeys().length > 0}>
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{
-                padding: '6px 10px', color: 'var(--text-muted)',
-                'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
-              }}>
-                Imported ({bridge.glbKeys().length})
-              </div>
-              <For each={bridge.glbKeys()}>
-                {(filename) => (
+            }>
+              <For each={recentProjects()}>
+                {(entry) => (
                   <div
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer!.setData('application/erythos-glb', filename);
-                      e.dataTransfer!.effectAllowed = 'copy';
-                    }}
+                    onClick={() => void handleOpenRecent(entry.id)}
                     style={{
-                      display: 'flex', 'align-items': 'center', gap: '6px',
-                      padding: '5px 10px', cursor: 'grab',
+                      display: 'flex', 'align-items': 'center', gap: '8px',
+                      padding: '6px 10px', cursor: 'pointer',
                     }}
                   >
                     <span style={{
@@ -348,16 +189,189 @@ const ProjectPanel: Component = () => {
                       'font-size': '9px', 'font-weight': 'bold',
                       display: 'flex', 'align-items': 'center', 'justify-content': 'center',
                       'flex-shrink': '0',
-                    }}>G</span>
-                    <span style={{
-                      'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-                      overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
-                    }}>{filename}</span>
+                    }}>P</span>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{
+                        'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
+                      }}>{entry.name}</div>
+                      <div style={{ 'font-size': '10px', color: 'var(--text-muted)' }}>
+                        {formatDate(entry.lastOpened)}
+                      </div>
+                    </div>
+                    {/* Status indicator */}
+                    {entry.status?.hasErrorLog && (
+                      <span title="Has error log" style={{
+                        width: '6px', height: '6px', 'border-radius': '50%',
+                        background: '#e55', 'flex-shrink': '0',
+                      }} />
+                    )}
+                    {!entry.status?.hasStructure && !entry.status?.hasErrorLog && (
+                      <span style={{ 'font-size': '9px', color: 'var(--text-muted)' }}>empty</span>
+                    )}
+                    <button
+                      onClick={(e: MouseEvent) => void handleRemove(entry.id, e)}
+                      title="Remove from list"
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                        cursor: 'pointer', padding: '2px 4px', 'font-size': '12px',
+                      }}
+                    >{'\u00D7'}</button>
                   </div>
                 )}
               </For>
-            </div>
-          </Show>
+            </Show>
+
+            {/* Imported Models (GlbStore) — draggable to viewport, always visible in Hub */}
+            <Show when={bridge.glbKeys().length > 0}>
+              <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{
+                  padding: '6px 10px', color: 'var(--text-muted)',
+                  'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
+                }}>
+                  Imported ({bridge.glbKeys().length})
+                </div>
+                <For each={bridge.glbKeys()}>
+                  {(filename) => (
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer!.setData('application/erythos-glb', filename);
+                        e.dataTransfer!.effectAllowed = 'copy';
+                      }}
+                      style={{
+                        display: 'flex', 'align-items': 'center', gap: '6px',
+                        padding: '5px 10px', cursor: 'grab',
+                      }}
+                    >
+                      <span style={{
+                        width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
+                        background: 'var(--badge-mesh, #4a6fa5)', color: 'var(--text-inverse)',
+                        'font-size': '9px', 'font-weight': 'bold',
+                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                        'flex-shrink': '0',
+                      }}>G</span>
+                      <span style={{
+                        'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
+                      }}>{filename}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+
+            {/* ── Create overlay ── */}
+            <Show when={showCreate()}>
+              <div style={{
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                right: '0',
+                bottom: '0',
+                background: 'rgba(20,20,20,0.95)',
+                'z-index': '10',
+                display: 'flex',
+                'flex-direction': 'column',
+                overflow: 'auto',
+              }}>
+                {/* Overlay header */}
+                <div style={{
+                  padding: '8px 10px',
+                  'border-bottom': '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+                  'flex-shrink': '0',
+                }}>
+                  <span style={{
+                    color: 'var(--text-primary, #fff)', 'font-size': 'var(--font-size-sm)',
+                    'font-weight': '600',
+                  }}>New Project</span>
+                  <button onClick={handleCancelCreate} style={{
+                    background: 'none', border: 'none', color: 'var(--text-muted)',
+                    cursor: 'pointer', 'font-size': '14px',
+                  }}>{'\u00D7'}</button>
+                </div>
+                {/* Form */}
+                <div style={{ padding: '12px 10px', display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
+                  {/* Project name */}
+                  <div>
+                    <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)', 'margin-bottom': '4px' }}>
+                      Project name
+                    </div>
+                    <input
+                      type="text"
+                      value={newName()}
+                      onInput={(e) => setNewName(e.target.value)}
+                      placeholder="My project"
+                      style={{
+                        width: '100%', padding: '4px 8px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        'border-radius': 'var(--radius-sm)',
+                        color: 'var(--text-primary, #fff)',
+                        'font-size': 'var(--font-size-sm)',
+                        'box-sizing': 'border-box',
+                      }}
+                    />
+                  </div>
+                  {/* Location */}
+                  <div>
+                    <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)', 'margin-bottom': '4px' }}>
+                      Location
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{
+                        flex: 1, padding: '4px 8px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        'border-radius': 'var(--radius-sm)',
+                        color: parentHandle() ? 'var(--text-secondary)' : 'var(--text-muted)',
+                        'font-size': 'var(--font-size-sm)',
+                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
+                      }}>
+                        {parentHandle()?.name ?? 'Select location...'}
+                      </div>
+                      <button onClick={() => void handlePickLocation()} title="Browse" style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        'border-radius': 'var(--radius-sm)',
+                        color: 'var(--text-secondary)', cursor: 'pointer',
+                        padding: '4px 8px', 'font-size': 'var(--font-size-sm)',
+                      }}>{'\uD83D\uDCC2'}</button>
+                    </div>
+                  </div>
+                  {/* Path preview */}
+                  <Show when={newName().trim() && parentHandle()}>
+                    <div style={{
+                      padding: '8px',
+                      background: 'rgba(0,0,0,0.2)',
+                      'border-radius': 'var(--radius-sm)',
+                      'font-family': 'monospace',
+                      'font-size': '10px',
+                      color: 'var(--text-muted)',
+                      'line-height': '1.6',
+                      'white-space': 'pre',
+                    }}>
+                      {`${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n└── textures/`}
+                    </div>
+                  </Show>
+                  {/* Create button */}
+                  <button
+                    onClick={() => void handleCreate()}
+                    disabled={!newName().trim() || !parentHandle()}
+                    style={{
+                      width: '100%', padding: '6px',
+                      background: (!newName().trim() || !parentHandle()) ? 'rgba(255,255,255,0.05)' : 'var(--accent-blue)',
+                      color: (!newName().trim() || !parentHandle()) ? 'var(--text-muted)' : '#fff',
+                      border: 'none', 'border-radius': 'var(--radius-sm)',
+                      cursor: (!newName().trim() || !parentHandle()) ? 'default' : 'pointer',
+                      'font-size': 'var(--font-size-sm)', 'font-weight': 'bold',
+                    }}
+                  >+ Create Project</button>
+                </div>
+              </div>
+            </Show>
+          </div>
         </>
       }>
         {/* ── Browser mode ── */}
