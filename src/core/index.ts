@@ -12,4 +12,5 @@ export type { SceneData, SceneObjectData } from './scene/SceneLoader';
 export { AutoSave, hasSnapshot, saveSnapshot, restoreSnapshot } from './scene/AutoSave';
 export { ResourceCache } from './scene/ResourceCache';
 export { ProjectManager } from './project';
-export type { ProjectInfo } from './project';
+export type { ProjectFile } from './project';
+export { inferFileType } from './project';
