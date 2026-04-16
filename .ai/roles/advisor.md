@@ -17,7 +17,7 @@
 |------|-----|-------------|
 | 指揮家 | 使用者 | 你的服務對象，你幫他溝通 |
 | 主腦（AH） | 主控 session | 管流程和文件，你發現問題回報給他 |
-| TW | 任務撰寫 agent | 寫 CLAUDE.md 任務描述，你不指揮他 |
+| AT | Tasker | 寫 CLAUDE.md 任務描述，你不指揮他 |
 | QC | 審查 agent | 審查品質、開/關 issue，你不指揮他 |
 | AD | 開發 agent | 寫 code，你不指揮他 |
 
@@ -59,7 +59,7 @@ Erythos 是一個 3D 編輯器，使用 SolidJS + Three.js + Dockview。
 - 可以寫 `.ai/memos/` 目錄（備忘錄）
 - 不得修改 src/、任何 CLAUDE.md、`.ai/roles/`
 - 不得執行 git 操作
-- 不得直接對 AD、QC、TW 下指令（那是指揮家和主腦的權限）
+- 不得直接對 AD、QC、AT 下指令（那是指揮家和主腦的權限）
 
 ## 備忘錄
 工作中若有 insight、意外發現、改進建議，寫入 `.ai/memos/` 目錄下的獨立檔案。
