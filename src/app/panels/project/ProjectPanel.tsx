@@ -162,6 +162,44 @@ const ProjectPanel: Component = () => {
                 )}
               </For>
             </Show>
+            {/* Imported Models (GlbStore) — draggable to viewport */}
+            <Show when={bridge.glbKeys().length > 0}>
+              <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{
+                  padding: '6px 10px', color: 'var(--text-muted)',
+                  'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
+                }}>
+                  Imported ({bridge.glbKeys().length})
+                </div>
+                <For each={bridge.glbKeys()}>
+                  {(filename) => (
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer!.setData('application/erythos-glb', filename);
+                        e.dataTransfer!.effectAllowed = 'copy';
+                      }}
+                      style={{
+                        display: 'flex', 'align-items': 'center', gap: '6px',
+                        padding: '5px 10px', cursor: 'grab',
+                      }}
+                    >
+                      <span style={{
+                        width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
+                        background: 'var(--badge-mesh, #4a6fa5)', color: 'var(--text-inverse)',
+                        'font-size': '9px', 'font-weight': 'bold',
+                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                        'flex-shrink': '0',
+                      }}>G</span>
+                      <span style={{
+                        'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
+                      }}>{filename}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </>
       }>
@@ -190,7 +228,45 @@ const ProjectPanel: Component = () => {
             <FileSection title="Models" files={modelFiles()} badge="M" badgeColor="#4a6fa5"
               onClick={(path: string) => void handleImportModel(path)} />
             <FileSection title="Textures" files={textureFiles()} badge="T" badgeColor="#8a6a4a" />
-            <Show when={sceneFiles().length === 0 && modelFiles().length === 0 && textureFiles().length === 0}>
+            {/* Imported Models (GlbStore) — draggable to viewport */}
+            <Show when={bridge.glbKeys().length > 0}>
+              <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{
+                  padding: '6px 10px', color: 'var(--text-muted)',
+                  'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
+                }}>
+                  Imported ({bridge.glbKeys().length})
+                </div>
+                <For each={bridge.glbKeys()}>
+                  {(filename) => (
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer!.setData('application/erythos-glb', filename);
+                        e.dataTransfer!.effectAllowed = 'copy';
+                      }}
+                      style={{
+                        display: 'flex', 'align-items': 'center', gap: '6px',
+                        padding: '5px 10px', cursor: 'grab',
+                      }}
+                    >
+                      <span style={{
+                        width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
+                        background: 'var(--badge-mesh, #4a6fa5)', color: 'var(--text-inverse)',
+                        'font-size': '9px', 'font-weight': 'bold',
+                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                        'flex-shrink': '0',
+                      }}>G</span>
+                      <span style={{
+                        'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
+                      }}>{filename}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+            <Show when={sceneFiles().length === 0 && modelFiles().length === 0 && textureFiles().length === 0 && bridge.glbKeys().length === 0}>
               <div style={{
                 padding: '16px 12px', color: 'var(--text-muted)',
                 'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
