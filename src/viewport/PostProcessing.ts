@@ -158,7 +158,9 @@ export class PostProcessing {
     this.composer.render();
     const renderer = this.composer.renderer;
     renderer.autoClear = false;
+    renderer.autoClearDepth = false;
     renderer.render(this.sceneHelpers, this.camera);
+    renderer.autoClearDepth = true;
     renderer.autoClear = true;
   }
 
