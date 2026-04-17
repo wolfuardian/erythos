@@ -125,6 +125,15 @@ html, body {
   background: var(--scrollbar-thumb-hover);
 }
 
+/* Native select dark theme */
+select, option {
+  color-scheme: dark;
+}
+option {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+
 /* Selection styling */
 ::selection {
   background: var(--accent-blue);
