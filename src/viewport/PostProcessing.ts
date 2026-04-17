@@ -8,6 +8,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping, ReinhardToneMapping, CineonToneMapping, NoToneMapping } from 'three';
 import type { RenderSettings } from './RenderSettings';
 
@@ -86,6 +87,9 @@ export class PostProcessing {
     this.fxaaPass = new ShaderPass(FXAAShader);
     this.fxaaPass.enabled = false;
     this.composer.addPass(this.fxaaPass);
+
+    const outputPass = new OutputPass();
+    this.composer.addPass(outputPass);
   }
 
   get quality(): QualityLevel { return this._quality; }
