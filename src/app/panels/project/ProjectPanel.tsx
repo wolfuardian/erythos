@@ -519,7 +519,8 @@ const ProjectPanel: Component = () => {
         open={showCloseConfirm()}
         title="Close this project?"
         message="Unsaved changes will be lost."
-        confirmLabel="Close"
+        confirmLabel="Close project"
+        cancelLabel="Back"
         onConfirm={() => { handleClose(); setShowCloseConfirm(false); }}
         onCancel={() => setShowCloseConfirm(false)}
       />
