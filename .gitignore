@@ -7,3 +7,4 @@ samples
 settings.local.json
 .ai/user/
 projects/
+.playwright-mcp/
