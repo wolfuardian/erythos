@@ -549,80 +549,99 @@ const SceneTreePanel: Component = () => {
   });
 
   return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.ctrlKey || e.metaKey) return;
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      'flex-direction': 'column',
+      overflow: 'hidden',
+      background: 'var(--bg-panel)',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '6px 10px',
+        'border-bottom': '1px solid var(--border-subtle)',
+        color: 'var(--text-muted)',
+        'font-size': 'var(--font-size-xs)',
+        'text-transform': 'uppercase',
+        'letter-spacing': '0.5px',
+        'flex-shrink': 0,
+      }}>
+        Scene
+      </div>
 
-        const flat = flatVisibleNodes();
-        const selected = bridge.selectedUUIDs();
-        const currentId = selected.length > 0 ? selected[selected.length - 1] : null;
-        const currentIdx = currentId ? flat.findIndex(n => n.id === currentId) : -1;
+      <div
+        ref={containerRef}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.ctrlKey || e.metaKey) return;
 
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          const next = flat[currentIdx + 1];
-          if (next) editor.selection.select(next.id);
-          else if (currentIdx === -1 && flat.length > 0) editor.selection.select(flat[0].id);
-        }
+          const flat = flatVisibleNodes();
+          const selected = bridge.selectedUUIDs();
+          const currentId = selected.length > 0 ? selected[selected.length - 1] : null;
+          const currentIdx = currentId ? flat.findIndex(n => n.id === currentId) : -1;
 
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (currentIdx > 0) editor.selection.select(flat[currentIdx - 1].id);
-        }
-
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          if (!currentId) return;
-          const node = flat.find(n => n.id === currentId);
-          if (!node) return;
-          const hasKids = bridge.nodes().some(n => n.parent === currentId);
-          if (hasKids && isExpanded(currentId)) {
-            setNodeExpanded(currentId, false);
-          } else if (node.parent) {
-            editor.selection.select(node.parent);
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = flat[currentIdx + 1];
+            if (next) editor.selection.select(next.id);
+            else if (currentIdx === -1 && flat.length > 0) editor.selection.select(flat[0].id);
           }
-        }
 
-        if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          if (!currentId) return;
-          const hasKids = bridge.nodes().some(n => n.parent === currentId);
-          if (!hasKids) return;
-          if (!isExpanded(currentId)) {
-            setNodeExpanded(currentId, true);
-          } else {
-            const children = bridge.nodes()
-              .filter(n => n.parent === currentId)
-              .sort((a, b) => a.order - b.order);
-            if (children.length > 0) editor.selection.select(children[0].id);
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentIdx > 0) editor.selection.select(flat[currentIdx - 1].id);
           }
-        }
-      }}
-      onClick={(e) => {
-        if (!(e.target as Element).closest('[draggable]')) {
-          editor.selection.select(null);
-        }
-        containerRef.focus();
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        if (!(e.target as Element).closest('[draggable]')) {
-          editor.selection.select(null);
-        }
-        setContextMenu({ x: e.clientX, y: e.clientY });
-      }}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        overflow: 'auto',
-        background: 'var(--bg-panel)',
-        padding: 'var(--space-xs) 0',
-        outline: 'none',
-      }}
-    >
+
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (!currentId) return;
+            const node = flat.find(n => n.id === currentId);
+            if (!node) return;
+            const hasKids = bridge.nodes().some(n => n.parent === currentId);
+            if (hasKids && isExpanded(currentId)) {
+              setNodeExpanded(currentId, false);
+            } else if (node.parent) {
+              editor.selection.select(node.parent);
+            }
+          }
+
+          if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (!currentId) return;
+            const hasKids = bridge.nodes().some(n => n.parent === currentId);
+            if (!hasKids) return;
+            if (!isExpanded(currentId)) {
+              setNodeExpanded(currentId, true);
+            } else {
+              const children = bridge.nodes()
+                .filter(n => n.parent === currentId)
+                .sort((a, b) => a.order - b.order);
+              if (children.length > 0) editor.selection.select(children[0].id);
+            }
+          }
+        }}
+        onClick={(e) => {
+          if (!(e.target as Element).closest('[draggable]')) {
+            editor.selection.select(null);
+          }
+          containerRef.focus();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (!(e.target as Element).closest('[draggable]')) {
+            editor.selection.select(null);
+          }
+          setContextMenu({ x: e.clientX, y: e.clientY });
+        }}
+        style={{
+          position: 'relative',
+          flex: 1,
+          overflow: 'auto',
+          padding: 'var(--space-xs) 0',
+          outline: 'none',
+        }}
+      >
       <For each={rootNodes()}>
         {(node) => (
           <TreeNode
@@ -673,6 +692,7 @@ const SceneTreePanel: Component = () => {
           Drop GLB to import
         </div>
       </Show>
+      </div>
     </div>
   );
 };
