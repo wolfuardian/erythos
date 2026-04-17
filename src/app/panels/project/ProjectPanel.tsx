@@ -581,7 +581,7 @@ const ProjectPanel: Component = () => {
                 'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
               }}>
                 No assets found.<br />
-                Place files in scenes/, models/,<br />or textures/ folders.
+                Place files in scenes/, models/, textures/,<br />hdris/, leaves/, or other/ folders.
               </div>
             </Show>
           </div>
