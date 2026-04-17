@@ -12,6 +12,7 @@
     "bump:major": "node scripts/bump.js major",
     "postinstall": "git config core.hooksPath .githooks",
     "audit:scene-tree": "node scripts/audit/scene-tree.mjs",
+    "audit:environment": "node scripts/audit/environment.mjs",
     "audit:properties": "node scripts/audit/properties.mjs"
   },
   "dependencies": {
