@@ -1,26 +1,13 @@
-import { createSignal, For, Show, type Component } from 'solid-js';
+import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 
 const EnvironmentPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
 
-  const [urlInput, setUrlInput] = createSignal('');
-  const [error, setError] = createSignal<string | null>(null);
-
   const env = () => bridge.environmentSettings();
 
-  const handleLoad = () => {
-    const url = urlInput().trim();
-    if (!url) return;
-    setError(null);
-    // 只更新設定，實際載入由 ViewportPanel 負責（監聽 environmentChanged 事件）
-    editor.setEnvironmentSettings({ hdrUrl: url });
-  };
-
   const handleClear = () => {
-    setUrlInput('');
-    setError(null);
     editor.setEnvironmentSettings({ hdrUrl: null });
   };
 
@@ -64,48 +51,12 @@ const EnvironmentPanel: Component = () => {
         Environment
       </div>
 
-      {/* HDR URL */}
+      {/* HDR Image section */}
       <div style={{ 'margin-bottom': '12px' }}>
         <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>HDR Image</div>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <input
-            type="text"
-            placeholder="Enter .hdr URL..."
-            value={urlInput()}
-            onInput={e => setUrlInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleLoad(); }}
-            style={{
-              flex: 1,
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: 'var(--text-primary, #fff)',
-              padding: '4px 6px',
-              'border-radius': '3px',
-              'font-size': '11px',
-              outline: 'none',
-            }}
-          />
-          <button
-            onClick={handleLoad}
-            disabled={!urlInput().trim()}
-            style={{
-              background: 'rgba(74,127,191,0.3)',
-              border: 'none',
-              color: 'var(--text-primary, #fff)',
-              padding: '4px 10px',
-              'border-radius': '3px',
-              cursor: 'pointer',
-              'font-size': '11px',
-              opacity: urlInput().trim() ? 1 : 0.5,
-            }}
-          >
-            Load
-          </button>
-        </div>
 
         <Show when={env().hdrUrl}>
           <div style={{
-            'margin-top': '4px',
             display: 'flex',
             'justify-content': 'space-between',
             'align-items': 'center',
@@ -132,12 +83,6 @@ const EnvironmentPanel: Component = () => {
                 padding: '0 4px',
               }}
             >×</button>
-          </div>
-        </Show>
-
-        <Show when={error()}>
-          <div style={{ color: '#f66', 'font-size': '10px', 'margin-top': '4px' }}>
-            {error()}
           </div>
         </Show>
       </div>
