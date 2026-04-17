@@ -33,6 +33,7 @@
 | 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 | — |
 | 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、dispatch agent、執行 merge | — |
 | 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
+| Mock-Preview | MP | Sonnet（可升 Opus） | UI 腦爆階段純視覺化工人，產出 HTML mockup 供指揮家挑方案 | [.ai/roles/mock-preview.md](.ai/roles/mock-preview.md) |
 | Tasker | AT | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/tasker.md](.ai/roles/tasker.md) |
 | 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
@@ -73,6 +74,14 @@
 
 ### 流水線流程
 
+**UI 類變更腦爆階段（選擇性，在開 issue 前）：**
+
+若變更涉及 UI feat/fix/refactor/style，AH 預設主動詢問指揮家「要不要 MP 先畫？」。豁免項（不需 MP）：純文字改動、單一 CSS 屬性微調、純邏輯 bug 無視覺變化。
+
+指揮家同意 → AH 與指揮家談出 N 個方案（至少 2 個）→ spawn MP（背景）→ 產出 `.ai/previews/<topic>.html` → 指揮家挑定方案 → AH 在 issue body 加 `Mockup: .ai/previews/<topic>.html` 行 → 進入正常流程。
+
+MP 是純視覺化工人，不提建議、不做決策。前提是方案已經談清楚，不可把模糊需求丟給 MP 自行詮釋。
+
 **Bug / 小功能（單一模組）：**
 1. AH 調查後開 GitHub issue（帶 label）
 2. AH 建 worktree + spawn AT（背景）撰寫任務描述
@@ -96,11 +105,12 @@
 - AH 在等待期間可與指揮家對話、處理其他事務
 - Agent 完成後 AH 會收到通知，再接續下一步
 - **Dispatch prompt 必須指向角色規範**：
+  - MP → 讀取 `.ai/roles/mock-preview.md`
   - AT → 讀取 `.ai/roles/tasker.md`
   - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
   - QC → 讀取 `.ai/roles/pr-qc.md`
   - PM → 讀取 `.ai/roles/pr-merge.md`
-- AT / AD / QC / PM 均使用 Sonnet 模型，節省 token
+- AT / AD / QC / PM / MP 均預設 Sonnet 模型，節省 token。MP 在複雜任務 AH 可於 dispatch 升 Opus。
 
 ### Reader 大軍模式
 
