@@ -149,6 +149,7 @@ const ProjectPanel: Component = () => {
             padding: '6px 10px',
             'border-bottom': '1px solid var(--border-subtle)',
             display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+            height: '30px', 'box-sizing': 'border-box',
           }}>
             <span style={{
               color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
@@ -293,6 +294,7 @@ const ProjectPanel: Component = () => {
                   'border-bottom': '1px solid rgba(255,255,255,0.1)',
                   display: 'flex', 'align-items': 'center', gap: '6px',
                   'flex-shrink': '0',
+                  height: '30px', 'box-sizing': 'border-box',
                 }}>
                   <button
                     onClick={handleCancelCreate}
