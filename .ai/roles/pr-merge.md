@@ -51,18 +51,29 @@ git push origin --delete <branch-name>
 
 如果這些區塊已經是空的（只有 placeholder 註解），跳過。
 
-### 7. Build 驗證
+### 7. 清理 MP mockup（若有）
+讀取 issue body，解析 `Mockup:` 行：
+```bash
+gh issue view <N> --json body -q .body | grep -oE '\.ai/previews/[^ ]+\.html'
+```
+若找到路徑，刪除該檔案：
+```bash
+rm .ai/previews/<topic>.html
+```
+若 issue body 無 `Mockup:` 行，跳過（非 UI 或未用 MP 的 issue）。
+
+### 8. Build 驗證
 ```bash
 npm run build
 ```
 如果失敗，不要嘗試修復，在輸出中報告錯誤。
 
-### 8. Commit + Push
+### 9. Commit + Push
 ```bash
 git add -A
 git status -s
 ```
-如果有改動（CLAUDE.md 清理、knowledge 更新、memos 刪除等），commit：
+如果有改動（CLAUDE.md 清理、mockup 刪除、knowledge 更新、memos 刪除等），commit：
 ```bash
 git commit -m "chore: merge 收尾 #<PR>"
 git push
