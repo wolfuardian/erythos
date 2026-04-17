@@ -156,6 +156,8 @@ const ProjectPanel: Component = () => {
     });
   };
 
+  const [isDragOver, setIsDragOver] = createSignal(false);
+
   const displayedAssets = () => assetFiles().filter((f) => activeFilters().has(f.type));
   const hiddenCount = () => assetFiles().length - displayedAssets().length;
 
@@ -177,6 +179,24 @@ const ProjectPanel: Component = () => {
     } catch (e: any) {
       setErrorTitle('Import Failed');
       setErrorMsg(e.message || String(e));
+    }
+  };
+
+  const handleAssetsDrop = async (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    const errors: string[] = [];
+    for (const file of files) {
+      try {
+        await editor.projectManager.importAsset(file);
+      } catch (err: any) {
+        errors.push(`${file.name}: ${err.message ?? String(err)}`);
+      }
+    }
+    if (errors.length > 0) {
+      setErrorTitle('Import Failed');
+      setErrorMsg(errors.join('\n'));
     }
   };
 
@@ -394,7 +414,7 @@ const ProjectPanel: Component = () => {
                       'white-space': 'pre',
                     }}>
                       {(newName().trim() && parentHandle())
-                        ? `${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n└── textures/`
+                        ? `${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n├── textures/\n├── hdris/\n├── leaves/\n└── other/`
                         : null}
                     </div>
                   </div>
@@ -436,7 +456,23 @@ const ProjectPanel: Component = () => {
               'font-size': 'var(--font-size-xs)', cursor: 'pointer',
             }}>Close project</button>
           </div>
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={(e) => {
+              if (!(e.currentTarget as Element).contains(e.relatedTarget as Node)) {
+                setIsDragOver(false);
+              }
+            }}
+            onDrop={(e) => void handleAssetsDrop(e)}
+            style={{
+              flex: 1, overflow: 'auto',
+              border: isDragOver() ? '2px dashed var(--accent-blue)' : '2px solid transparent',
+              background: isDragOver() ? 'rgba(70,130,220,0.08)' : undefined,
+              'box-sizing': 'border-box',
+              transition: 'border-color 100ms, background 100ms',
+            }}
+          >
             {/* ── Assets/ section header ── */}
             <div style={{
               padding: '6px 10px',
@@ -545,7 +581,7 @@ const ProjectPanel: Component = () => {
                 'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
               }}>
                 No assets found.<br />
-                Place files in scenes/, models/,<br />or textures/ folders.
+                Place files in scenes/, models/, textures/,<br />hdris/, leaves/, or other/ folders.
               </div>
             </Show>
           </div>
