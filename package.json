@@ -11,7 +11,8 @@
     "bump:minor": "node scripts/bump.js minor",
     "bump:major": "node scripts/bump.js major",
     "postinstall": "git config core.hooksPath .githooks",
-    "audit:scene-tree": "node scripts/audit/scene-tree.mjs"
+    "audit:scene-tree": "node scripts/audit/scene-tree.mjs",
+    "audit:properties": "node scripts/audit/properties.mjs"
   },
   "dependencies": {
     "dockview-core": "^5.1.0",
