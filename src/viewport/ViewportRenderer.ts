@@ -24,7 +24,7 @@ export class ViewportRenderer {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
-    this.renderer.setClearColor(0x1a1a1a);
+    this.renderer.setClearColor(0x3f3f3f);
   }
 
   mount(
