@@ -129,3 +129,11 @@ PM 的 memo 掃描可能遺漏（working directory / worktree 邊界差異）。
 
 ### 共通哲學
 以上四條指向同一原理：**AH 不委機械流程或下游 agent 做判斷**。多工是預設；工具服務判斷；命名服務讀者；掃描決策是 AH 職責。
+
+## 拖放 / FSA API 常見陷阱（來源：#328 memo）
+
+- **writeFile 不自動 emit/rescan**：`ProjectManager.writeFile` 純粹寫檔、不觸 UI 更新。新增資產後需明確 `await this.rescan()`，否則 `bridge.projectFiles()` 不更新
+- **findFreeName 用 FSA getFileHandle 試探**：靠 `getFileHandle(name)` 拋 `NotFoundError` 判斷檔案是否存在，需精確捕這個 error type，其他 error 重拋；extension-less 名稱要用 `lastIndexOf('.') >= 0` 判斷
+- **onDragOver 必須 preventDefault**：否則 `drop` event 不會觸發（HTML5 Drag API 規格），任何 drop target 必加
+- **onDragLeave child 元素觸發**：子元素 hover 會連動觸發父層 `dragleave`，造成 visual state 閃爍。用 `e.currentTarget.contains(e.relatedTarget)` 過濾
+- **UI 顯示字串 vs code 寫死資料夾名**：createProject 建立的資料夾清單若擴增（如 3 → 6），Browser mode 空狀態提示 / Preview 等 hardcoded 字串需同步更新，否則 UI 撒謊（#328 QC FAIL 案例）
