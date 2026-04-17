@@ -57,6 +57,7 @@
 | properties | src/panels/properties/ | `[properties]` |
 | leaf-panel | src/panels/leaf/ | `[leaf-panel]` |
 | environment-panel | src/panels/environment/ | `[environment]` |
+| scripts | scripts/ | `[scripts]` |
 
 ### 分支規則
 
