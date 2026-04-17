@@ -15,8 +15,6 @@ const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; colo
   other:   { pill: 'OTH', label: 'Other',   color: 'var(--text-muted)'    },
 };
 
-const [hoveredFilter, setHoveredFilter] = createSignal<ProjectFile['type'] | null>(null);
-
 const filterIcon = (t: ProjectFile['type']) => {
   // viewBox 0 0 16 16, fill:none, stroke-linecap:round, stroke-linejoin:round
   switch (t) {
@@ -170,6 +168,7 @@ const ProjectPanel: Component = () => {
     });
   };
 
+  const [hoveredFilter, setHoveredFilter] = createSignal<ProjectFile['type'] | null>(null);
   const [isDragOver, setIsDragOver] = createSignal(false);
 
   const displayedAssets = () => assetFiles().filter((f) => activeFilters().has(f.type));
@@ -529,7 +528,6 @@ const ProjectPanel: Component = () => {
                             ? (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--accent-blue)')
                             : (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--text-muted)'),
                           'stroke-width': '1.5',
-                          opacity: activeFilters().has(t) ? '1' : '0.5',
                         }}
                       >
                         {filterIcon(t)}
