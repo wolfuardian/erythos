@@ -51,16 +51,15 @@ git push origin --delete <branch-name>
 
 如果這些區塊已經是空的（只有 placeholder 註解），跳過。
 
-### 7. 清理 MP mockup（若有）
-讀取 issue body，解析 `Mockup:` 行：
-```bash
-gh issue view <N> --json body -q .body | grep -oE '\.ai/previews/[^ ]+\.html'
-```
-若找到路徑，刪除該檔案：
-```bash
-rm .ai/previews/<topic>.html
-```
-若 issue body 無 `Mockup:` 行，跳過（非 UI 或未用 MP 的 issue）。
+### 7. Mockup 保留（**不清理**）
+
+`.ai/previews/` 下的 HTML 是 **design history / 視覺規格 source of truth**，可能跨 issue、跨階段（例如 Variant A · Tint v2 涵蓋階段 1-4 的 properties 落地）供未來 agent 查閱。
+
+**PM 嚴禁刪除 `.ai/previews/` 目錄下的任何檔案**，**無論** issue body 是否含 `Mockup:` 行。
+
+若需清理未採納的 mockup 或過期檔案，由 AH 親自判斷後操作，不屬 PM 職責。
+
+（歷史背景：PM 角色過去曾依 issue `Mockup:` 行自動 `rm` 此檔案；實作發現「mockup 是一次性的」假設錯誤，會連帶刪除仍在服役的規格檔，導致後續階段無法還原。2026-04-18 起改為一律保留。）
 
 ### 8. Build 驗證
 ```bash
@@ -81,7 +80,7 @@ git status -s
 | 檔案模式 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
-| `.ai/previews/<topic>.html` 刪除（step 7） | 可 commit |
+| `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
 | `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
 | `tsconfig.app.tsbuildinfo` | 可 commit（build 產物） |
