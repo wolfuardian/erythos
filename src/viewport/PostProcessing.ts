@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { AfterimagePass } from 'three/examples/jsm/postprocessing/AfterimagePass.js';
-import { ACESFilmicToneMapping, NoToneMapping } from 'three';
+import { ACESFilmicToneMapping, AgXToneMapping, NeutralToneMapping, ReinhardToneMapping, CineonToneMapping, NoToneMapping } from 'three';
 import type { RenderSettings } from './RenderSettings';
 
 export type QualityLevel = 'low' | 'normal' | 'high';
@@ -98,9 +98,17 @@ export class PostProcessing {
 
   applyRenderSettings(settings: RenderSettings): void {
     // Tone mapping
-    this.renderer.toneMapping = settings.toneMapping.mode === 'aces'
-      ? ACESFilmicToneMapping
-      : NoToneMapping;
+    if (!settings.toneMapping.enabled) {
+      this.renderer.toneMapping = NoToneMapping;
+    } else {
+      switch (settings.toneMapping.mode) {
+        case 'aces':     this.renderer.toneMapping = ACESFilmicToneMapping; break;
+        case 'agx':      this.renderer.toneMapping = AgXToneMapping; break;
+        case 'neutral':  this.renderer.toneMapping = NeutralToneMapping; break;
+        case 'reinhard': this.renderer.toneMapping = ReinhardToneMapping; break;
+        case 'cineon':   this.renderer.toneMapping = CineonToneMapping; break;
+      }
+    }
     this.renderer.toneMappingExposure = settings.toneMapping.exposure;
 
     // Bloom
@@ -135,7 +143,14 @@ export class PostProcessing {
   }
 
   private applySize(): void {
-    const pixelRatio = this._quality === 'low' ? 1 : this.renderer.getPixelRatio();
+    let pixelRatio: number;
+    if (this._quality === 'low') {
+      pixelRatio = 0.5;
+    } else if (this._quality === 'normal') {
+      pixelRatio = 1.0;
+    } else {
+      pixelRatio = window.devicePixelRatio;
+    }
     const w = Math.max(1, Math.round(this._logicalW * pixelRatio));
     const h = Math.max(1, Math.round(this._logicalH * pixelRatio));
     this.composer.setSize(w, h);
