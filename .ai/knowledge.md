@@ -63,3 +63,52 @@
 - 轉換集中在 ViewportPanel（UI 層），core/Selection 和 bridge 完全不持有 Object3D，未來換 3D 引擎只需改 ViewportPanel ⏳ 永久
 - `sceneSync.getUUID(obj)` 回傳 null 是正常情境（helper 物件不在 SceneSync 中），null guard 是語意過濾非錯誤防護 ⏳ 永久
 - `.filter(Boolean)` 無法窄化 `(T | null)[] → T[]`，需用明確型別守衛 `.filter((o): o is T => o !== null)` ⏳ 永久
+
+## File System Access API（來源：#309 實作）
+
+- TS DOM lib 不含 FSAA 型別。`FileSystemDirectoryHandle.entries()` / `.values()` 必須 `(handle as any).entries()` 強制轉型。codebase 既定 pattern，參考 `src/core/ProjectManager.ts:162` ⏳ 適用至 TS 新增 FSAA lib
+- 迭代 child entries：`for await (const [, h] of (p as any).entries() as AsyncIterable<[string, FileSystemHandle]>) { ... }`
+- Permission error / AbortError 一律 try/catch，fallback 視 UX 而定（#309 fallback 為「無衝突」，不顯示錯誤） ⏳ 永久
+
+## 樣式變數（來源：theme.css 掃檔）
+
+- 錯誤 / 危險紅色：`var(--accent-red)`（`#c04040`，定義於 `src/styles/theme.css:30`） ⏳ 永久
+- Input border 變紅 + 錯誤文字同時使用 `var(--accent-red)`（參考 #309） ⏳ 永久
+- 文字色三層：`--text-primary` / `--text-secondary` / `--text-muted` ⏳ 永久
+- 背景面板色：`--bg-panel` / `--bg-section` ⏳ 永久
+- 圓角：`--radius-sm` / `--radius-md` ⏳ 永久
+
+## ConfirmDialog API（來源：#311）
+
+```ts
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmLabel?: string;  // default 'OK'
+  cancelLabel?: string;   // default 'Cancel'
+}
+```
+
+- Named export：`import { ConfirmDialog } from '<path>/components/ConfirmDialog'`
+- 內建 Escape key 關閉（觸發 `onCancel`）
+- 遮罩點擊觸發 `onCancel`
+- **不支援** `variant` / `danger` / 紅色 destructive 按鈕，需要時另開 issue 擴充
+- SolidJS 限制：**不要 destructure props**，保持 `props.xxx` 存取。用 `??` 非 `||` 設預設值
+⏳ 適用至 ConfirmDialog 下次重構
+
+## Solid DevTools 組件命名（來源：本 session 討論）
+
+- 頂層約 20 個 named components（panels / dialogs / toolbar），Solid DevTools 看得到
+- panel 內的子區塊多為 inline JSX（div），無 named component
+- 定位子元素：Solid DevTools 帶到 `XxxPanel` → outerHTML（文字 / inline style 片段）grep ⏳ 永久
+
+## 專案 workflow 慣例
+
+- Issue body 含 `Depends-on: #N` → 必須等 #N 合併後才能合本 issue
+- Issue body 含 `Mockup: .ai/previews/xxx.html` → PM merge 時刪除該檔
+- 豁免級變更（純文字 / 單一 CSS / 純邏輯 bug）可走 Fast path，AH 自寫任務跳過 AT
+- 跨模組 API 依賴不明時，開 issue 前先 spawn RD 掃檔（Pre-flight RD）
+- Agent 工具呼叫必須明確 `model: 'sonnet'`（或 `'opus'`），不指定會默默升 Opus ⏳ 永久

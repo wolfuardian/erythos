@@ -97,6 +97,23 @@ AD 讀完你的輸出即可開工，**不需要查其他文件**。如果 AD 需
 ### Build 預期
 如果你預期 build 會因為跨模組依賴而報錯（例如移除了 API 但消費端尚未更新），在 **build 驗證** 區塊說明預期的錯誤和繞過方式。
 
+## Lite 模式
+
+若 dispatch prompt 含 `mode: lite`，產出目標 **< 30 行**：
+
+- 省略完整 before/after code blocks（行號 + 一句描述即可，例：「在 `ProjectPanel.tsx:L148` 新增 `height: '30px'`」）
+- 保留必要的負面指令（可極簡列表）
+- 保留 commit 格式、PR 指令、CLAUDE.md 還原步驟
+- 保留「上報區」用法（若發現意外仍正常上報）
+
+適用時機：極簡任務（單一屬性修改、rename、加單層 wrapper）但仍需 AT 掃檔確認細節（例如行號、既有 style 慣例）。
+
+**Fast path vs Lite 模式**：
+- **Fast path**（根 CLAUDE.md 定義）：AH 自寫任務跳過 AT，適合完全豁免級
+- **Lite 模式**：仍走 AT 但壓縮產出，適合介於豁免和標準之間的任務
+
+不符合「極簡」條件的任務不得使用 Lite 模式 — 產出資訊不足 AD 會踩雷。
+
 ## Context 預算
 
 你的 context 有限，必須節制讀取：
