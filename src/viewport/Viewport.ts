@@ -116,7 +116,7 @@ export class Viewport {
     this.postProcessing.setSize(this.vpRenderer.width, this.vpRenderer.height);
 
     // Mount submodules
-    this.gridHelpers.mount(this.sceneHelpers);
+    this.gridHelpers.mount(this.scene);
     this.sceneHelpers.add(this.gizmo.controls.getHelper());
     this.picker.mount(
       this.vpRenderer.domElement,

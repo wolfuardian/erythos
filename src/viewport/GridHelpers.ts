@@ -13,8 +13,8 @@ export class GridHelpers {
     this.axes.name = '__axes';
   }
 
-  mount(sceneHelpers: Scene): void {
-    this.scene = sceneHelpers;
+  mount(scene: Scene): void {
+    this.scene = scene;
     this.scene.add(this.grid);
     this.scene.add(this.axes);
   }
