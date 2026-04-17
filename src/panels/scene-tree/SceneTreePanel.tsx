@@ -62,14 +62,14 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
   const typeBadge = () => {
     switch (inferNodeType(props.node)) {
       case 'Group':             return { label: 'G', color: 'var(--badge-group)' };
-      case 'Mesh':              return { label: 'M', color: 'var(--badge-mesh, #4a9eff)' };
+      case 'Mesh':              return { label: 'M', color: 'var(--badge-mesh)' };
       case 'Box':               return { label: 'B', color: 'var(--badge-geometry, #f5a623)' };
       case 'Sphere':            return { label: 'S', color: 'var(--badge-geometry, #f5a623)' };
       case 'Plane':             return { label: 'P', color: 'var(--badge-geometry, #f5a623)' };
       case 'Cylinder':          return { label: 'C', color: 'var(--badge-geometry, #f5a623)' };
-      case 'DirectionalLight':  return { label: 'L', color: 'var(--badge-light, #f7dc6f)' };
-      case 'AmbientLight':      return { label: 'L', color: 'var(--badge-light, #f7dc6f)' };
-      case 'PerspectiveCamera': return { label: 'C', color: 'var(--badge-camera, #a29bfe)' };
+      case 'DirectionalLight':  return { label: 'L', color: 'var(--badge-light)' };
+      case 'AmbientLight':      return { label: 'L', color: 'var(--badge-light)' };
+      case 'PerspectiveCamera': return { label: 'C', color: 'var(--badge-camera)' };
       default:                  return { label: 'O', color: 'var(--badge-empty)' };
     }
   };
