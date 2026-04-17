@@ -4,7 +4,7 @@ import { useEditor } from '../../../app/EditorContext';
 import { SetTransformCommand } from '../../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
-import { XYZCellEditable } from '../components/XYZCell';
+import { XYZCellEditable, XYZCellReadonly } from '../components/XYZCell';
 import { fieldLabel, xyzRow, groupLabelRow } from '../components/fieldStyles';
 
 interface TransformDrawProps {
@@ -97,6 +97,39 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
           <XYZCellEditable axis="z" value={sz()} onChange={(v) => setScale('z', v)} />
         </div>
       </div>
+
+      {/* Delta Transform 子 section（hardcoded 0，驗證 deep tint 視覺，階段 2 替換） */}
+      <FoldableSection label="DELTA TRANSFORM" variant="deep" sectionKey="propertiesDeltaTransform">
+        {/* Position */}
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Position</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value="0" />
+            <XYZCellReadonly axis="y" value="0" />
+            <XYZCellReadonly axis="z" value="0" />
+          </div>
+        </div>
+
+        {/* Rotation */}
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Rotation</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value="0" />
+            <XYZCellReadonly axis="y" value="0" />
+            <XYZCellReadonly axis="z" value="0" />
+          </div>
+        </div>
+
+        {/* Scale */}
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Scale</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value="0" />
+            <XYZCellReadonly axis="y" value="0" />
+            <XYZCellReadonly axis="z" value="0" />
+          </div>
+        </div>
+      </FoldableSection>
     </FoldableSection>
   );
 };
