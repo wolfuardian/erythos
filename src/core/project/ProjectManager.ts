@@ -39,9 +39,12 @@ export class ProjectManager {
   async createProject(name: string, parentHandle: FileSystemDirectoryHandle): Promise<void> {
     const projectHandle = await parentHandle.getDirectoryHandle(name, { create: true });
 
-    await projectHandle.getDirectoryHandle('scenes', { create: true });
-    await projectHandle.getDirectoryHandle('models', { create: true });
+    await projectHandle.getDirectoryHandle('scenes',   { create: true });
+    await projectHandle.getDirectoryHandle('models',   { create: true });
     await projectHandle.getDirectoryHandle('textures', { create: true });
+    await projectHandle.getDirectoryHandle('hdris',    { create: true });
+    await projectHandle.getDirectoryHandle('leaves',   { create: true });
+    await projectHandle.getDirectoryHandle('other',    { create: true });
 
     const files = await this.collectFiles(projectHandle);
     const status = this.computeStatus(files);
