@@ -34,22 +34,32 @@ const EnvironmentPanel: Component = () => {
     <div style={{
       width: '100%',
       height: '100%',
-      overflow: 'auto',
-      padding: '10px',
-      'box-sizing': 'border-box',
-      'font-size': '11px',
-      color: 'var(--text-secondary, #aaa)',
+      display: 'flex',
+      'flex-direction': 'column',
+      overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
+        padding: '6px 10px',
+        'border-bottom': '1px solid var(--border-subtle)',
         color: 'var(--text-muted)',
         'font-size': 'var(--font-size-xs)',
         'text-transform': 'uppercase',
         'letter-spacing': '0.5px',
-        'margin-bottom': '12px',
+        'flex-shrink': 0,
       }}>
         Environment
       </div>
+
+      {/* Body */}
+      <div style={{
+        flex: 1,
+        overflow: 'auto',
+        padding: '10px',
+        'box-sizing': 'border-box',
+        'font-size': '11px',
+        color: 'var(--text-secondary, #aaa)',
+      }}>
 
       {/* HDR Image section */}
       <div style={{ 'margin-bottom': '12px' }}>
@@ -134,6 +144,7 @@ const EnvironmentPanel: Component = () => {
           value={env().rotation}
           onInput={e => handleRotation(parseInt(e.target.value))}
           style={{ width: '100%' }} />
+      </div>
       </div>
     </div>
   );
