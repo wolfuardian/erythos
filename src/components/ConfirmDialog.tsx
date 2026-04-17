@@ -1,4 +1,4 @@
-import { type Component, Show, createEffect, onCleanup } from 'solid-js';
+import { type Component, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -11,6 +11,9 @@ export interface ConfirmDialogProps {
 }
 
 const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
+  const [confirmHovered, setConfirmHovered] = createSignal(false);
+  const [cancelHovered, setCancelHovered] = createSignal(false);
+
   createEffect(() => {
     if (!props.open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -60,10 +63,12 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
           <div style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
             <button
               onClick={props.onCancel}
+              onMouseEnter={() => setCancelHovered(true)}
+              onMouseLeave={() => setCancelHovered(false)}
               style={{
                 padding: '4px 16px',
                 height: '28px',
-                background: 'var(--bg-section)',
+                background: cancelHovered() ? 'var(--bg-hover)' : 'var(--bg-section)',
                 color: 'var(--text-secondary)',
                 border: '1px solid var(--border-subtle)',
                 'border-radius': 'var(--radius-sm)',
@@ -73,14 +78,16 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             >
               {props.cancelLabel ?? 'Cancel'}
             </button>
+            {/* TODO #345: variant='danger' → background: var(--accent-red) */}
             <button
               onClick={props.onConfirm}
+              onMouseEnter={() => setConfirmHovered(true)}
+              onMouseLeave={() => setConfirmHovered(false)}
               style={{
                 padding: '4px 16px',
                 height: '28px',
-                background: 'var(--bg-section)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-subtle)',
+                background: confirmHovered() ? 'var(--accent-blue-hover)' : 'var(--accent-blue)',
+                color: 'white',
                 'border-radius': 'var(--radius-sm)',
                 'font-size': 'var(--font-size-sm)',
                 cursor: 'pointer',
