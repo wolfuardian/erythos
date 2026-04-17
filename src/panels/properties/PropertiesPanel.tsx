@@ -35,7 +35,7 @@ const PropertiesPanel: Component = () => {
       <div style={{
         flex: 1,
         overflow: 'auto',
-        padding: 'var(--space-md)',
+        padding: '4px 10px 10px',
       }}>
         <Switch fallback={
           <div style={{
