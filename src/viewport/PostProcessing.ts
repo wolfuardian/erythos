@@ -98,9 +98,17 @@ export class PostProcessing {
 
   applyRenderSettings(settings: RenderSettings): void {
     // Tone mapping
-    this.renderer.toneMapping = settings.toneMapping.mode === 'aces'
-      ? ACESFilmicToneMapping
-      : NoToneMapping;
+    if (!settings.toneMapping.enabled) {
+      this.renderer.toneMapping = NoToneMapping;
+    } else {
+      switch (settings.toneMapping.mode) {
+        case 'aces':     this.renderer.toneMapping = ACESFilmicToneMapping; break;
+        case 'agx':      this.renderer.toneMapping = AgXToneMapping; break;
+        case 'neutral':  this.renderer.toneMapping = NeutralToneMapping; break;
+        case 'reinhard': this.renderer.toneMapping = ReinhardToneMapping; break;
+        case 'cineon':   this.renderer.toneMapping = CineonToneMapping; break;
+      }
+    }
     this.renderer.toneMappingExposure = settings.toneMapping.exposure;
 
     // Bloom
