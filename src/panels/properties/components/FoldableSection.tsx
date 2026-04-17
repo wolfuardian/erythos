@@ -80,10 +80,7 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
           'margin-bottom': '6px',
           'border-radius': 'var(--radius-sm)',
         }}>
-          {/* 內部欄位縮排 14px */}
-          <div style={{ 'padding-left': '14px' }}>
-            {props.children}
-          </div>
+          {props.children}
         </div>
       )}
     </div>
