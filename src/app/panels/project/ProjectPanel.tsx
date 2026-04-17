@@ -1,6 +1,7 @@
 import { createSignal, createResource, onMount, onCleanup, Show, For, type Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
 import { ErrorDialog } from '../../../components/ErrorDialog';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import type { ProjectEntry } from '../../../core/project/ProjectHandleStore';
 import type { ProjectFile } from '../../../core/project/ProjectFile';
 import { loadGLTFFromFile } from '../../../utils/gltfLoader';
@@ -16,6 +17,7 @@ const ProjectPanel: Component = () => {
   const [closing, setClosing] = createSignal(false);
   const [newName, setNewName] = createSignal('');
   const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
 
   // ── Duplicate folder check ──
   // 用 createResource 自動處理 race condition（舊的 async 結果被 SolidJS 丟棄）
@@ -449,12 +451,12 @@ const ProjectPanel: Component = () => {
               'font-weight': 'bold', overflow: 'hidden', 'text-overflow': 'ellipsis',
               'white-space': 'nowrap',
             }}>{bridge.projectName()}</span>
-            <button onClick={handleClose} style={{
+            <button onClick={() => setShowCloseConfirm(true)} style={{
               background: 'var(--bg-section)', color: 'var(--text-muted)',
               border: '1px solid var(--border-subtle)',
               padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
               'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-            }}>Close</button>
+            }}>Close project</button>
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
             <FileSection title="Scenes" files={sceneFiles()} badge="S" badgeColor="#5a8a5a"
@@ -513,6 +515,14 @@ const ProjectPanel: Component = () => {
         </>
       </Show>
       <ErrorDialog open={!!errorMsg()} title={errorTitle()} message={errorMsg()} onClose={() => setErrorMsg('')} />
+      <ConfirmDialog
+        open={showCloseConfirm()}
+        title="Close this project?"
+        message="Unsaved changes will be lost."
+        confirmLabel="Close"
+        onConfirm={() => { handleClose(); setShowCloseConfirm(false); }}
+        onCancel={() => setShowCloseConfirm(false)}
+      />
     </div>
   );
 };
