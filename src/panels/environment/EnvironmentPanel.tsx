@@ -96,8 +96,8 @@ const EnvironmentPanel: Component = () => {
             onChange={(e) => void handleSelectFromProject(e.target.value)}
             style={{
               width: '100%',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.15)',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-subtle)',
               color: 'var(--text-primary, #fff)',
               padding: '4px 6px',
               'border-radius': '3px',
