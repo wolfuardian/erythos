@@ -1,88 +1,79 @@
-# Session 狀態（2026-04-17 下半場）
+# Session 狀態（2026-04-17 第三輪 / 接續上半 + 下半場）
 
-## 核心進展：DV 視覺審計流程建立 + scene-tree PoC 驗證成功
+## 完成事項：5 PRs merged
 
-本 session 從「UI 視覺美感盤點」的三題 Q 開始，落地出：
+| PR | Issue | 摘要 | merge commit |
+|----|-------|------|--------------|
+| #360 | #359 | audit 基建（playwright seed pattern + scene-tree.mjs） | b9e0003 |
+| #361 | #349 | 補 --badge-geometry token | cd638aa |
+| #364 | #362 | environment audit seed | a56f7ca |
+| #367 | #365 | viewport + leaf 背景色改 #3f3f3f | 92dee69 |
+| #366 | #363 | properties audit seed | 21506f6 |
 
-1. **新角色 DV（Design-Visual）**：`.ai/roles/design-visual.md`
-   - 只讀截圖 + theme.css 寫中文美感問題清單
-   - 不碰 Playwright、不讀 src、不做 code review、不給修法建議
-   - 與 MP 差別：MP 畫草案，DV 審活網頁
-   - 設計要點：明確「你不是 code reviewer」邊界，避免 Sonnet 降級成工程審查
+## 新模式驗證
 
-2. **PoC 驗證（scene-tree panel）**：
-   - 首次跑 DA（Design-Auditor 舊命名）時，Playwright 權限被拒自動降級成靜態 code review（22 個工程問題，存 `.ai/audits/scene-tree-engineering.md` 當 DE 樣本）
-   - 診斷後拆分為 DV（視覺）/DE（工程）兩職能，先做 DV
-   - AH 親操 Playwright MCP 截 overview/hover/selected 三張圖
-   - spawn DV（Sonnet）讀圖 → 10 個視覺問題，整體印象「功能到位但視覺未收尾」直白判斷
-   - 報告：`.ai/audits/scene-tree.md`
+1. **跨機協作**（#359）：純檔案搬 + 本機 AD 接力收尾
+   - 教訓：背景 agent 跨 session 不延續，session 結束前需檢查未收尾任務（spawned 但 timeout）
+   - 接力 prompt 需明寫已完成 vs 待補步驟，避免重做
 
-3. **Issue #359 基建**（走完整流程中）：
-   - Title: `[scripts] audit 基建：playwright seed script pattern`
-   - Worktree: `C:\z\erythos-359-audit-seed` @ `feat/audit-seed`
-   - 新模組 `scripts/`（含 CLAUDE.md 範圍限制 + 當前任務）
-   - AD (aa80fd7c5c99b2d34) 背景跑中 — session 結束時尚未開 PR
+2. **Fast path 變體**（#349, #365）：跨模組或極小變更，純 prompt 任務、無模組 CLAUDE.md
+   - 省 AT 整輪 + CLAUDE.md 還原步驟
+   - 適用：純 1 行 CSS / hex 變更，跨多模組但無設計分歧
 
-## 下一個 session 要做（優先序）
+3. **Audit script pattern 證實可複製**：environment（三輪曲折）+ properties（一輪 + timeout 接力）
 
-### 1. 接力 #359 基建
-- **先做**：`gh pr list` 看 #359 有沒有開 PR
-  - 若 PR 開了 → spawn QC 審查
-  - 若 AD 卡住或未完成 → 檢查 worktree 狀態，可能需要 reset 或 spawn 新 AD
-- **QC PASS 後** → merge + cleanup（含清 scripts/CLAUDE.md 當前任務）
+## 主要教訓（已寫入 knowledge.md）
 
-### 2. 基建 merged 後：全站 audit
-- 複製 `scripts/audit/scene-tree.mjs` 成其他 panel 的 seed：
-  - `environment.mjs`（Environment panel，有 slider / select）
-  - `properties.mjs`（Properties panel，form 類）
-  - `assets.mjs`（Assets browser，filter bar + grid）
-  - `viewport-controls.mjs`（Viewport toolbar + shading mode buttons）
-  - `hub.mjs`（Hub 首頁，Hub 模式跟 Editor 模式切換要處理）
-  - `leaves.mjs`（Leaves panel）
-- 每 panel 跑 seed → spawn DV → 產出 `.ai/audits/<panel>.md`
-- 可平行：5-6 個 panel 一次跑完
+- **Dockview DOM 沒 ARIA role / data-view-id**：必用 `.dv-default-tab-content` + `.dv-content-container` 等 class（#362 三輪才解，每輪 AD 都自報停手 + 給實測修法）
+- **Scene Tree `getByText('Scene', { exact: true })` 是碰巧能用**：因 panel 內文連著 row 文字，exact 過濾掉。不適用其他 panel
+- **多態 panel 用全頁截圖**規避 panel-locator 不穩（properties 案例）
 
-### 3. 全站 audit 完成後：批次修繕計畫
-- 讀所有 `.ai/audits/*.md`，整理跨 panel 共通問題（例如多個 panel 都說 hover 太弱 = 系統性問題）
-- 決定修繕順序：
-  - A 類單點可修（每 panel 一個 issue 或多 panel 併一個）
-  - B 類需 MP 設計方案（badge 色系重做、狀態視覺系統）
-  - C 類通盤設計（留 knowledge.md 記錄，不急著動）
-- 可能需要 `.ai/roles/design-engineer.md`（DE）角色來處理「工程健康檢查」
+## Process 觀察
 
-### 4. 原本 4 個 open issue（還沒處理）
+- **Stream timeout**（#363 AD）：實作做完但收尾 stream 斷。檢查 worktree 狀態（git status + ls 產物）即可判斷實際進度。接力派 AD 補 commit/push/PR
+- **PM 解機械性衝突**（#366）：兩 PR 改同檔同位置（package.json scripts 區塊），PM 報告衝突 → AH 評估「無 drift」後授權 PM 解 → PM 跑 `git merge origin/master` + 解衝突 + push + `gh pr merge`。memory `feedback_conflict_drift.md` 規則的例外
+- **`gh pr merge --delete-branch` 對 worktree 引用的分支會 fail**（本地分支刪不掉）：PM 自己 fallback 處理（手動 `git branch -d`）。下次可在 PM SOP 註明「先 worktree remove 再 pr merge」
+- **dev server port 3000**：兩個 AD 不能並行跑 audit。要 sequence 派 AD（一個跑完 kill server 後再派下一個）
+
+## 下一個 session 優先序
+
+### 1. 原計畫第 2 步：剩 4 panel audit（已完成 scene-tree / environment / properties）
+- `assets`：filter bar + grid（grid 互動可能複雜）
+- `viewport-controls`：toolbar + shading mode buttons
+- `hub`：Hub 模式 vs Editor 模式切換（特殊狀態管理）
+- `leaves`：未知，需 AT 探勘
+
+可平行（4 個 issue / worktree / AT / AD），但**注意 dev server port**：AD spawn 要 sequence。
+**spawn AT 時提示**「Dockview selector 用 `.dv-*` class」（已記 knowledge.md，未來 AT 應該會自查 knowledge.md）。
+
+### 2. 全 6 panel audit pattern 完成後：spawn DV 寫美感問題
+目前 `.ai/audits/` 只有 scene-tree.md（DV 報告 + 截圖）。environment / properties 截圖跑出但未派 DV。
+下個 session 啟動 audit batch 後可批量 spawn DV。
+
+### 3. 第 2 步 + DV 完成後：第 3 步批次修繕計畫
+讀 6 panel `.ai/audits/<panel>.md` 整理跨 panel 共通問題，分類修繕。可能需要 `.ai/roles/design-engineer.md`（DE）角色處理工程健康檢查。
+
+### 4. 原本 3 個 open issue 還沒處理
 - #330 [core] 巢狀 Mesh 重複渲染（等藝術家資產觸發）
 - #343 [styles] theme.css polish（可併入 UI 修繕大計畫）
-- #349 [styles] 補 `--badge-geometry` token（可直接修或併入視覺系統 issue）
 - #355 [viewport] refactor: computeDropPosition（技術債，獨立處理）
 
-## 本次產生的新原則（已寫入 memory）
+## 觀察到的指揮家偏好
 
-- **`feedback_role_naming_clarity.md`**：角色一多縮寫會碰撞，8+ 角色需全盤重命名
+- **「同步」一字代表「兩處保持對齊」**（#365 viewport + leaf 改色案例）
+- 偏好平行（一次 spawn 多個 task）但接受 AH 對 dev server port 衝突的序列化判斷
+- **接受 PM 解機械性衝突**（無 drift 場合）— 「程式碼衝突開 issue 防 drift」規則的例外是「純機械合併」
+- 結束 session 比拼進度，今日進度足夠就停
 
-## 重要思考：機械化原則（指揮家提出）
+## Pipeline 終點
 
-> 「這種複雜的端到端測試最好還是能讓頻繁處理的行為變為機械式的，盡可能使其可靠可復現」
+- master clean @ 21506f6（含本筆記 commit 後會更新）
+- 0 active worktree
+- 3 open issues：#330 #343 #355
+- knowledge.md 加了 Dockview selector pattern 章節
+- `.ai/audits/` 內 environment / properties 截圖已有，scene-tree.md DV 報告已寫（上 session）
 
-這句話驅動了 #359 的設計：不靠 LLM 即時判斷（AH 手操 Playwright），改寫 node script 版控化。下 session merge 後這成為 DV 流程的核心基建，應該寫進 knowledge.md「audit 方法論」章節。
+## 懸念
 
-## 指揮家本 session 決策摘要
-
-- DA → DV/DE 拆分：同意 A+C 混搭（AH 截圖餵 DV + 拆角色）
-- PoC 選 scene-tree（row 典型、非近期大改）
-- 中文報告、整 panel 截圖加座標標註
-- 資料用 C:\z\erythos\samples\question_block.glb（實際 PoC 用 + Cube toolbar 代替更快）
-- 批准「基建先 → 全站 audit → 批次修繕」順序
-
-## Session context 觀察
-
-- 本 session 主軸從 UI 美感討論 → 流程設計 → PoC → 基建 issue
-- 兩次自我修正：DA 降級成 code review → 拆角色；AH 手操 → 機械化 script
-- 指揮家適時提醒「角色命名」「機械化」兩個通用原則，顯示他在思考**方法論層**而非具體問題
-- Pipeline 終點：1 active worktree（#359），1 AD 跑中，5 open issue，master clean（57850a6 pushed）
-
-## 懸念備註
-
-- `.ai/audits/scene-tree-engineering.md`（22 個工程問題）已 commit 留存，未來 DE role 建立時參考，**不要當 scene-tree.md 用**（已覆蓋）
-- 下 session 若發現 AD 產出的 seed script 跑出來的截圖與本 session AH 手操版本差異大，代表 locator 不穩定，需補強（例如改用更穩的 CSS selector 取代 sparse text match）
-- Playwright MCP 工具如果還要主腦直接用，每個 session 都要 ToolSearch load（它們是 deferred）
+- environment.mjs 跟 properties.mjs 的 selector pattern 不同（panel locator vs 全頁），未來 4 panel 跑出來後可能要統一格式（或保留各自最適）
+- audit 截圖未版控？看了 .ai/audits/ 在 git 中，`.ai/audits/<panel>/*.png` 應該被 commit（scripts/CLAUDE.md 慣例「截圖輸出目錄統一放 .ai/audits/，會被 commit 是預期」）

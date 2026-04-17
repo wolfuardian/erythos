@@ -137,3 +137,12 @@ PM 的 memo 掃描可能遺漏（working directory / worktree 邊界差異）。
 - **onDragOver 必須 preventDefault**：否則 `drop` event 不會觸發（HTML5 Drag API 規格），任何 drop target 必加
 - **onDragLeave child 元素觸發**：子元素 hover 會連動觸發父層 `dragleave`，造成 visual state 閃爍。用 `e.currentTarget.contains(e.relatedTarget)` 過濾
 - **UI 顯示字串 vs code 寫死資料夾名**：createProject 建立的資料夾清單若擴增（如 3 → 6），Browser mode 空狀態提示 / Preview 等 hardcoded 字串需同步更新，否則 UI 撒謊（#328 QC FAIL 案例）
+
+## Audit script Dockview selector pattern（來源：#362 三輪、#363 實作）
+
+寫 panel audit playwright seed 時，**Dockview UI 沒有 ARIA `role="tab"`、沒有 `data-view-id` attribute**。AT / AD 不要按 W3C standard 假設，必用 `.dv-*` class。
+
+- **Tab click**：`page.locator('.dv-default-tab-content', { hasText: '<TabName>' }).first().click()` ⏳ 永久
+- **Panel content container**：`page.locator('.dv-content-container').filter({ hasText: '<panel 內唯一文字>' })`（例：environment 用 'HDR Image'）⏳ 永久
+- **`getByText('Scene', { exact: true })` 是碰巧 work**：Scene panel 內文連著 row 文字（"SceneBCubeS..."），`exact` 過濾掉複合文字、只命中 tab 字。其他 panel 內文簡單，header 純文字會跟 tab 撞名 → 不可套用此 pattern ⏳ 永久
+- **多態 panel 用全頁截圖規避 locator 不穩**：properties panel 「無選中」與「選中後」DOM 內文差異大，難找跨態穩定的 panel locator → 直接 `page.screenshot()` 全頁截，DV 看 panel 區域即可 ⏳ 適用至 panel 內文穩定後
