@@ -131,8 +131,6 @@ export class ShadingManager {
         break;
       case 'shading':
         this.renderer.toneMapping = ACESFilmicToneMapping;
-        this.ensureDefaultEnv();
-        this.scene.environment = this.defaultEnv?.texture ?? null;
         // 場景燈預設開，使用者可用 setSceneLightsEnabled 切換
         break;
       case 'rendering':
