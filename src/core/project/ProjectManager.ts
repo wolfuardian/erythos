@@ -43,10 +43,8 @@ export class ProjectManager {
     await projectHandle.getDirectoryHandle('models', { create: true });
     await projectHandle.getDirectoryHandle('textures', { create: true });
 
-    this._handle = projectHandle;
-    this._files = await this.collectFiles(projectHandle);
-
-    const status = this.computeStatus(this._files);
+    const files = await this.collectFiles(projectHandle);
+    const status = this.computeStatus(files);
     const id = await this.dedup(projectHandle);
 
     void ProjectHandleStore.saveProject({
