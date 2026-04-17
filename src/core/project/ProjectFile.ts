@@ -1,7 +1,7 @@
 export interface ProjectFile {
   path: string; // e.g. 'models/chair.glb'
   name: string; // e.g. 'chair.glb'
-  type: 'glb' | 'leaf' | 'hdr' | 'scene' | 'other';
+  type: 'glb' | 'leaf' | 'hdr' | 'scene' | 'texture' | 'other';
 }
 
 export function inferFileType(name: string): ProjectFile['type'] {
@@ -14,6 +14,11 @@ export function inferFileType(name: string): ProjectFile['type'] {
       return 'leaf';
     case 'hdr':
       return 'hdr';
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'webp':
+      return 'texture';
     case 'erythos':
       return 'scene';
     default:
