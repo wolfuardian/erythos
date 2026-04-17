@@ -1,4 +1,4 @@
-import { createSignal, Show, type Component } from 'solid-js';
+import { createSignal, For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 
 const EnvironmentPanel: Component = () => {
@@ -30,6 +30,17 @@ const EnvironmentPanel: Component = () => {
 
   const handleRotation = (value: number) => {
     editor.setEnvironmentSettings({ rotation: value });
+  };
+
+  const projectHdrFiles = () => bridge.projectFiles().filter((f) => f.type === 'hdr');
+
+  const handleSelectFromProject = async (path: string) => {
+    if (!path) return;
+    const file = await editor.projectManager.readFile(path);
+    const blob = new Blob([await file.arrayBuffer()], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    editor.setEnvironmentSettings({ hdrUrl: url });
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
   return (
@@ -130,6 +141,31 @@ const EnvironmentPanel: Component = () => {
           </div>
         </Show>
       </div>
+
+      {/* Project HDR Dropdown */}
+      <Show when={bridge.projectOpen()}>
+        <div style={{ 'margin-bottom': '12px' }}>
+          <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>From Project</div>
+          <select
+            value=""
+            onChange={(e) => void handleSelectFromProject(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'var(--text-primary, #fff)',
+              padding: '4px 6px',
+              'border-radius': '3px',
+              'font-size': '11px',
+            }}
+          >
+            <option value="">From project…</option>
+            <For each={projectHdrFiles()}>
+              {(f) => <option value={f.path}>{f.name || f.path}</option>}
+            </For>
+          </select>
+        </div>
+      </Show>
 
       {/* Intensity */}
       <div style={{ 'margin-bottom': '8px' }}>
