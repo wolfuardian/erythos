@@ -6,6 +6,16 @@ import type { ProjectEntry } from '../../../core/project/ProjectHandleStore';
 import type { ProjectFile } from '../../../core/project/ProjectFile';
 import { loadGLTFFromFile } from '../../../utils/gltfLoader';
 
+// ── Type meta ──
+const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
+  scene:   { pill: 'SCN', label: 'Scene',   color: 'var(--accent-green)'  },
+  glb:     { pill: 'GLB', label: 'Model',   color: 'var(--accent-blue)'   },
+  texture: { pill: 'TEX', label: 'Texture', color: 'var(--accent-yellow)' },
+  hdr:     { pill: 'HDR', label: 'HDRI',    color: 'var(--accent-orange)' },
+  leaf:    { pill: 'LEA', label: 'Leaf',    color: 'var(--accent-purple)' },
+  other:   { pill: 'OTH', label: 'Other',   color: 'var(--text-muted)'    },
+};
+
 const ProjectPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
@@ -130,17 +140,24 @@ const ProjectPanel: Component = () => {
 
   const handleClose = () => editor.projectManager.close();
 
-  // ── Browser: categorize files ──
+  // ── Browser: Assets/ ──
+  const assetFiles = () => bridge.projectFiles();
 
-  const sceneFiles = () => bridge.projectFiles().filter(
-    (f: ProjectFile) => f.path.startsWith('scenes/') && f.type === 'scene',
+  const ALL_TYPES: ProjectFile['type'][] = ['scene', 'glb', 'texture', 'hdr', 'leaf', 'other'];
+  const [activeFilters, setActiveFilters] = createSignal<Set<ProjectFile['type']>>(
+    new Set(ALL_TYPES),
   );
-  const modelFiles = () => bridge.projectFiles().filter(
-    (f: ProjectFile) => f.path.startsWith('models/') && f.type === 'glb',
-  );
-  const textureFiles = () => bridge.projectFiles().filter(
-    (f: ProjectFile) => f.path.startsWith('textures/') && f.type === 'hdr',
-  );
+
+  const toggleFilter = (t: ProjectFile['type']) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) { next.delete(t); } else { next.add(t); }
+      return next;
+    });
+  };
+
+  const displayedAssets = () => assetFiles().filter((f) => activeFilters().has(f.type));
+  const hiddenCount = () => assetFiles().length - displayedAssets().length;
 
   const handleLoadScene = async (path: string) => {
     try {
@@ -420,50 +437,109 @@ const ProjectPanel: Component = () => {
             }}>Close project</button>
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
-            <FileSection title="Scenes" files={sceneFiles()} badge="S" badgeColor="#5a8a5a"
-              onClick={(path: string) => void handleLoadScene(path)} />
-            <FileSection title="Models" files={modelFiles()} badge="M" badgeColor="#4a6fa5"
-              onClick={(path: string) => void handleImportModel(path)} />
-            <FileSection title="Textures" files={textureFiles()} badge="T" badgeColor="#8a6a4a" />
-            {/* Imported Models (GlbStore) — draggable to viewport */}
-            <Show when={bridge.glbKeys().length > 0}>
-              <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{
-                  padding: '6px 10px', color: 'var(--text-muted)',
-                  'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
-                }}>
-                  Imported ({bridge.glbKeys().length})
-                </div>
-                <For each={bridge.glbKeys()}>
-                  {(filename) => (
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer!.setData('application/erythos-glb', filename);
-                        e.dataTransfer!.effectAllowed = 'copy';
-                      }}
+            {/* ── Assets/ section header ── */}
+            <div style={{
+              padding: '6px 10px',
+              color: 'var(--text-muted)',
+              'font-size': 'var(--font-size-xs)',
+              'text-transform': 'uppercase',
+              'letter-spacing': '0.5px',
+              'border-bottom': '1px solid var(--border-subtle)',
+            }}>
+              Assets
+            </div>
+
+            {/* ── Filter bar ── */}
+            <div style={{
+              display: 'flex', gap: '4px', padding: '6px 10px',
+              'border-bottom': '1px solid var(--border-subtle)',
+              'flex-wrap': 'wrap',
+            }}>
+              <For each={ALL_TYPES}>
+                {(t) => {
+                  const meta = TYPE_META[t];
+                  return (
+                    <button
+                      aria-label={meta.label}
+                      title={meta.label}
+                      onClick={() => toggleFilter(t)}
                       style={{
-                        display: 'flex', 'align-items': 'center', gap: '6px',
-                        padding: '5px 10px', cursor: 'grab',
+                        display: 'flex', 'align-items': 'center', gap: '4px',
+                        padding: '2px 6px',
+                        background: activeFilters().has(t) ? 'var(--bg-section)' : 'transparent',
+                        border: '1px solid',
+                        'border-color': activeFilters().has(t) ? 'var(--border-subtle)' : 'transparent',
+                        'border-radius': 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        opacity: activeFilters().has(t) ? '1' : '0.4',
                       }}
                     >
                       <span style={{
-                        width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
-                        background: 'var(--badge-mesh, #4a6fa5)', color: 'var(--text-inverse)',
-                        'font-size': '9px', 'font-weight': 'bold',
-                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                        'flex-shrink': '0',
-                      }}>G</span>
+                        width: '8px', height: '8px', 'border-radius': '50%',
+                        background: activeFilters().has(t) ? meta.color : 'var(--text-muted)',
+                        display: 'inline-block', 'flex-shrink': '0',
+                      }} />
                       <span style={{
-                        'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-                        overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
-                      }}>{filename}</span>
-                    </div>
-                  )}
-                </For>
+                        'font-size': 'var(--font-size-xs)',
+                        color: 'var(--text-muted)',
+                      }}>{meta.label}</span>
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
+
+            {/* ── Asset list ── */}
+            <For each={displayedAssets()}>
+              {(f) => {
+                const meta = TYPE_META[f.type];
+                return (
+                  <div
+                    onClick={
+                      f.type === 'scene' ? () => void handleLoadScene(f.path) :
+                      f.type === 'glb' ? () => void handleImportModel(f.path) :
+                      undefined
+                    }
+                    style={{
+                      display: 'flex', 'align-items': 'center', gap: '6px',
+                      padding: '5px 10px',
+                      cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
+                    }}
+                  >
+                    {/* Type pill */}
+                    <span style={{
+                      width: '16px', height: '20px', 'border-radius': '3px',
+                      background: meta.color + '33',
+                      color: meta.color,
+                      'font-size': '8px', 'font-weight': 'bold',
+                      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                      'flex-shrink': '0',
+                      'line-height': '1',
+                    }}>{meta.pill}</span>
+                    {/* Filename */}
+                    <span style={{
+                      'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                      overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
+                    }}>{f.name}</span>
+                  </div>
+                );
+              }}
+            </For>
+
+            {/* ── Hidden hint ── */}
+            <Show when={hiddenCount() > 0}>
+              <div style={{
+                padding: '4px 10px',
+                'font-size': 'var(--font-size-xs)',
+                color: 'var(--text-muted)',
+                'border-top': '1px solid var(--border-subtle)',
+              }}>
+                {hiddenCount()} items hidden
               </div>
             </Show>
-            <Show when={sceneFiles().length === 0 && modelFiles().length === 0 && textureFiles().length === 0 && bridge.glbKeys().length === 0}>
+
+            {/* ── Empty state ── */}
+            <Show when={assetFiles().length === 0}>
               <div style={{
                 padding: '16px 12px', color: 'var(--text-muted)',
                 'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
@@ -490,47 +566,3 @@ const ProjectPanel: Component = () => {
 };
 
 export default ProjectPanel;
-
-/* ── Sub-component ── */
-
-const FileSection: Component<{
-  title: string;
-  files: ProjectFile[];
-  badge: string;
-  badgeColor: string;
-  onClick?: (path: string) => void;
-}> = (props) => (
-  <Show when={props.files.length > 0}>
-    <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{
-        padding: '6px 10px', color: 'var(--text-muted)',
-        'font-size': 'var(--font-size-xs)', 'text-transform': 'uppercase', 'letter-spacing': '0.5px',
-      }}>
-        {props.title} ({props.files.length})
-      </div>
-      <For each={props.files}>
-        {(f) => (
-          <div
-            onClick={() => props.onClick?.(f.path)}
-            style={{
-              display: 'flex', 'align-items': 'center', gap: '6px',
-              padding: '5px 10px', cursor: props.onClick ? 'pointer' : 'default',
-            }}
-          >
-            <span style={{
-              width: '16px', height: '16px', 'border-radius': 'var(--radius-sm)',
-              background: props.badgeColor, color: 'var(--text-inverse)',
-              'font-size': '9px', 'font-weight': 'bold',
-              display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-              'flex-shrink': '0',
-            }}>{props.badge}</span>
-            <span style={{
-              'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-              overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
-            }}>{f.name}</span>
-          </div>
-        )}
-      </For>
-    </div>
-  </Show>
-);
