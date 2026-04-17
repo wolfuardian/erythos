@@ -5,3 +5,4 @@ dist
 .version-bumped
 samples
 settings.local.json
+.ai/user/
