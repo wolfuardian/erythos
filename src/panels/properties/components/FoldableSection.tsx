@@ -5,6 +5,12 @@ interface FoldableSectionProps {
   sectionKey: string;
   label: string;
   children: JSX.Element;
+  /**
+   * 背景深度
+   * - "default"（預設）: var(--bg-section)
+   * - "deep": color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)
+   */
+  variant?: 'default' | 'deep';
 }
 
 const STORAGE_PREFIX = 'erythos.properties.foldable.';
@@ -67,7 +73,9 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
       {/* 分組 body（tint 容器）*/}
       {expanded() && (
         <div style={{
-          background: 'var(--bg-section)',
+          background: props.variant === 'deep'
+            ? 'color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)'
+            : 'var(--bg-section)',
           padding: '6px 10px',
           'margin-bottom': '6px',
           'border-radius': 'var(--radius-sm)',
