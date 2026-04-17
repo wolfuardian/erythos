@@ -68,17 +68,38 @@ npm run build
 ```
 如果失敗，不要嘗試修復，在輸出中報告錯誤。
 
-### 9. Commit + Push
+### 9. Commit + Push（含 in-progress docs 防呆）
+
+**先看 `git status`**，不要盲用 `git add -A`：
+
 ```bash
-git add -A
 git status -s
 ```
-如果有改動（CLAUDE.md 清理、mockup 刪除、knowledge 更新、memos 刪除等），commit：
+
+判斷每個未暫存檔屬於哪類：
+
+| 檔案模式 | 處理 |
+|---------|------|
+| `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
+| `.ai/previews/<topic>.html` 刪除（step 7） | 可 commit |
+| `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
+| `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
+| `tsconfig.app.tsbuildinfo` | 可 commit（build 產物） |
+| **根 `CLAUDE.md`** | ❌ 跳過（AH 可能正在改） |
+| **`.ai/roles/*.md`** | ❌ 跳過（AH 可能正在改） |
+| **`.ai/knowledge.md`** | ❌ 跳過（AH 負責，非 PM） |
+| **`.ai/specs/*`** | ❌ 跳過（AH 在寫 spec） |
+| **`.ai/user/`** | 已 gitignore，不會出現；若出現代表 gitignore 失效，回報 AH |
+| **其他 unstaged src/** | ❌ 跳過 + 回報異常（不該有） |
+
+若有可 commit 項：
 ```bash
+git add <具體檔案>   # 不用 -A，逐個指定
 git commit -m "chore: merge 收尾 #<PR>"
 git push
 ```
-如果沒有改動，跳過。
+
+若所有未暫存檔都落入「跳過」類，或完全無改動：不 commit，回報 `step 9 跳過` 並列出被跳過的原因（例如 `unstaged docs: CLAUDE.md, .ai/knowledge.md`）。
 
 ## 輸出
 
