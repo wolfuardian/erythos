@@ -40,8 +40,11 @@
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
 | Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
 | Reader | RD | Sonnet | 精準讀取工人，被其他角色批量 spawn | [.ai/roles/reader.md](.ai/roles/reader.md) |
+| Reader-Manager | RDM | Sonnet | 維護 `.ai/module-cache/<module>.md` 品質（對照 src 驗證、刪冗、補新增）；其他角色默認信任 cache | [.ai/roles/reader-manager.md](.ai/roles/reader-manager.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
+>
+> RDM 用途：PR merge 後即時更新 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC 可先查 cache 不重讀整個模組。其他角色默認信任 cache（品質責任在 RDM）；資訊不足才 spawn RD。
 
 ### 開發模組清單
 
