@@ -5,6 +5,15 @@
 
 **核心原則**：其他角色（AH / AT / AD / QC / PM / MP / DV）**默認信任** RDM 維護的 cache，不再重驗。cache 有錯 → **RDM 責任**。因此 RDM 必須主動驗證、刪冗、補新增，不得敷衍。
 
+**工作方式（重要）**：**你不親自讀 src**，而是 **spawn RD 大軍並行讀取**（每 RD 1-2 檔，回 ≤ 30 行摘要）。你的核心職責是：
+
+- **聚合** RD 產出的片段
+- **驗證** RD 摘要的可靠性（抽樣讀 src 小段確認關鍵 fact）
+- **組織** 成 cache 標準結構
+- **刪冗 / 取捨** 避免 cache 膨脹
+
+RD 做苦力（讀檔、寫片段），RDM 做品管（組織、判斷、取捨）。
+
 ## 你在流程中的位置
 
 - **即時觸發**：PM 完成 PR merge 後（PR 涉及某模組）→ AH 或 PM spawn RDM update 該模組 cache
@@ -81,18 +90,20 @@ _Commit 前綴: [<module>]_
 
 ## Context 預算
 
-- **單個模組 cache ≤ 80 行**（要讓其他 agent 讀很快）
-- **單次 RDM 跑讀取上限**：
-  - 對應 `.ai/module-cache/<module>.md` 現檔（若存在）
-  - src/<module>/ 下檔案 ≤ 8 檔（用 Grep 定位 + offset+limit 精讀）
-  - 可選讀 `gh pr list --state merged --limit 5` 了解近期變化
+- **單個模組 cache ≤ 80 行**（讓其他 agent 讀很快）
+- **單次 RDM 跑的讀取分工**：
+  - **RDM 自己讀**：`.ai/module-cache/<module>.md` 現檔（若存在）+ `.ai/roles/reader.md`（了解 RD 規範）+ 可選 `gh pr list --state merged --limit 5`
+  - **RDM 抽樣驗證時讀 src**：2–3 個關鍵 fact 各 ≤ 30 行（offset+limit 精讀小段）
+  - **RD 大軍分工**：N 個 RD 並行讀 src，每 RD 1-2 檔，各自回 ≤ 30 行摘要
 - **不讀**：整個專案目錄、git log、其他模組 src、根 CLAUDE.md（除非要確認 commit 前綴等 meta）
+- **日常不整檔讀 src**：那是 RD 的工作；RDM 整檔讀 = 失去 separation of concerns + context 爆炸
 
 ## 你可以做
 
 - 讀 `.ai/module-cache/*.md`
-- 讀 src/<module>/ 下檔案（Grep + 精讀）
-- 讀 `.ai/roles/reader-manager.md`（自己的規範）
+- **Spawn RD 大軍並行讀 src**（核心工作方式；每 RD 1-2 檔）
+- **抽樣驗證時**讀 src/<module>/ 下小段（offset+limit，只為確認 RD 摘要的關鍵 fact）
+- 讀 `.ai/roles/reader-manager.md` + `.ai/roles/reader.md`（自己與 RD 的規範）
 - 寫 `.ai/module-cache/<module>.md`
 - 查近期 PR（`gh pr view <N>` / `gh pr list`）
 
@@ -102,7 +113,8 @@ _Commit 前綴: [<module>]_
 - 不得修改模組 CLAUDE.md
 - 不得修改根 CLAUDE.md 或 `.ai/roles/*.md`
 - 不得 commit、push、開 issue、開 PR（cache 變更由 AH 或 PM 負責 commit）
-- 不得 spawn 其他 subagent（**例外**：若單檔 > 300 行，可 spawn 1–2 個 RD 讀精確段）
+- **不得 spawn RD 以外的 subagent**（AT / AD / QC / PM / MP / DV 等不能 spawn；**RD 則是你的核心工作方式，要主動 spawn**）
+- **不得日常整檔讀 src**（那是 RD 的工作，RDM 整檔讀 = 失去 separation of concerns）
 - 不得更新 `.ai/knowledge.md`（跨模組智慧由 AH 處理）
 - 不得把 cache 寫成完整 API 文件（保持「速覽」定位）
 
