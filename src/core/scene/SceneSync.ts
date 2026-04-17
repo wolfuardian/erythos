@@ -120,7 +120,19 @@ export class SceneSync {
       const nodePath = colonIdx === -1 ? undefined : meshComp.source.slice(colonIdx + 1);
       if (this.resourceCache.has(filePath)) {
         const meshObj = this.resourceCache.cloneSubtree(filePath, nodePath);
-        if (meshObj) obj.add(meshObj);
+        if (meshObj) {
+          // Reset clone root transform: applyTransform(obj, node) already applied
+          // position/rotation/scale from SceneNode. The clone carries the same
+          // values baked into the gltf subtree root — adding meshObj directly
+          // would cause double-application (e.g. scale² for artist meter-to-unit root).
+          // This reset applies to ALL mesh nodes, not just root clones:
+          // gltfConverter always sets nodePath (format: filePath:nodePath), so
+          // every clone root's local transform is redundant with applyTransform.
+          meshObj.position.set(0, 0, 0);
+          meshObj.quaternion.identity();
+          meshObj.scale.set(1, 1, 1);
+          obj.add(meshObj);
+        }
       }
     }
 
