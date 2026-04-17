@@ -2,6 +2,9 @@ import { createMemo, type Component } from 'solid-js';
 import { MathUtils } from 'three';
 import { useEditor } from '../../../app/EditorContext';
 import type { SceneNode } from '../../../core/scene/SceneFormat';
+import FoldableSection from '../components/FoldableSection';
+import { XYZCellReadonly } from '../components/XYZCell';
+import { fieldRow, fieldLabel, xyzRow, groupLabelRow } from '../components/fieldStyles';
 
 interface MultiSelectDrawProps {
   uuids: string[];
@@ -54,134 +57,61 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
 
   return (
     <>
-      <div style={summaryStyle}>
+      {/* 多選摘要 */}
+      <div style={{
+        color: 'var(--text-secondary)',
+        'font-size': 'var(--font-size-sm)',
+        'text-align': 'center',
+        'margin-bottom': 'var(--space-lg)',
+      }}>
         {props.uuids.length} objects selected
       </div>
 
-      {/* Object section */}
-      <div style={{ 'margin-bottom': 'var(--space-lg)' }}>
-        <div style={sectionHeader}>Object</div>
-
+      {/* OBJECT section — 共用 sectionKey，折疊狀態與單選同步 */}
+      <FoldableSection sectionKey="object" label="OBJECT">
         <div style={fieldRow}>
           <label style={fieldLabel}>Name</label>
           <span style={{
-            color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
             'font-size': 'var(--font-size-sm)',
+            'font-weight': '500',
+            color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
           }}>
             {info()?.name ?? MIXED}
           </span>
         </div>
-      </div>
+      </FoldableSection>
 
-      {/* Transform section */}
-      <div style={{ 'margin-bottom': 'var(--space-lg)' }}>
-        <div style={sectionHeader}>Transform</div>
-
-        <div style={groupLabel}>Position</div>
-        <div style={vectorRow}>
-          <ValueField label="X" value={info()?.px ?? MIXED} color="#c04040" />
-          <ValueField label="Y" value={info()?.py ?? MIXED} color="#3a9060" />
-          <ValueField label="Z" value={info()?.pz ?? MIXED} color="#4a7fbf" />
+      {/* TRANSFORM section — 共用 sectionKey */}
+      <FoldableSection sectionKey="transform" label="TRANSFORM">
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Position</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value={info()?.px ?? MIXED} />
+            <XYZCellReadonly axis="y" value={info()?.py ?? MIXED} />
+            <XYZCellReadonly axis="z" value={info()?.pz ?? MIXED} />
+          </div>
         </div>
 
-        <div style={groupLabel}>Rotation</div>
-        <div style={vectorRow}>
-          <ValueField label="X" value={info()?.rx ?? MIXED} color="#c04040" />
-          <ValueField label="Y" value={info()?.ry ?? MIXED} color="#3a9060" />
-          <ValueField label="Z" value={info()?.rz ?? MIXED} color="#4a7fbf" />
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Rotation</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value={info()?.rx ?? MIXED} />
+            <XYZCellReadonly axis="y" value={info()?.ry ?? MIXED} />
+            <XYZCellReadonly axis="z" value={info()?.rz ?? MIXED} />
+          </div>
         </div>
 
-        <div style={groupLabel}>Scale</div>
-        <div style={vectorRow}>
-          <ValueField label="X" value={info()?.sx ?? MIXED} color="#c04040" />
-          <ValueField label="Y" value={info()?.sy ?? MIXED} color="#3a9060" />
-          <ValueField label="Z" value={info()?.sz ?? MIXED} color="#4a7fbf" />
+        <div style={groupLabelRow}>
+          <span style={fieldLabel}>Scale</span>
+          <div style={xyzRow}>
+            <XYZCellReadonly axis="x" value={info()?.sx ?? MIXED} />
+            <XYZCellReadonly axis="y" value={info()?.sy ?? MIXED} />
+            <XYZCellReadonly axis="z" value={info()?.sz ?? MIXED} />
+          </div>
         </div>
-      </div>
+      </FoldableSection>
     </>
   );
 };
 
 export default MultiSelectDraw;
-
-// ── ValueField (read-only NumField equivalent) ──
-
-const ValueField: Component<{ label: string; value: string; color: string }> = (props) => (
-  <div style={{ display: 'flex', 'align-items': 'center', flex: 1, gap: '2px' }}>
-    <span style={{
-      color: props.color,
-      'font-size': 'var(--font-size-xs)',
-      'font-weight': 'bold',
-      width: '12px',
-      'text-align': 'center',
-    }}>
-      {props.label}
-    </span>
-    <span style={{
-      flex: 1,
-      width: '0',
-      background: 'var(--bg-input)',
-      border: '1px solid var(--border-subtle)',
-      'border-radius': 'var(--radius-sm)',
-      color: props.value === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
-      padding: '2px 4px',
-      height: '20px',
-      'line-height': '16px',
-      'font-size': 'var(--font-size-sm)',
-      'font-family': 'var(--font-mono)',
-      'text-align': props.value === MIXED ? 'center' : 'left',
-      overflow: 'hidden',
-      'text-overflow': 'ellipsis',
-      'white-space': 'nowrap',
-    }}>
-      {props.value}
-    </span>
-  </div>
-);
-
-// ── Styles (matching ObjectDraw / TransformDraw) ──
-
-const summaryStyle = {
-  color: 'var(--text-secondary)',
-  'font-size': 'var(--font-size-sm)',
-  'text-align': 'center' as const,
-  'margin-bottom': 'var(--space-lg)',
-};
-
-const sectionHeader = {
-  'font-size': 'var(--font-size-sm)',
-  'font-weight': '600' as const,
-  color: 'var(--text-primary)',
-  'margin-bottom': 'var(--space-md)',
-  'padding-bottom': 'var(--space-xs)',
-  'border-bottom': '1px solid var(--border-subtle)',
-  'text-transform': 'uppercase' as const,
-  'letter-spacing': '0.5px',
-};
-
-const fieldRow = {
-  display: 'flex',
-  'align-items': 'center',
-  'margin-bottom': 'var(--space-sm)',
-  'min-height': 'var(--row-height)',
-};
-
-const fieldLabel = {
-  width: '70px',
-  'flex-shrink': '0',
-  color: 'var(--text-secondary)',
-  'font-size': 'var(--font-size-sm)',
-};
-
-const groupLabel = {
-  color: 'var(--text-secondary)',
-  'font-size': 'var(--font-size-sm)',
-  'margin-bottom': 'var(--space-xs)',
-  'margin-top': 'var(--space-sm)',
-};
-
-const vectorRow = {
-  display: 'flex',
-  gap: 'var(--space-sm)',
-  'margin-bottom': 'var(--space-sm)',
-};
