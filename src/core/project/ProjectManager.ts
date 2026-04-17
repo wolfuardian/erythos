@@ -145,6 +145,54 @@ export class ProjectManager {
     await writable.close();
   }
 
+  /** Copy an external File into the project's correct folder, auto-suffixing on name clash */
+  async importAsset(file: File): Promise<string> {
+    const type = inferFileType(file.name);
+    const folder = this.folderForType(type);
+    const finalName = await this.findFreeName(folder, file.name);
+    const path = `${folder}/${finalName}`;
+    const buffer = await file.arrayBuffer();
+    await this.writeFile(path, buffer);
+    await this.rescan();
+    return path;
+  }
+
+  private folderForType(type: ProjectFile['type']): string {
+    switch (type) {
+      case 'scene':   return 'scenes';
+      case 'glb':     return 'models';
+      case 'texture': return 'textures';
+      case 'hdr':     return 'hdris';
+      case 'leaf':    return 'leaves';
+      default:        return 'other';
+    }
+  }
+
+  private async findFreeName(folder: string, baseName: string): Promise<string> {
+    const lastDot = baseName.lastIndexOf('.');
+    const stem = lastDot >= 0 ? baseName.slice(0, lastDot) : baseName;
+    const ext  = lastDot >= 0 ? baseName.slice(lastDot)    : '';
+
+    const exists = async (name: string): Promise<boolean> => {
+      if (!this._handle) return false;
+      try {
+        const dir = await this._handle.getDirectoryHandle(folder);
+        await dir.getFileHandle(name);
+        return true;
+      } catch (e: any) {
+        if (e.name === 'NotFoundError') return false;
+        throw e; // 非 NotFound 的錯誤往上拋
+      }
+    };
+
+    if (!(await exists(baseName))) return baseName;
+    for (let i = 1; i <= 9999; i++) {
+      const candidate = `${stem} (${i})${ext}`;
+      if (!(await exists(candidate))) return candidate;
+    }
+    throw new Error(`Cannot find a free name for ${baseName} in ${folder}`);
+  }
+
   /** Subscribe to projectChanged event */
   onChange(fn: Listener): () => void {
     this._listeners.add(fn);
