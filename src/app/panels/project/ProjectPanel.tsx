@@ -4,7 +4,6 @@ import { ErrorDialog } from '../../../components/ErrorDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import type { ProjectEntry } from '../../../core/project/ProjectHandleStore';
 import type { ProjectFile } from '../../../core/project/ProjectFile';
-import { loadGLTFFromFile } from '../../../utils/gltfLoader';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -28,6 +27,7 @@ const ProjectPanel: Component = () => {
   const [newName, setNewName] = createSignal('');
   const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
+  const [selectedAssetPath, setSelectedAssetPath] = createSignal<string | null>(null);
 
   // ── Duplicate folder check ──
   // 用 createResource 自動處理 race condition（舊的 async 結果被 SolidJS 丟棄）
@@ -172,14 +172,8 @@ const ProjectPanel: Component = () => {
     }
   };
 
-  const handleImportModel = async (path: string) => {
-    try {
-      const file = await editor.projectManager.readFile(path);
-      await loadGLTFFromFile(file, editor);
-    } catch (e: any) {
-      setErrorTitle('Import Failed');
-      setErrorMsg(e.message || String(e));
-    }
+  const handleSelectAsset = (path: string) => {
+    setSelectedAssetPath(path === selectedAssetPath() ? null : path);
   };
 
   const handleAssetsDrop = async (e: DragEvent) => {
@@ -533,13 +527,21 @@ const ProjectPanel: Component = () => {
                   <div
                     onClick={
                       f.type === 'scene' ? () => void handleLoadScene(f.path) :
-                      f.type === 'glb' ? () => void handleImportModel(f.path) :
+                      f.type === 'glb'   ? () => handleSelectAsset(f.path) :
                       undefined
                     }
+                    draggable={f.type === 'glb'}
+                    onDragStart={f.type === 'glb' ? (e) => {
+                      e.dataTransfer!.setData('application/erythos-glb', f.path);
+                      e.dataTransfer!.effectAllowed = 'copy';
+                    } : undefined}
                     style={{
                       display: 'flex', 'align-items': 'center', gap: '6px',
                       padding: '5px 10px',
                       cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
+                      background: (f.type === 'glb' && selectedAssetPath() === f.path)
+                        ? 'var(--bg-selected)'
+                        : undefined,
                     }}
                   >
                     {/* Type pill */}
