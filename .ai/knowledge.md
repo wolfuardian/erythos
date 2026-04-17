@@ -112,3 +112,20 @@ interface ConfirmDialogProps {
 - 豁免級變更（純文字 / 單一 CSS / 純邏輯 bug）可走 Fast path，AH 自寫任務跳過 AT
 - 跨模組 API 依賴不明時，開 issue 前先 spawn RD 掃檔（Pre-flight RD）
 - Agent 工具呼叫必須明確 `model: 'sonnet'`（或 `'opus'`），不指定會默默升 Opus ⏳ 永久
+
+## AH 方法論（來源：本 session 2026-04-17 指揮家叮）
+
+### 多工預設
+多任務預設「並行推進」，不序列執行。多個 issue / worktree / agent 可同步開動。僅有明確依賴（pre-flight 結果決定修法方向）才等。
+
+### Task 工具輕量
+GitHub issue / PR / worktree / subagent 是真實外部載體。`TaskCreate` 僅用於「本 session 無外部載體的多步驟流程」。多工情境直接看 `gh issue list` / `git worktree list`，不為每個 issue 複製一份到本地 task。
+
+### Worktree 命名語意化
+格式 `erythos-<issue>-<slug>`（例：`erythos-318-glb-transform`）。避免純數字（`erythos-315` / `erythos-317`），`ls` / `git worktree list` 才能一眼看出內容。
+
+### 主動掃 memos，不盲信 PM
+PM 的 memo 掃描可能遺漏（working directory / worktree 邊界差異）。AH 每個 PM 後自己掃主 repo + 所有 active worktree 的 `.ai/memos/`。memo 處置優先序：新 bug / feature → 開 issue；方法論 / 設計哲學 → 歸檔本檔；瑣碎 → 刪除。
+
+### 共通哲學
+以上四條指向同一原理：**AH 不委機械流程或下游 agent 做判斷**。多工是預設；工具服務判斷；命名服務讀者；掃描決策是 AH 職責。
