@@ -6,6 +6,8 @@ export interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
@@ -69,7 +71,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
                 cursor: 'pointer',
               }}
             >
-              取消
+              {props.cancelLabel ?? 'Cancel'}
             </button>
             <button
               onClick={props.onConfirm}
@@ -84,7 +86,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
                 cursor: 'pointer',
               }}
             >
-              確認
+              {props.confirmLabel ?? 'OK'}
             </button>
           </div>
         </div>
