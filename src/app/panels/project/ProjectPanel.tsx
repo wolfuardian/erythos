@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, Show, For, type Component } from 'solid-js';
+import { createSignal, createResource, onMount, onCleanup, Show, For, type Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
 import { ErrorDialog } from '../../../components/ErrorDialog';
 import type { ProjectEntry } from '../../../core/project/ProjectHandleStore';
@@ -16,6 +16,33 @@ const ProjectPanel: Component = () => {
   const [closing, setClosing] = createSignal(false);
   const [newName, setNewName] = createSignal('');
   const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
+
+  // ── Duplicate folder check ──
+  // 用 createResource 自動處理 race condition（舊的 async 結果被 SolidJS 丟棄）
+  // 回傳值：true = 有衝突，false = 無衝突，undefined = 正在檢查中
+  // 決策說明：
+  //   - case-insensitive 比對（符合 OS 可觀察行為，Windows 下 Demo 與 demo 視同衝突）
+  //   - 只檢查 kind === 'directory'（根據 issue 錯誤文案 "folder named..."）
+  //   - permission error / AbortError 等例外一律視為無衝突（fallback false），不崩潰
+  const [nameConflict] = createResource(
+    () => ({ n: newName().trim(), p: parentHandle() }),
+    async ({ n, p }: { n: string; p: FileSystemDirectoryHandle | null }): Promise<boolean> => {
+      if (!n || !p) return false;
+      try {
+        for await (const [, handle] of (p as any).entries() as AsyncIterable<[string, FileSystemHandle]>) {
+          if (
+            handle.kind === 'directory' &&
+            handle.name.toLowerCase() === n.toLowerCase()
+          ) {
+            return true;
+          }
+        }
+        return false;
+      } catch {
+        return false; // permission error / AbortError — fallback to no conflict
+      }
+    },
+  );
 
   const refreshRecent = async () => {
     setRecentProjects(await editor.projectManager.getRecentProjects());
@@ -325,13 +352,24 @@ const ProjectPanel: Component = () => {
                       style={{
                         width: '100%', padding: '4px 8px',
                         background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.15)',
+                        border: nameConflict() === true
+                          ? '1px solid var(--accent-red)'
+                          : '1px solid rgba(255,255,255,0.15)',
                         'border-radius': 'var(--radius-sm)',
                         color: 'var(--text-primary, #fff)',
                         'font-size': 'var(--font-size-sm)',
                         'box-sizing': 'border-box',
                       }}
                     />
+                    <Show when={nameConflict() === true}>
+                      <div style={{
+                        'margin-top': '4px',
+                        'font-size': 'var(--font-size-xs)',
+                        color: 'var(--accent-red)',
+                      }}>
+                        A folder named '{newName().trim()}' already exists in this location
+                      </div>
+                    </Show>
                   </div>
                   {/* Location */}
                   <div>
@@ -383,13 +421,13 @@ const ProjectPanel: Component = () => {
                   {/* Create button */}
                   <button
                     onClick={() => void handleCreate()}
-                    disabled={!newName().trim() || !parentHandle()}
+                    disabled={!newName().trim() || !parentHandle() || nameConflict() === true}
                     style={{
                       width: '100%', padding: '6px',
-                      background: (!newName().trim() || !parentHandle()) ? 'rgba(255,255,255,0.05)' : 'var(--accent-blue)',
-                      color: (!newName().trim() || !parentHandle()) ? 'var(--text-muted)' : '#fff',
+                      background: (!newName().trim() || !parentHandle() || nameConflict() === true) ? 'rgba(255,255,255,0.05)' : 'var(--accent-blue)',
+                      color: (!newName().trim() || !parentHandle() || nameConflict() === true) ? 'var(--text-muted)' : '#fff',
                       border: 'none', 'border-radius': 'var(--radius-sm)',
-                      cursor: (!newName().trim() || !parentHandle()) ? 'default' : 'pointer',
+                      cursor: (!newName().trim() || !parentHandle() || nameConflict() === true) ? 'default' : 'pointer',
                       'font-size': 'var(--font-size-sm)', 'font-weight': 'bold',
                     }}
                   >+ Create Project</button>
