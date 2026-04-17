@@ -7,7 +7,7 @@ import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
-import { loadGLTFFromFile, loadGLTFFromCache } from '../../utils/gltfLoader';
+import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafCommand';
@@ -117,8 +117,9 @@ const ViewportPanel: Component = () => {
         }
 
         try {
-          const groupUUID = await loadGLTFFromCache(internalGlb, editor);
-          if (groupUUID && (dropPosition[0] !== 0 || dropPosition[2] !== 0)) {
+          const file = await editor.projectManager.readFile(internalGlb);
+          const groupUUID = await loadGLTFFromFile(file, editor);
+          if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
             const oldPos: Vec3 = [0, 0, 0];
             editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
           }
