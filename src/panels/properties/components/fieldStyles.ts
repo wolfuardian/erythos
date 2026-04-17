@@ -5,6 +5,7 @@ export const fieldRow = {
   'grid-template-columns': '64px 1fr',
   'align-items': 'center',
   padding: '3px 0',
+  'padding-left': '14px',
   'column-gap': '6px',
 } as const;
 
@@ -55,4 +56,5 @@ export const groupLabelRow = {
   'align-items': 'center',
   'column-gap': '6px',
   padding: '3px 0',
+  'padding-left': '14px',
 } as const;
