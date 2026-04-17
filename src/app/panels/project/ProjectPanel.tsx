@@ -154,19 +154,21 @@ const ProjectPanel: Component = () => {
               color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
               'text-transform': 'uppercase', 'letter-spacing': '0.5px',
             }}>Projects</span>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => setShowCreate(true)} style={{
-                background: 'var(--accent-blue)', color: '#fff', border: 'none',
-                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-              }}>New</button>
-              <button onClick={() => void handleAdd()} style={{
-                background: 'var(--bg-section)', color: 'var(--text-muted)',
-                border: '1px solid var(--border-subtle)',
-                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-              }}>Add</button>
-            </div>
+            <Show when={!showCreate()}>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button onClick={() => setShowCreate(true)} style={{
+                  background: 'var(--accent-blue)', color: '#fff', border: 'none',
+                  padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                  'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+                }}>New</button>
+                <button onClick={() => void handleAdd()} style={{
+                  background: 'var(--bg-section)', color: 'var(--text-muted)',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                  'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+                }}>Add</button>
+              </div>
+            </Show>
           </div>
 
           {/* Content area — relative 容器，overlay 以此為基準 */}
@@ -289,17 +291,22 @@ const ProjectPanel: Component = () => {
                 <div style={{
                   padding: '8px 10px',
                   'border-bottom': '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+                  display: 'flex', 'align-items': 'center', gap: '6px',
                   'flex-shrink': '0',
                 }}>
+                  <button
+                    onClick={handleCancelCreate}
+                    title="Back"
+                    aria-label="Back"
+                    style={{
+                      background: 'none', border: 'none', color: 'var(--text-muted)',
+                      cursor: 'pointer', 'font-size': '14px', padding: '0 2px',
+                    }}
+                  >{'\u2190'}</button>
                   <span style={{
                     color: 'var(--text-primary, #fff)', 'font-size': 'var(--font-size-sm)',
                     'font-weight': '600',
                   }}>New Project</span>
-                  <button onClick={handleCancelCreate} style={{
-                    background: 'none', border: 'none', color: 'var(--text-muted)',
-                    cursor: 'pointer', 'font-size': '14px',
-                  }}>{'\u00D7'}</button>
                 </div>
                 {/* Form */}
                 <div style={{ padding: '12px 10px', display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
