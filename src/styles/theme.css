@@ -34,6 +34,7 @@
   /* Type badge colors */
   --badge-scene: #3a9060;
   --badge-mesh: #4a7fbf;
+  --badge-geometry: #f5a623;  /* 鮮橙色，對齊既有 fallback */
   --badge-light: #c0a030;
   --badge-camera: #7a5fb0;
   --badge-group: #c06020;
