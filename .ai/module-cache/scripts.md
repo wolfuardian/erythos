@@ -1,6 +1,6 @@
 # Scripts Module Cache
 
-_Last updated: 2026-04-18 by RDM (PR #382)_
+_Last updated: 2026-04-18 by RDM (PR #383)_
 _Module path: scripts/_
 _Commit 前綴: [scripts]_
 
@@ -16,6 +16,7 @@ _Commit 前綴: [scripts]_
 | `scripts/audit/leaf.mjs` | Leaf panel 截圖：empty-state / overview / hover / selected（4 張）；用 IndexedDB fixture 注入 |
 | `scripts/audit/project.mjs` | Project panel 截圖：hub-empty / hub-new-overlay / editor-overview / filter-scene-only / filter-model-only / asset-selected / asset-hover（7 張）；用 OPFS stub 繞過 file picker |
 | `scripts/audit/settings.mjs` | Settings panel 截圖：overview / checkbox-hover（2 張）；用 panel `filter({ hasText: 'Confirm before loading scene' })` 定位 |
+| `scripts/audit/context.mjs` | Context Menu 截圖：menu-no-selection / menu-with-selection / menu-item-hover / menu-submenu / menu-disabled（5 張）；右鍵 Scene Tree 空白區與物件 row |
 
 ## 常用 Pattern
 
@@ -47,3 +48,4 @@ _Commit 前綴: [scripts]_
 - #380 leaf panel audit（reload 後 locator 超時 fallback 教訓）
 - #381 project panel audit（OPFS stub 繞過 file picker，7 張截圖）
 - #382 settings panel audit（overview + checkbox-hover 2 張，package.json 新增 `audit:settings` script）
+- #383 context menu audit（5 張：no-selection / with-selection / item-hover / submenu / disabled，package.json 新增 `audit:context` script）
