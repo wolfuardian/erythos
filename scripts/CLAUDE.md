@@ -9,6 +9,7 @@
 
 ## 當前任務
 <!-- 待填入 -->
+
 ## 通用 SOP
 遵守 [開發成員 SOP](../.ai/roles/developer.md)。
 
