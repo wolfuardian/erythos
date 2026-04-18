@@ -1,6 +1,6 @@
 # Scripts Module Cache
 
-_Last updated: 2026-04-18 by RDM_
+_Last updated: 2026-04-18 by RDM (PR #382)_
 _Module path: scripts/_
 _Commit 前綴: [scripts]_
 
@@ -15,6 +15,7 @@ _Commit 前綴: [scripts]_
 | `scripts/audit/viewport.mjs` | Viewport panel 截圖：overview / Wire / Shading / Render / selected-gizmo / Solid（6 張） |
 | `scripts/audit/leaf.mjs` | Leaf panel 截圖：empty-state / overview / hover / selected（4 張）；用 IndexedDB fixture 注入 |
 | `scripts/audit/project.mjs` | Project panel 截圖：hub-empty / hub-new-overlay / editor-overview / filter-scene-only / filter-model-only / asset-selected / asset-hover（7 張）；用 OPFS stub 繞過 file picker |
+| `scripts/audit/settings.mjs` | Settings panel 截圖：overview / checkbox-hover（2 張）；用 panel `filter({ hasText: 'Confirm before loading scene' })` 定位 |
 
 ## 常用 Pattern
 
@@ -45,3 +46,4 @@ _Commit 前綴: [scripts]_
 - #379 新增 viewport audit script（strict-mode + tab 存在性判斷）
 - #380 leaf panel audit（reload 後 locator 超時 fallback 教訓）
 - #381 project panel audit（OPFS stub 繞過 file picker，7 張截圖）
+- #382 settings panel audit（overview + checkbox-hover 2 張，package.json 新增 `audit:settings` script）
