@@ -57,14 +57,14 @@ agent 名稱 = 模組名稱。每個模組有獨立 CLAUDE.md。
 |------|------|-------|--------|------|-------|
 | — | 指揮家 | — | — | 提意圖、做最終決策 | — |
 | AH | 主腦 | Opus 4.7 | xhigh | 理解全貌、拆 issue、路由決策、處理上報 | 主對話 |
-| AA | 顧問 | Opus 4.7 | max | 昂貴探索、戰略審查 | `roles/advisor` |
-| EX | Explorer | Sonnet 4.6 | high | 探勘模組、寫 DB | `roles/explorer` |
-| MP | Mock-Preview | Sonnet 4.6 | medium | UI 方案視覺化（產 HTML mockup） | `roles/mock-preview` |
-| DV | Design-Visual | Sonnet 4.6 | medium | 讀截圖 + theme.css 產美感問題清單 | `roles/design-visual` |
-| AT | Tasker | Sonnet 4.6 | medium | issue → 模組 CLAUDE.md 當前任務 | `roles/tasker` |
-| AD | Developer | Sonnet 4.6 | medium | 在 worktree 實作 + PR | `roles/developer` |
-| QC | QC | Sonnet 4.6 | high | 審 PR diff，留 `QC PASS` / `QC FAIL` | `roles/pr-qc` |
-| PM | Merger | Sonnet 4.6 | low | merge 後機械收尾 | `roles/pr-merge` |
+| AA | 顧問 | Opus 4.7 | max | 昂貴探索、戰略審查 | `role-advisor` |
+| EX | Explorer | Sonnet 4.6 | high | 探勘模組、寫 DB | `role-explorer` |
+| MP | Mock-Preview | Sonnet 4.6 | medium | UI 方案視覺化（產 HTML mockup） | `role-mock-preview` |
+| DV | Design-Visual | Sonnet 4.6 | medium | 讀截圖 + theme.css 產美感問題清單 | `role-design-visual` |
+| AT | Tasker | Sonnet 4.6 | medium | issue → 模組 CLAUDE.md 當前任務 | `role-tasker` |
+| AD | Developer | Sonnet 4.6 | medium | 在 worktree 實作 + PR | `role-developer` |
+| QC | QC | Sonnet 4.6 | high | 審 PR diff，留 `QC PASS` / `QC FAIL` | `role-pr-qc` |
+| PM | Merger | Sonnet 4.6 | low | merge 後機械收尾 | `role-pr-merge` |
 
 ### AH 的職責（正向定義）
 
@@ -182,17 +182,18 @@ PM 不碰 DB。
 
 | skill | 用途 | 觸發方式 |
 |-------|------|---------|
-| `session-startup` | AH 每次 session 開始的 pipeline 狀態重建 | AH 自動觸發 |
-| `pr-merge` | QC PASS 後的機械 merge 收尾 | AH 顯式觸發 |
-| `db-lookup` | 前置知識 DB 查詢 + 缺口判斷 | 相關角色起手 |
-| `roles/advisor` | AA 戰略審查 | AH 顯式觸發 |
-| `roles/explorer` | EX 模組探勘 | AH 顯式觸發 |
-| `roles/mock-preview` | MP UI 方案視覺化 | AH 顯式觸發 |
-| `roles/design-visual` | DV 美感問題清單 | AH 顯式觸發 |
-| `roles/tasker` | AT 任務描述撰寫 | AH 顯式觸發 |
-| `roles/developer` | AD 實作 + PR | AH 顯式觸發 |
-| `roles/pr-qc` | QC PR 審查 | AH 顯式觸發 |
-| `roles/pr-merge` | PM merge 後收尾的具體流程 | `pr-merge` skill 內部呼叫 |
+| `flow-session-startup` | AH session 啟動 pipeline 狀態重建 | AH 自動觸發 |
+| `flow-db-lookup` | 前置知識 DB 查詢 + 缺口判斷 | 相關角色起手 |
+| `role-advisor` | AA 戰略審查 | AH 顯式觸發 |
+| `role-explorer` | EX 模組探勘 | AH 顯式觸發 |
+| `role-mock-preview` | MP UI 方案視覺化 | AH 顯式觸發 |
+| `role-design-visual` | DV 美感問題清單 | AH 顯式觸發 |
+| `role-tasker` | AT 任務描述撰寫 | AH 顯式觸發 |
+| `role-developer` | AD 實作 + PR | AH 顯式觸發 |
+| `role-pr-qc` | QC PR 審查 | AH 顯式觸發 |
+| `role-pr-merge` | PM merge + 完整收尾 | AH 顯式觸發 |
+
+**命名慣例**：`role-` 對應角色；`flow-` 跨角色工作流程；`ref-` 純參考（暫未用）。全部扁平放在 `.claude/skills/<name>/SKILL.md`（Claude Code skill discovery 只掃第一層）。
 
 ---
 
