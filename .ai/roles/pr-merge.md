@@ -51,16 +51,15 @@ git push origin --delete <branch-name>
 
 如果這些區塊已經是空的（只有 placeholder 註解），跳過。
 
-### 7. 清理 MP mockup（若有）
-讀取 issue body，解析 `Mockup:` 行：
-```bash
-gh issue view <N> --json body -q .body | grep -oE '\.ai/previews/[^ ]+\.html'
-```
-若找到路徑，刪除該檔案：
-```bash
-rm .ai/previews/<topic>.html
-```
-若 issue body 無 `Mockup:` 行，跳過（非 UI 或未用 MP 的 issue）。
+### 7. Mockup 保留（**不清理**）
+
+`.ai/previews/` 下的 HTML 是 **design history / 視覺規格 source of truth**，可能跨 issue、跨階段（例如 Variant A · Tint v2 涵蓋階段 1-4 的 properties 落地）供未來 agent 查閱。
+
+**PM 嚴禁刪除 `.ai/previews/` 目錄下的任何檔案**，**無論** issue body 是否含 `Mockup:` 行。
+
+若需清理未採納的 mockup 或過期檔案，由 AH 親自判斷後操作，不屬 PM 職責。
+
+（歷史背景：PM 角色過去曾依 issue `Mockup:` 行自動 `rm` 此檔案；實作發現「mockup 是一次性的」假設錯誤，會連帶刪除仍在服役的規格檔，導致後續階段無法還原。2026-04-18 起改為一律保留。）
 
 ### 8. Build 驗證
 ```bash
@@ -68,7 +67,53 @@ npm run build
 ```
 如果失敗，不要嘗試修復，在輸出中報告錯誤。
 
-### 9. Commit + Push（含 in-progress docs 防呆）
+### 9. Trigger RDM 更新模組 cache
+
+**目的**：PR merge 後第一時間刷新對應模組的 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC 可信任 cache 不重讀整個模組。
+
+**9a. 拿 PR 改動的檔案列表**：
+
+```bash
+gh pr view <PR> --json files --jq '.files[].path'
+```
+
+**9b. 對照路徑表 map 出涉及的模組**（去重；非 `src/` 路徑不 trigger）：
+
+| 路徑前綴 | 模組名 |
+|---------|--------|
+| `src/core/`, `src/utils/` | `core` |
+| `src/viewport/`, `src/panels/viewport/` | `viewport` |
+| `src/components/` | `components` |
+| `src/app/` | `app` |
+| `src/panels/scene-tree/` | `scene-tree` |
+| `src/panels/properties/` | `properties` |
+| `src/panels/leaf/` | `leaf-panel` |
+| `src/panels/environment/` | `environment-panel` |
+| `scripts/` | `scripts` |
+
+非 `src/` / `scripts/` 的改動（例如 `.ai/`、根 `CLAUDE.md`、`*.json`）**不 trigger** RDM。
+
+若 PR **完全沒有**涉及上述模組（純 docs / process 改動），跳過整個 step 9，繼續 step 10。
+
+**9c. 判定每個涉及模組的 mode**：
+
+```bash
+test -f .ai/module-cache/<module>.md && echo update || echo create
+```
+
+**9d. 並行 spawn RDM**（每模組一個，`model: 'sonnet'`）：
+
+dispatch prompt 必須包含：
+- 模組名稱
+- mode（`create` 或 `update`）
+- 觸發原因，格式：`PR #<N> merged，改動：<完整路徑列表>`
+- 提醒「依 `.ai/roles/reader-manager.md` 規範執行；spawn RD 大軍並行讀，不親自整檔讀 src」
+
+等所有 RDM 回報完才進 step 10。
+
+**9e. RDM 失敗處理**：**不重試、不 block**。在最終回報加一行 `RDM <module> 失敗：<簡因>`，AH 後續可手動補 spawn。Cache 過時不致命（其他角色仍可 fallback 直接 spawn RD）。
+
+### 10. Commit + Push（含 in-progress docs 防呆）
 
 **先看 `git status`**，不要盲用 `git add -A`：
 
@@ -81,7 +126,8 @@ git status -s
 | 檔案模式 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
-| `.ai/previews/<topic>.html` 刪除（step 7） | 可 commit |
+| `.ai/module-cache/*.md`（step 9 RDM 寫的） | 可 commit |
+| `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
 | `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
 | `tsconfig.app.tsbuildinfo` | 可 commit（build 產物） |
@@ -99,13 +145,14 @@ git commit -m "chore: merge 收尾 #<PR>"
 git push
 ```
 
-若所有未暫存檔都落入「跳過」類，或完全無改動：不 commit，回報 `step 9 跳過` 並列出被跳過的原因（例如 `unstaged docs: CLAUDE.md, .ai/knowledge.md`）。
+若所有未暫存檔都落入「跳過」類，或完全無改動：不 commit，回報 `step 10 跳過` 並列出被跳過的原因（例如 `unstaged docs: CLAUDE.md, .ai/knowledge.md`）。
 
 ## 輸出
 
 回報以下資訊：
 - merge 是否成功
 - build 是否通過
+- RDM 觸發結果：哪些模組刷新成功 / 失敗（簡因）
 - memos 處理結果（歸檔/刪除了什麼）
 - knowledge 是否有過期條目被移除
 - 有無異常
@@ -114,8 +161,11 @@ git push
 - 可以執行 git 操作（merge、delete branch、commit、push）
 - 可以執行 gh 操作（merge PR、close issue）
 - 可以修改模組 CLAUDE.md（僅清空任務區塊）
+- 可以 spawn RDM subagent（step 9，限 RDM；不得 spawn AT / AD / QC / MP / DV 等其他角色）
+- **不得**手寫或修改 `.ai/module-cache/*.md` 內容（由 RDM 寫、PM 只負責 commit）
 - **不得**修改 `.ai/knowledge.md`（由 AH 處理）
 - **不得**刪除 `.ai/memos/` 下的檔案（由 AH 處理）
 - **不得**修改 src/ 下的程式碼
 - **不得**修改根 CLAUDE.md
+- **不得**修改 `.ai/roles/*.md`
 - **不得**開 issue 或 PR

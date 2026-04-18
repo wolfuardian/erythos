@@ -2,6 +2,8 @@ import { createSignal, createEffect, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { SetNodePropertyCommand } from '../../../core/commands/SetNodePropertyCommand';
 import { inferNodeType } from '../../../core/scene/inferNodeType';
+import FoldableSection from '../components/FoldableSection';
+import { fieldRow, fieldLabel, textInputBase, textInputRest, textInputFocus } from '../components/fieldStyles';
 
 interface ObjectDrawProps {
   uuid: string;
@@ -12,6 +14,7 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   const { editor } = bridge;
   const [name, setName] = createSignal('');
   const [type, setType] = createSignal('');
+  const [nameFocused, setNameFocused] = createSignal(false);
 
   createEffect(() => {
     bridge.objectVersion();
@@ -28,71 +31,39 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   };
 
   return (
-    <div style={{ 'margin-bottom': 'var(--space-lg)' }}>
-      <div style={sectionHeader}>Object</div>
-
-      {/* Name */}
+    <FoldableSection sectionKey="object" label="OBJECT">
+      {/* Name（可編輯） */}
       <div style={fieldRow}>
         <label style={fieldLabel}>Name</label>
         <input
           type="text"
           value={name()}
           onInput={(e) => handleNameChange(e.currentTarget.value)}
-          style={textInput}
+          onFocus={() => setNameFocused(true)}
+          onBlur={() => setNameFocused(false)}
+          style={{
+            ...textInputBase,
+            ...(nameFocused() ? textInputFocus : textInputRest),
+          }}
         />
       </div>
 
-      {/* Type */}
+      {/* Type（唯讀，顯示為 span 仿 input 樣式） */}
       <div style={fieldRow}>
         <label style={fieldLabel}>Type</label>
         <span style={{
-          flex: '1',
+          ...textInputBase,
+          ...textInputRest,
+          display: 'flex',
+          'align-items': 'center',
           color: 'var(--text-secondary)',
-          'font-size': 'var(--font-size-sm)',
+          cursor: 'default',
         }}>
           {type()}
         </span>
       </div>
-    </div>
+    </FoldableSection>
   );
 };
 
 export default ObjectDraw;
-
-// ── Shared styles ──────────────────────────────
-
-const sectionHeader = {
-  'font-size': 'var(--font-size-sm)',
-  'font-weight': '600' as const,
-  color: 'var(--text-primary)',
-  'margin-bottom': 'var(--space-md)',
-  'padding-bottom': 'var(--space-xs)',
-  'border-bottom': '1px solid var(--border-subtle)',
-  'text-transform': 'uppercase' as const,
-  'letter-spacing': '0.5px',
-};
-
-const fieldRow = {
-  display: 'flex',
-  'align-items': 'center',
-  'margin-bottom': 'var(--space-sm)',
-  'min-height': 'var(--row-height)',
-};
-
-const fieldLabel = {
-  width: '70px',
-  'flex-shrink': '0',
-  color: 'var(--text-secondary)',
-  'font-size': 'var(--font-size-sm)',
-};
-
-const textInput = {
-  flex: '1',
-  background: 'var(--bg-input)',
-  border: '1px solid var(--border-subtle)',
-  'border-radius': 'var(--radius-sm)',
-  color: 'var(--text-primary)',
-  padding: '2px 6px',
-  height: '20px',
-  'font-size': 'var(--font-size-sm)',
-};
