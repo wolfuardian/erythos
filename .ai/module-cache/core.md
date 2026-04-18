@@ -69,8 +69,15 @@ _Commit 前綴: [core]_
 - **SceneSync mesh clone transform reset**：mesh component 的 clone 根節點 transform 重置為 identity（避免與 applyTransform 雙重疊加）
 - **MoveNodeCommand cycle check**：execute 時向上追溯 parent 檢查是否移入自己的後代，違反拋 Error
 - **SaveAsLeafCommand 剝 components.leaf**：序列化時移除 root 的 components.leaf，避免 leaf 資產自我引用
-- **AutoSave debounce 2 秒**：每次場景變更 emit `autosaveStatusChanged('pending')`，靜默 2 秒後寫入並 emit `'saved'`
+- **AutoSave debounce 2 秒**：場景變更 emit `autosaveStatusChanged('pending')`，靜默 2 秒後寫入並 emit `'saved'`
 - **ProjectManager.openRecent() requestPermission**：使用者拒絕權限回傳 false 而非拋錯，呼叫方需檢查
+- **Vec3 是 tuple 不是 class**：複製用 `[...value] as Vec3`，不能 `.clone()`；tuple 無方法
+- **strict mode `{ [property]: value }` 型別推斷**：推出 `{ [x: string]: T }`，需 `as Partial<SceneNode>` 安全窄化（#128 教訓）
+- **Command 快照用 `structuredClone`**：非 shallow spread，防 snapshot 不變性被外部修改破壞
+- **FSA API TS 型別缺口**：`FileSystemDirectoryHandle.entries()/.values()` 必須 `(handle as any).entries()` 強制轉型（TS DOM lib 不含 FSAA）；permission / abort error 一律 try/catch
+- **ProjectManager.writeFile 不自動 rescan**：純粹寫檔，新增資產後需明確 `await this.rescan()` 否則 `bridge.projectFiles()` 不更新
+- **onDragOver preventDefault + dragleave child 過濾**：drop event 觸發需 preventDefault；dragleave 子元素連動觸發父層，用 `e.currentTarget.contains(e.relatedTarget)` 過濾（#328 教訓）
+- **SetTransformCommand oldValue 需呼叫端傳入**：canMerge 合併機制要求 oldValue 為操作開始時快照；Gizmo 拖曳場景須用拖曳開始時的值
 
 ## 最近 PR
 

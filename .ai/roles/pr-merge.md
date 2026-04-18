@@ -84,13 +84,11 @@ git status -s
 | 檔案模式 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
-| `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
 | `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
 | `tsconfig.app.tsbuildinfo` | 可 commit（build 產物） |
 | `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | **根 `CLAUDE.md`** | ❌ 跳過（AH 可能正在改） |
 | **`.ai/roles/*.md`** | ❌ 跳過（AH 可能正在改） |
-| **`.ai/knowledge.md`** | ❌ 跳過（AH 負責，非 PM） |
 | **`.ai/module-cache/*.md`** | ❌ 跳過（DB 由 EX 維護，PM 不碰） |
 | **`.ai/specs/*`** | ❌ 跳過（AH 在寫 spec） |
 | **`.ai/user/`** | 已 gitignore，不會出現；若出現代表 gitignore 失效，回報 AH |
@@ -103,16 +101,14 @@ git commit -m "chore: merge 收尾 #<PR>"
 git push
 ```
 
-若所有未暫存檔都落入「跳過」類，或完全無改動：不 commit，回報 `step 10 跳過` 並列出被跳過的原因（例如 `unstaged docs: CLAUDE.md, .ai/knowledge.md`）。
+若所有未暫存檔都落入「跳過」類，或完全無改動：不 commit，回報 `step 9 跳過` 並列出被跳過的原因（例如 `unstaged docs: CLAUDE.md, .ai/roles/xxx.md`）。
 
 ## 輸出
 
 回報以下資訊：
 - merge 是否成功
 - build 是否通過
-- memos 處理結果（歸檔/刪除了什麼）
-- knowledge 是否有過期條目被移除
-- 有無異常
+- 有無異常（跳過的未暫存檔清單、其他警告）
 
 ## 範圍限制
 - 可以執行 git 操作（merge、delete branch、commit、push）
@@ -120,8 +116,6 @@ git push
 - 可以修改模組 CLAUDE.md（僅清空任務區塊）
 - **不得** spawn 任何 subagent
 - **不得**修改 `.ai/module-cache/*.md`（DB 由 EX 維護，AH 按需 trigger）
-- **不得**修改 `.ai/knowledge.md`（由 AH 處理）
-- **不得**刪除 `.ai/memos/` 下的檔案（由 AH 處理）
 - **不得**修改 src/ 下的程式碼
 - **不得**修改根 CLAUDE.md
 - **不得**修改 `.ai/roles/*.md`

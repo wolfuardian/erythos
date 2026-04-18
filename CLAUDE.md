@@ -209,9 +209,11 @@ QC PASS 後，AH spawn PM（背景）執行機械操作，然後 AH 自行處理
 PM 不再 trigger DB 刷新（舊 RDM push 模式已廢除）。DB 由 EX 按需更新。
 
 **AH 在 PM 完成後執行：**
-1. 拜讀 `.ai/memos/` 目錄：有價值 → 歸檔至 `.ai/knowledge.md`；瑣碎 → 刪除
-2. 審查 `.ai/knowledge.md`：移除已過期（`⏳`）條目
-3. 若 memo 中出現 `DB 缺口` / `DB 過時` 上報，AH 判斷是否 spawn EX 補 / 刷新相關模組 DB
+- 審視 QC / AT / AD 在 PR body / comment 中回報的跨模組 insight 或 `DB 缺口` / `DB 過時` 標記，判斷：
+  - 值得修 → `gh issue create` 開 issue
+  - 長期指揮家偏好 / 跨 session 原則 → 寫入 auto-memory（MEMORY.md）
+  - DB 需補或刷新 → spawn EX
+  - 瑣碎 → 忽略
 
 ### 文件維護流程
 
@@ -266,7 +268,7 @@ AH 是最昂貴的角色（Opus），context 必須留給決策和對話：
 - **不自己跨模組探勘**：資訊不足直接 spawn EX，不要自己 Grep 全庫 + 讀多檔 src
 - **不自己讀大檔案**：超過 100 行的 src 檔案交給 EX / AT / AA 讀，AH 只看摘要
 - **不自己寫 CLAUDE.md 任務**：交給 AT，AH 只審閱和修正（**例外**：Fast path 下 AH 自寫豁免級任務）
-- **不自己跑 merge 收尾**：交給 PM，AH 只處理 memos/knowledge
+- **不自己跑 merge 收尾**：交給 PM，AH 只處理 PM 回報中需判斷的上報項
 - **不自己做完整 code review**：交給 QC，AH 只看結論
 - **git log / git diff 限制**：只看最近 5 條 commit 或 diff stat，不讀完整歷史
 

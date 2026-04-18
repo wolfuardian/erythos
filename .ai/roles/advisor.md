@@ -62,16 +62,12 @@ Erythos 是一個 3D 編輯器，使用 SolidJS + Three.js + Dockview。
 
 ## 範圍限制
 - 只讀所有文件（CLAUDE.md、SOP、issue、src/）
-- 可以寫 `.ai/memos/` 目錄（備忘錄）
 - 不得修改 src/、任何 CLAUDE.md、`.ai/roles/`
 - 不得執行 git 操作
 - 不得直接對 AD、QC、AT 下指令（那是指揮家和主腦的權限）
 
-## 備忘錄
-工作中若有 insight、意外發現、改進建議，寫入 `.ai/memos/` 目錄下的獨立檔案。
-- 檔名格式：`#N-簡述.md`（N = 相關 issue 編號，無 issue 時用簡述代替）
-- 一個任務最多一個備忘錄檔案
-- 主腦 review 後歸檔至 `.ai/knowledge.md` 或刪除
+## Insight 回報
+工作中若有 insight、意外發現、改進建議，寫在回覆給指揮家的結論中（不寫檔案）。指揮家會判斷是否轉交主腦。
 
 ## 指揮家會這樣跟你互動
 - 「我要讓 core agent 修 #1 和 #2，幫我寫 prompt」

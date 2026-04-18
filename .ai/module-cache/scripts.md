@@ -42,6 +42,8 @@ _Commit 前綴: [scripts]_
 - **reload 後 panel locator 超時**：fresh browserContext 無 localStorage，`applyDefaultLayout()` 重跑後須等 `networkidle` + 額外 waitForTimeout，否則 panel locator 可能超時；leaf.mjs 加 try/catch fallback 全頁截圖（#380 教訓）
 - **editor.init() async + signal propagation**：`networkidle` 不保證 editor.init()（IndexedDB read + leafStoreChanged emit）已完成；leaf.mjs 在 reload 後加 `waitForTimeout(500)` 讓 signal propagation 完成再定位 panel（#386/#389 修正）；overview panel locator timeout 從 3000 升至 5000（#389）
 - **project.mjs OPFS 原型 patch**：`queryPermission / requestPermission` 必須 patch 在 prototype 上（instance patch 在 structured clone 後失效），否則 `openRecent()` 找不到 handle
+- **Dockview 無 ARIA / data-view-id**：不按 W3C 標準假設，所有 tab 用 `.dv-default-tab-content`，panel content 容器用 `.dv-content-container`（`filter({ hasText: '<panel 內唯一文字>' })` 定位）
+- **`getByText('Scene', { exact: true })` 碰巧 work**：Scene panel 內文連 row 文字，`exact` 剛好只命中 tab 字；其他 panel 內文簡單 header 純文字會跟 tab 撞名，**此 pattern 不可套用**（#362 三輪教訓）
 
 ## 最近 PR
 

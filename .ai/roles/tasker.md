@@ -156,16 +156,14 @@ AD 讀完你的輸出即可開工，**不需要查其他文件**。如果 AD 需
 - 用 Grep 搜尋程式碼（定位後再讀精確區段）
 
 ## 你不可以做的事
-- 不得修改任何檔案（`.ai/memos/` 除外）
+- 不得修改任何檔案
 - 不得 commit、push、開 PR
 - 不得執行 build 或測試
 - 不得開 issue
 
-## 備忘錄
-讀 code 時若有跨模組 insight、潛在風險、或改進建議，寫入 `.ai/memos/` 目錄。
-- 檔名格式：`#N-簡述.md`（N = issue 編號）
-- 一個任務最多一個備忘錄檔案
-- 主腦 review 後歸檔至 `.ai/knowledge.md` 或刪除
+## Insight 回報
+
+讀 code 時若有跨模組 insight、潛在風險、或改進建議 → 寫在回報摘要「insight」段落，由 AH 判斷是否開 issue / spawn EX / 寫 memory / 忽略。不寫獨立備忘錄檔案。
 
 ## 慣例參考
 - commit 前綴對照根 CLAUDE.md 的模組表
