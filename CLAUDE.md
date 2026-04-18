@@ -37,8 +37,7 @@
 | Mock-Preview | MP | Sonnet（可升 Opus） | UI 腦爆階段純視覺化工人，產出 HTML mockup 供指揮家挑方案 | [.ai/roles/mock-preview.md](.ai/roles/mock-preview.md) |
 | Design-Visual | DV | Sonnet | 讀截圖 + theme.css 產出中文視覺美感問題清單（不碰 Playwright、不讀 src、不給修法建議） | [.ai/roles/design-visual.md](.ai/roles/design-visual.md) |
 | Tasker | AT | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/tasker.md](.ai/roles/tasker.md) |
-| 開發 agent | AD | Sonnet | 模組總執行長：在指定 worktree 實作功能、必要時 spawn subAD、commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
-| Sub-Developer | subAD | Sonnet | AD 分派的單檔實作者（並行改獨立檔案） | [.ai/roles/sub-developer.md](.ai/roles/sub-developer.md) |
+| 開發 agent | AD | Sonnet | 模組總執行長：在指定 worktree 實作功能、commit + push + 開 PR（同 worktree 依序處理多檔） | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
 | Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
 
@@ -46,7 +45,7 @@
 >
 > **EX 用途**：AH / AT 遇到「跨模組 API 不清」、「未知 component 形狀」、「既有 util 盤點」時，AH 主動 spawn EX 按需探勘並寫入 DB。EX 是 **pull** 模式（有人問才產，產了就有用），不在 PR merge 後盲推。其他角色**預設信任 DB**。
 >
-> **subAD 用途**：AD 面對多個獨立檔案改動時，**由 AD 自行 spawn** 並行 subAD 加速。AH 不直接 spawn subAD。
+> **並行工作**：多檔改動預設由單一 AD 依序處理（同 worktree 多檔）。真正需要並行時，AH 直接派多個並行 AD（各自獨立 worktree / branch / PR）。無 subAD 層（Claude Code 1 層 spawn 限制）。
 
 ### 開發模組清單
 
@@ -162,7 +161,7 @@ Fast path 省 AT 整輪（~3 分鐘 + 一次審閱）。若變更不符豁免，
   - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
   - QC → 讀取 `.ai/roles/pr-qc.md`
   - PM → 讀取 `.ai/roles/pr-merge.md`
-- subAD 不由 AH dispatch，由 AD 自行 spawn；dispatch prompt 指向 `.ai/roles/sub-developer.md`。
+- **Agent 不 spawn 下層 Agent**（Claude Code 1 層 spawn 限制）。AD 不 spawn subAD；並行由 AH 直接派多個 AD 達成（各自獨立 worktree）。
 - EX / AT / AD / QC / PM / MP / DV 均預設 Sonnet 模型，節省 token。MP 在複雜任務 AH 可於 dispatch 升 Opus。
 - **Agent 工具呼叫必須明確指定 `model` 參數**（`'sonnet'` 或 `'opus'`）。不指定會走 general-purpose 預設 Opus，等於默默升級，token 成本 ×4。EX / AT / AD / QC / PM / MP / DV 一律明寫 `model: 'sonnet'`。
 

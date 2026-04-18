@@ -27,7 +27,7 @@
 
 - 每個角色只做一件事：探勘 / 撰寫 / 實作 / 審查 / 收尾 / 視覺化 / 美感審閱 / 戰略諮詢。
 - 禁止橫跨職責：AD 不做 code review；QC 不寫 code；AT 不 commit。
-- subagent 層級嚴格：AH 不直接 spawn subAD；只有 AD 可 spawn subAD。
+- subagent 單層：AH spawn 單層 agent，agent 不再 spawn 下層（Claude Code 架構限制）。並行需求由 AH 直接派多個 AD。
 - 所有 AH spawn 的 subagent 用 `run_in_background: true`，AH 不阻塞等待。
 
 ### 1.4 Context 是寶貴資源（普適）
@@ -38,7 +38,7 @@
 - `Read` 用 `offset + limit` 只讀相關區段
 - `Grep` 先定位再讀精確區段
 - 限制單檔行數（預設 ≤ 200 行）
-- 限制總讀取檔數（EX ≤ 8、AT ≤ 5、subAD ≤ 3）
+- 限制總讀取檔數（EX ≤ 8、AT ≤ 5）
 - 不讀 `git log` / `git diff`（由上層摘要供給）
 
 ---
@@ -54,10 +54,9 @@
 | Mock-Preview | MP | Sonnet\* | UI 腦爆階段純視覺化工人 | AH | R.3 |
 | Design-Visual | DV | Sonnet | 視覺美感審閱（截圖 → 問題清單） | AH | R.4 |
 | Tasker | AT | Sonnet | 將 issue 轉為模組 CLAUDE.md 當前任務 | AH | R.5 |
-| Developer | AD | Sonnet | 模組總執行長：實作 + commit + PR | AH | R.6 |
-| Sub-Developer | subAD | Sonnet | AD 分派的單檔實作者（多檔並行） | AD | R.7 |
-| QC | QC | Sonnet | 審 PR diff，留 `QC PASS` / `QC FAIL` | AH | R.8 |
-| PR Merge | PM | Sonnet | QC PASS 後完整 merge 收尾 | AH | R.9 |
+| Developer | AD | Sonnet | 模組總執行長：實作 + commit + PR（同 worktree 單 AD 多檔） | AH | R.6 |
+| QC | QC | Sonnet | 審 PR diff，留 `QC PASS` / `QC FAIL` | AH | R.7 |
+| PR Merge | PM | Sonnet | QC PASS 後完整 merge 收尾 | AH | R.8 |
 
 \*MP 在複雜任務 AH 可於 dispatch 升 Opus。
 
@@ -81,11 +80,9 @@ AH 建 worktree + 分支
   ├─ 標準路徑 ─ AH spawn AT 寫任務 → AH 審閱 → 寫入模組 CLAUDE.md
   └─ Fast Path ─ AH 自寫任務到模組 CLAUDE.md（僅限豁免項）
   ↓
-AH spawn AD
+AH spawn AD（並行需求 → AH 直接派多個 AD，各自獨立 worktree）
   ↓
-AD 評估任務
-  ├─ 單檔 / 耦合 → 親自實作
-  └─ 多檔獨立 → spawn subAD × N（≤ 4）並行
+AD 依序處理任務檔案（同 worktree 單 AD 多檔為預設）
   ↓
 AD build + commit + push + 開 PR
   ↓
@@ -284,6 +281,44 @@ git log origin/master..master --oneline   # 有無未 push 的 commit
 - **不在 commit / 文件 / DB 中提及敏感品牌名或公司名**
 - **不自行 `git push --force`**（PM 尤其禁止，未授權執行）
 - **不跳過 GitHub CLI 流程**（開 issue / PR / review 必須走 `gh`，保持可追蹤）
+
+### 5.9 並行工作模式
+
+**預設**：同 worktree 單 AD 依序處理多檔。多個檔案的同質改動（例：N 個 panel 各加 hover）由單一 AD 接力完成，1 個 issue / 1 個 worktree / 1 個 PR。
+
+**subAD 已廢除**：Claude Code 架構只允許 1 層 spawn（AH spawn agent，agent 不再 spawn 下層）。原設計的 subAD 機制（AD 分派下層工人）2026-04-18 實測失敗，概念廢除。
+
+**真並行（跨 worktree 多 AD）**：任務能乾淨拆成彼此無依賴的子任務、且每個子任務還夠大（≥ 50 行改動）時，AH 可直接派多個並行 AD：
+- 每個 AD 各自獨立 worktree / branch
+- 各自 commit + push + 開 PR
+- AH 分別 spawn QC 審各 PR
+- PM 依合併順序（有依賴的先合）逐一收尾
+
+**Plan A 優先於 Plan B**：
+
+Context 膨脹的主因**常是 AD 自身探勘冗餘**（重複 Read、探性 Grep），不一定是任務規模本身。優化順序：
+
+1. **Plan A — 精煉 dispatch prompt**（優先）：
+   - AT spec 給精確行號 + before/after snippet（AD 不需 grep 找位置）
+   - AH dispatch 明確標註「預期讀 N 個檔」讓 AD 自覺越界
+   - AT / AD 嚴格使用 Read `offset+limit`，不讀整檔
+   - 同一檔不重複 Read
+
+2. **Plan B — 任務拆分**（Plan A 仍嫌大時）：
+   - 優先：多 phase 序列（同 AD 接力，phase 1 的學習可指導 phase 2）
+   - 次選：跨 worktree 多 AD 並行（適用明確無依賴子任務）
+   - 紅線：子任務 < ~50 行別拆（管理成本 > 節省）
+
+**何時考慮拆分（啟發式不是硬規則）**：
+
+AH dispatch 前自問：
+- 單 AD 讀檔 > 5？
+- 實作檔 > 4？
+- 預估改動 > 200 行？
+- 跨模組 > 3 個？
+- Spec 超出 AT 單 CLAUDE.md 上限（~60 行當前任務）？
+
+任一觸發 → 先 Plan A 精煉 prompt，仍嫌大再 Plan B 拆。
 
 ---
 
@@ -553,28 +588,12 @@ git checkout HEAD -- path/to/CLAUDE.md
 
 ## R.6 Developer（AD）— 開發執行長
 
-**TL;DR**：模組總執行長。收 AT 寫好的任務 → 實作、build、commit、push、開 PR。
-
-**兩種工作模式**：
-- **親自實作**：單檔 / 邏輯耦合
-- **分派 subAD**：多個獨立檔案改動時並行 spawn subAD
+**TL;DR**：模組總執行長。收 AT 寫好的任務 → 實作、build、commit、push、開 PR。**同 worktree 單 AD 依序處理多檔為預設模式**（無 subAD 層；並行需求由 AH 直接派多個獨立 AD）。
 
 **開工流程**：
 1. `npm install`（worktree 無 `node_modules`）
 2. 讀模組 CLAUDE.md「當前任務」
 3. **DB-first**：超出 AT 已寫明的部分 → 查 `.ai/module-cache/<module>.md`，不存在 / 衝突時在 PR body 標「**DB 缺口**」 / 「**DB 過時**」上報 AH
-
-**subAD 分派判斷**：
-
-| 條件 | 模式 |
-|------|------|
-| 改動集中 1-2 檔 | 親自 |
-| 跨檔邏輯耦合 | 親自 |
-| 需互動探索 | 親自 |
-| 多檔相似獨立（如 8 panel 同樣 hover CSS） | 分派 |
-| 大量機械性 rename / import 調整 | 分派 |
-
-**分派原則**：每個 subAD 1-3 個**彼此不依賴**檔案；單次並行 ≤ 4；dispatch prompt 完整自包含；明寫 `model: 'sonnet'`。subAD 回報後 AD 負責驗證 + build + commit + PR。
 
 **遇阻升級**：卡住時可**自行呼叫內建 `advisor()`**（不消耗 AH context）。
 
@@ -587,50 +606,14 @@ git checkout HEAD -- path/to/CLAUDE.md
 **禁止**：
 - 改自己模組以外的檔案
 - 操作 master、merge、關 issue
-- spawn 除 subAD 以外的 subagent（EX / AT / QC 由 AH 負責）
+- spawn 任何 subagent（Claude Code 1 層 spawn 限制；EX / AT / QC 由 AH 負責）
 - 自行改 `.ai/module-cache/*.md`（DB 由 EX 維護）
 
 **模型**：Sonnet
 
 ---
 
-## R.7 Sub-Developer（subAD）— 單檔實作者
-
-**TL;DR**：受 AD 分派的細節實作者。做 Edit → 回報簡潔 diff summary。不協調、不 commit、不 push、不 PR、不驗證 build。
-
-**流程位置**：
-```
-AD 評估任務
-  ├─ 是多檔獨立 → spawn subAD × N → 收回報 → AD 整合 → build + commit + PR
-  └─ 邏輯耦合 → AD 自己改
-```
-
-**輸入**（AD 提供）：
-1. 檔案路徑清單（1-3 個絕對路徑）
-2. 每檔精確修法（整檔 content 或 old_string/new_string 組）
-3. 禁止事項
-
-**輸出**：
-- 用 Edit / Write 完成改動
-- 回報 ≤ 200 字：改了哪些檔（路徑 + 行數變化）、各做什麼（1 句）、有無意外、有無違反負面指令風險
-
-**工作準則**：
-- **嚴守 AD 精確指示**：說改什麼就改什麼，不補 side fix
-- 發現明顯 bug / typo 不在清單內 → **回報**，不順手修
-- **不擴大讀取**：只讀 AD 指定檔；不讀 import 源；不讀其他模組
-- **不做設計決策**：AD 指示有歧義 → **回報**，不自選
-
-**可以做**：讀 AD 指定檔、Edit / Write AD 指定檔、回報。
-
-**不可以做**：讀 / 改 AD 未指定檔、commit / PR、執行 build、spawn subagent、讀 `.ai/module-cache/` / `.ai/roles/`（除非 AD 指定）、加 side fix、詮釋模糊指示。
-
-**Context 預算**：總讀取 ≤ 3 檔；單檔 ≤ 200 行（超過 offset+limit）；不讀 git log。單次 ≤ 15k token。
-
-**模型**：Sonnet
-
----
-
-## R.8 QC — 品質審查
+## R.7 QC — 品質審查
 
 **TL;DR**：只審查、不寫 code、不改計劃。審 PR diff 後留 `QC PASS` / `QC FAIL`。
 
@@ -700,7 +683,7 @@ gh issue close #N
 
 ---
 
-## R.9 PR Merge（PM）— 合併收尾
+## R.8 PR Merge（PM）— 合併收尾
 
 **TL;DR**：QC PASS 後的機械收尾。嚴格照表執行，不做設計決策。
 
@@ -825,7 +808,7 @@ Worktree：<path>
 分支：<branch>
 Issue：#N
 
-npm install → 讀任務 → 實作（評估是否分派 subAD）→ build → commit → push → 開 PR。
+npm install → 讀任務 → 依序實作多檔 → build → commit → push → 開 PR。
 開 PR 前還原 CLAUDE.md：git checkout -- <path>/CLAUDE.md
 ```
 
@@ -906,7 +889,6 @@ Panel 使用情境：<1-2 句描述>
 │   │   ├── design-visual.md # DV
 │   │   ├── tasker.md        # AT
 │   │   ├── developer.md     # AD
-│   │   ├── sub-developer.md # subAD
 │   │   ├── pr-qc.md         # QC
 │   │   └── pr-merge.md      # PM
 │   ├── module-cache/        # 前置知識 DB（EX 按需維護）
