@@ -17,7 +17,8 @@
     "audit:viewport": "node scripts/audit/viewport.mjs",
     "audit:leaf": "node scripts/audit/leaf.mjs",
     "audit:project": "node scripts/audit/project.mjs",
-    "audit:settings": "node scripts/audit/settings.mjs"
+    "audit:settings": "node scripts/audit/settings.mjs",
+    "audit:context": "node scripts/audit/context.mjs"
   },
   "dependencies": {
     "dockview-core": "^5.1.0",
