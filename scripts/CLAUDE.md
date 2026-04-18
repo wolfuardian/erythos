@@ -10,28 +10,6 @@
 ## 當前任務
 <!-- 待填入 -->
 
-## Summary
-- Add `scripts/audit/project.mjs` to seed Project panel screenshots for DV review
-- Add `audit:project` npm script to `package.json`
-- Covers Hub empty state, Hub New overlay, Editor overview, filter states, asset selected, asset hover
-
-## Technical approach
-`window.showDirectoryPicker` is gesture-gated and cannot be driven headless. The script uses `page.addInitScript` to stub the picker, returning a pre-populated OPFS handle so `ProjectManager.addFromDisk()` transitions the UI to Editor/Browser mode without any native dialog.
-
-## Test plan
-- [ ] `npm run dev` in separate terminal
-- [ ] `npm run audit:project`
-- [ ] Verify 7 PNGs in `.ai/audits/project/`
-- [ ] Verify hub-empty shows "No recent projects." text
-- [ ] Verify editor-overview shows Assets section with all 7 mock files
-- [ ] Verify filter-scene-only shows only `demo-scene.json`
-- [ ] Verify asset-selected shows `rock.glb` row highlighted
-
-refs #370
-EOF
-)"
-```
-
 ## 通用 SOP
 遵守 [開發成員 SOP](../.ai/roles/developer.md)。
 
