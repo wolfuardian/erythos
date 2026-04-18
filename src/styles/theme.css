@@ -173,3 +173,9 @@ button {
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
 }
+
+/* Form control accent (override browser default pink on checkbox/range) */
+input[type="checkbox"],
+input[type="range"] {
+  accent-color: var(--accent-blue);
+}
