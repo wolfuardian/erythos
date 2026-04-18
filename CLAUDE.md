@@ -176,6 +176,8 @@ Issue body 可加：
 
 **命名慣例**：`role-` 對應角色；`flow-` 跨角色工作流程；`ref-` 純參考（暫未用）。全部扁平放在 `.claude/skills/<name>/SKILL.md`（Claude Code skill discovery 只掃第一層）。
 
+**AH 操作細則**（Context 保護 / Dispatch Prompt / 並行 Plan A/B / Pipeline 路徑）：`.ai/WORKFLOW.md`。
+
 ---
 
 ## Session 開始時
