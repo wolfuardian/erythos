@@ -1,97 +1,108 @@
-# Session 狀態（2026-04-17 → 2026-04-18 — properties 視覺落地 + RDM 機制引入）
+# Session 狀態（2026-04-18 — Audit pipeline 完成 + RDM/PM 流程穩態化）
 
-## 完成事項：3 PR merged + process 建設
+## 完成事項：5 PR merged + Phase 3a 驗證 + Simplify
 
-### Properties 模組階段式落地
+### Audit pipeline（全 5 PR）
 
-| PR | Issue | 摘要 | merge commit |
-|----|-------|------|--------------|
-| #374 | #373 | 階段 1：Variant A · Tint v2 視覺落地（平面結構）+ foldable + XYZ badge | 4ce2e9b |
-| #376 | #375 | 階段 1.5：Delta Transform 子面板驗證 deep tint（`variant="deep"` prop） | b1e6e53 |
-| #378 | #377 | 階段 1.6：padding-left 從 FoldableSection wrapper 移到 row 層級 | 6065f4d |
+| PR | Issue | Panel | merge | RDM cache update |
+|----|-------|-------|-------|------------------|
+| #379 | #368 | viewport | `ccfb6f3` | scripts.md 首版 create（PM #379 timeout，AH 手動補） |
+| #380 | #369 | leaf | `a62e61f` | 手動補（PM step 9 已 override 跳過） |
+| #381 | #370 | project | `daad57d` | scripts.md 43→47（PM #381 重跑驗證 v2b） |
+| #382 | #371 | settings | `8c1cbb0` | scripts.md 47→49 |
+| #383 | #372 | context | `8c1cbb0` 後續 | scripts.md 49→52 |
 
-### 非 PR 改動（AH 直接在 master commit）
+### Phase 3a：RDM 自動 trigger（PM merge 後刷新模組 cache）
 
-- **#343 關閉** + title 改中性（敏感詞清除）+ supersede comment 指向 #373
-- **4 個 mockup git-tracked**（`.ai/previews/properties-*.html`）：design history 保留
-- **pr-merge.md step 7 修訂**：不再自動刪 `.ai/previews/`（PM 曾誤刪 v4 事件教訓）
-- **RDM 機制建立**：
-  - 新 role `.ai/roles/reader-manager.md`（首版 + 架構修正）
-  - `.ai/module-cache/` 目錄 + `.gitkeep`
-  - 根 CLAUDE.md 角色表加 RDM 行 + 用途說明
-  - 首次產出 `.ai/module-cache/properties.md`（55 行，baseline）
+- v1（commit `f6cfeca`）：PM step 9 spawn RDM（同步等）→ **撞 stream timeout**（PM #379 教訓：3 層 nested 太深）
+- v2b（commit `beb1db6`）：rdm SOP 鬆綁 — 小模組（≤8 檔且 <800 行）RDM 自己讀，不 spawn RD 大軍
+- Simplify（commit `63d5473`）：PM step 9 行為跟實務對齊 — PM 對小模組直接做 cache update，大模組才 spawn RDM。一層 spawn 都不開
 
-## 主要模式與教訓（已寫入 memory）
+### 流程文件 simplify（commit `63d5473`）
 
-- **命名潔癖**：`nadi`（前公司名）**不得**寫入任何 git 追蹤位置（commit / PR / issue / `.ai/` / src）。本地 memory 可記（不進 git）。HTML mockup 內部 label 用中性（Baseline / Variant A / ...），不提 Blender / Unity / Nuke 等品牌名
-- **Context 寶貴原則普適**：不只 AH 要省，AT / AD / QC / PM / MP / DV / RD 皆然。dispatch 給剛剛好 context、不讓 agent 自由擴探
-- **RDM 架構（指揮家糾正）**：RDM **不親自讀 src**，而是 spawn RD 大軍並行讀 → 聚合 / 驗證 / 組織。首次 Phase 2 properties.md 是 RDM 親讀產生（例外 baseline），下次 update 走正確流程
-- **PM 誤刪事件**：`.ai/previews/` 檔案未 git-track 被 PM 依舊規範 `rm` 掉，無法還原，重跑 MP 重建。新規範已防
-- **Foldable 1px 跳動**：rest 和 focus border 厚度要一致（都 2px），focus 只切色值（AT #374 技術決策）
-- **MultiSelectDraw 陷阱**：任何 row 視覺改動要同步 multi-select 視圖（#374 教訓，AT 主動用 advisor 識別）
+- pr-merge.md step 1：加 conflict escalate 規範 + 禁止 force-push（#380 教訓）
+- pr-merge.md step 9：重寫為「PM 自做 / spawn RDM」二分（小模組 / 大模組）
+- tasker.md：「當前任務」內容**不得**用 `## ` 開頭 subheader（與 CLAUDE.md section 同層 → AD 還原時容易遺漏，#381 教訓）
+
+### Sub-AD memory 升級（local，不進 git）
+
+- 含本 session 實證對照表（5 PR ~535k token / 70-90 min vs 1 sub-AD PR ~140-180k / 25-35 min，省 60-67%）
+- 觸發 4 條 checklist 精煉
+- 實裝 lite path：下次甜蜜點 dispatch inline 「sub-AD 協調」指引（不寫獨立 SOP），跑 1-2 次後再萃取
+
+## 主要模式與教訓
+
+### Process 設計教訓
+
+- **v1 → v2b 反覆是「下午建傍晚拆」**：advisor 點名。流程改動上線前要先過 1-2 個 failure mode（nested timeout、各層 spawn baseline 累積）
+- **PM 自做 RDM drift 變成 feature**：PM #381/#382/#383 三次自跑 step 9 沒 spawn RDM → 結果穩定 → simplify 時直接寫進 SOP「小模組 PM 自做」
+- **Force-push 防呆生效**：PM #380 自做 force-push 被 advisor 點 → 後續 dispatch inline 防呆 → PM #381/#382/#383 都正確 escalate AH 解 conflict
+
+### 拆分粒度教訓
+
+- **Audit pipeline 5 PR 是「過細」拆分**：同模組同 pattern 無 cross-PR 邏輯依賴 → N² 衝突（4 次 AH 親自 cd worktree 解 package.json + CLAUDE.md trivial conflict）
+- **下次同類批次任務直上 sub-AD**：properties 階段 4「Variant A 擴散到 environment / scene-tree / leaf 等」是甜蜜點
+
+### Dispatch 優化教訓
+
+- **QC dispatch 優化版穩定省 22%**：禁止「對照既有 pattern」+ inline 三條檢查 + 不讀 pr-qc.md → 21-23k / 2-4 tool uses / 14-30 秒（vs 舊 28k / 11 uses / 58 秒）
+- **AD token 暴漲與 dispatch 無關**：AD #370 OPFS 70k 是任務本身複雜（AT spec 有錯，AD 自己 trial-error）。dispatch 優化救不了
+- **AT 質量影響倍增**：AT 寫不準 → AD 多 ~40k token trial-error。下次 AT 對複雜 web API（OPFS / Service Worker / IndexedDB）需先 prototype 確認再寫任務
 
 ## Process 觀察
 
-- **本 session Stream 健康**：所有 agent（AT / AD / QC / PM / MP / RDM）均成功回報，無 stream timeout
-- **Context 節約實證**：QC PR #378 dispatch 加精簡規則後 23k tokens（vs 前版 33k），35s（vs 67s），7 tool uses（vs 17） — **省約 30%**
-- **AT 使用 advisor 升級**（#374）：dispatch 未提 MultiSelectDraw，AT 自行用 advisor 識別陷阱並納入任務
-- **Mockup 疊代 4 版定調**：b-v1 → b2-variants-v1 → va-nested-v1 → va-tint-v2（採納）— 指揮家偏好「讓我確認是不是我想的」方式
+- **Stream 健康**：除 PM #379 v1（timeout）+ AD #370 OPFS（14.5 min 但完成），全部 agent 順利
+- **AH 親自做 git ops**：cleanup commit / merge conflict / .gitignore 修改全 AH 親手做（避免 spawn AD 5-10k overhead，AH 直接做 ~30 秒）
+- **Memory 飽和度**：本 session 引用了多條歷史 memory（advisor 機制 / sub-AD / context 寶貴普適 / RDM 架構 / 衝突 drift / force-push 警示），證明 memory 系統運作良好
 
-## 下一個 session 優先序
+## 指揮家偏好觀察（新增 / 更新）
 
-### ★ 最優先：Phase 3 RDM 整合（PM trigger）
-
-**問題**：RDM 機制建立了但沒人在 PM merge 後 trigger 它 → cache 不會自動維護 → stale
-
-**最小 Phase 3a**（最關鍵）：
-- 修訂 `.ai/roles/pr-merge.md` 加 step：merge 後判斷 PR 涉及哪個模組 → spawn RDM update 該模組 cache
-- 這一步做完 RDM 機制才真正活起來
-
-**完整 Phase 3**（視需求）：
-- AT / AD / QC dispatch 模板預設「先查 `.ai/module-cache/<module>.md`，資訊不足才 spawn RD」
-- 根 CLAUDE.md Session startup SOP 加「偵測 cache stale → 輪巡」
-
-### 次優先：Audit pipeline 繼續
-
-5 個 AT 產物備妥在 worktree，等 AD 依序（port 3000 衝突，必須 sequential）：
-- #368 viewport（6 張截圖）
-- #369 leaf（4 張，需 IndexedDB fixture）
-- #370 project（7 張，含 OPFS stub）
-- #371 settings（2 張，最簡）
-- #372 context（5 張，右鍵觸發）
-
-完成後批次 spawn DV 審視覺，6 panel audit 完成後排批次修繕計畫。
-
-### 第三優先：Properties 階段 2+
-
-- **階段 2**：正式巢狀資料模型 + PropertiesPanel 遞迴渲染（替換 Delta Transform hardcoded 0）
-- **階段 3**：core 提供 Mesh metadata accessor（Geometry / Vertices / Faces）
-- **階段 4**：Variant A 擴散到 environment / scene-tree / leaf 等其他 panel
-
-### 第四優先：Sub-AD 機制（等甜蜜點）
-
-指揮家明言要記得。擱置理由：RDM 剛落地需穩定 + 當前 PR 多耦合。甜蜜點 = 4–8 個獨立檔案的大 PR（跨 panel 統一視覺、批次 hardcoded 替換）。參考 memory `project_sub_ad_idea.md`。
-
-## 指揮家偏好觀察（新增）
-
-- **敏感詞紅線**：`nadi` 一律不留紀錄，AH 要主動守門（grep PR diff / mockup HTML 等產出）
-- **Context 寶貴普適**：不只 AD 要省，所有角色都要
-- **會迂迴確認擱置話題**：sub-AD 被 RDM 岔開後還會回頭問 — **AH 不要轉 topic 太快**，擱置的討論要主動記 memory 或追蹤
-- **設計決策流程**：「讓我確認是不是我想的那樣」→ MP 一版 + before 對照足夠，不用一次畫 4 個 variants
-- **對視覺細節敏感**：子面板縮排 14px 偏差一眼發現（說明他實際在瀏覽器檢視每個 PR 成果）
-- **「立刻喔，很清楚了」**：表示他信任方向不需再討論，AH 直接執行
-- **同意 PM 解機械性衝突**（之前 session）/ **不同意 PM 自動刪 mockup**（本 session）— 「無 drift」是關鍵判準
+- **反思性提問代表已收到資訊但需要重新評估**：「工作量挺大的，確認工作量與工作目標是否呈現正比」 = 暫停推進，認真回答 retrospective 問題
+- **A + C 採納**：明確的 multi-option 提案 → 指揮家直接選編號（不展開），AH 立刻動
+- **Simplify 偏好**：流程文件改動採「跟實務對齊」精神（PM 自做 RDM 是 drift 但變 feature），不是「強制服從原 SOP」
+- **「指派後你自己再重新審視」**：希望 AH 兼具執行 + retrospective 雙重視角，不只埋頭做
 
 ## Pipeline 終點
 
-- **Master** @ `a334965`（含本 session 所有改動 + RDM 架構修正）
+- **Master** @ `63d5473`（含全部 5 audit script + Phase 3a v1+v2b+simplify + scripts.md cache 52 行）
 - **0 active worktree**
 - **0 open PR**
-- **Open issues**：#368 / #369 / #370 / #371 / #372（audit batch，AT 產物備妥）
+- **Open issues**：#330 / #355（與本 session 無關的舊 issue，待後續處理）
 
 ## 懸念
 
-- **RDM 機制未整合進 PM**：目前 RDM 只能手動 spawn，下個 session Phase 3a 優先補齊
-- **Properties.md cache 的 date 標 `2026-04-17`**（實際 04-18）：RDM 日期來自 session context 非 system date，下次 RDM dispatch 可帶當下日期
-- **audit screenshot 與新 master 對齊？**：5 AT 產物從 `eaddea6` 建 worktree，現 master 已到 `a334965`（涉 properties 改動但不影響 5 個 panel 的 audit）。worktree base 陳舊但不衝突
-- **.claude/settings.local.json** 一直有 M 狀態（local 設定），無需處理
+- **`.claude/settings.local.json`** 一直有 M 狀態：local 設定，無需處理（已成 chronic state）
+- **AT 任務描述對複雜 web API 不準**：#370 OPFS stub 是教訓，下次類似要 AH 主動提示「需 prototype 確認」
+- **CLAUDE.md placeholder 結構過於複雜**：tasker.md 已加禁止 `## ` 規範，但 worktree base 過舊的場景仍可能出現舊版 placeholder（`<!-- 由主腦填寫 -->` vs `<!-- 待填入 -->` 兩版混雜）
+
+## 下一個 session 優先序
+
+### ★ 最優先：Audit pipeline 後半段 — DV 視覺審計
+
+5 個 audit script 已上 master，產出 5 個 panel 截圖目錄（`.ai/audits/<panel>/`，gitignored）。下次 session 起手：
+
+1. AH 親跑 5 個 npm run audit:* 重新生成截圖（worktree 已被 cleanup，需在 master 跑）
+2. 批次 spawn DV（每 panel 一個，並行）審 `.ai/audits/<panel>/` + `theme.css` → 產出 `.ai/audits/<panel>.md` 美感問題清單
+3. 整合 6 panel（含 properties 已有 baseline）審視結果 → 排批次修繕計畫
+4. **修繕批次正是 sub-AD 甜蜜點候選**：跨 panel 統一視覺修正
+
+### 次優先：Properties 階段 2
+
+- 正式巢狀資料模型 + PropertiesPanel 遞迴渲染（替換 Delta Transform hardcoded 0）
+- 不適用 sub-AD（共用 type，跨檔耦合）
+
+### 第三優先：Sub-AD 機制首次實裝
+
+- 等遇到「跨 panel 統一視覺擴散」這類甜蜜點 → 直接 dispatch inline「sub-AD 協調」指引
+- 跑通 1-2 次後再萃取成 .ai/roles/sub-ad.md
+
+### 第四優先：舊 issue cleanup
+
+- #330 巢狀 Mesh 重複渲染（#318 延伸 bug）
+- #355 抽 computeDropPosition 公用函式（#338 技術債）
+
+## 對指揮家的提醒
+
+- **sub-AD 機制已成熟可用**，下次甜蜜點直接上不要再記「擱置」
+- **Simplify 後的 PM step 9 跟實務對齊**：下次 PR merge PM 跑 ~3-4 分鐘穩定，不會 timeout
+- **CLAUDE.md placeholder 規範收緊**（tasker.md 加禁止 `## `）— AT 下次寫任務應該不再留地雷
