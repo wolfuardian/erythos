@@ -15,6 +15,7 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   const [name, setName] = createSignal('');
   const [type, setType] = createSignal('');
   const [nameFocused, setNameFocused] = createSignal(false);
+  const [nameRowHovered, setNameRowHovered] = createSignal(false);
 
   createEffect(() => {
     bridge.objectVersion();
@@ -33,7 +34,14 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   return (
     <FoldableSection sectionKey="object" label="OBJECT">
       {/* Name（可編輯） */}
-      <div style={fieldRow}>
+      <div
+        style={{
+          ...fieldRow,
+          background: nameRowHovered() ? 'var(--bg-hover)' : 'transparent',
+        }}
+        onMouseEnter={() => setNameRowHovered(true)}
+        onMouseLeave={() => setNameRowHovered(false)}
+      >
         <label style={fieldLabel}>Name</label>
         <input
           type="text"

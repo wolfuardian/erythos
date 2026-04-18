@@ -22,6 +22,7 @@ interface XYZCellReadonlyProps {
 /** 可編輯版（TransformDraw 使用） */
 export const XYZCellEditable: Component<XYZCellEditableProps> = (props) => {
   const [focused, setFocused] = createSignal(false);
+  const [hovered, setHovered] = createSignal(false);
 
   const handleInput = (e: InputEvent & { currentTarget: HTMLInputElement }) => {
     const v = parseFloat(e.currentTarget.value);
@@ -29,22 +30,25 @@ export const XYZCellEditable: Component<XYZCellEditableProps> = (props) => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      'align-items': 'stretch',
-      background: 'var(--bg-input)',
-      height: '20px',
-      overflow: 'hidden',
-      flex: 1,
-      // Rest: 2px bottom 透明佔位（避免 focus 時 1→2px 跳動）
-      'border-bottom': focused()
-        ? '2px solid var(--accent-blue)'
-        : '2px solid var(--border-medium)',
-      // Focus glow（transparent 時不顯示）
-      'box-shadow': focused()
-        ? '0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent)'
-        : 'none',
-    }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        background: hovered() ? 'var(--bg-hover)' : 'transparent',
+        'align-items': 'stretch',
+        height: '20px',
+        overflow: 'hidden',
+        flex: 1,
+        // Rest: 2px bottom 透明佔位（避免 focus 時 1→2px 跳動）
+        'border-bottom': focused()
+          ? '2px solid var(--accent-blue)'
+          : '2px solid var(--border-medium)',
+        // Focus glow（transparent 時不顯示）
+        'box-shadow': focused()
+          ? '0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent)'
+          : 'none',
+      }}>
       <span style={{
         width: '16px',
         display: 'flex',
