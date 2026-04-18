@@ -83,6 +83,8 @@ const EnvironmentPanel: Component = () => {
             </span>
             <button
               onClick={handleClear}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -123,7 +125,11 @@ const EnvironmentPanel: Component = () => {
       </Show>
 
       {/* Intensity */}
-      <div style={{ 'margin-bottom': '8px' }}>
+      <div
+        style={{ 'margin-bottom': '8px' }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+      >
         <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
           <span>Intensity</span>
           <span>{env().intensity.toFixed(2)}</span>
@@ -135,7 +141,10 @@ const EnvironmentPanel: Component = () => {
       </div>
 
       {/* Rotation */}
-      <div>
+      <div
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+      >
         <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
           <span>Rotation</span>
           <span>{env().rotation}°</span>

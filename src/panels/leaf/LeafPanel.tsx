@@ -198,6 +198,7 @@ const LeafPanel: Component = () => {
             <For each={bridge.leafAssets()}>
               {(asset) => {
                 const isActive = () => activeId() === asset.id;
+                const [isHovered, setIsHovered] = createSignal(false);
                 return (
                   <div
                     draggable
@@ -206,6 +207,8 @@ const LeafPanel: Component = () => {
                       e.dataTransfer!.effectAllowed = 'copy';
                     }}
                     onClick={() => setActiveId(isActive() ? null : asset.id)}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
                     style={{
                       display: 'flex',
                       'align-items': 'center',
@@ -214,7 +217,9 @@ const LeafPanel: Component = () => {
                       cursor: 'grab',
                       background: isActive()
                         ? 'var(--bg-selected, rgba(74,127,191,0.2))'
-                        : 'transparent',
+                        : isHovered()
+                          ? 'var(--bg-hover)'
+                          : 'transparent',
                       'border-left': isActive()
                         ? '2px solid var(--accent-primary, #4a7fbf)'
                         : '2px solid transparent',
