@@ -73,6 +73,9 @@ export class Editor {
 
     // 4. Start listening for scene changes and persisting them.
     this.autosave = new AutoSave(this);
+
+    // 5. Notify bridge signals that async hydrate is complete.
+    this.events.emit('leafStoreChanged');
   }
 
   // ── Transform mode ────────────────────────────────
