@@ -39,12 +39,14 @@
 | 開發 agent | AD | Sonnet | 在指定 worktree 實作功能，commit + push + 開 PR | [.ai/roles/developer.md](.ai/roles/developer.md) |
 | QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
 | Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
-| Reader | RD | Sonnet | 精準讀取工人，被其他角色批量 spawn | [.ai/roles/reader.md](.ai/roles/reader.md) |
-| Reader-Manager | RDM | Sonnet | 維護 `.ai/module-cache/<module>.md` 品質（對照 src 驗證、刪冗、補新增）；其他角色默認信任 cache | [.ai/roles/reader-manager.md](.ai/roles/reader-manager.md) |
+| Reader-Manager | RDM | Sonnet | 維護 `.ai/module-cache/<module>.md` 品質（對照 src 驗證、刪冗、補新增）；大模組時可並行 spawn RD 讀 src。其他角色預設信任 cache | [.ai/roles/reader-manager.md](.ai/roles/reader-manager.md) |
+| Reader | RD | Sonnet | RDM 的大模組 scale-out 工具，被 RDM 批量並行 spawn | [.ai/roles/reader.md](.ai/roles/reader.md) |
 
 > AA 用途：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
 >
-> RDM 用途：PR merge 後即時更新 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC 可先查 cache 不重讀整個模組。其他角色默認信任 cache（品質責任在 RDM）；資訊不足才 spawn RD。
+> RDM 用途：PR merge 後即時更新 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC / AH 先查 cache 不重讀整個模組。其他角色**預設信任 cache**（品質責任在 RDM 的對照 src 驗證 + 抽樣驗證準則）；若遇到 src 事實與 cache 明顯衝突，上報 AH 由 AH trigger RDM 刷新，不自行忽略 cache 硬讀整模組。
+>
+> RD 用途：**僅 RDM 在大模組 scale-out 時 spawn**。其他角色不直接 spawn RD — 透過 `.ai/module-cache/` 複用 RDM 成果。
 
 ### 開發模組清單
 
@@ -85,13 +87,16 @@ Issue body 可加以下行表達依賴關係：
 
 Session startup 時 AH 掃開放 issue 的 body 建依賴圖，優先啟動無依賴者；若選到被封鎖者，先處理其依賴。
 
-### Pre-flight RD（可選，跨模組變更建議）
+### Pre-flight 查 cache（可選，跨模組變更建議）
 
-當 AH 懷疑變更會牽動其他模組的 API 或型別（例如調用 components / core 函式，但不確定介面），**開 issue 前**可先 spawn RD 掃檔：
+當 AH 懷疑變更會牽動其他模組的 API 或型別（例如調用 components / core 函式，但不確定介面），**開 issue 前**先查 `.ai/module-cache/<module>.md`：
 
 - 使用時機：跨模組 API 依賴、未知 component 的 props 形狀、既有 util / pattern 不明
+- 起手順序：
+  1. 查 `.ai/module-cache/<module>.md` 有無相關條目（types / pattern / 地雷）
+  2. cache 不存在或資訊不足 → spawn RDM 建 / 補 cache（RDM 若判定大模組會自己 spawn RD 大軍）
+  3. **不要**直接 spawn RD 讀 src — 過時的「pre-flight RD」做法已改為 cache-first
 - 目的：避免 AT / AD 跑到一半才發現要先改其他模組，省整輪重來（參考 #310 教訓：AT-B 跑完才發現 ConfirmDialog 不支援英文 → 重開 #311 前置作業）
-- 用 RD 而非 AA：這是精準掃檔，RD 夠用且便宜
 
 ### 流水線流程
 
@@ -157,22 +162,23 @@ Fast path 省 AT 整輪（~3 分鐘 + 一次審閱）。若變更不符豁免，
 - AT / AD / QC / PM / MP 均預設 Sonnet 模型，節省 token。MP 在複雜任務 AH 可於 dispatch 升 Opus。
 - **Agent 工具呼叫必須明確指定 `model` 參數**（`'sonnet'` 或 `'opus'`）。不指定會走 general-purpose 預設 Opus，等於默默升級，token 成本 ×4。AT / AD / QC / PM / MP 一律明寫 `model: 'sonnet'`。
 
-### Reader 大軍模式
+### Cache-first 讀取紀律
 
-**任何角色**需要讀取多個檔案時，可批量 spawn Reader（RD）subagent 並行讀取：
+所有需要理解模組 src 的角色（AT / AD / QC / AH），**起手一律先查 cache**：
 
 ```
 角色收到任務
-  → spawn RD-1（讀 fileA L1-200）  ┐
-  → spawn RD-2（讀 fileB L50-150） ├── 並行
-  → spawn RD-3（grep pattern → 讀上下文）┘
-  → 收到三段摘要 → 綜合處理
+  → 查 .ai/module-cache/<module>.md
+    ├─ 存在 → 讀 cache 取速覽（types / patterns / 地雷 / 最近 PR）
+    │         需細節再用 Read + offset/limit 精準補讀
+    └─ 不存在 → 正常讀 src（每檔 ≤ 200 行用 offset+limit）
+  → 遇到 src 事實與 cache 明顯衝突 → 上報 AH 由 AH trigger RDM 刷新
+  → 不因輕微不確定就放棄 cache 重讀整模組（浪費 RDM 工作成果）
 ```
 
-Reader 藍圖：[.ai/roles/reader.md](.ai/roles/reader.md)
-- 每個 RD 讀取 ≤ 200 行，回傳 ≤ 30 行摘要
-- 派遣 agent 的 context 只收到摘要，不會被原始碼灌爆
-- RD 不會再 spawn 其他 agent（只有一層深度）
+**信任基礎**：RDM 驗證準則（對照 src 驗證每條 fact + 抽樣 2-3 關鍵 fact）見 [.ai/roles/reader-manager.md](.ai/roles/reader-manager.md)。Cache 是 RDM 整理過的成品，預設可信。
+
+**RD 大軍模式僅限 RDM 使用**：RDM 處理大模組（> 8 檔 或 ≥ 800 行）時可並行 spawn 多個 RD 分工讀 src（每 RD 1-2 檔回 ≤ 30 行摘要）。其他角色不直接 spawn RD。藍圖：[.ai/roles/reader.md](.ai/roles/reader.md)。
 
 ### Merge 流程
 
@@ -250,6 +256,7 @@ git log origin/master..master --oneline   # 本地 master 有無未 push 的 com
 
 AH 是最昂貴的角色（Opus），context 必須留給決策和對話：
 
+- **Cache-first**：要理解模組現況時，**先查 `.ai/module-cache/<module>.md`**，不要直接讀 src。cache 是 RDM 驗證過的速覽，預設可信（見上方 Cache-first 讀取紀律）
 - **不自己讀大檔案**：超過 100 行的 src 檔案交給 AT 或 AA 讀，AH 只看摘要
 - **不自己寫 CLAUDE.md 任務**：交給 AT，AH 只審閱和修正（**例外**：Fast path 下 AH 自寫豁免級任務）
 - **不自己跑 merge 收尾**：交給 PM，AH 只處理 memos/knowledge
