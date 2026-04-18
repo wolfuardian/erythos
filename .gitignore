@@ -6,5 +6,6 @@ dist
 samples
 settings.local.json
 .ai/user/
+.ai/audits/
 projects/
 .playwright-mcp/
