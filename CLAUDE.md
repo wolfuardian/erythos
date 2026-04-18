@@ -170,7 +170,7 @@ PM 不碰 DB。
 ## 非目標（不走此流程的情況）
 
 - **純文件修改**（README、doc）：直接在 master 或分支改，不走 issue / PR
-- **`.ai/session/` 交接筆記、`.ai/module-cache/` DB**：由對應 skill 維護，不走 PR
+- **`.claude/session/` 交接筆記、`.ai/module-cache/` DB**：由對應 skill 維護，不走 PR
 - **外部依賴升級**（package.json）：獨立 issue，但不套用 MP / DV
 - **master build 失敗緊急修復**：AH 判斷後可直接 commit，事後補 issue 紀錄
 
@@ -200,6 +200,6 @@ PM 不碰 DB。
 ## 長期原則（跨 session）
 
 - AH 每次 session 開始執行 `session-startup` skill
-- AH 每次 session 結束前在 `.ai/session/` 寫入交接筆記（下次讀後刪）
+- AH 每次 session 結束前在 `.claude/session/` 寫入交接筆記（下次讀後刪）
 - 指揮家偏好、跨 session 原則 → 寫入 `MEMORY.md`（由 AH 判斷是否該寫）
 - 過往教訓 → 寫入 `.ai/lessons/<issue>.md`，不堆在本檔
