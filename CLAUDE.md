@@ -1,55 +1,39 @@
 # Erythos — 3D Editor
 
+## 專案定位
+
+TypeScript + SolidJS + Three.js 打造的 3D 編輯器。Dockview 面板系統，Vite 建置。
+
+## 技術約束
+
+- TypeScript strict mode
+- SolidJS（`createSignal`、`createEffect`、`onMount`、`onCleanup`）
+- Three.js
+- Dockview
+- Vite
+- 樣式：inline style + CSS 變數 `var(--bg-*)`、`var(--text-*)`
+- UI 文字預設英文（未導入 i18n）
+- 型別檢查用 `npm run build`，**不用** `npx tsc`（專案未裝 typescript CLI）
+
 ## 環境需求
 
 - Node.js
-- GitHub CLI (`gh`) — 用於開 issue、建 PR。安裝：`winget install GitHub.cli`，首次需 `gh auth login`
-- `gh` 安裝後需重啟 shell 才能找到，路徑：`/c/Program Files/GitHub CLI`
+- GitHub CLI (`gh`)：`winget install GitHub.cli`，首次 `gh auth login`
+- `gh` 安裝後重啟 shell 才能生效，路徑 `/c/Program Files/GitHub CLI`
 
-## 專案慣例
+---
 
-- 語言：TypeScript（strict mode）
-- UI 框架：SolidJS（用 createSignal, createEffect, onMount, onCleanup）
-- 3D 引擎：Three.js
-- 面板佈局：Dockview
-- 建置工具：Vite
-- 樣式：inline style + CSS 變數 var(--bg-*), var(--text-*)
-- UI 文字預設使用英文（目前未導入本地化機制，所有使用者可見文字以英文撰寫）
-- 型別檢查用 `npm run build`，不要用 `npx tsc`（專案未直接安裝 typescript CLI）
+## 架構契約
 
-## 架構原則
+三條底線，違反即 rollback：
 
-- **Command 模式**：所有場景變更必須透過 Command + editor.execute()，確保 undo/redo
-- **事件驅動**：Editor 發事件 → Bridge 更新 signal → 面板自動重渲染
-- **事件順序**：objectAdded → sceneGraphChanged（不能反過來）
-- **模組邊界**：core/ 不依賴 UI，panels/ 透過 bridge 取得狀態，viewport/ 不處理檔案 I/O
+1. **Command 模式**：所有場景變更經 `Command + editor.execute()`，以保 undo/redo
+2. **事件驅動 + 事件順序**：Editor 發事件 → Bridge 更新 signal → 面板自動重渲染；順序 `objectAdded → sceneGraphChanged`，不得反向
+3. **模組邊界**：core/ 不依賴 UI；panels/ 只透過 bridge 取狀態；viewport/ 不處理檔案 I/O
 
-## 協作角色與流程
+## 模組清單
 
-### 角色分工
-
-| 角色 | 代號 | 模型 | 職責 | 規範 |
-|------|------|------|------|------|
-| 指揮家（使用者） | — | — | 提出意圖與方向，做最終決策 | — |
-| 主腦（主控 session） | AH | Opus | 理解全貌、拆 issue、建 worktree、dispatch agent、執行 merge | — |
-| 顧問 | AA | Opus | 承擔昂貴探索、減少 AH context 消耗、戰略審查（非每次必用） | — |
-| Explorer | EX | Sonnet | 按需探勘前置知識，寫入 `.ai/module-cache/<module>.md`（DB） | [.ai/roles/explorer.md](.ai/roles/explorer.md) |
-| Mock-Preview | MP | Sonnet（可升 Opus） | UI 腦爆階段純視覺化工人，產出 HTML mockup 供指揮家挑方案 | [.ai/roles/mock-preview.md](.ai/roles/mock-preview.md) |
-| Design-Visual | DV | Sonnet | 讀截圖 + theme.css 產出中文視覺美感問題清單（不碰 Playwright、不讀 src、不給修法建議） | [.ai/roles/design-visual.md](.ai/roles/design-visual.md) |
-| Tasker | AT | Sonnet | 將 issue 轉化為模組 CLAUDE.md 當前任務區塊 | [.ai/roles/tasker.md](.ai/roles/tasker.md) |
-| 開發 agent | AD | Sonnet | 模組總執行長：在指定 worktree 實作功能、commit + push + 開 PR（同 worktree 依序處理多檔） | [.ai/roles/developer.md](.ai/roles/developer.md) |
-| QC agent | QC | Sonnet | 審查 PR diff，在 PR 留 QC PASS / QC FAIL comment | [.ai/roles/pr-qc.md](.ai/roles/pr-qc.md) |
-| Merge 操作 | PM | Sonnet | QC PASS 後執行完整 merge 收尾流程 | [.ai/roles/pr-merge.md](.ai/roles/pr-merge.md) |
-
-> **AA 用途**：需要大量探索才能確定方向時由 AH 主動 spawn，目的是把昂貴分析外包給 AA，不消耗 AH context。AD 遇到問題可自行呼叫內建 `advisor()` 升級，與 AA 用途不同。
->
-> **EX 用途**：AH / AT 遇到「跨模組 API 不清」、「未知 component 形狀」、「既有 util 盤點」時，AH 主動 spawn EX 按需探勘並寫入 DB。EX 是 **pull** 模式（有人問才產，產了就有用），不在 PR merge 後盲推。其他角色**預設信任 DB**。
->
-> **並行工作**：多檔改動預設由單一 AD 依序處理（同 worktree 多檔）。真正需要並行時，AH 直接派多個並行 AD（各自獨立 worktree / branch / PR）。無 subAD 層（Claude Code 1 層 spawn 限制）。
-
-### 開發模組清單
-
-每個模組有獨立的 CLAUDE.md，agent 名稱 = 模組名稱。
+agent 名稱 = 模組名稱。每個模組有獨立 CLAUDE.md。
 
 | 模組 | 路徑 | commit 前綴 |
 |------|------|------------|
@@ -63,222 +47,158 @@
 | environment-panel | src/panels/environment/ | `[environment]` |
 | scripts | scripts/ | `[scripts]` |
 
-### 分支規則
+---
 
-**所有程式碼變更一律走完整流程：issue → 分支 + worktree → 開發 → PR → QC → merge。**
-不論改動大小，不得直接在 master 上修改程式碼。唯一例外是 merge 後的收尾 commit（清理 CLAUDE.md、build 驗證等非程式碼改動）。
+## 協作模型
 
-一個 issue 對應一條分支、一個 PR。不混搭多個 issue 到同一分支。
+### 角色配置
 
-分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
+| 代號 | 角色 | model | effort | 職責 | skill |
+|------|------|-------|--------|------|-------|
+| — | 指揮家 | — | — | 提意圖、做最終決策 | — |
+| AH | 主腦 | Opus 4.7 | xhigh | 理解全貌、拆 issue、路由決策、處理上報 | 主對話 |
+| AA | 顧問 | Opus 4.7 | max | 昂貴探索、戰略審查 | `roles/advisor` |
+| EX | Explorer | Sonnet 4.6 | high | 探勘模組、寫 DB | `roles/explorer` |
+| MP | Mock-Preview | Sonnet 4.6 | medium | UI 方案視覺化（產 HTML mockup） | `roles/mock-preview` |
+| DV | Design-Visual | Sonnet 4.6 | medium | 讀截圖 + theme.css 產美感問題清單 | `roles/design-visual` |
+| AT | Tasker | Sonnet 4.6 | medium | issue → 模組 CLAUDE.md 當前任務 | `roles/tasker` |
+| AD | Developer | Sonnet 4.6 | medium | 在 worktree 實作 + PR | `roles/developer` |
+| QC | QC | Sonnet 4.6 | high | 審 PR diff，留 `QC PASS` / `QC FAIL` | `roles/pr-qc` |
+| PM | Merger | Sonnet 4.6 | low | merge 後機械收尾 | `roles/pr-merge` |
 
-### 模組 CLAUDE.md 編寫原則
+### AH 的職責（正向定義）
 
-模組 CLAUDE.md 只放**範圍限制、任務描述、慣例**。「當前任務」區塊須**完整自包含**（含精確修法、程式碼片段、commit 格式、PR 開法），AD 讀完即可開工，不需查其他文件。
+- **理解全貌**：跨模組變更的介面契約
+- **決策與路由**：選 skill、選時機、選並行度
+- **處理上報**：QC FAIL、DB 缺口、衝突、跨模組 insight
+- **人機介面**：與指揮家對話、確認意圖
 
-主腦準備 worktree 時在「當前任務」寫入任務描述；QC 退回時在「待修項」寫入修正項。兩者不混用。
+AH 不承擔機械工作（讀大檔、跑 merge、寫任務描述、整模組探勘），由對應 skill 處理。若 AH 發現自己在做機械工作，通常意味著少叫了某個 skill。
 
-### Issue 依賴標注
+### 觸發決策表
 
-Issue body 可加以下行表達依賴關係：
-- `Depends-on: #N` — 本 issue 需在 #N 合併後才能開發 / 合併
-- `Blocks: #N` — 本 issue 合併前擋住 #N 的進度
+| 情境 | 觸發 |
+|------|------|
+| 跨模組 API 不清、未知 component 形狀、既有 util 盤點 | EX（先查 DB，缺 / 舊才 spawn） |
+| UI feat/fix/refactor/style（非豁免項） | 問指揮家是否要 MP 畫草案 |
+| 整體盤點某 panel 或全站視覺 | 準備截圖 → DV |
+| issue → 任務描述（非 Fast path） | AT |
+| 任務描述完成、待實作 | AD |
+| PR 開啟、未審 | QC |
+| PR 有 `QC PASS` | `pr-merge` skill |
+| 需要大量探索才能定方向 | AA |
 
-Session startup 時 AH 掃開放 issue 的 body 建依賴圖，優先啟動無依賴者；若選到被封鎖者，先處理其依賴。
+**MP / DV 差別**：MP 是設計階段畫草案（open-ended），DV 是實作後讀截圖評美感找落差（close-ended，不做 code review）。
 
-### Pre-flight 探勘（可選，跨模組變更建議）
+**Fast path 豁免項**（可跳 AT，AH 自寫任務）：純文字改動、單一 CSS 屬性微調、純邏輯 bug 無視覺變化。不符豁免則**不得**強用 Fast path。
 
-當 AH 懷疑變更會牽動其他模組的 API 或型別（例如調用 components / core 函式，但不確定介面），**開 issue 前**先查前置知識 DB：
+### 並行規則
 
-- 使用時機：跨模組 API 依賴、未知 component 的 props 形狀、既有 util / pattern 不明
-- 起手順序：
-  1. 查 `.ai/module-cache/<module>.md` 有無相關條目（types / pattern / 地雷）
-  2. DB 不存在或資訊不足 → spawn EX 按需探勘並寫入 DB
-  3. **不要**自行整模組讀 src — 把探勘交給 EX，AH 只拿精要結論
-- **EX 完成後 AH commit DB**：`git add .ai/module-cache/<module>.md && git commit -m "chore: EX <module> DB refresh"`（PM 不碰 DB，AH 在 pre-flight 收尾順手提交）
-- 目的：避免 AT / AD 跑到一半才發現要先改其他模組，省整輪重來（參考 #310 教訓：AT-B 跑完才發現 ConfirmDialog 不支援英文 → 重開 #311 前置作業）
-
-### 流水線流程
-
-**UI 類變更腦爆階段（選擇性，在開 issue 前）：**
-
-若變更涉及 UI feat/fix/refactor/style，AH 預設主動詢問指揮家「要不要 MP 先畫？」。豁免項（不需 MP）：純文字改動、單一 CSS 屬性微調、純邏輯 bug 無視覺變化。
-
-指揮家同意 → AH 與指揮家談出 N 個方案（至少 2 個）→ spawn MP（背景）→ 產出 `.ai/previews/<topic>.html` → 指揮家挑定方案 → AH 在 issue body 加 `Mockup: .ai/previews/<topic>.html` 行 → 進入正常流程。
-
-MP 是純視覺化工人，不提建議、不做決策。前提是方案已經談清楚，不可把模糊需求丟給 MP 自行詮釋。
-
-**UI 視覺審計階段（選擇性，針對活網頁盤點）：**
-
-當指揮家想整體盤點某個 panel 或全站的視覺品質時：
-1. AH 起 dev server 並準備截圖（親自 Playwright MCP 或用 seed script）→ 存 `.ai/audits/<panel>/`
-2. spawn DV（背景）→ 讀圖 + 對照 `theme.css` → 產出 `.ai/audits/<panel>.md` 美感問題清單（中文、不含修法建議）
-3. AH 與指揮家挑要修的項 → 依項開 issue 並行執行
-
-DV 與 MP 的差別：MP 是設計階段**畫草案**，DV 是實作後**讀截圖評美感**找落差。DV **不做 code review**（token 缺失 / 硬編碼屬於 DE 職責，DV 只看視覺）。
-
-**Bug / 小功能（單一模組）：**
-1. AH 調查後開 GitHub issue（帶 label）
-2. AH 建 worktree + spawn AT（背景）撰寫任務描述
-3. AH 審閱 AT 產出 → 寫入模組 CLAUDE.md 當前任務
-4. AH spawn AD（背景）→ 實作 → commit + push → 開 PR
-5. AH spawn QC（背景）→ 審查 PR → 留 QC PASS / QC FAIL comment
-6. QC PASS → AH 直接 merge + cleanup
-7. QC FAIL → AH 更新 CLAUDE.md 待修項 → 回到步驟 4
-
-**Fast path（豁免級變更直通車道）：**
-
-當變更屬於以下任一豁免項時，AH 可跳過 AT，**自己**寫任務描述到模組 CLAUDE.md 並 spawn AD：
-- 純文字改動（copy edit、typo、翻譯）
-- 單一 CSS 屬性微調（單一顏色 / 間距 / 尺寸）
-- 純邏輯 bug 無視覺變化
-
-Fast path 流程：
-1. AH 開 issue + 建 worktree
-2. **AH 自寫任務**到 worktree 的模組 CLAUDE.md「當前任務」（格式同 AT：含 before/after、負面指令、commit、PR 指令）
-3. AH spawn AD → PR → QC → merge（4 步起同標準流程）
-
-Fast path 省 AT 整輪（~3 分鐘 + 一次審閱）。若變更不符豁免，**不得強用 Fast path**，走完整流程。
-
-**大功能（跨模組）：**
-1. AH 設計介面契約，更新根 CLAUDE.md
-2. 拆分支（每模組一條），建 worktree，spawn AT 撰寫各模組任務
-3. AH 審閱 → 寫入各模組 CLAUDE.md
-4. AH 同時 spawn 多個 AD（各 worktree 並行，背景）
-5. 各 AD 開 PR 後，AH spawn QC（背景）逐 PR 審查
-6. 依合併順序（有依賴的先合）逐一 merge
+- 多檔改動預設由單一 AD 依序處理（同 worktree 多檔）
+- 真正需要並行時，AH 直接派多個 AD（各自獨立 worktree / branch / PR）
+- Claude Code 1 層 spawn 限制，無 subAD 層
 
 ### Subagent 執行原則
 
-- **AH spawn 的 subagent 用 `run_in_background: true`**，AH 不阻塞等待
-- AH 在等待期間可與指揮家對話、處理其他事務
-- Agent 完成後 AH 會收到通知，再接續下一步
-- **Dispatch prompt 必須指向角色規範**：
-  - EX → 讀取 `.ai/roles/explorer.md`
-  - MP → 讀取 `.ai/roles/mock-preview.md`
-  - DV → 讀取 `.ai/roles/design-visual.md`
-  - AT → 讀取 `.ai/roles/tasker.md`
-  - AD → 讀取 `.ai/roles/developer.md` + 模組 CLAUDE.md
-  - QC → 讀取 `.ai/roles/pr-qc.md`
-  - PM → 讀取 `.ai/roles/pr-merge.md`
-- **Agent 不 spawn 下層 Agent**（Claude Code 1 層 spawn 限制）。AD 不 spawn subAD；並行由 AH 直接派多個 AD 達成（各自獨立 worktree）。
-- EX / AT / AD / QC / PM / MP / DV 均預設 Sonnet 模型，節省 token。MP 在複雜任務 AH 可於 dispatch 升 Opus。
-- **Agent 工具呼叫必須明確指定 `model` 參數**（`'sonnet'` 或 `'opus'`）。不指定會走 general-purpose 預設 Opus，等於默默升級，token 成本 ×4。EX / AT / AD / QC / PM / MP / DV 一律明寫 `model: 'sonnet'`。
+- 所有 subagent 用 `run_in_background: true`，AH 不阻塞
+- model 與 effort 由 skill frontmatter 決定，AH dispatch 時**不手動指定**（避免遺漏導致 general-purpose 預設偷跑 Opus）
+- skill 缺失 / 無法載入 → 停下來問指揮家，不自行 fallback
 
-### 前置知識 DB 讀取紀律
+---
 
-所有需要理解模組 src 的角色（AT / AD / QC / AH），**起手一律先查 DB**：
+## 開發流程契約
+
+### 總則
+
+**所有程式碼變更走完整流程**：issue → 分支 + worktree → 開發 → PR → QC → merge。
+
+不論改動大小，不得直接在 master 上修改程式碼。唯一例外是 merge 後的收尾 commit（清理 CLAUDE.md、build 驗證等非程式碼改動）。
+
+一個 issue 對應一條分支、一個 PR。不混搭多個 issue。
+
+分支命名：`fix/<簡述>` 或 `feat/<簡述>`。
+
+### Issue 依賴標注
+
+Issue body 可加：
+
+- `Depends-on: #N` — 本 issue 需在 #N 合併後才能開發 / 合併
+- `Blocks: #N` — 本 issue 合併前擋住 #N
+
+AH 啟動時掃 open issue body 建依賴圖，優先推進無依賴者。
+
+### 模組 CLAUDE.md 編寫原則
+
+模組 CLAUDE.md 只放**範圍限制、任務描述、慣例**。
+
+「當前任務」區塊須**完整自包含**（含精確修法、程式碼片段、commit 格式、PR 開法），AD 讀完即可開工，不需查其他文件。
+
+「當前任務」由 AH 或 AT 寫入；「待修項」由 QC FAIL 時 AH 寫入。兩者不混用。
+
+### PR 通過規則
+
+所有 agent 共用同一 GitHub 帳號，無法 `--approve`。以 PR comment 中的 `QC PASS` / `QC FAIL` 標記代替。
+
+---
+
+## 前置知識 DB（`.ai/module-cache/`）
+
+**DB 是 pull 模式產物**：EX 按需探勘。PR merge 後**不自動**刷新。
+
+### 讀取契約
+
+需理解模組 src 的角色（AT / AD / QC / AH）起手：
+
+1. 查 `.ai/module-cache/<module>.md`
+2. 存在 → 讀速覽；需細節用 `Read` + offset/limit 精準補讀
+3. 不存在或資訊不足 → 上報 AH 考慮 spawn EX；該次任務仍按 src 現況執行
+4. DB 與 src 事實衝突 → 上報 AH 考慮 spawn EX 刷新，**不自行改 DB**
+
+### DB 維護
+
+EX 完成探勘後，AH 手動提交：
 
 ```
-角色收到任務
-  → 查 .ai/module-cache/<module>.md（前置知識 DB）
-    ├─ 存在 → 讀 DB 取速覽（types / patterns / 地雷 / 最近 PR）
-    │         需細節再用 Read + offset/limit 精準補讀
-    └─ 不存在或資訊不足 → 上報 AH 考慮 spawn EX 補 DB
-                            該次任務仍按 src 現況執行（單檔 ≤ 200 行用 offset+limit）
-  → DB 與 src 事實明顯衝突 → 上報 AH 考慮 spawn EX 刷新，不自行改 DB
+git add .ai/module-cache/<module>.md
+git commit -m "chore: EX <module> DB refresh"
 ```
 
-**信任基礎**：EX 對照 src 驗證 + 抽樣 2-3 關鍵 fact 交叉確認（見 [.ai/roles/explorer.md](.ai/roles/explorer.md)）。DB 是 EX 的產物，預設可信。
+PM 不碰 DB。
 
-**DB 是 pull 模式產物**：EX 按需探勘，有人問才產。不在 PR merge 後自動刷新（已廢除舊 RDM push 模式）。DB 條目可能滯後 src，遇到衝突走「上報 AH」路徑；不要因為 DB 可能過時就重讀整模組。
+---
 
-### Merge 流程
+## 非目標（不走此流程的情況）
 
-1. AD 完成實作 → commit + push → 開 PR（`gh pr create`）
-2. QC 在 PR 上留 comment：
-   - 通過：包含 **`QC PASS`** 標記
-   - 不通過：包含 **`QC FAIL`** 標記 + 問題說明 + 開 issue
-3. AH 直接處理結果，無需指揮家轉達：
-   - **QC PASS** → AH 執行 merge + cleanup
-   - **QC FAIL** → AH 更新模組 CLAUDE.md 待修項 → spawn AD 修復 → QC 再次 review
+- **純文件修改**（README、doc）：直接在 master 或分支改，不走 issue / PR
+- **`.ai/session/` 交接筆記、`.ai/module-cache/` DB**：由對應 skill 維護，不走 PR
+- **外部依賴升級**（package.json）：獨立 issue，但不套用 MP / DV
+- **master build 失敗緊急修復**：AH 判斷後可直接 commit，事後補 issue 紀錄
 
-> 所有 agent 共用同一 GitHub 帳號，無法使用 `--approve`，以 PR comment 中的 `QC PASS` / `QC FAIL` 標記代替。
+---
 
-### Merge 後收尾
+## 延伸 skill 清單
 
-QC PASS 後，AH spawn PM（背景）執行機械操作，然後 AH 自行處理需要判斷的部分。
+所有角色規範與重複流程已外部化為 skill。根文件不重複其內容。
 
-**PM 執行（背景）：**
-1. `gh pr merge` → `gh issue close` → `git worktree remove` → `git pull` → 刪分支
-2. 清理模組 CLAUDE.md（清空當前任務/待修項/上報區）
-3. `npm run build` 驗證
-4. commit 收尾改動並 push
+| skill | 用途 | 觸發方式 |
+|-------|------|---------|
+| `session-startup` | AH 每次 session 開始的 pipeline 狀態重建 | AH 自動觸發 |
+| `pr-merge` | QC PASS 後的機械 merge 收尾 | AH 顯式觸發 |
+| `db-lookup` | 前置知識 DB 查詢 + 缺口判斷 | 相關角色起手 |
+| `roles/advisor` | AA 戰略審查 | AH 顯式觸發 |
+| `roles/explorer` | EX 模組探勘 | AH 顯式觸發 |
+| `roles/mock-preview` | MP UI 方案視覺化 | AH 顯式觸發 |
+| `roles/design-visual` | DV 美感問題清單 | AH 顯式觸發 |
+| `roles/tasker` | AT 任務描述撰寫 | AH 顯式觸發 |
+| `roles/developer` | AD 實作 + PR | AH 顯式觸發 |
+| `roles/pr-qc` | QC PR 審查 | AH 顯式觸發 |
+| `roles/pr-merge` | PM merge 後收尾的具體流程 | `pr-merge` skill 內部呼叫 |
 
-PM 不再 trigger DB 刷新（舊 RDM push 模式已廢除）。DB 由 EX 按需更新。
+---
 
-**AH 在 PM 完成後執行：**
-- 審視 QC / AT / AD 在 PR body / comment 中回報的跨模組 insight 或 `DB 缺口` / `DB 過時` 標記，判斷：
-  - 值得修 → `gh issue create` 開 issue
-  - 長期指揮家偏好 / 跨 session 原則 → 寫入 auto-memory（MEMORY.md）
-  - DB 需補或刷新 → spawn EX
-  - 瑣碎 → 忽略
+## 長期原則（跨 session）
 
-### 文件維護流程
-
-- AH 更新文件後 → 自行校閱一致性 → 將 master merge 進所有 active feat 分支
-- 指揮家與成員溝通不順時 → AA 診斷問題根因
-
-### 開發成員 SOP
-所有開發 agent 遵守 [.ai/roles/developer.md](.ai/roles/developer.md)。
-
-## AH Session Startup SOP
-
-**每次 session 開始（含 /clear 後）必須執行：**
-
-### 0. 讀取上一個 session 的交接筆記
-```bash
-ls .ai/session/
-```
-如果有檔案，逐一讀取，了解上次做了什麼、遇到什麼問題、待辦是什麼。讀完後刪除（保證上下文新鮮）。
-
-### 1. 重建 pipeline 狀態
-```bash
-git worktree list          # 哪些 worktree 活著（= 哪些 issue 在開發中）
-gh pr list                 # 哪些 PR 待 QC 或待 merge
-gh issue list              # 哪些 issue 開著
-git log origin/master..master --oneline   # 本地 master 有無未 push 的 commit
-```
-
-對每個 active worktree，讀其模組 CLAUDE.md（當前任務 + 待修項）。
-
-**解析依賴圖**：掃所有 open issue 的 body，找 `Depends-on:` / `Blocks:` 行，建圖。優先推進**無依賴**的 issue；被封鎖的 issue 先處理其依賴。
-
-**若 `git log origin/master..master` 非空**：**先 push master** 再建任何新 worktree，避免 unpushed commits 混入 PR diff（參考 #304 教訓）。
-
-重建 pipeline 狀態：
-
-| 狀態 | 判斷條件 | 下一步 |
-|------|---------|--------|
-| 開發中 | worktree 存在，無 PR | spawn AD |
-| 等 QC | PR open，無 QC comment | spawn QC |
-| 等 merge | PR 有 QC PASS | merge + cleanup |
-| 等修復 | PR 有 QC FAIL，CLAUDE.md 有待修項 | spawn AD fix |
-| 等依賴 | issue 有 `Depends-on:` 指向未合 issue | 先處理依賴 |
-| 閒置 | 無 worktree，無 open PR | 等指揮家指示 |
-
-重建完畢後向指揮家報告現況，或直接繼續推進。
-
-### 2. AH Context 保護
-
-AH 是最昂貴的角色（Opus），context 必須留給決策和對話：
-
-- **DB-first**：要理解模組現況時，**先查 `.ai/module-cache/<module>.md`**，不要直接讀 src。DB 是 EX 驗證過的速覽，預設可信（見上方「前置知識 DB 讀取紀律」）
-- **不自己跨模組探勘**：資訊不足直接 spawn EX，不要自己 Grep 全庫 + 讀多檔 src
-- **不自己讀大檔案**：超過 100 行的 src 檔案交給 EX / AT / AA 讀，AH 只看摘要
-- **不自己寫 CLAUDE.md 任務**：交給 AT，AH 只審閱和修正（**例外**：Fast path 下 AH 自寫豁免級任務）
-- **不自己跑 merge 收尾**：交給 PM，AH 只處理 PM 回報中需判斷的上報項
-- **不自己做完整 code review**：交給 QC，AH 只看結論
-- **git log / git diff 限制**：只看最近 5 條 commit 或 diff stat，不讀完整歷史
-
-**讀取技巧**：
-- 審閱 AT 產出的模組 CLAUDE.md 時，先 `grep -n "^##"` 抓 section 邊界，再用 `Read` 的 `offset + limit` 只讀「當前任務」區塊（~30–50 行），跳過範圍限制 / SOP / 慣例樣板。省 ~60% context
-- AT 回報摘要若已明確（含行號、技術決策、無意外標記），AH 可**直接派 AD 不重讀 CLAUDE.md**。信任摘要，省整檔 Read
-- 只有 AT 摘要含「意外」、「上報」或不確定時，才讀完整 CLAUDE.md
-
-### 3. Session 結束前
-在 `.ai/session/` 寫入交接筆記，供下一個 session 讀取：
-- 本次完成了什麼（issue / PR 清單）
-- 遇到的問題和解決方式
-- 未完成的待辦
-- 觀察到的指揮家偏好
+- AH 每次 session 開始執行 `session-startup` skill
+- AH 每次 session 結束前在 `.ai/session/` 寫入交接筆記（下次讀後刪）
+- 指揮家偏好、跨 session 原則 → 寫入 `MEMORY.md`（由 AH 判斷是否該寫）
+- 過往教訓 → 寫入 `.ai/lessons/<issue>.md`，不堆在本檔
