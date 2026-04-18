@@ -13,7 +13,8 @@
     "postinstall": "git config core.hooksPath .githooks",
     "audit:scene-tree": "node scripts/audit/scene-tree.mjs",
     "audit:environment": "node scripts/audit/environment.mjs",
-    "audit:properties": "node scripts/audit/properties.mjs"
+    "audit:properties": "node scripts/audit/properties.mjs",
+    "audit:settings": "node scripts/audit/settings.mjs"
   },
   "dependencies": {
     "dockview-core": "^5.1.0",
