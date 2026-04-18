@@ -143,7 +143,7 @@ git status -s
 | 檔案模式 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
-| `.ai/module-cache/*.md`（step 9 RDM 寫的） | 可 commit |
+| `.ai/module-cache/*.md`（step 9 PM 自寫或 RDM 寫的） | 可 commit |
 | `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
 | `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
@@ -179,7 +179,7 @@ git push
 - 可以執行 gh 操作（merge PR、close issue）
 - 可以修改模組 CLAUDE.md（僅清空任務區塊）
 - 可以 spawn RDM subagent（step 9，限 RDM；不得 spawn AT / AD / QC / MP / DV 等其他角色）
-- **不得**手寫或修改 `.ai/module-cache/*.md` 內容（由 RDM 寫、PM 只負責 commit）
+- **可以**修改 `.ai/module-cache/*.md`（step 9 小模組 PM 自做時依 step 9 規範寫入；大模組由 spawn 的 RDM 寫）
 - **不得**修改 `.ai/knowledge.md`（由 AH 處理）
 - **不得**刪除 `.ai/memos/` 下的檔案（由 AH 處理）
 - **不得**修改 src/ 下的程式碼

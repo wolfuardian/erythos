@@ -4,6 +4,10 @@
 
 1. `npm install`（worktree 無 node_modules，不裝會 build 失敗）
 2. 讀自己模組的 CLAUDE.md，確認任務內容
+3. **Cache-first**：若任務需要理解模組既有結構 / pattern / 既有 util，先查 `.ai/module-cache/<module>.md`
+   - 存在 → 讀 cache 取速覽，再依任務需要用 Read + offset/limit 精準補讀 src 細節
+   - 不存在 → 正常讀 src（每檔 ≤ 200 行用 offset+limit）
+   - cache 與 src 事實明顯衝突 → 在備忘錄 `.ai/memos/#N-cache-drift.md` 記一筆上報 AH（由 AH trigger RDM 刷新），該次實作照 src 現況進行，不自行改 cache
 
 ## 開發
 

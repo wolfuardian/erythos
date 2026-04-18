@@ -39,7 +39,9 @@ gh issue list --state open
 ```bash
 gh pr diff <PR-number>
 ```
-**Context 保護**：若 diff 超過 300 行，先看統計（`gh pr diff <N> | head -50`），再逐檔重點讀取改動區段。不要一次讀完巨型 diff。需要讀多個檔案時，可 spawn 多個 Reader（RD）subagent 並行讀取（參考 `.ai/roles/reader.md`）。
+**Context 保護**：若 diff 超過 300 行，先看統計（`gh pr diff <N> | head -50`），再逐檔重點讀取改動區段。不要一次讀完巨型 diff。
+
+**需要模組上下文時先查 cache**：若需要理解改動檔所在模組的 types / pattern / 既有慣例，先查 `.ai/module-cache/<module>.md`（RDM 維護的速覽，預設可信），不要直接讀模組全檔 src。cache 不存在或與 src 明顯衝突才用 Read + offset/limit 精準補讀；cache 衝突時在 QC 回報標「**cache 過時**」上報 AH。
 
 逐檔檢查：
 - 是否只改了該分支被允許改的檔案（對照根 CLAUDE.md 分支策略表）

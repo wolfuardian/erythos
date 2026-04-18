@@ -14,6 +14,15 @@
 2. **模組路徑**（例如 `src/core/`、`src/app/`）
 3. **需要讀的檔案清單**（主腦會列出，或說「自行探索」）
 
+## 起手流程（cache-first）
+
+**必做第一步**：先查 `.ai/module-cache/<module>.md`
+- 存在 → 讀 cache 取速覽（types / pattern / 已知地雷 / 最近 PR），再依任務需要用 Read + offset/limit 精準補讀 src 細節
+- 不存在 → 正常讀 src（每檔 ≤ 200 行用 offset+limit，整檔讀禁止）
+- cache 有但與 src 事實明顯衝突 → 在回報裡標「**cache 過時**」上報 AH；該次任務照 src 現況寫，不要自行改 cache（cache 由 RDM 維護）
+
+**不要**因為不信任 cache 就重讀整模組 src。Cache 是 RDM 對照 src 驗證過的成品（見 `.ai/roles/reader-manager.md` 驗證準則），預設可信。
+
 ## 輸出格式
 
 回傳一段完整的「當前任務」區塊內容，格式如下（不含 `## 當前任務` 標題本身）：
