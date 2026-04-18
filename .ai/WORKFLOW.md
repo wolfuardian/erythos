@@ -900,7 +900,7 @@ Panel 使用情境：<1-2 句描述>
 ├── .ai/
 │   ├── WORKFLOW.md          # 本文件（流程 + 角色 reference）
 │   ├── roles/               # 完整角色規範
-│   │   ├── advisor.md       # AA
+│   │   ├── consultant.md    # AA（原 advisor.md，重命名避免與 Claude 內建 advisor() 衝突）
 │   │   ├── explorer.md      # EX
 │   │   ├── mock-preview.md  # MP
 │   │   ├── design-visual.md # DV
