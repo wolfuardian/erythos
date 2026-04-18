@@ -90,6 +90,9 @@ async function main() {
   // ── Round 2：注入 fixture → reload ────────────────────────────────────────
   await injectFixtures(page, FIXTURE_ASSETS);
   await page.reload({ waitUntil: 'networkidle' });
+  // editor.init() 是 async（IndexedDB read + leafStoreChanged emit），
+  // networkidle 不保證 init 完成；額外等待讓 signal propagation 完成
+  await page.waitForTimeout(500);
 
   await page.locator('.dv-default-tab-content', { hasText: 'Leaves' }).first().click();
   await page.waitForTimeout(300);
@@ -97,7 +100,7 @@ async function main() {
   // overview: 有 2 個 item，無選中
   try {
     const panel = page.locator('.dv-content-container').filter({ hasText: 'Leaves (2)' });
-    await panel.waitFor({ timeout: 3000 });
+    await panel.waitFor({ timeout: 5000 });
 
     await panel.screenshot({ path: resolve(OUT_DIR, 'overview.png'), type: 'png' });
 
