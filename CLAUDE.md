@@ -194,7 +194,8 @@ QC PASS 後，AH spawn PM（背景）執行機械操作，然後 AH 自行處理
 1. `gh pr merge` → `gh issue close` → `git worktree remove` → `git pull` → 刪分支
 2. 清理模組 CLAUDE.md（清空當前任務/待修項/上報區）
 3. `npm run build` 驗證
-4. commit 收尾改動並 push
+4. Trigger RDM 刷新涉及模組的 `.ai/module-cache/<module>.md`（依 PR file 列表 map 模組 → 並行 spawn RDM；失敗不重試不 block）
+5. commit 收尾改動並 push（含 RDM 寫的 cache）
 
 **AH 在 PM 完成後執行：**
 5. 拜讀 `.ai/memos/` 目錄：有價值 → 歸檔至 `.ai/knowledge.md`；瑣碎 → 刪除
