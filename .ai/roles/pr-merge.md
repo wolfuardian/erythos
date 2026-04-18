@@ -20,6 +20,10 @@
 gh pr merge <PR> --merge
 ```
 
+**衝突處理**：若 `gh pr merge` 失敗（CONFLICTING / DIRTY）：**停下回報 AH**。
+
+**禁止**自行 `git rebase` + `git push --force` 解衝突 — force-push 是破壞性操作，PM 未授權執行（#380 教訓）。AH 用 `git merge origin/master` 處理後通知 PM 重跑。
+
 ### 2. 關閉 Issue
 ```bash
 gh issue close <N>
@@ -67,7 +71,7 @@ npm run build
 ```
 如果失敗，不要嘗試修復，在輸出中報告錯誤。
 
-### 9. Trigger RDM 更新模組 cache
+### 9. 更新模組 cache（PM 自做或委 RDM）
 
 **目的**：PR merge 後第一時間刷新對應模組的 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC 可信任 cache 不重讀整個模組。
 
@@ -91,27 +95,40 @@ gh pr view <PR> --json files --jq '.files[].path'
 | `src/panels/environment/` | `environment-panel` |
 | `scripts/` | `scripts` |
 
-非 `src/` / `scripts/` 的改動（例如 `.ai/`、根 `CLAUDE.md`、`*.json`）**不 trigger** RDM。
+非 `src/` / `scripts/` 的改動（例如 `.ai/`、根 `CLAUDE.md`、`*.json`）**不 trigger**。
 
 若 PR **完全沒有**涉及上述模組（純 docs / process 改動），跳過整個 step 9，繼續 step 10。
 
-**9c. 判定每個涉及模組的 mode**：
+**9c. 判定每個涉及模組的 mode + 規模**：
 
 ```bash
 test -f .ai/module-cache/<module>.md && echo update || echo create
+ls src/<module-path>/ | wc -l    # 檔案數
+find src/<module-path>/ -type f -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' | xargs wc -l 2>/dev/null | tail -1   # 總行數
 ```
 
-**9d. 並行 spawn RDM**（每模組一個，`model: 'sonnet'`）：
+**9d. 依模組規模選策略**：
 
-dispatch prompt 必須包含：
-- 模組名稱
-- mode（`create` 或 `update`）
-- 觸發原因，格式：`PR #<N> merged，改動：<完整路徑列表>`
-- 提醒「依 `.ai/roles/reader-manager.md` 規範執行；spawn RD 大軍並行讀，不親自整檔讀 src」
+| 規模（兩條件取較嚴） | 策略 |
+|---------------------|------|
+| 小模組（≤ 8 檔 **且** < 800 行） | **PM 直接做**（讀現 cache + 自己讀 src + 抽樣驗證 + 更新 cache） |
+| 大模組（任一條件超標） | **Spawn RDM subagent**（避免 PM context 爆，依 reader-manager.md 規範） |
 
-等所有 RDM 回報完才進 step 10。
+**PM 自做時的步驟**（小模組）：
+1. 讀 `.ai/module-cache/<module>.md` 現檔
+2. 自己讀 src/ 下檔案（每檔 ≤ 200 行用 offset+limit）
+3. 比對「檔案速覽 / pattern / 已知地雷 / 最近 PR」是否需更新
+4. 抽樣 2-3 個 fact 驗證
+5. 寫回 cache（≤ 80 行）
 
-**9e. RDM 失敗處理**：**不重試、不 block**。在最終回報加一行 `RDM <module> 失敗：<簡因>`，AH 後續可手動補 spawn。Cache 過時不致命（其他角色仍可 fallback 直接 spawn RD）。
+**PM 委 RDM 時的 dispatch**（大模組）：
+- `model: 'sonnet'`、`run_in_background: false`
+- prompt 含模組名 / mode / 觸發原因（PR #N merged，改動：<完整路徑列表>）
+- 提醒「依 reader-manager.md v2b — 大模組強制 spawn RD 大軍」
+
+**9e. 失敗處理**：**不重試、不 block**。回報 `cache <module> 失敗：<簡因>`，AH 後續手動補。Cache 過時不致命。
+
+**設計理由**：v2b 鬆綁後，小模組 RDM 也是自己讀 — PM 直接做省一層 spawn baseline + 避免 nested timeout（PM #379 教訓 → PM #381/#382 自做 2-3 分鐘穩定）。
 
 ### 10. Commit + Push（含 in-progress docs 防呆）
 
