@@ -71,66 +71,7 @@ npm run build
 ```
 如果失敗，不要嘗試修復，在輸出中報告錯誤。
 
-### 9. 更新模組 cache（PM 自做或委 RDM）
-
-**目的**：PR merge 後第一時間刷新對應模組的 `.ai/module-cache/<module>.md`，讓後續 AT / AD / QC 可信任 cache 不重讀整個模組。
-
-**9a. 拿 PR 改動的檔案列表**：
-
-```bash
-gh pr view <PR> --json files --jq '.files[].path'
-```
-
-**9b. 對照路徑表 map 出涉及的模組**（去重；非 `src/` 路徑不 trigger）：
-
-| 路徑前綴 | 模組名 |
-|---------|--------|
-| `src/core/`, `src/utils/` | `core` |
-| `src/viewport/`, `src/panels/viewport/` | `viewport` |
-| `src/components/` | `components` |
-| `src/app/` | `app` |
-| `src/panels/scene-tree/` | `scene-tree` |
-| `src/panels/properties/` | `properties` |
-| `src/panels/leaf/` | `leaf-panel` |
-| `src/panels/environment/` | `environment-panel` |
-| `scripts/` | `scripts` |
-
-非 `src/` / `scripts/` 的改動（例如 `.ai/`、根 `CLAUDE.md`、`*.json`）**不 trigger**。
-
-若 PR **完全沒有**涉及上述模組（純 docs / process 改動），跳過整個 step 9，繼續 step 10。
-
-**9c. 判定每個涉及模組的 mode + 規模**：
-
-```bash
-test -f .ai/module-cache/<module>.md && echo update || echo create
-ls src/<module-path>/ | wc -l    # 檔案數
-find src/<module-path>/ -type f -name '*.ts' -o -name '*.tsx' -o -name '*.mjs' | xargs wc -l 2>/dev/null | tail -1   # 總行數
-```
-
-**9d. 依模組規模選策略**：
-
-| 規模（兩條件取較嚴） | 策略 |
-|---------------------|------|
-| 小模組（≤ 8 檔 **且** < 800 行） | **PM 直接做**（讀現 cache + 自己讀 src + 抽樣驗證 + 更新 cache） |
-| 大模組（任一條件超標） | **Spawn RDM subagent**（避免 PM context 爆，依 reader-manager.md 規範） |
-
-**PM 自做時的步驟**（小模組）：
-1. 讀 `.ai/module-cache/<module>.md` 現檔
-2. 自己讀 src/ 下檔案（每檔 ≤ 200 行用 offset+limit）
-3. 比對「檔案速覽 / pattern / 已知地雷 / 最近 PR」是否需更新
-4. 抽樣 2-3 個 fact 驗證
-5. 寫回 cache（≤ 80 行）
-
-**PM 委 RDM 時的 dispatch**（大模組）：
-- `model: 'sonnet'`、`run_in_background: false`
-- prompt 含模組名 / mode / 觸發原因（PR #N merged，改動：<完整路徑列表>）
-- 提醒「依 reader-manager.md v2b — 大模組強制 spawn RD 大軍」
-
-**9e. 失敗處理**：**不重試、不 block**。回報 `cache <module> 失敗：<簡因>`，AH 後續手動補。Cache 過時不致命。
-
-**設計理由**：v2b 鬆綁後，小模組 RDM 也是自己讀 — PM 直接做省一層 spawn baseline + 避免 nested timeout（PM #379 教訓 → PM #381/#382 自做 2-3 分鐘穩定）。
-
-### 10. Commit + Push（含 in-progress docs 防呆）
+### 9. Commit + Push（含 in-progress docs 防呆）
 
 **先看 `git status`**，不要盲用 `git add -A`：
 
@@ -143,14 +84,14 @@ git status -s
 | 檔案模式 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（已由 step 6 清理） | 可 commit |
-| `.ai/module-cache/*.md`（step 9 PM 自寫或 RDM 寫的） | 可 commit |
-| `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | `.ai/memos/` 變動 | 可 commit（AH 之後歸檔/刪除） |
 | `package.json` / `package-lock.json`（pre-commit hook 自動 bump） | 可 commit |
 | `tsconfig.app.tsbuildinfo` | 可 commit（build 產物） |
+| `.ai/previews/*.html` 新增或修改 | ❌ 跳過 + 回報 AH（AH 決定是否追蹤進 git） |
 | **根 `CLAUDE.md`** | ❌ 跳過（AH 可能正在改） |
 | **`.ai/roles/*.md`** | ❌ 跳過（AH 可能正在改） |
 | **`.ai/knowledge.md`** | ❌ 跳過（AH 負責，非 PM） |
+| **`.ai/module-cache/*.md`** | ❌ 跳過（DB 由 EX 維護，PM 不碰） |
 | **`.ai/specs/*`** | ❌ 跳過（AH 在寫 spec） |
 | **`.ai/user/`** | 已 gitignore，不會出現；若出現代表 gitignore 失效，回報 AH |
 | **其他 unstaged src/** | ❌ 跳過 + 回報異常（不該有） |
@@ -169,7 +110,6 @@ git push
 回報以下資訊：
 - merge 是否成功
 - build 是否通過
-- RDM 觸發結果：哪些模組刷新成功 / 失敗（簡因）
 - memos 處理結果（歸檔/刪除了什麼）
 - knowledge 是否有過期條目被移除
 - 有無異常
@@ -178,8 +118,8 @@ git push
 - 可以執行 git 操作（merge、delete branch、commit、push）
 - 可以執行 gh 操作（merge PR、close issue）
 - 可以修改模組 CLAUDE.md（僅清空任務區塊）
-- 可以 spawn RDM subagent（step 9，限 RDM；不得 spawn AT / AD / QC / MP / DV 等其他角色）
-- **可以**修改 `.ai/module-cache/*.md`（step 9 小模組 PM 自做時依 step 9 規範寫入；大模組由 spawn 的 RDM 寫）
+- **不得** spawn 任何 subagent
+- **不得**修改 `.ai/module-cache/*.md`（DB 由 EX 維護，AH 按需 trigger）
 - **不得**修改 `.ai/knowledge.md`（由 AH 處理）
 - **不得**刪除 `.ai/memos/` 下的檔案（由 AH 處理）
 - **不得**修改 src/ 下的程式碼

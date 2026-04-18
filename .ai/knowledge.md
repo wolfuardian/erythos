@@ -108,9 +108,10 @@ interface ConfirmDialogProps {
 ## 專案 workflow 慣例
 
 - Issue body 含 `Depends-on: #N` → 必須等 #N 合併後才能合本 issue
-- Issue body 含 `Mockup: .ai/previews/xxx.html` → PM merge 時刪除該檔
+- Issue body 含 `Mockup: .ai/previews/xxx.html` → mockup 是 design history / 視覺規格 source of truth，**PM 嚴禁刪除**，由 AH 親自判斷是否過時（2026-04-18 修正） ⏳ 永久
 - 豁免級變更（純文字 / 單一 CSS / 純邏輯 bug）可走 Fast path，AH 自寫任務跳過 AT
-- 跨模組 API 依賴不明時，開 issue 前先 spawn RD 掃檔（Pre-flight RD）
+- 跨模組 API / 既有 util / component props 不明時，開 issue 前先查 `.ai/module-cache/<module>.md`（DB）；DB 不存在或資訊不足 → spawn EX 按需探勘並寫入 DB（2026-04-18 改制：舊 Pre-flight RD / push-mode RDM 廢除，改 pull-mode EX） ⏳ 永久
+- AD 面對多個獨立檔案改動時，可 spawn subAD 並行；單檔或邏輯耦合任務仍親自實作 ⏳ 永久
 - Agent 工具呼叫必須明確 `model: 'sonnet'`（或 `'opus'`），不指定會默默升 Opus ⏳ 永久
 
 ## AH 方法論（來源：本 session 2026-04-17 指揮家叮）

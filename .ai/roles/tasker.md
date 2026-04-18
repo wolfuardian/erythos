@@ -14,14 +14,14 @@
 2. **模組路徑**（例如 `src/core/`、`src/app/`）
 3. **需要讀的檔案清單**（主腦會列出，或說「自行探索」）
 
-## 起手流程（cache-first）
+## 起手流程（DB-first）
 
-**必做第一步**：先查 `.ai/module-cache/<module>.md`
-- 存在 → 讀 cache 取速覽（types / pattern / 已知地雷 / 最近 PR），再依任務需要用 Read + offset/limit 精準補讀 src 細節
-- 不存在 → 正常讀 src（每檔 ≤ 200 行用 offset+limit，整檔讀禁止）
-- cache 有但與 src 事實明顯衝突 → 在回報裡標「**cache 過時**」上報 AH；該次任務照 src 現況寫，不要自行改 cache（cache 由 RDM 維護）
+**必做第一步**：先查 `.ai/module-cache/<module>.md`（前置知識 DB）
+- 存在 → 讀 DB 取速覽（types / pattern / 已知地雷 / 最近 PR），再依任務需要用 Read + offset/limit 精準補讀 src 細節
+- 不存在或資訊嚴重不足 → 在回報裡標「**DB 缺口**」上報 AH（AH 決定是否 spawn EX 補 DB）；該次任務仍按 src 現況寫
+- DB 與 src 事實明顯衝突 → 在回報裡標「**DB 過時**」上報 AH；該次任務照 src 現況寫，不要自行改 DB（DB 由 EX 維護）
 
-**不要**因為不信任 cache 就重讀整模組 src。Cache 是 RDM 對照 src 驗證過的成品（見 `.ai/roles/reader-manager.md` 驗證準則），預設可信。
+**不要**因為不信任 DB 就重讀整模組 src。DB 是 EX 對照 src 驗證過的產物，預設可信。
 
 ## 輸出格式
 
@@ -145,7 +145,7 @@ AD 讀完你的輸出即可開工，**不需要查其他文件**。如果 AD 需
 
 如果主腦說「自行探索」，先用 Grep 定位再讀精確區段，不要整檔讀取。
 
-**需要讀多個檔案時**，spawn 多個 Reader（RD）subagent 並行讀取（參考 `.ai/roles/reader.md`），只收摘要。
+**需要探勘大量未知資訊**：在回報裡標「**建議 spawn EX 補 DB**」上報 AH，不要自己 spawn subagent（AT 單層執行）。
 
 ## 你可以做的事
 - 讀取 src/ 檔案（限相關區段，單檔 ≤ 200 行）
