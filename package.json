@@ -1,7 +1,7 @@
 {
   "name": "erythos",
   "private": true,
-  "version": "0.1.100",
+  "version": "0.1.112",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,10 @@
     "audit:scene-tree": "node scripts/audit/scene-tree.mjs",
     "audit:environment": "node scripts/audit/environment.mjs",
     "audit:properties": "node scripts/audit/properties.mjs",
+    "audit:viewport": "node scripts/audit/viewport.mjs",
+    "audit:leaf": "node scripts/audit/leaf.mjs",
+    "audit:project": "node scripts/audit/project.mjs",
+    "audit:settings": "node scripts/audit/settings.mjs",
     "audit:context": "node scripts/audit/context.mjs"
   },
   "dependencies": {
