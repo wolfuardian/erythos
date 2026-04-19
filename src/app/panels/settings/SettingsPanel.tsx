@@ -26,15 +26,21 @@ const SettingsPanel: Component = () => {
         Settings
       </h3>
 
-      <label style={{
-        display: 'flex',
-        'align-items': 'center',
-        gap: 'var(--space-sm)',
-        'margin-top': 'var(--space-md)',
-        color: 'var(--text-secondary)',
-        'font-size': 'var(--font-size-sm)',
-        cursor: 'pointer',
-      }}>
+      <label
+        onMouseEnter={(e) => (e.currentTarget as HTMLLabelElement).style.background = 'var(--bg-hover)'}
+        onMouseLeave={(e) => (e.currentTarget as HTMLLabelElement).style.background = ''}
+        style={{
+          display: 'flex',
+          'align-items': 'center',
+          gap: 'var(--space-sm)',
+          'margin-top': 'var(--space-md)',
+          padding: '4px var(--space-sm)',
+          'border-radius': 'var(--radius-sm)',
+          color: 'var(--text-secondary)',
+          'font-size': 'var(--font-size-sm)',
+          cursor: 'pointer',
+        }}
+      >
         <input
           type="checkbox"
           checked={bridge.confirmBeforeLoad()}

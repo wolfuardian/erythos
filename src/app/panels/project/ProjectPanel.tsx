@@ -511,7 +511,11 @@ const ProjectPanel: Component = () => {
                       style={{
                         display: 'flex', 'align-items': 'center', gap: '4px',
                         padding: '2px 6px',
-                        background: activeFilters().has(t) ? 'var(--bg-section)' : 'transparent',
+                        background: activeFilters().has(t)
+                          ? 'var(--bg-section)'
+                          : hoveredFilter() === t
+                            ? 'var(--bg-hover)'
+                            : 'transparent',
                         border: '1px solid',
                         'border-color': activeFilters().has(t) ? 'var(--border-subtle)' : 'transparent',
                         'border-radius': 'var(--radius-sm)',
