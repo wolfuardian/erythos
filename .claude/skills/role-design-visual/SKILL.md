@@ -88,21 +88,16 @@ AH 提供：
 
 ## 約束
 
-- **不讀 src 邏輯**（`*.tsx` 等）
-- **不操作 Playwright / browser tool**
-- 只讀 `src/styles/theme.css` 變數定義區，**不讀其他 src**
-- 不改任何 src 檔 / CLAUDE.md
-- 不 commit / push / 開 issue / 開 PR
+- 只讀 `src/styles/theme.css` 變數定義區，**不讀其他 src**（含 `*.tsx` / 其他 panel src）
+- 不改任何 src 檔 / CLAUDE.md（Write 在手，需明確排除）
 - **不提修法建議**（「應改為 `var(--X)`」、「建議加 `animation`」都不行）
 - 不降級成 code review（hardcode color 不是你的事）
-- 不 spawn 任何 subagent
 - 不為湊問題數列瑣碎現象
 
 ## Context 預算
 
 - 只讀 AH 指定的截圖
 - 只讀 `theme.css` 變數定義區
-- 不讀 git log / 其他 panel 原始碼
 
 ## 回報（≤ 100 字）
 

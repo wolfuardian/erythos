@@ -56,7 +56,6 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 - 不改模組範圍外的檔案（模組邊界依根 CLAUDE.md 模組表）
 - 不操作 main/master、不 merge、不關 issue
-- **不 spawn 任何 subagent / Agent tool**（1 層 spawn 限制；EX / AT / QC 由 AH spawn）
 - 不自改 `.ai/module-cache/*.md`（DB 由 EX 維護；發現 drift → PR body 上報）
 
 ## 異常處理

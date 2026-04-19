@@ -46,10 +46,8 @@ AH 會判斷是否 spawn `role-explorer` 補 / 刷新。
 
 ## 約束
 
-- **不自改** `.ai/module-cache/*.md`（DB 由 `role-explorer` 維護）
 - 不因疑心重讀整模組 src（效率優先）
 - 衝突走「上報 AH」路徑，不自處理
-- 不 spawn 任何 subagent（此 skill 純查詢 + 上報）
 
 ## 異常處理
 
