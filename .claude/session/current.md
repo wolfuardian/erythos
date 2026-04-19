@@ -1,44 +1,67 @@
-# Session 狀態（2026-04-19 — WORKFLOW 重定位為 AH 操作手冊 + 4.7 原則落地）
+# Session 狀態（2026-04-19 晚 — 多 PR + 流程漏洞修補 + Backlog 清空）
 
-## 本 session 完成（4 commit，已 push）
+## 本 session 完成
 
-- **驗證 `flow-pipeline-state-detect` skill discovery**（前 session 待辦 #1）— 首次實跑 A/B 組 + L2 表正常產出
-- `aa92f4c` **CLAUDE.md/WORKFLOW 4.7 適配瘦身 + 新 skill**：整批 commit 前 session 遺留改動，CLAUDE.md 206→198（7 處調整：升格 Session 開始/結束為頂級段、DB 段 20→6、決策表命名一致化、Subagent 原則瘦身）
-- `03ad10b` **WORKFLOW.md 重定位為 AH 操作手冊**（核心里程碑）：872→259。砍除 R.1-R.8 + §6 + 序言 + 多處重複；保留聚焦 AH 執行細則（§1 核心決策 + §2 Pipeline + §3 紀律 + 附錄 Prompt 欄位）
-- `46fd63a` **4.7 adaptive thinking 原則落地**：CLAUDE.md Subagent 原則 + WORKFLOW §3.2/§3.3 擴充（Model 鎖 / Effort 彈性上調 / 不塞催促語 / 長度上限）
-- `5e6e14b` **4.7 歧義抑制提問原則落地**：CLAUDE.md 人機介面職責擴充 + WORKFLOW §3.3 第 7 條 + 新 §3.5 提問紀律（破壞性後果才問）
-- **MEMORY 新增 2 條**：`feedback_prompt_4_7_style` + `feedback_prompt_ambiguity_default`
+### Pipeline（5 個 PR merge + 多個 chore commit）
 
-## 遇到的問題
+- **`.ai/roles/` 雙源清理** commit `291072b`（13 檔，-940）
+- **#355 viewport drop helper**（PR #394）merge `e45d802`
+- **#330 nested mesh double render**（PR #395）merge `79a76d0` — EX 探勘 + AT 糾正實作位置在 `ResourceCache.ts` 非 `SceneSync.ts`
+- **#396 hover phase 2**（PR #397）merge — viewport-tab + settings + project-hub，per-module 2 commit
+- **#398 viewport bg B3 方案**（PR #399）**失敗關閉** — post-processing alpha 被 FXAA 破壞
+- **#400 viewport bg fast-path A**（PR #401）merge — `0x3f3f3f` → `0x0a0a0a` 單行（指揮家視覺驗收 PASS）
+- **#402 leaf preview bg fast-path**（PR #403）**關閉** — leaf panel 全黑有其他渲染問題，暫緩
 
-- **指揮家評估稿依據「`flow-session-startup` 還存在」假設**：實際該 skill 已於 commit 7bacd41 刪除。AH surface 衝突後指揮家選方向 A（CLAUDE.md 直接寫「Session 開始時」步驟不走中介 skill）
-- **WORKFLOW §3.6 插入位置放錯**：新節放在 §3.5 之前導致編號倒序；後續交換編號修復（§3.5 提問紀律 / §3.6 並行工作模式）
-- **pre-commit hook 自動 bump package.json**（0.1.138→0.141）：常態行為但 commit 噪音；未處理
+### Chore / 流程
 
-## 未完成待辦（按優先序）
+- `edb2a6a` CLAUDE.md 加「回應節奏」段（指揮家手寫，AH commit 純文件變更）
+- `1063060` 還原 `src/panels/viewport/CLAUDE.md` 被 #355 AT 覆寫的範圍限制
+- `a85cf66` 3 skill 增補整檔還原原則（role-tasker/role-developer/role-pr-merge）
+- MEMORY `feedback_claude_md_restore.md` 整合新教訓升級
+- 清理殘留 worktree 目錄（erythos-359 / 363 / 400-viewport-bg）
 
-1. **`.ai/roles/` 衝突處理**：skill 是 canonical（WORKFLOW 序言明言）但 `.ai/roles/` 還有 8 個原版 md；3 選項：刪 / 降級 archive / 不動
-2. **Hover phase 2**：首次試「AH 直派多 AD 並行」；新原則首次實戰（effort 動態上調 + dispatch prompt 埋歧義抑制 + 不塞催促語）
-3. **#330 / #355 技術債**
+### Backlog 清空（指揮家一次性 purge）
+
+- UIUX 推理輔助角色構想 → MEMORY 移除
+- Project Hub 3 項（texture→HDRI / models 拖曳 / 專案 auto-save）→ MEMORY 移除
+- `--bg-hover` 對比度驗收 → 視為已解決
+- Leaf panel 系統性問題 → 未建 memory，指揮家要重新檢視需求
+
+## 遇到的問題（教訓）
+
+1. **AT 兩次糾正上游**（#330 糾正 EX 實作位置 / #396 糾正 issue body 行號）— AT 讀 src 的價值不可跳過
+2. **#355 AT 誤改「範圍限制」區塊 + AD 漏還原 + PM 沒驗證** — 污染 master 跨 2 PR 才顯形。**已在 3 skill 寫入整檔還原原則 + 驗證機制**
+3. **B3 方案失敗**（PR #399）— 視覺 bug 靜態分析有上限，post-processing alpha 保留脆弱。advisor 正確指出「hand back 給指揮家 DevTools 診斷」。教訓：視覺不確定先試 fast-path A
+4. **Windows `git worktree remove --force` 不實際刪目錄**（node_modules lock）— 需手動 `rm -rf` 跟上。PM skill 可考慮加收尾驗證
+
+## 未完成待辦
+
+**無明確待辦**。Pipeline 乾淨（0 open issue / 0 open PR / 0 worktree），backlog 已 purge。
+
+可選待指揮家重新定義：
+- Leaf panel 系統性問題（剛浮現，指揮家要先重新檢視需求）
 
 ## 下個 session 第一步
 
-執行 `session-startup` 讀本檔 → `flow-pipeline-state-detect`。依狀態快照：
-- 若無 env 異常且無突發議題 → 詢問指揮家挑 1/2/3 優先序
-- 若指揮家丟新題 → 按本 session 模式執行（A 路徑）
+執行 `session-startup` 讀本檔 → `flow-pipeline-state-detect`。依狀態：
+- 若指揮家丟新題 → 正常 pipeline
+- 若無新題且 backlog 空 → 問指揮家是否要重新檢視 leaf panel / 其他新方向
 
-origin/master 已同步（`5e6e14b`），worktree 只剩主樹。
+master `a85cf66`，origin 同步。
 
 ## 觀察到的偏好（非顯而易見）
 
-- **「指揮家分享資料 = 期望落地」**：本 session 指揮家 2 次分享 4.7 原則資料，無明確「去做」指令，但期望 AH 主動吸收並寫入文件 + MEMORY。上次授權「非破壞自行決定」延續至同 session 後續任務
-- **文件 refactor 前先問「原本在定義誰」**：WORKFLOW 重定位的關鍵洞察由指揮家提出「原先是不是在定一角色」。直接砍會丟失 AH 的隱性操作手冊。未來 refactor 前都要先做這個質問
-- **效率原則落地標準模式**：2 處文件（CLAUDE.md 契約 + WORKFLOW 細則）+ 1 條 MEMORY（跨 session 持續）三者分工穩定；本 session 連續 2 次套同模式成功
+- **fast-path 直改 master 偏好強**：指揮家樂於授權純文件 / 單行常數改動跳 PR 流程。建「回應節奏」段、`1063060` CLAUDE.md 污染修復、#400 單行都是走 master
+- **B 方案太複雜時毫不猶豫回 A**：視覺 bug 寧願試錯再調，不堆架構改動
+- **「重新檢視需求」= 清 backlog 從零開始**：指揮家不想背負舊 idea，喜歡乾淨狀態
+- **視覺驗收永遠由指揮家目測**：agent 幫不上忙，AH 越早 hand back 越省時間
+- **session 可長**：本 session 單輪處理 3 個交接筆記待辦 + 2 個 tech debt 相關 + 4 個 chore，agent spawn 數 ~15 仍在指揮家容忍範圍
 
-## 重要檔案
+## 重要檔案 / 狀態
 
-- `CLAUDE.md`（202 行）— 主契約；本 session +4 行（Subagent effort 彈性 / 不塞催促語 / 人機介面歧義抑制 + §3.5 pointer）
-- `.ai/WORKFLOW.md`（276 行）— AH 操作手冊；本 session 從 872 重寫至 276
-- `C:/Users/eoswolf/.claude/projects/C--z-erythos/memory/feedback_prompt_4_7_style.md`（新）
-- `C:/Users/eoswolf/.claude/projects/C--z-erythos/memory/feedback_prompt_ambiguity_default.md`（新）
-- `.claude/skills/flow-pipeline-state-detect/SKILL.md` — 前 session 建，本 session 首次實測驗證
+- `CLAUDE.md` 新增「回應節奏」段 + 型別檢查行括號略修
+- `src/panels/viewport/CLAUDE.md` 已還原為標準模組結構
+- `src/viewport/ViewportRenderer.ts:27` 背景 `0x0a0a0a`（#400）
+- `src/panels/leaf/LeafPanel.tsx:33` 仍是 `0x3f3f3f`（leaf 全黑有其他問題，未修）
+- 3 SKILL.md（role-tasker/role-developer/role-pr-merge）含整檔還原原則
+- `.ai/roles/` 已刪（dir 不存在）
