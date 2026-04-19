@@ -313,7 +313,7 @@ const ProjectPanel: Component = () => {
                 left: '0',
                 right: '0',
                 bottom: '0',
-                background: 'rgba(20,20,20,0.95)',
+                background: 'var(--bg-app)',
                 'z-index': '10',
                 display: 'flex',
                 'flex-direction': 'column',
