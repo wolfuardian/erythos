@@ -1,67 +1,47 @@
-# Session 狀態（2026-04-19 晚 — 多 PR + 流程漏洞修補 + Backlog 清空）
+# Session 狀態（2026-04-19 深夜 — skill 大重構 + .ai 搬遷 + dockview themeAbyss 永久根治）
 
 ## 本 session 完成
 
-### Pipeline（5 個 PR merge + 多個 chore commit）
+### 流程基礎建設
+- `5263cb6` 套用「結構排除」原則精修 10 skill 約束段（D 類 -19 行）
+- `483c3ff` `.ai/` → `.claude/` 整體搬遷（14 檔 git rename + 26 檔 path sed + .gitignore 清理）
+- `101c9ed` 安裝 AH 自改 CLAUDE.md 協定（T1-T4 框架，全文 `.claude/self-edit-protocol.md`，CLAUDE.md 加 3 行 pointer）
+- `fab8c70` role-design-visual 改對話回報（不再寫 `.claude/audits/`，補設計取捨段）
+- `8292586` CLAUDE.md 加「結構成本意識」段（指揮家 mid-session 直加）+ panel-bg mockup 入庫
 
-- **`.claude/roles/` 雙源清理** commit `291072b`（13 檔，-940）
-- **#355 viewport drop helper**（PR #394）merge `e45d802`
-- **#330 nested mesh double render**（PR #395）merge `79a76d0` — EX 探勘 + AT 糾正實作位置在 `ResourceCache.ts` 非 `SceneSync.ts`
-- **#396 hover phase 2**（PR #397）merge — viewport-tab + settings + project-hub，per-module 2 commit
-- **#398 viewport bg B3 方案**（PR #399）**失敗關閉** — post-processing alpha 被 FXAA 破壞
-- **#400 viewport bg fast-path A**（PR #401）merge — `0x3f3f3f` → `0x0a0a0a` 單行（指揮家視覺驗收 PASS）
-- **#402 leaf preview bg fast-path**（PR #403）**關閉** — leaf panel 全黑有其他渲染問題，暫緩
+### Panel 色系統一（指揮家視覺驗收 PASS）
+- DV 跨 panel 一致性審計（scene-tree / project / viewport overlay 三方比對）
+- MP 出 A/B/C 3 方案 mockup（`.claude/previews/panel-bg-unification.html`），指揮家挑 **A.1 全 solid**
+- `#404 / #407 [viewport]` + `#405 / #406 [app]` 並行 2 PR，merge — 殺 4 處 `rgba(20,20,20,0.X)`
+- `#408 / #409 [app]` dockview 自訂 erythos theme — 永久根因解決，dockview chrome 全對映 token
 
-### Chore / 流程
+## 遇到的問題
 
-- `edb2a6a` CLAUDE.md 加「回應節奏」段（指揮家手寫，AH commit 純文件變更）
-- `1063060` 還原 `src/panels/viewport/CLAUDE.md` 被 #355 AT 覆寫的範圍限制
-- `a85cf66` 3 skill 增補整檔還原原則（role-tasker/role-developer/role-pr-merge）
-- MEMORY `feedback_claude_md_restore.md` 整合新教訓升級
-- 清理殘留 worktree 目錄（erythos-359 / 363 / 400-viewport-bg）
-
-### Backlog 清空（指揮家一次性 purge）
-
-- UIUX 推理輔助角色構想 → MEMORY 移除
-- Project Hub 3 項（texture→HDRI / models 拖曳 / 專案 auto-save）→ MEMORY 移除
-- `--bg-hover` 對比度驗收 → 視為已解決
-- Leaf panel 系統性問題 → 未建 memory，指揮家要重新檢視需求
-
-## 遇到的問題（教訓）
-
-1. **AT 兩次糾正上游**（#330 糾正 EX 實作位置 / #396 糾正 issue body 行號）— AT 讀 src 的價值不可跳過
-2. **#355 AT 誤改「範圍限制」區塊 + AD 漏還原 + PM 沒驗證** — 污染 master 跨 2 PR 才顯形。**已在 3 skill 寫入整檔還原原則 + 驗證機制**
-3. **B3 方案失敗**（PR #399）— 視覺 bug 靜態分析有上限，post-processing alpha 保留脆弱。advisor 正確指出「hand back 給指揮家 DevTools 診斷」。教訓：視覺不確定先試 fast-path A
-4. **Windows `git worktree remove --force` 不實際刪目錄**（node_modules lock）— 需手動 `rm -rf` 跟上。PM skill 可考慮加收尾驗證
+1. **Agent tool 繼承 1M context** — 預設 spawn 觸發 `extra-usage required` 錯誤。必須明示 `model: sonnet` 才能跑 sonnet subagent。指揮家認為這是 bug。
+2. **AH 誤引「歷史 meta-exception」** — 提案 P1/P2 時把 `#400`、`#1063060` 當作「歷史單行直改 master 例外」，實際上 `#400` 走 PR、`#1063060` 是 chore（CLAUDE.md 還原），不算 src 例外。指揮家糾正 → 升級 `feedback_strict_workflow.md` memory：AH 不得提議 src 變更走 meta-exception。
+3. **DV skill 重做時遺漏 conversation-report 改動** — 第一次改完被 revert，第二次只重做 D 類負面句精修，沒帶回 conversation-report。事後在 #panel-bg 議題中重派 DV 才發現，補修 `fab8c70`。
+4. **dockview default theme = abyss** — 用戶觀察到 `#000c17` 冷藍，挖到根因在 `node_modules/dockview-core/dist/cjs/dockview/dockviewComponent.js`：沒傳 theme option 時 default 是 themeAbyss（VS Code Abyss 風）。
+5. **task 跨無模組歸屬檔案** — `src/styles/theme.css` 無模組擁有，#408 task spec 顯式授權 AD 修改，繞過 app 範圍限制。
 
 ## 未完成待辦
 
-**無明確待辦**。Pipeline 乾淨（0 open issue / 0 open PR / 0 worktree），backlog 已 purge。
-
-可選待指揮家重新定義：
-- Leaf panel 系統性問題（剛浮現，指揮家要先重新檢視需求）
+**無**。Pipeline 乾淨（0 open issue / 0 open PR / 0 worktree / master ahead origin 0）。
 
 ## 下個 session 第一步
 
-執行 `session-startup` 讀本檔 → `flow-pipeline-state-detect`。依狀態：
-- 若指揮家丟新題 → 正常 pipeline
-- 若無新題且 backlog 空 → 問指揮家是否要重新檢視 leaf panel / 其他新方向
-
-master `a85cf66`，origin 同步。
+執行 `session-startup` → `flow-pipeline-state-detect`。依狀態：
+- 指揮家丟新題 → 正常 pipeline
+- 無新題 → 問指揮家是否要重檢視 leaf panel（前 session 遺留待議）或新方向
 
 ## 觀察到的偏好（非顯而易見）
 
-- **fast-path 直改 master 偏好強**：指揮家樂於授權純文件 / 單行常數改動跳 PR 流程。建「回應節奏」段、`1063060` CLAUDE.md 污染修復、#400 單行都是走 master
-- **B 方案太複雜時毫不猶豫回 A**：視覺 bug 寧願試錯再調，不堆架構改動
-- **「重新檢視需求」= 清 backlog 從零開始**：指揮家不想背負舊 idea，喜歡乾淨狀態
-- **視覺驗收永遠由指揮家目測**：agent 幫不上忙，AH 越早 hand back 越省時間
-- **session 可長**：本 session 單輪處理 3 個交接筆記待辦 + 2 個 tech debt 相關 + 4 個 chore，agent spawn 數 ~15 仍在指揮家容忍範圍
+- **結構成本意識**（CLAUDE.md L91-107，指揮家 mid-session 親加）— 預設口語回應，少用編號 / 表格 / 三段式。一輪一決策點。送出前自檢「這結構是指揮家需要還是我想展示思考完整」。
+- **改一律禁止跳過流程**（再次申明）— src 程式碼變更必走完整流程，AH 不得提議 meta-exception 即便 1 行。CLAUDE.md / `.claude/` / chore 才是合法直改。
+- **指揮家會 mid-session 直改 CLAUDE.md** — 「結構成本意識」段就是這樣加進來的，AH 不需主動拉回。
 
-## 重要檔案 / 狀態
+## 重要 commit / 檔案
 
-- `CLAUDE.md` 新增「回應節奏」段 + 型別檢查行括號略修
-- `src/panels/viewport/CLAUDE.md` 已還原為標準模組結構
-- `src/viewport/ViewportRenderer.ts:27` 背景 `0x0a0a0a`（#400）
-- `src/panels/leaf/LeafPanel.tsx:33` 仍是 `0x3f3f3f`（leaf 全黑有其他問題，未修）
-- 3 SKILL.md（role-tasker/role-developer/role-pr-merge）含整檔還原原則
-- `.claude/roles/` 已刪（dir 不存在）
+- `8292586` 是本 session 最後一個 commit。Master ahead origin 0（已 push）。
+- 新增 `.claude/self-edit-protocol.md`、`.claude/previews/panel-bg-unification.html`
+- CLAUDE.md 新增段：「結構成本意識」（L91-107）、「AH 自改 CLAUDE.md」（L139-141）
+- `.gitignore` 清掉 `.claude/audits/` 死規則
