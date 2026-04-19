@@ -30,7 +30,7 @@ const LeafPanel: Component = () => {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.toneMapping = ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
-    renderer.setClearColor(0x3f3f3f);
+    renderer.setClearColor(0x0a0a0a);
     previewRef.appendChild(renderer.domElement);
     renderer.domElement.style.display = 'block';
 
