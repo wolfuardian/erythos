@@ -31,7 +31,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 1. `npm install`（worktree 無 `node_modules`，不裝會 build 失敗）
 2. 讀模組 CLAUDE.md「當前任務」區塊
-3. **DB-first**：若需理解模組既有結構 / pattern / util 超出 AT 已寫明的部分，先查 `.ai/module-cache/<module>.md`
+3. **DB-first**：若需理解模組既有結構 / pattern / util 超出 AT 已寫明的部分，先查 `.claude/module-cache/<module>.md`
    - 存在 → 讀 DB 速覽，細節用 `Read` + offset/limit 精準補讀
    - 不存在或嚴重不足 → PR body 標 **DB 缺口 #N** + 一句描述；該次任務照 src 現況做
    - DB 與 src 衝突 → PR body 標 **DB 過時 #N** + 衝突描述；照 src 現況做，**不自改 DB**
@@ -56,7 +56,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 - 不改模組範圍外的檔案（模組邊界依根 CLAUDE.md 模組表）
 - 不操作 main/master、不 merge、不關 issue
-- 不自改 `.ai/module-cache/*.md`（DB 由 EX 維護；發現 drift → PR body 上報）
+- 不自改 `.claude/module-cache/*.md`（DB 由 EX 維護；發現 drift → PR body 上報）
 
 ## 異常處理
 

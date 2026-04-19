@@ -5,7 +5,6 @@ dist
 .version-bumped
 samples
 settings.local.json
-.ai/user/
-.ai/audits/
+.claude/user/
 projects/
 .playwright-mcp/

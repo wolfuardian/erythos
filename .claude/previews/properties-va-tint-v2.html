@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Properties — Variant A · Tint v2</title>
+<style>
+  :root {
+    /* —— Design tokens (mirror src/styles/theme.css) —— */
+    --bg-app: #1a1a1a;
+    --bg-panel: #242424;
+    --bg-section: #2a2a2a;
+    --bg-header: #333333;
+    --bg-input: #1e1e1e;
+    --bg-input-focus: #252525;
+    --bg-hover: #383838;
+    --bg-selected: #2a4060;
+
+    --text-primary: #e0e0e0;
+    --text-secondary: #9c9c9c;
+    --text-muted: #666666;
+    --text-disabled: #4a4a4a;
+
+    --accent-blue: #4a7fbf;
+    --accent-red: #c04040;
+    --accent-green: #3a9060;
+    --accent-yellow: #c0a030;
+
+    --border-subtle: #2e2e2e;
+    --border-medium: #3a3a3a;
+    --border-strong: #4a4a4a;
+    --border-focus: var(--accent-blue);
+
+    --space-xs: 2px;
+    --space-sm: 4px;
+    --space-md: 8px;
+    --space-lg: 12px;
+    --space-xl: 16px;
+
+    --row-height: 22px;
+
+    --font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --font-size-xs: 9px;
+    --font-size-sm: 10px;
+    --font-size-md: 11px;
+    --font-size-lg: 12px;
+    --font-size-xl: 14px;
+
+    --radius-sm: 2px;
+    --radius-md: 4px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    min-height: 100vh;
+  }
+
+  .page {
+    padding: 32px 24px 48px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .page-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .page-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    line-height: 1.55;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 300px);
+    gap: 32px 24px;
+    justify-content: center;
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+  }
+
+  .col-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-left: 2px;
+  }
+  .col-label.before { color: #c8a0d0; }
+  .col-label.v2     { color: #8aa8d0; }
+
+  .panel {
+    width: 300px;
+    height: 600px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+  }
+
+  .col-desc {
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    padding: 0 2px;
+  }
+  .col-desc strong { color: var(--text-primary); }
+  .col-desc ul { margin: 4px 0 0; padding-left: 16px; }
+  .col-desc li { margin: 2px 0; }
+
+  /* =========================================================
+     Shared panel header (aligned with Variant A DNA)
+     ========================================================= */
+  .p-header {
+    padding: 8px 12px 7px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  /* =========================================================
+     Variant A DNA — shared by both panels
+     ========================================================= */
+  .panel .p-body {
+    flex: 1;
+    padding: 4px 10px 10px;
+    overflow: auto;
+  }
+  .panel .group {
+    margin-top: 4px;
+  }
+  .panel .group-title {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 0 5px 2px;
+    margin: 0 0 4px 0;
+    background: transparent;
+    border-bottom: 1px solid var(--border-subtle);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel .chev {
+    display: inline-block;
+    font-size: 8px;
+    color: var(--text-muted);
+    transform: translateY(-1px);
+  }
+  .panel .row-field {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    align-items: center;
+    padding: 3px 0;
+    column-gap: 6px;
+  }
+  .panel .label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .panel input[type="text"] {
+    background: var(--bg-input);
+    border: none;
+    border-bottom: 1px solid var(--border-medium);
+    border-radius: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    padding: 2px 4px;
+    height: 20px;
+    outline: none;
+    width: 100%;
+  }
+  .panel input[type="text"].focused {
+    border-bottom: 2px solid var(--accent-blue);
+    padding-bottom: 1px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent);
+  }
+  .panel .xyz-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .panel .xyz-cell {
+    display: flex;
+    align-items: stretch;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border-medium);
+    height: 20px;
+    overflow: hidden;
+  }
+  .panel .xyz-badge {
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+    border-radius: var(--radius-sm) 0 0 0;
+  }
+  .panel .xyz-badge.x { background: var(--accent-red); }
+  .panel .xyz-badge.y { background: var(--accent-green); }
+  .panel .xyz-badge.z { background: var(--accent-blue); }
+  .panel .xyz-value {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* =========================================================
+     Panel 1 : Before — v3 Nest · Tint (redraw)
+     - OBJECT/TRANSFORM 欄位「裸」在 panel 底色
+     - 僅 Data 子群組鋪 --bg-section
+     ========================================================= */
+  .before-panel .group-body {
+    background: var(--bg-panel);
+    padding: 4px 0 4px 10px;
+  }
+  .before-panel .sub-group {
+    background: var(--bg-section);
+    padding: 0 10px 2px 14px;
+    margin: 4px 0 4px 0;
+    border-radius: var(--radius-sm);
+  }
+  .before-panel .sub-group .group-title {
+    background: transparent;
+    padding: 5px 0 5px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    margin: 0 0 4px 0;
+  }
+  .before-panel .sub-group .group-body {
+    background: transparent;
+    padding: 2px 0 4px 10px;
+  }
+
+  /* =========================================================
+     Panel 2 : Variant A · Tint v2
+     - 每個父分組 body 皆為 tint 容器（--bg-section）
+     - 所有子欄位 indent 14px（一致縮排）
+     - Data 子分組於父 tint 內再嵌 deep tint 容器
+     - Deep tint = color-mix(--bg-section 70%, --bg-app 30%)
+     ========================================================= */
+  .v2-panel .group-body {
+    /* 父分組 body = tint 容器 */
+    background: var(--bg-section);
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: var(--radius-sm);
+  }
+  .v2-panel .group-body > .row-field {
+    /* 欄位於 tint 容器內縮排 14px */
+    padding-left: 14px;
+  }
+  .v2-panel .group-body > .sub-group {
+    /* 子分組 foldout header 對齊父欄位縮排（14px） */
+    margin: 4px 0 2px 0;
+  }
+  .v2-panel .sub-group > .group-title {
+    /* 子 foldout 標題：透明 bg、縮排 14px 與其他欄位對齊 */
+    background: transparent;
+    padding: 5px 0 5px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin: 0 0 4px 0;
+  }
+  .v2-panel .sub-group > .group-body {
+    /* Deep tint 容器：比 section 更深一階 */
+    background: color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%);
+    padding: 6px 10px;
+    margin-bottom: 0;
+    border-radius: var(--radius-sm);
+  }
+  .v2-panel .sub-group > .group-body > .row-field {
+    /* Deep tint 容器內欄位縮排 28px（累積對父） */
+    padding-left: 28px;
+  }
+
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-title">Properties — Variant A · Tint v2</div>
+    <div class="page-sub">
+      兩 panel 對照：<strong style="color:var(--text-primary);">Before</strong> 為 v3 Nest · Tint 原版（僅子分組鋪色，父欄位裸在 panel 底色，造成父子不對稱）；
+      <strong style="color:var(--text-primary);">Variant A · Tint v2</strong> 將所有父分組 body 皆改為 tint 容器、子分組再嵌深 tint，欄位統一縮排，呈現一致的層級呼吸。<br />
+      統一情境：選中 Cube、Name 欄 focus、Data 子分組展開。
+    </div>
+
+    <div class="grid">
+
+      <!-- ===== Panel 1: Before (v3 Nest · Tint redraw) ===== -->
+      <div class="col">
+        <div class="col-label before">Before</div>
+        <div class="panel before-panel">
+          <div class="p-header">PROPERTIES</div>
+          <div class="p-body">
+
+            <div class="group">
+              <div class="group-title"><span class="chev">&#9660;</span>OBJECT</div>
+              <div class="group-body">
+                <div class="row-field">
+                  <span class="label">Name</span>
+                  <input type="text" class="focused" value="Cube" />
+                </div>
+                <div class="row-field">
+                  <span class="label">Type</span>
+                  <input type="text" value="Mesh" readonly />
+                </div>
+
+                <!-- Data 子分組（只有這一塊有 tint） -->
+                <div class="group sub-group">
+                  <div class="group-title"><span class="chev">&#9660;</span>Data</div>
+                  <div class="group-body">
+                    <div class="row-field">
+                      <span class="label">Geometry</span>
+                      <input type="text" value="BoxGeometry" readonly />
+                    </div>
+                    <div class="row-field">
+                      <span class="label">Vertices</span>
+                      <input type="text" value="24" readonly />
+                    </div>
+                    <div class="row-field">
+                      <span class="label">Faces</span>
+                      <input type="text" value="6" readonly />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="group">
+              <div class="group-title"><span class="chev">&#9660;</span>TRANSFORM</div>
+              <div class="group-body">
+                <div class="row-field">
+                  <span class="label">Position</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">0</span></div>
+                  </div>
+                </div>
+                <div class="row-field">
+                  <span class="label">Rotation</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">0</span></div>
+                  </div>
+                </div>
+                <div class="row-field">
+                  <span class="label">Scale</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">1</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">1</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">1</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="col-desc">
+          <strong>不對稱問題（v3 原版重畫）。</strong>
+          <ul>
+            <li>OBJECT / TRANSFORM body 透明，欄位裸在 <span style="font-family:var(--font-mono);color:#b5c9de;">--bg-panel</span></li>
+            <li>僅 Data 子分組鋪 <span style="font-family:var(--font-mono);color:#b5c9de;">--bg-section</span></li>
+            <li>父欄位「裸」、子欄位「包」→ 視覺權重反常、層級呼吸不平衡</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ===== Panel 2: Variant A · Tint v2 ===== -->
+      <div class="col">
+        <div class="col-label v2">Variant A · Tint v2</div>
+        <div class="panel v2-panel">
+          <div class="p-header">PROPERTIES</div>
+          <div class="p-body">
+
+            <!-- OBJECT 分組（父 tint 容器） -->
+            <div class="group">
+              <div class="group-title"><span class="chev">&#9660;</span>OBJECT</div>
+              <div class="group-body">
+                <div class="row-field">
+                  <span class="label">Name</span>
+                  <input type="text" class="focused" value="Cube" />
+                </div>
+                <div class="row-field">
+                  <span class="label">Type</span>
+                  <input type="text" value="Mesh" readonly />
+                </div>
+
+                <!-- Data 子分組（嵌於父 tint 內，body 為 deep tint） -->
+                <div class="group sub-group">
+                  <div class="group-title"><span class="chev">&#9660;</span>Data</div>
+                  <div class="group-body">
+                    <div class="row-field">
+                      <span class="label">Geometry</span>
+                      <input type="text" value="BoxGeometry" readonly />
+                    </div>
+                    <div class="row-field">
+                      <span class="label">Vertices</span>
+                      <input type="text" value="24" readonly />
+                    </div>
+                    <div class="row-field">
+                      <span class="label">Faces</span>
+                      <input type="text" value="6" readonly />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- TRANSFORM 分組（父 tint 容器，無子分組） -->
+            <div class="group">
+              <div class="group-title"><span class="chev">&#9660;</span>TRANSFORM</div>
+              <div class="group-body">
+                <div class="row-field">
+                  <span class="label">Position</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">0</span></div>
+                  </div>
+                </div>
+                <div class="row-field">
+                  <span class="label">Rotation</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">0</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">0</span></div>
+                  </div>
+                </div>
+                <div class="row-field">
+                  <span class="label">Scale</span>
+                  <div class="xyz-row">
+                    <div class="xyz-cell"><span class="xyz-badge x">X</span><span class="xyz-value">1</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge y">Y</span><span class="xyz-value">1</span></div>
+                    <div class="xyz-cell"><span class="xyz-badge z">Z</span><span class="xyz-value">1</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="col-desc">
+          <strong>一致層級呼吸（採納方向）。</strong>
+          <ul>
+            <li>父分組 body 皆鋪 <span style="font-family:var(--font-mono);color:#b5c9de;">--bg-section</span>（tint 容器）</li>
+            <li>子分組 body 嵌 <span style="font-family:var(--font-mono);color:#b5c9de;">color-mix(section 70%, app 30%)</span>（deep tint）</li>
+            <li>所有欄位統一縮排：父層 14px、子層 28px，foldout 標題對齊父欄位</li>
+            <li>父子皆被「包住」，對稱感強；子分組越深、tint 越深，自然表達層級</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 36px; padding: 14px 16px; background: var(--bg-section); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+      <strong style="color: var(--text-primary);">DNA 守則（兩 panel 皆保留）：</strong>
+      foldout 三角透明標題（<span style="font-family: var(--font-mono); color:#b5c9de; background:#1b1b1b; padding:1px 4px; border-radius:2px;">--text-secondary</span>、uppercase）、
+      輸入 rest 僅 <span style="font-family: var(--font-mono); color:#b5c9de; background:#1b1b1b; padding:1px 4px; border-radius:2px;">border-bottom</span>、
+      focus 為 2px 藍底線 + 1px blue glow（<span style="font-family: var(--font-mono); color:#b5c9de; background:#1b1b1b; padding:1px 4px; border-radius:2px;">color-mix 40%</span>）、
+      X/Y/Z 為 16px 紅/綠/藍 badge + 白字、字級 <span style="font-family: var(--font-mono); color:#b5c9de; background:#1b1b1b; padding:1px 4px; border-radius:2px;">--font-size-sm</span>。
+      v2 僅在「所有分組 body 皆為 tint 容器、子分組嵌 deep tint、欄位統一縮排」三處與 Before 不同。
+      所有色值嚴守 token，唯一 <code>#fff</code> 為 badge 對比白字（同前版例外）。
+    </div>
+  </div>
+</body>
+</html>

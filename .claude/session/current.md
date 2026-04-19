@@ -4,7 +4,7 @@
 
 ### Pipeline（5 個 PR merge + 多個 chore commit）
 
-- **`.ai/roles/` 雙源清理** commit `291072b`（13 檔，-940）
+- **`.claude/roles/` 雙源清理** commit `291072b`（13 檔，-940）
 - **#355 viewport drop helper**（PR #394）merge `e45d802`
 - **#330 nested mesh double render**（PR #395）merge `79a76d0` — EX 探勘 + AT 糾正實作位置在 `ResourceCache.ts` 非 `SceneSync.ts`
 - **#396 hover phase 2**（PR #397）merge — viewport-tab + settings + project-hub，per-module 2 commit
@@ -64,4 +64,4 @@ master `a85cf66`，origin 同步。
 - `src/viewport/ViewportRenderer.ts:27` 背景 `0x0a0a0a`（#400）
 - `src/panels/leaf/LeafPanel.tsx:33` 仍是 `0x3f3f3f`（leaf 全黑有其他問題，未修）
 - 3 SKILL.md（role-tasker/role-developer/role-pr-merge）含整檔還原原則
-- `.ai/roles/` 已刪（dir 不存在）
+- `.claude/roles/` 已刪（dir 不存在）

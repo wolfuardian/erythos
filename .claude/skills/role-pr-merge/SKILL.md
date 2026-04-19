@@ -46,8 +46,8 @@ AH 提供：
 | `src/<module>/CLAUDE.md`（step 6 清理後） | 可 commit |
 | `package.json` / `package-lock.json`（hook bump） | 可 commit |
 | `tsconfig.app.tsbuildinfo` | 可 commit |
-| `.ai/previews/*.html` | 跳過 + 回報 AH |
-| 根 `CLAUDE.md` / `.ai/module-cache/*` / `.ai/specs/*` | 跳過 |
+| `.claude/previews/*.html` | 跳過 + 回報 AH |
+| 根 `CLAUDE.md` / `.claude/module-cache/*` / `.claude/specs/*` | 跳過 |
 | 其他 unstaged src/ | 跳過 + 回報異常（不應出現） |
 
 可 commit：
@@ -62,8 +62,8 @@ Leftover 全數跳過或無改動：不 commit，回報「step 9 跳過 + 原因
 ## 約束
 
 - **不解 merge 衝突**：遇 CONFLICTING / DIRTY 停下回報 AH（`rebase + push --force` 是破壞性，此 skill 無此授權 — #380 教訓）
-- **不刪** `.ai/previews/*.html`（design source of truth；mockup 非一次性，跨 issue 服役 — 2026-04-18 起一律保留）
-- **不碰** `.ai/module-cache/`（DB 由 EX 維護）
+- **不刪** `.claude/previews/*.html`（design source of truth；mockup 非一次性，跨 issue 服役 — 2026-04-18 起一律保留）
+- **不碰** `.claude/module-cache/`（DB 由 EX 維護）
 - **不碰** 根 `CLAUDE.md`（AH 可能在改）
 - **不用** `git add -A`（逐個指定避免誤 commit）
 

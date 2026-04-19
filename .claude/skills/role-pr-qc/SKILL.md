@@ -43,7 +43,7 @@ gh pr diff <PR>
 
 Diff > 300 行先看 stat（`| head -50`），再逐檔重點讀改動區段。不一次讀巨型 diff。
 
-需模組 context 時**先查** `.ai/module-cache/<module>.md`（EX 維護的 DB，預設可信）。DB 不存在或與 src 衝突 → 在 QC 回報標 **DB 過時** 上報 AH，按 src 現況審。
+需模組 context 時**先查** `.claude/module-cache/<module>.md`（EX 維護的 DB，預設可信）。DB 不存在或與 src 衝突 → 在 QC 回報標 **DB 過時** 上報 AH，按 src 現況審。
 
 逐檔檢查：
 - 只改允許範圍（對照根 CLAUDE.md 模組邊界）

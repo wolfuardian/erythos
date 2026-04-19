@@ -144,7 +144,7 @@ Flags 欄累積 per-issue B 組修飾（`[draft]` / `[blocking]` 等）。Next s
 - 不下指令（L2「Next step」欄為建議，非執行指示）
 - 不擴大偵測（模組 CLAUDE.md 只掃固定三區塊，不讀其他內容）
 - 不推斷未直接偵測到的事實（例：不從 commit message 猜 issue 意圖）
-- 不讀 `.ai/module-cache/` DB（那是 EX 領域，此 skill 不涉模組內部語義）
+- 不讀 `.claude/module-cache/` DB（那是 EX 領域，此 skill 不涉模組內部語義）
 
 ## 異常處理
 
