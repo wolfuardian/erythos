@@ -49,7 +49,7 @@ AH 提供：
 - **不提方案建議 / 設計推薦**（純視覺化，不猜不加）
 - 方案描述有歧義 → 回報請 AH 補充，**不自行腦補**
 - AH 只給 2 個方案就畫 2 個，**不擅自增加變體**
-- 不改 `src/` / 任何 CLAUDE.md / `.ai/roles/`
+- 不改 `src/` / 任何 CLAUDE.md
 - 不 commit / push / 開 issue / 開 PR
 - 不 spawn 任何 subagent
 - 不跑 build / 測試

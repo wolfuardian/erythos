@@ -91,7 +91,7 @@ AH 提供：
 - **不讀 src 邏輯**（`*.tsx` 等）
 - **不操作 Playwright / browser tool**
 - 只讀 `src/styles/theme.css` 變數定義區，**不讀其他 src**
-- 不改任何 src 檔 / CLAUDE.md / `.ai/roles/`
+- 不改任何 src 檔 / CLAUDE.md
 - 不 commit / push / 開 issue / 開 PR
 - **不提修法建議**（「應改為 `var(--X)`」、「建議加 `animation`」都不行）
 - 不降級成 code review（hardcode color 不是你的事）

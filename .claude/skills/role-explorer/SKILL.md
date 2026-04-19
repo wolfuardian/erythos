@@ -68,7 +68,7 @@ _Commit 前綴: [<module>]_
 
 ## 約束
 
-- 不改 `src/`、模組 CLAUDE.md、根 CLAUDE.md、`.ai/roles/`
+- 不改 `src/`、模組 CLAUDE.md、根 CLAUDE.md
 - 不 commit / push / PR（DB 變更由 AH 在 pre-flight 收尾順手提交）
 - 不 spawn 任何 subagent（單層探勘）
 - 不把 DB 寫成完整 API 文件（保持「速覽 + 地雷 + 最近 PR」定位）
