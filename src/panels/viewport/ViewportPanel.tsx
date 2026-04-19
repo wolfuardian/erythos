@@ -34,6 +34,7 @@ const ViewportPanel: Component = () => {
   const [groupCollapsed, setGroupCollapsed] = createSignal<Record<string, boolean>>({});
   const isGroupOpen = (key: string) => !groupCollapsed()[key];
   const toggleGroup = (key: string) => setGroupCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+  const [hoveredShading, setHoveredShading] = createSignal<ShadingMode | null>(null);
 
   const updateSetting = <K extends keyof RenderSettings>(
     key: K,
@@ -426,8 +427,14 @@ const ViewportPanel: Component = () => {
           {(mode) => (
             <button
               onClick={() => setRenderMode(mode)}
+              onMouseEnter={() => setHoveredShading(mode)}
+              onMouseLeave={() => setHoveredShading(null)}
               style={{
-                background: renderMode() === mode ? 'rgba(255,255,255,0.18)' : 'transparent',
+                background: renderMode() === mode
+                  ? 'rgba(255,255,255,0.18)'
+                  : hoveredShading() === mode
+                    ? 'var(--bg-hover)'
+                    : 'transparent',
                 border: 'none',
                 color: renderMode() === mode ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
                 padding: '3px 8px',
