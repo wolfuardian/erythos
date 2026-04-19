@@ -51,7 +51,6 @@ AH 提供：
 - AH 只給 2 個方案就畫 2 個，**不擅自增加變體**
 - 不改 `src/` / 任何 CLAUDE.md
 - 不 commit / push / 開 issue / 開 PR
-- 不 spawn 任何 subagent
 - 不跑 build / 測試
 
 ## Context 預算

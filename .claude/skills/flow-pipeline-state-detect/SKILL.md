@@ -17,8 +17,7 @@ allowed-tools: Bash, Read, Grep, Glob
 ## 定位
 
 - **觸發時機**：AH session 起手、跨 session 回歸、派遣前需定位
-- **唯讀**：不 commit / push / merge / 改任何檔
-- **不 spawn**：此 skill 不呼叫其他 skill 或 subagent
+- **唯讀**：不 commit / push / merge
 - **不決策**：L2「Next step」欄僅為建議，AH 自行拍板
 
 ## 狀態字典
@@ -141,8 +140,7 @@ Flags 欄累積 per-issue B 組修飾（`[draft]` / `[blocking]` 等）。Next s
 
 ## 約束
 
-- 不 commit / push / merge / 改任何檔
-- 不 spawn 其他 skill 或 subagent
+- 不 commit / push / merge（Bash 在手，需明確排除）
 - 不下指令（L2「Next step」欄為建議，非執行指示）
 - 不擴大偵測（模組 CLAUDE.md 只掃固定三區塊，不讀其他內容）
 - 不推斷未直接偵測到的事實（例：不從 commit message 猜 issue 意圖）

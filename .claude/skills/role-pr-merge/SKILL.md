@@ -65,7 +65,6 @@ Leftover 全數跳過或無改動：不 commit，回報「step 9 跳過 + 原因
 - **不刪** `.ai/previews/*.html`（design source of truth；mockup 非一次性，跨 issue 服役 — 2026-04-18 起一律保留）
 - **不碰** `.ai/module-cache/`（DB 由 EX 維護）
 - **不碰** 根 `CLAUDE.md`（AH 可能在改）
-- **不 spawn** 任何 subagent
 - **不用** `git add -A`（逐個指定避免誤 commit）
 
 ## 異常處理
