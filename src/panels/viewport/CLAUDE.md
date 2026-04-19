@@ -2,8 +2,8 @@
 
 ## 範圍限制
 
-- 只修改 `src/viewport/ViewportRenderer.ts`、`src/viewport/PostProcessing.ts`、`src/panels/viewport/ViewportPanel.tsx`、`src/styles/theme.css`
-- 不動其他模組
+只能修改 src/viewport/ 和 src/panels/viewport/ 底下的檔案。
+不得修改 src/core/、src/components/、src/app/、src/panels/properties/、src/panels/scene-tree/。
 
 ---
 
