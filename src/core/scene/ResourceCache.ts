@@ -79,16 +79,16 @@ export class ResourceCache {
    *
    * @param source  filePath（快取鍵，不含 nodePath）
    * @param nodePath 可選；`|` 分隔的逐層路徑（如 `"Body|Arm|Hand"`），省略時 clone 整個 scene root
-   * @returns 深度 clone 的 Object3D，快取未命中或節點不存在時回傳 null
+   * @returns 淺 clone 的 Object3D（不含子孫），快取未命中或節點不存在時回傳 null
    */
   cloneSubtree(source: string, nodePath?: string): Object3D | null {
     const root = this.cache.get(source);
     if (!root) return null;
 
-    if (!nodePath) return root.clone(true);
+    if (!nodePath) return root.clone(false);
 
     const target = findByPath(root, nodePath);
-    return target ? target.clone(true) : null;
+    return target ? target.clone(false) : null;
   }
 
   /** 檢查 filePath 是否已在快取中。 */
