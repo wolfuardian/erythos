@@ -2,9 +2,8 @@
 
 ## 範圍限制
 
-- 只修改 `src/panels/viewport/ViewportPanel.tsx` 和新增 `src/viewport/dropPosition.ts`
+- 只修改 `src/viewport/ViewportRenderer.ts`、`src/viewport/PostProcessing.ts`、`src/panels/viewport/ViewportPanel.tsx`、`src/styles/theme.css`
 - 不動其他模組
-- 不改 UI 行為，純重構
 
 ---
 

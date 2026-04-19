@@ -386,7 +386,7 @@ const ViewportPanel: Component = () => {
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        background: 'var(--bg-app)',
+        background: 'var(--bg-viewport)',
         position: 'relative',
       }}
     >

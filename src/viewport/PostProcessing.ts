@@ -1,4 +1,4 @@
-import { type WebGLRenderer, type Scene, type Camera, type Object3D, type Mesh, Vector2 } from 'three';
+import { type WebGLRenderer, type Scene, type Camera, type Object3D, type Mesh, Vector2, WebGLRenderTarget } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
@@ -37,7 +37,8 @@ export class PostProcessing {
 
     const size = new Vector2(renderer.domElement.clientWidth || 1, renderer.domElement.clientHeight || 1);
 
-    this.composer = new EffectComposer(renderer);
+    const renderTarget = new WebGLRenderTarget(size.x, size.y);
+    this.composer = new EffectComposer(renderer, renderTarget);
 
     const renderPass = new RenderPass(scene, camera);
     this.composer.addPass(renderPass);

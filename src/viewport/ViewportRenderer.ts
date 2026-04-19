@@ -20,11 +20,11 @@ export class ViewportRenderer {
   private onResizeCallback?: (w: number, h: number) => void;
 
   constructor() {
-    this.renderer = new WebGLRenderer({ antialias: true, alpha: false });
+    this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
-    this.renderer.setClearColor(0x3f3f3f);
+    this.renderer.setClearColor(0x000000, 0);
   }
 
   mount(
