@@ -7,9 +7,6 @@
 ## 當前任務
 <!-- 由主腦在指派任務時填寫 -->
 
-## 通用 SOP
-遵守 [開發成員 SOP](../../.ai/roles/developer.md)。
-
 ## 慣例
 - 用 SolidJS 的 onMount/onCleanup 管理 DOM 事件監聽
 - 用 createSignal 管理元件狀態

@@ -7,9 +7,6 @@
 ## 當前任務
 <!-- 由主腦在指派任務時填寫 -->
 
-## 通用 SOP
-遵守 [開發成員 SOP](../../../.ai/roles/developer.md)。
-
 ## 慣例
 - 透過 bridge.leafAssets() 讀取 leaf 資產
 - 用 SolidJS createSignal 管理面板內部狀態

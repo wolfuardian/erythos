@@ -7,9 +7,6 @@
 ## 當前任務
 <!-- 由主腦填寫，無任務時留空 -->
 
-## 通用 SOP
-遵守 [開發成員 SOP](../../../.ai/roles/developer.md)。
-
 ## 慣例
 - 透過 bridge signal 取得狀態，不直接操作 core
 - 選取物體透過 `editor.selection.select()`

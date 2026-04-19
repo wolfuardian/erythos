@@ -56,7 +56,7 @@ allowed-tools: Bash, Read, Grep
 ## 約束
 
 - 只讀（CLAUDE.md / SOP / issue / src /  `.ai/module-cache/`）
-- 不得改 `src/` / 任何 CLAUDE.md / `.ai/roles/`
+- 不得改 `src/` / 任何 CLAUDE.md
 - 不得執行 git 操作
 - 不得對 AD / QC / AT 下指令（那是指揮家和 AH 的權限）
 - 不 spawn 任何 subagent
