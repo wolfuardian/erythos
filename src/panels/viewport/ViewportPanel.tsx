@@ -2,7 +2,7 @@ import { onMount, onCleanup, createEffect, createSignal, Show, For, type Compone
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
 import type { Object3D } from 'three';
-import { Raycaster, Plane, Vector3, Vector2 } from 'three';
+
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
@@ -12,6 +12,7 @@ import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafCommand';
 import * as LeafStore from '../../core/scene/LeafStore';
+import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 
 const ViewportPanel: Component = () => {
@@ -66,23 +67,7 @@ const ViewportPanel: Component = () => {
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
       if (gltfFile) {
-        // 計算 NDC 座標（-1 到 1）
-        const rect = containerRef.getBoundingClientRect();
-        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-        // Raycast 對 y=0 平面
-        let dropPosition: Vec3 = [0, 0, 0];
-        if (viewport) {
-          const raycaster = new Raycaster();
-          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
-          const groundPlane = new Plane(new Vector3(0, 1, 0), 0); // normal=(0,1,0), constant=0 → y=0
-          const hitPoint = new Vector3();
-          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
-          if (hit) {
-            dropPosition = [hitPoint.x, 0, hitPoint.z];
-          }
-        }
+        const dropPosition = computeDropPosition(e, containerRef, viewport);
 
         try {
           const groupUUID = await loadGLTFFromFile(gltfFile, editor);
@@ -101,20 +86,7 @@ const ViewportPanel: Component = () => {
       // 路徑 2：內部 GLB 拖曳（從 Project 面板）
       const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
       if (internalGlb) {
-        // 同 OS drop：計算 NDC 座標 + raycast y=0 平面
-        const rect = containerRef.getBoundingClientRect();
-        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-        let dropPosition: Vec3 = [0, 0, 0];
-        if (viewport) {
-          const raycaster = new Raycaster();
-          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
-          const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
-          const hitPoint = new Vector3();
-          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
-          if (hit) dropPosition = [hitPoint.x, 0, hitPoint.z];
-        }
+        const dropPosition = computeDropPosition(e, containerRef, viewport);
 
         try {
           const file = await editor.projectManager.readFile(internalGlb);
@@ -132,20 +104,7 @@ const ViewportPanel: Component = () => {
       // 路徑 3：Leaf 拖曳（從 Leaf Panel）
       const leafId = e.dataTransfer?.getData('application/erythos-leaf');
       if (leafId) {
-        // 計算 NDC 座標（與路徑 1、2 相同公式）
-        const rect = containerRef.getBoundingClientRect();
-        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-        let dropPosition: Vec3 = [0, 0, 0];
-        if (viewport) {
-          const raycaster = new Raycaster();
-          raycaster.setFromCamera(new Vector2(ndcX, ndcY), viewport.cameraCtrl.camera);
-          const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
-          const hitPoint = new Vector3();
-          const hit = raycaster.ray.intersectPlane(groundPlane, hitPoint);
-          if (hit) dropPosition = [hitPoint.x, 0, hitPoint.z];
-        }
+        const dropPosition = computeDropPosition(e, containerRef, viewport);
 
         try {
           const asset = await LeafStore.get(leafId);
