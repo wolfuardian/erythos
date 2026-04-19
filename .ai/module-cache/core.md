@@ -64,6 +64,7 @@ _Commit 前綴: [core]_
 
 ## 已知地雷
 
+- **gltfConverter 巢狀 Mesh 雙 clone 地雷（#330）**：`buildNodes` 對所有 Object3D 遞迴建 SceneNode；只有 `instanceof Mesh` 節點才加 `components.mesh`（非 Mesh 的中間 Group 只建空 `components: {}`）。SceneSync `onNodeAdded` mesh 分支呼叫 `cloneSubtree(filePath, nodePath)`，而 `cloneSubtree` 固定是 `target.clone(true)`（**深 clone**，含全部子孫）。結果：若 GLB 有 `Arm(Mesh) → Hand(Mesh)` 的巢狀結構，SceneDocument 中兩者皆為獨立 SceneNode 且各有 `components.mesh`。SceneSync 重建時 Arm 深 clone 已包含 Hand 幾何，Hand SceneNode 又額外深 clone 一次 Hand 節點，Hand 在 Three.js scene 中出現兩次 → 重複渲染。
 - **Editor.init() 必須 await**：確保 ResourceCache hydrate 和 AutoSave restore 完成，否則 UI 取得空資料（#387 fix：init() 末尾 emit leafStoreChanged）
 - **RemoveNodeCommand 反向刪除**：BFS 收集子樹，execute 時反向刪除（葉節點先刪），避免父節點先刪導致子節點失聯
 - **SceneSync mesh clone transform reset**：mesh component 的 clone 根節點 transform 重置為 identity（避免與 applyTransform 雙重疊加）
