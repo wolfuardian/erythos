@@ -46,9 +46,9 @@
 
 ### 3. 間接引用 → skill 化
 
-**舊模式**：「Dispatch prompt 必須指向 .ai/roles/xxx.md」
+**舊模式**：「Dispatch prompt 必須指向 .claude/roles/xxx.md」
 
-**新模式**：將 `.ai/roles/xxx.md` 升級為 skill，用 frontmatter 管控：
+**新模式**：將 `.claude/roles/xxx.md` 升級為 skill，用 frontmatter 管控：
 
 ```yaml
 ---
@@ -120,7 +120,7 @@ context: fork
 
 ## 遷出策略
 
-- 過往教訓（「參考 #X 教訓」）→ `.ai/lessons/<issue>.md`
+- 過往教訓（「參考 #X 教訓」）→ `.claude/lessons/<issue>.md`
 - 角色規範詳細內容 → `.claude/skills/roles/<role>/SKILL.md`
 - Session / merge / DB 具體步驟 → 對應 skill
 

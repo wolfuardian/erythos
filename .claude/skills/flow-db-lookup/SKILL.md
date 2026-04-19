@@ -1,6 +1,6 @@
 ---
 name: flow-db-lookup
-description: When any role (AT / AD / QC / AH) needs to understand module src context before a task, first check `.ai/module-cache/<module>.md` (the EX-maintained knowledge DB) instead of reading full src. Return the DB summary for types / patterns / mines, or report "DB 缺口" / "DB 過時" to AH if the DB is missing or conflicts with src. Invoke at the start of any module-aware task.
+description: When any role (AT / AD / QC / AH) needs to understand module src context before a task, first check `.claude/module-cache/<module>.md` (the EX-maintained knowledge DB) instead of reading full src. Return the DB summary for types / patterns / mines, or report "DB 缺口" / "DB 過時" to AH if the DB is missing or conflicts with src. Invoke at the start of any module-aware task.
 model: claude-sonnet-4-6
 effort: medium
 allowed-tools: Read, Grep
@@ -16,7 +16,7 @@ allowed-tools: Read, Grep
 
 ```
 角色收到任務
-  → 查 .ai/module-cache/<module>.md
+  → 查 .claude/module-cache/<module>.md
     ├─ 存在 → 讀速覽（types / pattern / 地雷 / 最近 PR）
     │         細節用 Read + offset/limit 精準補讀 src
     └─ 不存在或嚴重不足 → 標 DB 缺口 上報 AH 考慮 spawn role-explorer

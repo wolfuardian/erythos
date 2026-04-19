@@ -6,7 +6,7 @@
 
 1. 另開 terminal 跑 `npm run dev`（dev server 必須在 3000）
 2. 跑對應 audit script，例：`npm run audit:scene-tree`
-3. 截圖產出到 `.ai/audits/<panel>/`
+3. 截圖產出到 `.claude/audits/<panel>/`
 
 ## 新增 panel seed
 
@@ -19,4 +19,4 @@
 ## 原則
 - **機械化**：寫死序列，不依賴 LLM 判斷
 - **可復現**：每次跑同一 panel 產生視覺上近似的截圖（像素完全一致不強制）
-- **獨立**：不修改 repo 任何狀態（除了 .ai/audits/ 下截圖）
+- **獨立**：不修改 repo 任何狀態（除了 .claude/audits/ 下截圖）

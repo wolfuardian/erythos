@@ -24,7 +24,7 @@ _Commit 前綴: [scripts]_
 - **Dockview tab selector**：`.dv-default-tab-content`（無 ARIA role）+ `{ hasText: '...' }.first()` — 避免 strict-mode 錯誤，所有 audit script 均採用
 - **全頁截圖 fallback**：viewport / properties / project 的主截圖用 `page.screenshot()`（panel 無唯一文字 selector）；scene-tree / environment / leaf 用 `panel.screenshot()`（有唯一文字）
 - **port 3000**：所有 audit script 硬編 `DEV_URL = 'http://localhost:3000'`，不可假設其他 port
-- **輸出目錄**：`.ai/audits/<panel>/`，`mkdirSync(..., { recursive: true })` 自動建立
+- **輸出目錄**：`.claude/audits/<panel>/`，`mkdirSync(..., { recursive: true })` 自動建立
 - **bump.js 標記檔**：minor / major bump 會建立 `.version-bumped` 空檔，供 pre-commit hook 偵測跳過 patch 自動遞增
 - **IndexedDB fixture 注入（leaf.mjs）**：`page.evaluate()` 在瀏覽器端開 IndexedDB → 寫入假資料 → `page.reload({ waitUntil: 'networkidle' })` → 額外 `waitForTimeout(500)` 讓 editor.init() async 完成（IndexedDB read + signal propagation），解決 fresh context 空資料問題
 - **OPFS stub（project.mjs）**：`page.addInitScript()` 注入 `window.showDirectoryPicker` stub → 回傳含子目錄 + 假資產的 OPFS handle，並 patch `FileSystemDirectoryHandle.prototype.requestPermission / queryPermission` 回傳 `'granted'`，讓 headless 模式繞過 native file picker

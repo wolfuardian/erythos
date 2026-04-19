@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../..');
-const OUT_DIR = resolve(REPO_ROOT, '.ai/audits/properties');
+const OUT_DIR = resolve(REPO_ROOT, '.claude/audits/properties');
 const DEV_URL = 'http://localhost:3000';
 
 async function ensureDevServer() {

@@ -54,7 +54,7 @@ allowed-tools: Bash, Read, Grep
 
 ## 約束
 
-- 只讀（CLAUDE.md / SOP / issue / src /  `.ai/module-cache/`）
+- 只讀（CLAUDE.md / SOP / issue / src /  `.claude/module-cache/`）
 - 不操作 git（Bash 在手，需明確排除）
 - 不得對 AD / QC / AT 下指令（那是指揮家和 AH 的權限）
 
@@ -62,7 +62,7 @@ allowed-tools: Bash, Read, Grep
 
 - 單檔 ≤ 200 行（超過只讀相關區段）
 - 優先讀 CLAUDE.md + issue 描述，src/ 只在診斷問題時才讀
-- 多模組探勘時**先查** `.ai/module-cache/<module>.md`；DB 不足 → 建議 AH spawn EX 補資料，**不自己擴大讀取**
+- 多模組探勘時**先查** `.claude/module-cache/<module>.md`；DB 不足 → 建議 AH spawn EX 補資料，**不自己擴大讀取**
 - 不讀 git log / diff（歷史由指揮家或 AH 提供）
 
 ## Insight 回報

@@ -30,7 +30,7 @@ AH 提供：
 
 ## 起手（DB-first）
 
-查 `.ai/module-cache/<module>.md`：
+查 `.claude/module-cache/<module>.md`：
 - 存在 → 讀速覽（types / pattern / 地雷 / 最近 PR），細節用 `Read` + offset/limit 精準補讀
 - 不存在或嚴重不足 → 在回報標 **DB 缺口** 上報 AH；該次任務仍按 src 現況寫
 - DB 與 src 明顯衝突 → 標 **DB 過時** 上報 AH；按 src 現況寫，**不自改 DB**（DB 由 EX 維護）

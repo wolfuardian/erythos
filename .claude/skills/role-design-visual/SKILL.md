@@ -1,6 +1,6 @@
 ---
 name: role-design-visual
-description: When AH provides panel screenshots with state labels (overview / hover / selected / etc.) and needs visual aesthetic critique, read images + theme.css variables, produce a Chinese visual-problem checklist at `.ai/audits/<panel>.md`. Describe symptoms, no fixes. Use before opening UI issues when commander wants to audit a panel's polish.
+description: When AH provides panel screenshots with state labels (overview / hover / selected / etc.) and needs visual aesthetic critique, read images + theme.css variables, produce a Chinese visual-problem checklist at `.claude/audits/<panel>.md`. Describe symptoms, no fixes. Use before opening UI issues when commander wants to audit a panel's polish.
 model: claude-sonnet-4-6
 effort: medium
 allowed-tools: Read, Grep, Write
@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Write
 
 ## 目標
 
-讀 AH 提供的截圖 + `theme.css` → 產出**中文視覺美感問題清單** → 寫入 `.ai/audits/<panel>.md`。
+讀 AH 提供的截圖 + `theme.css` → 產出**中文視覺美感問題清單** → 寫入 `.claude/audits/<panel>.md`。
 
 **核心問題**：「這張圖看起來有沒有美感？哪裡粗糙？」
 
@@ -29,7 +29,7 @@ allowed-tools: Read, Grep, Write
 
 ## 驗收
 
-- 報告寫入 `.ai/audits/<panel>.md`（同 panel 重跑覆蓋）
+- 報告寫入 `.claude/audits/<panel>.md`（同 panel 重跑覆蓋）
 - 中文；CSS 變數名 / hex / 路徑不翻譯
 - 每問題描述**現象**，**不給解法**
 - 若某維度無問題，該段寫「無問題」一行，不勉強擠

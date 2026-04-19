@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../..');
-const OUT_DIR = resolve(REPO_ROOT, '.ai/audits/viewport');
+const OUT_DIR = resolve(REPO_ROOT, '.claude/audits/viewport');
 const DEV_URL = 'http://localhost:3000';
 
 async function ensureDevServer() {

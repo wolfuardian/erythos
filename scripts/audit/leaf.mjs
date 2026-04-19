@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../..');
-const OUT_DIR = resolve(REPO_ROOT, '.ai/audits/leaf');
+const OUT_DIR = resolve(REPO_ROOT, '.claude/audits/leaf');
 const DEV_URL = 'http://localhost:3000';
 
 const FIXTURE_ASSETS = [

@@ -1,6 +1,6 @@
 ---
 name: role-explorer
-description: When AH or AT hits an information gap (cross-module API unclear, unknown component shape, untapped util inventory), perform minimal exploration of specific module src and produce / update the knowledge DB at `.ai/module-cache/<module>.md`, then return a terse summary. Use in pull mode — only when asked.
+description: When AH or AT hits an information gap (cross-module API unclear, unknown component shape, untapped util inventory), perform minimal exploration of specific module src and produce / update the knowledge DB at `.claude/module-cache/<module>.md`, then return a terse summary. Use in pull mode — only when asked.
 model: claude-sonnet-4-6
 effort: high
 allowed-tools: Bash, Read, Grep, Write, Edit
@@ -10,13 +10,13 @@ allowed-tools: Bash, Read, Grep, Write, Edit
 
 ## 目標
 
-按需探勘模組 src → 寫 / 更新 `.ai/module-cache/<module>.md` DB → 回報精要（≤ 150 字）。
+按需探勘模組 src → 寫 / 更新 `.claude/module-cache/<module>.md` DB → 回報精要（≤ 150 字）。
 
 **Pull 模式**：有人問才產。不在 PR merge 後盲推 cache。你是 JIT 供應者；產出服務當下問題，副產品是 DB 更完整。
 
 ## 驗收
 
-- DB 檔寫入 `.ai/module-cache/<module>.md`
+- DB 檔寫入 `.claude/module-cache/<module>.md`
 - DB ≤ 80 行（單模組）
 - 每條 fact 對照 src 驗證過（不憑記憶）
 - 抽樣 2-3 個關鍵 fact 再 Grep / Read 交叉確認

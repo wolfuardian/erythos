@@ -1,6 +1,6 @@
 ---
 name: role-mock-preview
-description: When AH has N fully-specified UI design options (before any issue is opened) and needs them rendered as side-by-side HTML mockup for commander to pick, produce a single static HTML at `.ai/previews/<topic>.html` that renders all options with real colors/layout from theme.css. Use before opening a UI-related issue, after AH aligned options with commander.
+description: When AH has N fully-specified UI design options (before any issue is opened) and needs them rendered as side-by-side HTML mockup for commander to pick, produce a single static HTML at `.claude/previews/<topic>.html` that renders all options with real colors/layout from theme.css. Use before opening a UI-related issue, after AH aligned options with commander.
 model: claude-sonnet-4-6
 effort: medium
 allowed-tools: Bash, Read, Grep, Write
@@ -14,7 +14,7 @@ AH 給 N 個明確文字方案描述 → 產出 HTML 並排 mockup 供指揮家�
 
 ## 驗收
 
-- 單檔 HTML 寫入 `.ai/previews/<topic>.html`
+- 單檔 HTML 寫入 `.claude/previews/<topic>.html`
 - 含 Before + N 方案並排（或 2x2 grid）
 - 每 panel 上方有方案名標籤，下方有簡短說明
 - 配色對應真實 `theme.css` 的 CSS 變數（hex 值）
@@ -34,7 +34,7 @@ AH 提供：
 
 ## 輸出
 
-- 路徑：`.ai/previews/<topic>.html`
+- 路徑：`.claude/previews/<topic>.html`
 - 格式：單檔靜態 HTML，內嵌 CSS，**無 JS 互動**
 - 覆蓋策略：同 topic 重跑覆蓋舊檔（無狀態）
 
