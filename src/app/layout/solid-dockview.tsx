@@ -17,6 +17,7 @@ export function createDockview(options: DockviewOptions): DockviewApi {
   const disposers = new Map<string, () => void>();
 
   const dockview = new DockviewComponent(options.parentElement, {
+    theme: { name: 'erythos', className: 'dockview-theme-erythos' },
     createComponent(opts) {
       const Comp = options.components[opts.name];
       if (!Comp) throw new Error(`Unknown panel component: ${opts.name}`);
