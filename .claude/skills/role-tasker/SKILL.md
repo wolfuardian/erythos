@@ -92,7 +92,8 @@ AH 在 master 完成前置作業後，AD 才進模組任務。
 
 ## 約束
 
-- **不改任何檔案**，不 commit / push / PR / 開 issue / 跑 build
+- **Edit 模組 CLAUDE.md 時只改「當前任務」區塊內容**；「範圍限制」/「慣例」/「待修項」/「上報區」維持原樣不動（#355/#398 教訓 — AT 誤改「範圍限制」段的污染會被 AD 漏還原並 merge 進 master，一次失誤跨兩輪 PR 才顯形）
+- 不改任何 src 檔，不 commit / push / PR / 開 issue / 跑 build
 - 不 spawn 任何 subagent
 - 內容**不得**用 `## ` 開頭 subheader（會被誤認為新 section → AD 還原 placeholder 時容易遺漏 → 殘骸進 PR diff，#381 教訓）。允許：`### ` / `#### ` / 粗體 / 列表
 - 精確程式碼（整檔或 before/after snippet），**不用** `// ... existing code ...`

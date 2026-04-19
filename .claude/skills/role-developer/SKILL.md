@@ -38,7 +38,13 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 ## 收工
 
-1. 還原模組 CLAUDE.md：`git checkout -- <path>/CLAUDE.md`（避免 merge 衝突）
+1. **整檔**還原模組 CLAUDE.md 到 master 原貌（防止 AT 若誤改「範圍限制/慣例」等區塊污染進 PR — #355/#398 教訓）：
+   ```bash
+   git fetch origin master 2>/dev/null || true
+   git checkout origin/master -- <path>/CLAUDE.md
+   git add <path>/CLAUDE.md
+   ```
+   **不可**手動編輯「當前任務」回 placeholder（只還原單區塊容易漏掉其他被 AT 異動的區塊）
 2. Push：`git push -u origin <branch>`
 3. 開 PR：`gh pr create --title "[模組] 簡述 (refs #N)" --body "改動摘要 + Notes"`
 

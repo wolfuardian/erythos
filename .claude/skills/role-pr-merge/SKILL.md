@@ -37,7 +37,7 @@ AH 提供：
 3. `git worktree remove <worktree-path> --force`
 4. `git checkout -- tsconfig.app.tsbuildinfo 2>/dev/null && git pull`
 5. `git branch -d <branch>` + `git push origin --delete <branch>`
-6. 清模組 CLAUDE.md 的「當前任務」「待修項」「上報區」內容（保留標題 + placeholder 註解）
+6. **驗證**模組 CLAUDE.md 已由 AD 整檔還原至 master 原貌（`git diff master~1 -- <path>` 應無差異）。若「當前任務/待修項/上報區」殘留非 placeholder 內容，清空保留 placeholder 註解。**若發現「範圍限制」或「慣例」被異動，停下回報 AH**（AT/AD 流程異常，PM 無權判斷正確原貌）
 7. `npm run build`
 8. `git status -s` 看 leftover，按下表處理
 
