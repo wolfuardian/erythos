@@ -1,10 +1,11 @@
-import { type Component, onMount, onCleanup, Show } from 'solid-js';
+import { type Component, onMount, onCleanup, Show, createSignal } from 'solid-js';
 import { Editor } from '../core/Editor';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import DockLayout from './layout/DockLayout';
 import type { PanelComponent } from './layout/solid-dockview';
+import type { DockviewApi } from './layout/solid-dockview';
 import { ViewportPanel } from '../panels/viewport';
 import { SceneTreePanel } from '../panels/scene-tree';
 import { PropertiesPanel } from '../panels/properties';
@@ -14,6 +15,8 @@ import ProjectPanel from './panels/project/ProjectPanel';
 import ContextPanel from './panels/context/ContextPanel';
 import SettingsPanel from './panels/settings/SettingsPanel';
 import Toolbar from '../components/Toolbar';
+import { ContextMenu } from '../components/ContextMenu';
+import type { MenuItem } from '../components/ContextMenu';
 
 const COMPONENTS: Record<string, PanelComponent> = {
   'viewport': () => <ViewportPanel />,
@@ -30,6 +33,19 @@ const App: Component = () => {
   const editor = new Editor();
   const bridge = createEditorBridge(editor);
   const initPromise = editor.init();
+
+  // Context menu state for dockview tab right-click
+  const [tabCtxMenu, setTabCtxMenu] = createSignal<{
+    x: number;
+    y: number;
+    panelId: string;
+  } | null>(null);
+
+  let dockviewApi: DockviewApi | null = null;
+
+  const handleDockReady = (api: DockviewApi) => {
+    dockviewApi = api;
+  };
 
   onMount(() => {
     // Register keybindings
@@ -48,12 +64,54 @@ const App: Component = () => {
       { key: 'r', action: () => editor.setTransformMode('scale'), description: 'Scale mode' },
     ]);
     editor.keybindings.attach();
+
+    // Global right-click listener for dockview tabs
+    const onContextMenu = (e: MouseEvent) => {
+      const tabEl = (e.target as HTMLElement).closest('.dv-tab');
+      if (!tabEl || !dockviewApi) return;
+
+      // Find which panel this tab belongs to by matching the tab element
+      const panel = dockviewApi.panels.find(p => {
+        // dockview stores tab element on the panel group's tab container
+        // Walk up from clicked element to find matching panel id via data attribute or title match
+        const titleEl = tabEl.querySelector('.dv-default-tab-content');
+        if (titleEl) {
+          return titleEl.textContent?.trim() === p.title;
+        }
+        return false;
+      });
+
+      if (!panel) return;
+
+      e.preventDefault();
+      setTabCtxMenu({ x: e.clientX, y: e.clientY, panelId: panel.id });
+    };
+
+    document.addEventListener('contextmenu', onContextMenu);
+    onCleanup(() => document.removeEventListener('contextmenu', onContextMenu));
   });
 
   onCleanup(() => {
     bridge.dispose();
     void initPromise.then(() => editor.dispose());
   });
+
+  const tabMenuItems = (): MenuItem[] => {
+    const ctx = tabCtxMenu();
+    if (!ctx) return [];
+    return [
+      {
+        label: 'Close',
+        action: () => {
+          if (!dockviewApi) return;
+          const panel = dockviewApi.panels.find(p => p.id === ctx.panelId);
+          if (panel) {
+            dockviewApi.removePanel(panel);
+          }
+        },
+      },
+    ];
+  };
 
   return (
     <EditorProvider bridge={bridge}>
@@ -68,7 +126,7 @@ const App: Component = () => {
 
         {/* Dock panels */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <DockLayout components={COMPONENTS} />
+          <DockLayout components={COMPONENTS} onReady={handleDockReady} />
         </div>
 
         {/* Status bar */}
@@ -95,6 +153,15 @@ const App: Component = () => {
           </Show>
         </div>
       </div>
+
+      {/* Tab right-click context menu */}
+      <Show when={tabCtxMenu() !== null}>
+        <ContextMenu
+          items={tabMenuItems()}
+          position={{ x: tabCtxMenu()!.x, y: tabCtxMenu()!.y }}
+          onClose={() => setTabCtxMenu(null)}
+        />
+      </Show>
     </EditorProvider>
   );
 };
