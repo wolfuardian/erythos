@@ -99,7 +99,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       </div>
 
       {/* Delta Transform 子 section（hardcoded 0，驗證 deep tint 視覺，階段 2 替換） */}
-      <FoldableSection label="DELTA TRANSFORM" variant="deep" sectionKey="propertiesDeltaTransform">
+      <FoldableSection label="DELTA TRANSFORM" variant="subsection" sectionKey="propertiesDeltaTransform">
         {/* Position */}
         <div style={groupLabelRow}>
           <span style={fieldLabel}>Position</span>
