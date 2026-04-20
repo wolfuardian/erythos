@@ -72,18 +72,26 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
         {props.label}
       </div>
 
-      {/* 分組 body */}
-      {expanded() && (
-        <div style={{
-          background: isSubsection() ? 'var(--bg-subsection)' : 'var(--bg-section)',
-          padding: '6px 10px',
-          'margin-bottom': '6px',
-          'border-radius': isSubsection() ? '0 0 3px 3px' : 'var(--radius-md)',
-          'box-shadow': isSubsection() ? 'var(--shadow-well-subtle)' : 'var(--shadow-well-inner)',
-        }}>
-          {props.children}
+      {/* 分組 body — grid-template-rows 動畫容器，children 保持 mounted */}
+      <div style={{
+        display: 'grid',
+        'grid-template-rows': expanded() ? '1fr' : '0fr',
+        opacity: expanded() ? '1' : '0',
+        transition: 'grid-template-rows 0.1s ease, opacity 0.1s ease',
+        overflow: 'hidden',
+      }}>
+        <div style={{ 'min-height': '0', overflow: 'hidden' }}>
+          <div style={{
+            background: isSubsection() ? 'var(--bg-subsection)' : 'var(--bg-section)',
+            padding: '6px 10px',
+            'margin-bottom': '6px',
+            'border-radius': isSubsection() ? '0 0 3px 3px' : 'var(--radius-md)',
+            'box-shadow': isSubsection() ? 'var(--shadow-well-subtle)' : 'var(--shadow-well-inner)',
+          }}>
+            {props.children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
