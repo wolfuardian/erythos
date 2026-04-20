@@ -5,3 +5,4 @@ export { ImportGLTFCommand } from './ImportGLTFCommand';
 export { SetNodePropertyCommand } from './SetNodePropertyCommand';
 export { SetTransformCommand } from './SetTransformCommand';
 export { MoveNodeCommand } from './MoveNodeCommand';
+export { SetEnvironmentCommand } from './SetEnvironmentCommand';
