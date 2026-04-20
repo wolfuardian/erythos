@@ -151,7 +151,7 @@ const LeafPanel: Component = () => {
 
   return (
     <div style={{
-      width: '100%',
+      width: 'calc(100% - 6px)',
       height: '100%',
       display: 'flex',
       'flex-direction': 'column',
@@ -159,6 +159,8 @@ const LeafPanel: Component = () => {
       background: 'var(--bg-panel)',
       'box-shadow': 'var(--shadow-well-outer)',
       'border-radius': 'var(--radius-lg)',
+      margin: '0 3px',
+      'box-sizing': 'border-box',
     }}>
       {/* Header */}
       <PanelHeader title={`Leaves (${bridge.leafAssets().length})`} />
