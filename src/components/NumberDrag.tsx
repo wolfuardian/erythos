@@ -199,7 +199,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           type="number"
           value={inputText()}
           onInput={(e) => setInputText(e.currentTarget.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); inputRef?.select(); }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           style={{
