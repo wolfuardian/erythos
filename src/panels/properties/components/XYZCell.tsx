@@ -3,9 +3,9 @@ import { createSignal, type Component } from 'solid-js';
 type XYZAxis = 'x' | 'y' | 'z';
 
 const BADGE_BG: Record<XYZAxis, string> = {
-  x: 'var(--accent-red)',
-  y: 'var(--accent-green)',
-  z: 'var(--accent-blue)',
+  x: '#c04040',
+  y: '#3a9060',
+  z: '#527fc8',
 };
 
 interface XYZCellEditableProps {
@@ -22,7 +22,6 @@ interface XYZCellReadonlyProps {
 /** 可編輯版（TransformDraw 使用） */
 export const XYZCellEditable: Component<XYZCellEditableProps> = (props) => {
   const [focused, setFocused] = createSignal(false);
-  const [hovered, setHovered] = createSignal(false);
 
   const handleInput = (e: InputEvent & { currentTarget: HTMLInputElement }) => {
     const v = parseFloat(e.currentTarget.value);
@@ -31,34 +30,28 @@ export const XYZCellEditable: Component<XYZCellEditableProps> = (props) => {
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex',
-        background: hovered() ? 'var(--bg-hover)' : 'transparent',
+        background: 'var(--bg-input)',
         'align-items': 'stretch',
-        height: '20px',
+        height: '22px',
         overflow: 'hidden',
         flex: 1,
-        // Rest: 2px bottom 透明佔位（避免 focus 時 1→2px 跳動）
-        'border-bottom': focused()
-          ? '2px solid var(--accent-gold)'
-          : '2px solid var(--border-medium)',
-        // Focus glow（transparent 時不顯示）
+        'border-radius': '3px',
         'box-shadow': focused()
-          ? 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 40%, transparent)'
+          ? 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 50%, transparent)'
           : 'var(--shadow-input-inset)',
       }}>
       <span style={{
-        width: '16px',
+        width: '18px',
         display: 'flex',
         'align-items': 'center',
         'justify-content': 'center',
-        'font-size': 'var(--font-size-xs)',
+        'font-size': '10px',
         'font-weight': '700',
         color: '#fff',
         background: BADGE_BG[props.axis],
-        'border-radius': 'var(--radius-sm) 0 0 0',
+        'border-radius': '2px 0 0 2px',
         'flex-shrink': '0',
       }}>
         {props.axis.toUpperCase()}
@@ -94,21 +87,22 @@ export const XYZCellReadonly: Component<XYZCellReadonlyProps> = (props) => (
     display: 'flex',
     'align-items': 'stretch',
     background: 'var(--bg-input)',
-    height: '20px',
+    height: '22px',
     overflow: 'hidden',
     flex: 1,
-    'border-bottom': '2px solid var(--border-medium)',
+    'border-radius': '3px',
+    'box-shadow': 'var(--shadow-input-inset)',
   }}>
     <span style={{
-      width: '16px',
+      width: '18px',
       display: 'flex',
       'align-items': 'center',
       'justify-content': 'center',
-      'font-size': 'var(--font-size-xs)',
+      'font-size': '10px',
       'font-weight': '700',
       color: '#fff',
       background: BADGE_BG[props.axis],
-      'border-radius': 'var(--radius-sm) 0 0 0',
+      'border-radius': '2px 0 0 2px',
       'flex-shrink': '0',
     }}>
       {props.axis.toUpperCase()}
