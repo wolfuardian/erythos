@@ -1,47 +1,59 @@
-# Session 狀態（2026-04-19 深夜 — skill 大重構 + .ai 搬遷 + dockview themeAbyss 永久根治）
+# Session 狀態（2026-04-20 — Twilight persona 全面落地）
 
 ## 本 session 完成
 
-### 流程基礎建設
-- `5263cb6` 套用「結構排除」原則精修 10 skill 約束段（D 類 -19 行）
-- `483c3ff` `.ai/` → `.claude/` 整體搬遷（14 檔 git rename + 26 檔 path sed + .gitignore 清理）
-- `101c9ed` 安裝 AH 自改 CLAUDE.md 協定（T1-T4 框架，全文 `.claude/self-edit-protocol.md`，CLAUDE.md 加 3 行 pointer）
-- `fab8c70` role-design-visual 改對話回報（不再寫 `.claude/audits/`，補設計取捨段）
-- `8292586` CLAUDE.md 加「結構成本意識」段（指揮家 mid-session 直加）+ panel-bg mockup 入庫
+### Twilight persona 視覺系統（7 PRs 合成）
+- `f471d58` (#411) Twilight 主體：色 tokens（bg/text/accent/border）+ `--shadow-well-outer/inner/input-inset` + panel outer deep + section inner deep + input inset + dialog/menu 套用，16 檔
+- `4115688` (#413) 追補：fieldStyles 棄底線改 inset 方框、XYZCell 單一 inset 容器、FoldableSection subsection variant（原 `deep` rename）、新增 `--bg-subsection/subheader/shadow-well-subtle` tokens
+- `c34a032` (#415) Dockview tab：CSS-only（無 renderer），Subtle 3px border-top-radius，active tab height=32 填滿、inactive 28 align-self flex-end，無 close X（`.dv-default-tab-action` hide），右鍵 ContextMenu → `DockviewApi.removePanel`
+- `a5bc565` (#417) Panel header bg：5 檔 6 處加 `background: var(--bg-header)` 讓 active tab 與 panel header 色塊連續
+- `d5c09a9` (#419) 抽 `<PanelHeader title actions>` 共用組件 + 8 panel 遷移；ViewportPanel 拆內外兩層（container 外層 flex column，canvasRef 內層掛 Three.js + drag overlays）；Settings/Context 補 header；Project 兩模式用 actions slot
+- `71a0f7d` (#421) Panel root 左右 3px margin + `width: calc(100% - 6px)` + `box-sizing: border-box`（8 檔）
+- `beb4c4b` (#423) `--dv-separator-border: transparent`（單行，dockview split 分隔線）
 
-### Panel 色系統一（指揮家視覺驗收 PASS）
-- DV 跨 panel 一致性審計（scene-tree / project / viewport overlay 三方比對）
-- MP 出 A/B/C 3 方案 mockup（`.claude/previews/panel-bg-unification.html`），指揮家挑 **A.1 全 solid**
-- `#404 / #407 [viewport]` + `#405 / #406 [app]` 並行 2 PR，merge — 殺 4 處 `rgba(20,20,20,0.X)`
-- `#408 / #409 [app]` dockview 自訂 erythos theme — 永久根因解決，dockview chrome 全對映 token
+### 流程 / 清理
+- `0d14706` 刪 `.claude/skills/role-advisor/SKILL.md`（前 session 切換到內建 advisor() 工具的殘留 uncommitted deletion）
+- 清除 5 個 orphan worktree 目錄（C:/z/erythos-410-twilight-tint / -412-twilight-followup / -panel-header-bg / -panel-header-shared / -tab-redesign）— git worktree list 乾淨，檔案系統殘留由 rm -rf 手動處理
+- Memory `reference_variant_a_tint_v2.md` 更新：標註 input 底線 + blue focus 被 Twilight inset 方框 + gold focus 推翻；補充「新 source of truth = `.claude/previews/twilight-*.html` 系列」
+- Mockup 13 檔入 `.claude/previews/`（twilight-deep-deep / section-xyz / subsection / tab-v3-radius 等）
 
 ## 遇到的問題
 
-1. **Agent tool 繼承 1M context** — 預設 spawn 觸發 `extra-usage required` 錯誤。必須明示 `model: sonnet` 才能跑 sonnet subagent。指揮家認為這是 bug。
-2. **AH 誤引「歷史 meta-exception」** — 提案 P1/P2 時把 `#400`、`#1063060` 當作「歷史單行直改 master 例外」，實際上 `#400` 走 PR、`#1063060` 是 chore（CLAUDE.md 還原），不算 src 例外。指揮家糾正 → 升級 `feedback_strict_workflow.md` memory：AH 不得提議 src 變更走 meta-exception。
-3. **DV skill 重做時遺漏 conversation-report 改動** — 第一次改完被 revert，第二次只重做 D 類負面句精修，沒帶回 conversation-report。事後在 #panel-bg 議題中重派 DV 才發現，補修 `fab8c70`。
-4. **dockview default theme = abyss** — 用戶觀察到 `#000c17` 冷藍，挖到根因在 `node_modules/dockview-core/dist/cjs/dockview/dockviewComponent.js`：沒傳 theme option 時 default 是 themeAbyss（VS Code Abyss 風）。
-5. **task 跨無模組歸屬檔案** — `src/styles/theme.css` 無模組擁有，#408 task spec 顯式授權 AD 修改，繞過 app 範圍限制。
+1. **Variant A tint v2 input 底線設計被推翻** — 指揮家選 Twilight mockup 的 inset 方框後，Variant A 的 `border-bottom` + blue focus 正式退場。memory 已標註狀態更新，但 `reference_variant_a_tint_v2.md` 仍保留作 design history
+2. **AD 視覺判斷 2 次偏離 mockup** — tab 樣式第一版 inactive tab 沒設 `background: transparent` 導致整 tab bar 被 bg-header 覆蓋（AD 只依賴 `--dv-activegroup-hiddenpanel-tab-background-color` var 但 dockview 忽略）；必須強制 CSS `!important`。二次是 panel header bg 未對齊 tab（根因 panel root `--bg-panel` 而非 `--bg-header`，#417 補正）
+3. **Panel header 被 panel root radius 裁切** — panel root `border-radius: var(--radius-lg)` + `overflow: hidden` 讓 PanelHeader 頂部呈圓角。解法走 #421（左右 3px margin 讓整個 panel 變卡片浮在 group 中，圓角視覺自然）
+4. **dockview var 非全域生效** — `--dv-tabs-and-actions-container-background-color` 等對 tab bar container / hidden tab 的 bg 在實際 render 不套用，需 `.dv-tab.dv-inactive-tab { background: transparent !important }` 強制。記住 dockview theme var 不可全信
+5. **ViewportPanel canvas 拆層** — Three.js 原掛在 `containerRef`，加 PanelHeader 後需拆成外 containerRef（flex column + drag events + contains 判斷）+ 內 canvasRef（flex:1 + Three.js mount + computeDropPosition × 3 處）。既有絕對定位 overlay（toolbar / drag overlay / settings panel）留在 canvasRef 內不破
+6. **`--bg-tab-bar` token 未新增** — mockup 設計 #14161e，AD 復用 `--bg-app` #11131c 省新增。QC 標灰色地帶，指揮家視覺 audit 未追補
 
 ## 未完成待辦
 
-**無**。Pipeline 乾淨（0 open issue / 0 open PR / 0 worktree / master ahead origin 0）。
+1. **ViewportPanel 右上角 Toolbar overlay 未整合進 PanelHeader actions** — #418 scope 外，follow-up
+2. **`--bg-tab-bar` 新 token 是否追補** — 視覺差 3 hex 階（#11131c vs #14161e），指揮家未堅持
+3. **3 個模組 DB 缺口 / 過時** — `app.md`（缺，AT 兩次提到）、`components.md`（缺）、`properties.md`（variant deep → subsection 過時）。建議下個 session 派 EX 補
+4. **ProjectPanel Browser mode 字型風格改變** — 原 text-secondary + bold，遷移到 PanelHeader 後變 text-muted + uppercase。QC 標灰色地帶，指揮家視覺 audit OK 未回頭
 
 ## 下個 session 第一步
 
-執行 `session-startup` → `flow-pipeline-state-detect`。依狀態：
-- 指揮家丟新題 → 正常 pipeline
-- 無新題 → 問指揮家是否要重檢視 leaf panel（前 session 遺留待議）或新方向
+執行 `session-startup` + `flow-pipeline-state-detect`。預期狀態：
+- Pipeline 乾淨（0 open issue / 0 open PR / 0 worktree / master ahead origin 0）
+- 可繼續：3 DB 補（派 EX × 3）/ Viewport toolbar 整合 PanelHeader actions / bg-tab-bar 追補 / 指揮家新方向
+
+若無新題，建議先派 EX 補 app + components DB（properties 已存在，刷新即可），避免下次 AT 工作又標缺口。
 
 ## 觀察到的偏好（非顯而易見）
 
-- **結構成本意識**（CLAUDE.md L91-107，指揮家 mid-session 親加）— 預設口語回應，少用編號 / 表格 / 三段式。一輪一決策點。送出前自檢「這結構是指揮家需要還是我想展示思考完整」。
-- **改一律禁止跳過流程**（再次申明）— src 程式碼變更必走完整流程，AH 不得提議 meta-exception 即便 1 行。CLAUDE.md / `.claude/` / chore 才是合法直改。
-- **指揮家會 mid-session 直改 CLAUDE.md** — 「結構成本意識」段就是這樣加進來的，AH 不需主動拉回。
+- **直接貼 DOM / HTML / 截圖定位問題**，比文字描述快。指揮家習慣用「附圖 + 貼 HTML」一次說清
+- **「另開 issue」傾向** — 一旦 PR QC PASS 就寧可 merge，追補新需求另開。不疊入已 PASS 的 PR 讓它 stale
+- **Mockup 迭代節奏**：第一輪寬方向（3-4 選項）→ 指揮家粗選 → 第二輪細化（2-3 微調）→ 拍板。每輪都要派 MP
+- **「保留現狀扁平佈局」本能** — MP 加 Inner Deep 框時被指揮家糾正說「XYZ 保持 flat」「子面板接近現況 flat」。mockup 不要過度 enhance
+- **視覺 audit 由指揮家親自執行**（DV 不主動跑），QC 只做 code-level。所以 QC PASS 後還要等指揮家視覺確認才能 merge
+- **收工前指示清理物理資源** — git worktree remove 不會刪檔案系統殘留，需 rm -rf
 
 ## 重要 commit / 檔案
 
-- `8292586` 是本 session 最後一個 commit。Master ahead origin 0（已 push）。
-- 新增 `.claude/self-edit-protocol.md`、`.claude/previews/panel-bg-unification.html`
-- CLAUDE.md 新增段：「結構成本意識」（L91-107）、「AH 自改 CLAUDE.md」（L139-141）
-- `.gitignore` 清掉 `.claude/audits/` 死規則
+- Session 最後 commit：`beb4c4b`（#423 merge + `4fd0beb` 收尾 package.json bumpver）；實際最後 SHA 以當前 master 為準
+- Memory 更新：`reference_variant_a_tint_v2.md`（Twilight 推翻 input 底線）
+- 新增 mockup：`.claude/previews/` 13 個 HTML（twilight-* 系列 + 子面板 / tab 變體 / section-xyz 等）
+- 新增共用組件：`src/components/PanelHeader.tsx`（唯一新增 .tsx 檔）
+- 新 tokens in theme.css：`--shadow-well-outer/inner/input-inset/well-subtle` / `--bg-subsection/subheader` / `--accent-gold` / `--border-focus` 改 gold
