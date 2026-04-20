@@ -18,6 +18,7 @@ const PropertiesPanel: Component = () => {
       overflow: 'hidden',
       background: 'var(--bg-panel)',
       'box-shadow': 'var(--shadow-well-outer)',
+      'border-radius': 'var(--radius-lg)',
     }}>
       {/* Header */}
       <div style={{
