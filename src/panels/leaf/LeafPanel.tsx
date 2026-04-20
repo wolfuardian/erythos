@@ -168,6 +168,7 @@ const LeafPanel: Component = () => {
         'text-transform': 'uppercase',
         'letter-spacing': '0.5px',
         'flex-shrink': 0,
+        'background': 'var(--bg-header)',
       }}>
         Leaves ({bridge.leafAssets().length})
       </div>
