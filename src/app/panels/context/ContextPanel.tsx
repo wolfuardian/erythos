@@ -76,7 +76,7 @@ const ContextPanel: Component = () => {
 
   return (
     <div style={{
-      width: '100%',
+      width: 'calc(100% - 6px)',
       height: '100%',
       display: 'flex',
       'flex-direction': 'column',
@@ -84,6 +84,8 @@ const ContextPanel: Component = () => {
       background: 'var(--bg-panel)',
       'box-shadow': 'var(--shadow-well-outer)',
       'border-radius': 'var(--radius-lg)',
+      margin: '0 3px',
+      'box-sizing': 'border-box',
     }}>
       <PanelHeader title="Context" />
       <div style={{ flex: '1', overflow: 'auto', padding: 'var(--space-md)' }}>
