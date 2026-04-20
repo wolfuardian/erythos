@@ -92,12 +92,13 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   };
 
   const handleBlur = () => {
-    setFocused(false);
     const parsed = parseFloat(inputText());
     if (!isNaN(parsed)) {
       const clamped = applyClamp(parsed, props.min, props.max);
+      setFocused(false);
       props.onChange(clamped);
     } else {
+      setFocused(false);
       setInputText(props.value.toFixed(precision()));
     }
   };
