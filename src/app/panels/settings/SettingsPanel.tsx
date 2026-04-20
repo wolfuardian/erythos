@@ -1,6 +1,7 @@
 import type { Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
 import { setConfirmBeforeLoad } from '../../bridge';
+import { PanelHeader } from '../../../components/PanelHeader';
 
 const SettingsPanel: Component = () => {
   const bridge = useEditor();
@@ -13,21 +14,15 @@ const SettingsPanel: Component = () => {
     <div style={{
       width: '100%',
       height: '100%',
-      overflow: 'auto',
+      display: 'flex',
+      'flex-direction': 'column',
+      overflow: 'hidden',
       background: 'var(--bg-panel)',
-      padding: 'var(--space-md)',
       'box-shadow': 'var(--shadow-well-outer)',
       'border-radius': 'var(--radius-lg)',
     }}>
-      <h3 style={{
-        margin: 0,
-        'font-size': 'var(--font-size-md)',
-        color: 'var(--text-primary)',
-        'font-weight': 600,
-      }}>
-        Settings
-      </h3>
-
+      <PanelHeader title="Settings" />
+      <div style={{ flex: '1', overflow: 'auto', padding: 'var(--space-md)' }}>
       <label
         onMouseEnter={(e) => (e.currentTarget as HTMLLabelElement).style.background = 'var(--bg-hover)'}
         onMouseLeave={(e) => (e.currentTarget as HTMLLabelElement).style.background = ''}
@@ -50,6 +45,7 @@ const SettingsPanel: Component = () => {
         />
         Confirm before loading scene
       </label>
+      </div>
     </div>
   );
 };
