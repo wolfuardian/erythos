@@ -389,6 +389,7 @@ const ViewportPanel: Component = () => {
         background: 'var(--bg-app)',
         position: 'relative',
         'box-shadow': 'var(--shadow-well-outer)',
+        'border-radius': 'var(--radius-lg)',
       }}
     >
       <Show when={isDragging()}>

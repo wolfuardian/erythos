@@ -17,6 +17,7 @@ const SettingsPanel: Component = () => {
       background: 'var(--bg-panel)',
       padding: 'var(--space-md)',
       'box-shadow': 'var(--shadow-well-outer)',
+      'border-radius': 'var(--radius-lg)',
     }}>
       <h3 style={{
         margin: 0,
