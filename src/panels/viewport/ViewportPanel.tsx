@@ -15,6 +15,7 @@ import * as LeafStore from '../../core/scene/LeafStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
+import { NumberDrag } from '../../components/NumberDrag';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
@@ -591,13 +592,17 @@ const ViewportPanel: Component = () => {
                           </select>
                         </div>
                         <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                            <span>Exposure</span><span>{renderSettings().toneMapping.exposure.toFixed(2)}</span>
+                          <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                            <span style={{ 'white-space': 'nowrap' }}>Exposure</span>
+                            <NumberDrag
+                              value={renderSettings().toneMapping.exposure}
+                              onChange={v => updateSetting('toneMapping', { exposure: v })}
+                              min={0.1}
+                              max={3}
+                              step={0.05}
+                              precision={2}
+                            />
                           </div>
-                          <input type="range" min="0.1" max="3" step="0.05"
-                            value={renderSettings().toneMapping.exposure}
-                            onInput={e => updateSetting('toneMapping', { exposure: parseFloat(e.target.value) })}
-                            style={{ width: '100%' }} />
                         </div>
                       </div>
                     </Show>
@@ -618,24 +623,39 @@ const ViewportPanel: Component = () => {
                     </div>
                     <Show when={isGroupOpen('bloom') && renderSettings().bloom.enabled}>
                       <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <For each={[
-                          { key: 'strength' as const, min: 0, max: 3 },
-                          { key: 'radius' as const, min: 0, max: 1 },
-                          { key: 'threshold' as const, min: 0, max: 1 },
-                        ]}>
-                          {(item) => (
-                            <div>
-                              <div style={{ display: 'flex', 'justify-content': 'space-between' }}>
-                                <span style={{ 'text-transform': 'capitalize' }}>{item.key}</span>
-                                <span>{(renderSettings().bloom[item.key] as number).toFixed(2)}</span>
-                              </div>
-                              <input type="range" min={item.min} max={item.max} step="0.01"
-                                value={renderSettings().bloom[item.key] as number}
-                                onInput={e => updateSetting('bloom', { [item.key]: parseFloat(e.target.value) })}
-                                style={{ width: '100%' }} />
-                            </div>
-                          )}
-                        </For>
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>strength</span>
+                          <NumberDrag
+                            value={renderSettings().bloom.strength}
+                            onChange={v => updateSetting('bloom', { strength: v })}
+                            min={0}
+                            max={3}
+                            step={0.01}
+                            precision={2}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>radius</span>
+                          <NumberDrag
+                            value={renderSettings().bloom.radius}
+                            onChange={v => updateSetting('bloom', { radius: v })}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            precision={2}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>threshold</span>
+                          <NumberDrag
+                            value={renderSettings().bloom.threshold}
+                            onChange={v => updateSetting('bloom', { threshold: v })}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            precision={2}
+                          />
+                        </div>
                       </div>
                     </Show>
                   </div>
@@ -653,15 +673,27 @@ const ViewportPanel: Component = () => {
                     </div>
                     <Show when={isGroupOpen('ao') && renderSettings().ao.enabled}>
                       <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Radius</span><span>{renderSettings().ao.radius.toFixed(3)}</span></div>
-                          <input type="range" min="0.01" max="0.5" step="0.005" value={renderSettings().ao.radius}
-                            onInput={e => updateSetting('ao', { radius: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Radius</span>
+                          <NumberDrag
+                            value={renderSettings().ao.radius}
+                            onChange={v => updateSetting('ao', { radius: v })}
+                            min={0.01}
+                            max={0.5}
+                            step={0.005}
+                            precision={3}
+                          />
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Intensity</span><span>{renderSettings().ao.intensity.toFixed(2)}</span></div>
-                          <input type="range" min="0" max="1" step="0.01" value={renderSettings().ao.intensity}
-                            onInput={e => updateSetting('ao', { intensity: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
+                          <NumberDrag
+                            value={renderSettings().ao.intensity}
+                            onChange={v => updateSetting('ao', { intensity: v })}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            precision={2}
+                          />
                         </div>
                       </div>
                     </Show>
@@ -680,20 +712,38 @@ const ViewportPanel: Component = () => {
                     </div>
                     <Show when={isGroupOpen('dof') && renderSettings().dof.enabled}>
                       <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Focus</span><span>{renderSettings().dof.focus.toFixed(1)}</span></div>
-                          <input type="range" min="0.1" max="100" step="0.1" value={renderSettings().dof.focus}
-                            onInput={e => updateSetting('dof', { focus: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Focus</span>
+                          <NumberDrag
+                            value={renderSettings().dof.focus}
+                            onChange={v => updateSetting('dof', { focus: v })}
+                            min={0.1}
+                            max={100}
+                            step={0.1}
+                            precision={1}
+                          />
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Aperture</span><span>{renderSettings().dof.aperture.toFixed(3)}</span></div>
-                          <input type="range" min="0.001" max="0.1" step="0.001" value={renderSettings().dof.aperture}
-                            onInput={e => updateSetting('dof', { aperture: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Aperture</span>
+                          <NumberDrag
+                            value={renderSettings().dof.aperture}
+                            onChange={v => updateSetting('dof', { aperture: v })}
+                            min={0.001}
+                            max={0.1}
+                            step={0.001}
+                            precision={3}
+                          />
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between' }}><span>Max Blur</span><span>{renderSettings().dof.maxBlur.toFixed(3)}</span></div>
-                          <input type="range" min="0.001" max="0.05" step="0.001" value={renderSettings().dof.maxBlur}
-                            onInput={e => updateSetting('dof', { maxBlur: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Max Blur</span>
+                          <NumberDrag
+                            value={renderSettings().dof.maxBlur}
+                            onChange={v => updateSetting('dof', { maxBlur: v })}
+                            min={0.001}
+                            max={0.05}
+                            step={0.001}
+                            precision={3}
+                          />
                         </div>
                       </div>
                     </Show>
@@ -712,12 +762,17 @@ const ViewportPanel: Component = () => {
                     </div>
                     <Show when={isGroupOpen('motionBlur') && renderSettings().motionBlur.enabled}>
                       <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
-                        <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                          <span>Strength</span><span>{renderSettings().motionBlur.strength.toFixed(2)}</span>
+                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                          <span style={{ 'white-space': 'nowrap' }}>Strength</span>
+                          <NumberDrag
+                            value={renderSettings().motionBlur.strength}
+                            onChange={v => updateSetting('motionBlur', { strength: v })}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            precision={2}
+                          />
                         </div>
-                        <input type="range" min="0" max="1" step="0.01" value={renderSettings().motionBlur.strength}
-                          onInput={e => updateSetting('motionBlur', { strength: parseFloat(e.target.value) })}
-                          style={{ width: '100%' }} />
                       </div>
                     </Show>
                   </div>
@@ -791,26 +846,32 @@ const ViewportPanel: Component = () => {
 
             {/* HDR Intensity */}
             <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                <span>Intensity</span>
-                <span>{hdrIntensity().toFixed(2)}</span>
+              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
+                <NumberDrag
+                  value={hdrIntensity()}
+                  onChange={v => setHdrIntensity(v)}
+                  min={0}
+                  max={3}
+                  step={0.05}
+                  precision={2}
+                />
               </div>
-              <input type="range" min="0" max="3" step="0.05"
-                value={hdrIntensity()}
-                onInput={e => setHdrIntensity(parseFloat(e.target.value))}
-                style={{ width: '100%' }} />
             </div>
 
             {/* HDR Rotation */}
             <div style={{ padding: '8px 10px' }}>
-              <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                <span>Rotation</span>
-                <span>{hdrRotation()}&deg;</span>
+              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+                <span style={{ 'white-space': 'nowrap' }}>Rotation</span>
+                <NumberDrag
+                  value={hdrRotation()}
+                  onChange={v => setHdrRotation(Math.round(v))}
+                  min={0}
+                  max={360}
+                  step={1}
+                  precision={0}
+                />
               </div>
-              <input type="range" min="0" max="360" step="1"
-                value={hdrRotation()}
-                onInput={e => setHdrRotation(parseInt(e.target.value))}
-                style={{ width: '100%' }} />
             </div>
           </Show>
         </div>
