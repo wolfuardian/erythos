@@ -3,6 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import ObjectDraw from './object/ObjectDraw';
 import TransformDraw from './object/TransformDraw';
 import MultiSelectDraw from './object/MultiSelectDraw';
+import { PanelHeader } from '../../components/PanelHeader';
 
 const PropertiesPanel: Component = () => {
   const bridge = useEditor();
@@ -21,18 +22,7 @@ const PropertiesPanel: Component = () => {
       'border-radius': 'var(--radius-lg)',
     }}>
       {/* Header */}
-      <div style={{
-        padding: '6px 10px',
-        'border-bottom': '1px solid var(--border-subtle)',
-        color: 'var(--text-muted)',
-        'font-size': 'var(--font-size-xs)',
-        'text-transform': 'uppercase',
-        'letter-spacing': '0.5px',
-        'flex-shrink': 0,
-        'background': 'var(--bg-header)',
-      }}>
-        Properties
-      </div>
+      <PanelHeader title="Properties" />
 
       {/* Body */}
       <div style={{

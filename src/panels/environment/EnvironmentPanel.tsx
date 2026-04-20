@@ -1,5 +1,6 @@
 import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
+import { PanelHeader } from '../../components/PanelHeader';
 
 const EnvironmentPanel: Component = () => {
   const bridge = useEditor();
@@ -42,18 +43,7 @@ const EnvironmentPanel: Component = () => {
       'border-radius': 'var(--radius-lg)',
     }}>
       {/* Header */}
-      <div style={{
-        padding: '6px 10px',
-        'border-bottom': '1px solid var(--border-subtle)',
-        color: 'var(--text-muted)',
-        'font-size': 'var(--font-size-xs)',
-        'text-transform': 'uppercase',
-        'letter-spacing': '0.5px',
-        'flex-shrink': 0,
-        'background': 'var(--bg-header)',
-      }}>
-        Environment
-      </div>
+      <PanelHeader title="Environment" />
 
       {/* Body */}
       <div style={{

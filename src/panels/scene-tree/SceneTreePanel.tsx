@@ -9,6 +9,7 @@ import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 import { SaveAsLeafCommand } from '../../core/commands/SaveAsLeafCommand';
+import { PanelHeader } from '../../components/PanelHeader';
 
 interface DropIndicator {
   targetId: string;
@@ -560,18 +561,7 @@ const SceneTreePanel: Component = () => {
       'border-radius': 'var(--radius-lg)',
     }}>
       {/* Header */}
-      <div style={{
-        padding: '6px 10px',
-        'border-bottom': '1px solid var(--border-subtle)',
-        color: 'var(--text-muted)',
-        'font-size': 'var(--font-size-xs)',
-        'text-transform': 'uppercase',
-        'letter-spacing': '0.5px',
-        'flex-shrink': 0,
-        'background': 'var(--bg-header)',
-      }}>
-        Scene
-      </div>
+      <PanelHeader title="Scene" />
 
       <div
         ref={containerRef}

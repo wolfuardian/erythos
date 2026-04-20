@@ -1,6 +1,7 @@
 import { createMemo, createSignal, type Component } from 'solid-js';
 import { useEditor } from '../../EditorContext';
 import type { SceneNode } from '../../../core/scene/SceneFormat';
+import { PanelHeader } from '../../../components/PanelHeader';
 
 function compactJson(json: string): string {
   return json.replace(
@@ -77,12 +78,15 @@ const ContextPanel: Component = () => {
     <div style={{
       width: '100%',
       height: '100%',
-      overflow: 'auto',
+      display: 'flex',
+      'flex-direction': 'column',
+      overflow: 'hidden',
       background: 'var(--bg-panel)',
-      padding: 'var(--space-md)',
       'box-shadow': 'var(--shadow-well-outer)',
       'border-radius': 'var(--radius-lg)',
     }}>
+      <PanelHeader title="Context" />
+      <div style={{ flex: '1', overflow: 'auto', padding: 'var(--space-md)' }}>
       <div style={{
         display: 'flex',
         'align-items': 'center',
@@ -156,6 +160,7 @@ const ContextPanel: Component = () => {
       }}>
         {sceneJson()}
       </pre>
+      </div>
     </div>
   );
 };
