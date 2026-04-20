@@ -21,6 +21,8 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const precision = () => props.precision ?? 2;
 
   const [focused, setFocused] = createSignal(false);
+  const [hovered, setHovered] = createSignal(false);
+  const [isDragging, setIsDragging] = createSignal(false);
   const [inputText, setInputText] = createSignal(props.value.toFixed(precision()));
 
   // Sync display value when not focused
@@ -48,16 +50,17 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     e.preventDefault();
     const startX = e.clientX;
     const basis = props.value;
-    let isDragging = false;
+    let localDragging = false;
 
     const onMouseMove = (me: MouseEvent) => {
       const dx = me.clientX - startX;
-      if (!isDragging && Math.abs(dx) > 3) {
-        isDragging = true;
+      if (!localDragging && Math.abs(dx) > 3) {
+        localDragging = true;
+        setIsDragging(true);
         props.onDragStart?.();
         document.body.style.cursor = 'ew-resize';
       }
-      if (isDragging) {
+      if (localDragging) {
         const raw = basis + dx * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
         props.onChange(clamped);
@@ -69,12 +72,13 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       document.removeEventListener('mouseup', onMouseUp);
       cleanupListeners = null;
       document.body.style.cursor = '';
-      if (!isDragging) {
+      setIsDragging(false);
+      if (!localDragging) {
         inputRef?.focus();
       } else {
         props.onDragEnd?.();
       }
-      isDragging = false;
+      localDragging = false;
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -103,11 +107,12 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     }
   };
 
-  const bgStyle = () => {
-    const p = pct();
-    return p !== null
-      ? `linear-gradient(to right, color-mix(in srgb, var(--accent-gold) 30%, transparent) ${p}%, transparent ${p}%)`
-      : 'var(--bg-input)';
+  const showArrows = () => hovered() && !focused() && !isDragging();
+
+  const cellBg = () => {
+    if (focused()) return 'var(--bg-input-focus)';
+    if (hovered()) return '#333648';
+    return 'var(--bg-subsection)';
   };
 
   return (
@@ -123,19 +128,68 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       `}</style>
       <div
         onMouseDown={handleMouseDown}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           position: 'relative',
           display: 'flex',
           'align-items': 'center',
           height: '22px',
-          'border-radius': '3px',
+          'border-radius': '2px',
           overflow: 'hidden',
-          'box-shadow': 'var(--shadow-input-inset)',
           cursor: 'ew-resize',
-          background: bgStyle(),
-          flex: 1,
+          background: cellBg(),
+          flex: '1',
+          outline: focused() ? '1px solid var(--border-focus)' : 'none',
+          'outline-offset': '-1px',
+          transition: 'background 100ms ease',
         }}
       >
+        {/* Fill bar — independent absolutely-positioned div */}
+        {pct() !== null && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '0',
+              top: '0',
+              bottom: '0',
+              width: `${pct()}%`,
+              background: 'var(--accent-teal)',
+              opacity: '0.85',
+              'border-radius': '2px 0 0 2px',
+              'pointer-events': 'none',
+            }}
+          />
+        )}
+
+        {/* Left arrow ‹ */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onChange(applyClamp(props.value - (props.step ?? 0.1), props.min, props.max));
+          }}
+          style={{
+            position: 'absolute',
+            left: '0',
+            top: '0',
+            bottom: '0',
+            width: '14px',
+            display: 'flex',
+            'align-items': 'center',
+            'justify-content': 'center',
+            'font-size': '10px',
+            'font-weight': '600',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            'z-index': '2',
+            opacity: showArrows() ? '1' : '0',
+            'pointer-events': showArrows() ? 'auto' : 'none',
+            transition: 'opacity 100ms ease',
+          }}
+        >
+          ‹
+        </div>
+
         <input
           ref={inputRef}
           class="number-drag-input"
@@ -146,7 +200,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           style={{
-            flex: 1,
+            flex: '1',
             width: '0',
             background: 'transparent',
             border: 'none',
@@ -156,11 +210,88 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
             'font-family': 'var(--font-mono)',
             'font-variant-numeric': 'tabular-nums',
             padding: '0 4px',
-            cursor: 'ew-resize',
+            cursor: focused() ? 'text' : 'ew-resize',
             '-webkit-appearance': 'none',
             '-moz-appearance': 'textfield',
+            position: 'relative',
+            'z-index': '1',
           }}
         />
+
+        {/* Right arrow › */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onChange(applyClamp(props.value + (props.step ?? 0.1), props.min, props.max));
+          }}
+          style={{
+            position: 'absolute',
+            right: '0',
+            top: '0',
+            bottom: '0',
+            width: '14px',
+            display: 'flex',
+            'align-items': 'center',
+            'justify-content': 'center',
+            'font-size': '10px',
+            'font-weight': '600',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            'z-index': '2',
+            opacity: showArrows() ? '1' : '0',
+            'pointer-events': showArrows() ? 'auto' : 'none',
+            transition: 'opacity 100ms ease',
+          }}
+        >
+          ›
+        </div>
+
+        {/* Drag indicator */}
+        {isDragging() && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              'z-index': '3',
+              'pointer-events': 'none',
+              display: 'flex',
+              'align-items': 'center',
+              gap: '0',
+            }}
+          >
+            {/* Left triangle */}
+            <div
+              style={{
+                width: '0',
+                height: '0',
+                'border-top': '4px solid transparent',
+                'border-bottom': '4px solid transparent',
+                'border-right': '5px solid var(--text-secondary)',
+              }}
+            />
+            {/* Center bar */}
+            <div
+              style={{
+                width: '32px',
+                height: '2px',
+                background: 'var(--text-secondary)',
+                'border-radius': '1px',
+              }}
+            />
+            {/* Right triangle */}
+            <div
+              style={{
+                width: '0',
+                height: '0',
+                'border-top': '4px solid transparent',
+                'border-bottom': '4px solid transparent',
+                'border-left': '5px solid var(--text-secondary)',
+              }}
+            />
+          </div>
+        )}
       </div>
     </>
   );
