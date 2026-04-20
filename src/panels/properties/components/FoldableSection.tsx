@@ -6,11 +6,11 @@ interface FoldableSectionProps {
   label: string;
   children: JSX.Element;
   /**
-   * 背景深度
-   * - "default"（預設）: var(--bg-section)
-   * - "deep": color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)
+   * 視覺變體
+   * - "default"（預設）: bg-section + shadow-well-inner
+   * - "subsection": bg-subsection + shadow-well-subtle（Subtle Well，用於巢狀子面板）
    */
-  variant?: 'default' | 'deep';
+  variant?: 'default' | 'subsection';
 }
 
 const STORAGE_PREFIX = 'erythos.properties.foldable.';
@@ -35,6 +35,8 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
     } catch { /* ignore */ }
   };
 
+  const isSubsection = () => props.variant === 'subsection';
+
   return (
     <div style={{ 'margin-top': '4px' }}>
       {/* 分組標題（點擊折疊） */}
@@ -44,17 +46,17 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
           display: 'flex',
           'align-items': 'center',
           gap: '6px',
-          'font-size': 'var(--font-size-sm)',
-          color: 'var(--text-secondary)',
+          height: '24px',
+          padding: '0 8px',
+          background: isSubsection() ? 'var(--bg-subheader)' : 'var(--bg-header)',
+          'font-size': '11px',
+          color: 'var(--text-primary)',
           'text-transform': 'uppercase',
-          'letter-spacing': '0.5px',
-          padding: '5px 2px',
-          'margin-bottom': '4px',
-          background: 'transparent',
-          'border-bottom': '1px solid var(--border-subtle)',
+          'letter-spacing': '0.05em',
           'font-weight': '600',
           cursor: 'pointer',
           'user-select': 'none',
+          'border-radius': isSubsection() ? '3px 3px 0 0' : '0',
         }}
       >
         {/* 折疊三角：展開=▼ 折疊=▶ */}
@@ -62,7 +64,7 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
           display: 'inline-block',
           'font-size': '8px',
           color: 'var(--text-muted)',
-          transform: expanded() ? 'translateY(-1px)' : 'translateY(-1px) rotate(-90deg)',
+          transform: expanded() ? 'none' : 'rotate(-90deg)',
           transition: 'transform 0.15s',
         }}>
           &#9660;
@@ -70,16 +72,14 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
         {props.label}
       </div>
 
-      {/* 分組 body（tint 容器）*/}
+      {/* 分組 body */}
       {expanded() && (
         <div style={{
-          background: props.variant === 'deep'
-            ? 'color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)'
-            : 'var(--bg-section)',
+          background: isSubsection() ? 'var(--bg-subsection)' : 'var(--bg-section)',
           padding: '6px 10px',
           'margin-bottom': '6px',
-          'border-radius': 'var(--radius-md)',
-          'box-shadow': 'var(--shadow-well-inner)',
+          'border-radius': isSubsection() ? '0 0 3px 3px' : 'var(--radius-md)',
+          'box-shadow': isSubsection() ? 'var(--shadow-well-subtle)' : 'var(--shadow-well-inner)',
         }}>
           {props.children}
         </div>
