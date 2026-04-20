@@ -385,7 +385,7 @@ const ViewportPanel: Component = () => {
     <div
       ref={containerRef}
       style={{
-        width: '100%',
+        width: 'calc(100% - 6px)',
         height: '100%',
         display: 'flex',
         'flex-direction': 'column',
@@ -393,6 +393,8 @@ const ViewportPanel: Component = () => {
         background: 'var(--bg-app)',
         'box-shadow': 'var(--shadow-well-outer)',
         'border-radius': 'var(--radius-lg)',
+        margin: '0 3px',
+        'box-sizing': 'border-box',
       }}
     >
       <PanelHeader title="Viewport" />
