@@ -207,7 +207,7 @@ input[type="range"] {
 
   /* Dividers / borders */
   --dv-tab-divider-color: var(--border-subtle);
-  --dv-separator-border: var(--border-subtle);
+  --dv-separator-border: transparent;
   --dv-paneview-header-border-color: var(--border-subtle);
   --dv-paneview-active-outline-color: var(--accent-blue);
 
