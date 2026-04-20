@@ -4,7 +4,8 @@ import { useEditor } from '../../../app/EditorContext';
 import { SetTransformCommand } from '../../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
-import { XYZCellEditable, XYZCellReadonly } from '../components/XYZCell';
+import { XYZCellReadonly } from '../components/XYZCell';
+import { VectorDrag } from '../../../components/VectorDrag';
 import { fieldLabel, xyzRow, groupLabelRow } from '../components/fieldStyles';
 
 interface TransformDrawProps {
@@ -59,31 +60,38 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       {/* Position */}
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Position</span>
-        <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={pos().x} onChange={(v) => setPosition('x', v)} />
-          <XYZCellEditable axis="y" value={pos().y} onChange={(v) => setPosition('y', v)} />
-          <XYZCellEditable axis="z" value={pos().z} onChange={(v) => setPosition('z', v)} />
-        </div>
+        <VectorDrag
+          values={[pos().x, pos().y, pos().z]}
+          onChange={(i, v) => setPosition((['x', 'y', 'z'] as const)[i], v)}
+          step={0.01}
+          precision={3}
+          onDragEnd={() => editor.history.sealLast()}
+        />
       </div>
 
       {/* Rotation */}
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Rotation</span>
-        <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={rot().x} onChange={(v) => setRotation('x', v)} />
-          <XYZCellEditable axis="y" value={rot().y} onChange={(v) => setRotation('y', v)} />
-          <XYZCellEditable axis="z" value={rot().z} onChange={(v) => setRotation('z', v)} />
-        </div>
+        <VectorDrag
+          values={[rot().x, rot().y, rot().z]}
+          onChange={(i, v) => setRotation((['x', 'y', 'z'] as const)[i], v)}
+          step={1}
+          precision={1}
+          onDragEnd={() => editor.history.sealLast()}
+        />
       </div>
 
       {/* Scale */}
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Scale</span>
-        <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={scale().x} onChange={(v) => applyScale('x', v)} />
-          <XYZCellEditable axis="y" value={scale().y} onChange={(v) => applyScale('y', v)} />
-          <XYZCellEditable axis="z" value={scale().z} onChange={(v) => applyScale('z', v)} />
-        </div>
+        <VectorDrag
+          values={[scale().x, scale().y, scale().z]}
+          onChange={(i, v) => applyScale((['x', 'y', 'z'] as const)[i], v)}
+          step={0.01}
+          min={0.001}
+          precision={3}
+          onDragEnd={() => editor.history.sealLast()}
+        />
       </div>
 
       {/* Delta Transform 子 section（hardcoded 0，驗證 deep tint 視覺，階段 2 替換） */}
