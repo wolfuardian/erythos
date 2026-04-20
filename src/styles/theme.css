@@ -246,6 +246,11 @@ input[type="range"] {
   --dv-tab-divider-color: transparent;
 }
 
+/* Tab bar container: force deep dark background */
+.dockview-theme-erythos .dv-tabs-and-actions-container {
+  background-color: var(--bg-app) !important;
+}
+
 /* Tab bar: tabs align to bottom so active tab can be taller */
 .dockview-theme-erythos .dv-tabs-container {
   align-items: flex-end;
@@ -260,13 +265,21 @@ input[type="range"] {
   padding: 0 14px;
 }
 
-/* Inactive tab: 28px, anchored to bottom, subtle radius */
+/* Inactive tab: 28px, transparent bg exposes deep container, muted text */
 .dockview-theme-erythos .dv-tab.dv-inactive-tab {
   height: 28px;
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 14px;
+  background-color: transparent !important;
+  color: var(--text-muted);
+}
+
+/* Inactive tab hover: faint highlight */
+.dockview-theme-erythos .dv-tab.dv-inactive-tab:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: var(--text-secondary);
 }
 
 /* Hide close X on all tabs (no close button in this design) */
