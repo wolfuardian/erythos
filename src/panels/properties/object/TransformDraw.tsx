@@ -17,29 +17,17 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   const bridge = useEditor();
   const { editor } = bridge;
 
-  const [px, setPx] = createSignal(0);
-  const [py, setPy] = createSignal(0);
-  const [pz, setPz] = createSignal(0);
-  const [rx, setRx] = createSignal(0);
-  const [ry, setRy] = createSignal(0);
-  const [rz, setRz] = createSignal(0);
-  const [sx, setSx] = createSignal(1);
-  const [sy, setSy] = createSignal(1);
-  const [sz, setSz] = createSignal(1);
+  const [pos, setPos] = createSignal<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
+  const [rot, setRot] = createSignal<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
+  const [scale, setScale] = createSignal<{ x: number; y: number; z: number }>({ x: 1, y: 1, z: 1 });
 
   createEffect(() => {
     bridge.objectVersion();
     const node = bridge.getNode(props.uuid);
     if (!node) return;
-    setPx(round(node.position[0]));
-    setPy(round(node.position[1]));
-    setPz(round(node.position[2]));
-    setRx(round(MathUtils.radToDeg(node.rotation[0])));
-    setRy(round(MathUtils.radToDeg(node.rotation[1])));
-    setRz(round(MathUtils.radToDeg(node.rotation[2])));
-    setSx(round(node.scale[0]));
-    setSy(round(node.scale[1]));
-    setSz(round(node.scale[2]));
+    setPos({ x: round(node.position[0]), y: round(node.position[1]), z: round(node.position[2]) });
+    setRot({ x: round(MathUtils.radToDeg(node.rotation[0])), y: round(MathUtils.radToDeg(node.rotation[1])), z: round(MathUtils.radToDeg(node.rotation[2])) });
+    setScale({ x: round(node.scale[0]), y: round(node.scale[1]), z: round(node.scale[2]) });
   });
 
   const setPosition = (axis: 'x' | 'y' | 'z', value: number) => {
@@ -58,7 +46,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
     editor.execute(new SetTransformCommand(editor, props.uuid, 'rotation', newVec, node.rotation));
   };
 
-  const setScale = (axis: 'x' | 'y' | 'z', value: number) => {
+  const applyScale = (axis: 'x' | 'y' | 'z', value: number) => {
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     const newVec: Vec3 = [...node.scale];
@@ -72,9 +60,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Position</span>
         <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={px()} onChange={(v) => setPosition('x', v)} />
-          <XYZCellEditable axis="y" value={py()} onChange={(v) => setPosition('y', v)} />
-          <XYZCellEditable axis="z" value={pz()} onChange={(v) => setPosition('z', v)} />
+          <XYZCellEditable axis="x" value={pos().x} onChange={(v) => setPosition('x', v)} />
+          <XYZCellEditable axis="y" value={pos().y} onChange={(v) => setPosition('y', v)} />
+          <XYZCellEditable axis="z" value={pos().z} onChange={(v) => setPosition('z', v)} />
         </div>
       </div>
 
@@ -82,9 +70,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Rotation</span>
         <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={rx()} onChange={(v) => setRotation('x', v)} />
-          <XYZCellEditable axis="y" value={ry()} onChange={(v) => setRotation('y', v)} />
-          <XYZCellEditable axis="z" value={rz()} onChange={(v) => setRotation('z', v)} />
+          <XYZCellEditable axis="x" value={rot().x} onChange={(v) => setRotation('x', v)} />
+          <XYZCellEditable axis="y" value={rot().y} onChange={(v) => setRotation('y', v)} />
+          <XYZCellEditable axis="z" value={rot().z} onChange={(v) => setRotation('z', v)} />
         </div>
       </div>
 
@@ -92,9 +80,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       <div style={groupLabelRow}>
         <span style={fieldLabel}>Scale</span>
         <div style={xyzRow}>
-          <XYZCellEditable axis="x" value={sx()} onChange={(v) => setScale('x', v)} />
-          <XYZCellEditable axis="y" value={sy()} onChange={(v) => setScale('y', v)} />
-          <XYZCellEditable axis="z" value={sz()} onChange={(v) => setScale('z', v)} />
+          <XYZCellEditable axis="x" value={scale().x} onChange={(v) => applyScale('x', v)} />
+          <XYZCellEditable axis="y" value={scale().y} onChange={(v) => applyScale('y', v)} />
+          <XYZCellEditable axis="z" value={scale().z} onChange={(v) => applyScale('z', v)} />
         </div>
       </div>
 
