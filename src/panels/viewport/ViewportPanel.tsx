@@ -14,11 +14,13 @@ import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafComma
 import * as LeafStore from '../../core/scene/LeafStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
+import { PanelHeader } from '../../components/PanelHeader';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
   let containerRef!: HTMLDivElement;
+  let canvasRef!: HTMLDivElement;
   let viewport: Viewport | null = null;
 
   const [isDragging, setIsDragging] = createSignal(false);
@@ -68,7 +70,7 @@ const ViewportPanel: Component = () => {
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
       if (gltfFile) {
-        const dropPosition = computeDropPosition(e, containerRef, viewport);
+        const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
           const groupUUID = await loadGLTFFromFile(gltfFile, editor);
@@ -87,7 +89,7 @@ const ViewportPanel: Component = () => {
       // 路徑 2：內部 GLB 拖曳（從 Project 面板）
       const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
       if (internalGlb) {
-        const dropPosition = computeDropPosition(e, containerRef, viewport);
+        const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
           const file = await editor.projectManager.readFile(internalGlb);
@@ -105,7 +107,7 @@ const ViewportPanel: Component = () => {
       // 路徑 3：Leaf 拖曳（從 Leaf Panel）
       const leafId = e.dataTransfer?.getData('application/erythos-leaf');
       if (leafId) {
-        const dropPosition = computeDropPosition(e, containerRef, viewport);
+        const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
           const asset = await LeafStore.get(leafId);
@@ -259,7 +261,7 @@ const ViewportPanel: Component = () => {
       },
     });
 
-    viewport.mount(containerRef);
+    viewport.mount(canvasRef);
   });
 
   // Sync selection → viewport (UUID → Object3D)
@@ -385,13 +387,23 @@ const ViewportPanel: Component = () => {
       style={{
         width: '100%',
         height: '100%',
+        display: 'flex',
+        'flex-direction': 'column',
         overflow: 'hidden',
         background: 'var(--bg-app)',
-        position: 'relative',
         'box-shadow': 'var(--shadow-well-outer)',
         'border-radius': 'var(--radius-lg)',
       }}
     >
+      <PanelHeader title="Viewport" />
+      <div
+        ref={canvasRef}
+        style={{
+          flex: '1',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
       <Show when={isDragging()}>
         <div
           style={{
@@ -807,6 +819,7 @@ const ViewportPanel: Component = () => {
         message={errorMessage() ?? ''}
         onClose={() => setErrorMessage(null)}
       />
+      </div>
     </div>
   );
 };
