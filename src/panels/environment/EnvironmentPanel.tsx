@@ -1,6 +1,8 @@
 import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import { PanelHeader } from '../../components/PanelHeader';
+import { NumberDrag } from '../../components/NumberDrag';
+import { SetEnvironmentCommand } from '../../core/commands';
 
 const EnvironmentPanel: Component = () => {
   const bridge = useEditor();
@@ -10,14 +12,6 @@ const EnvironmentPanel: Component = () => {
 
   const handleClear = () => {
     editor.setEnvironmentSettings({ hdrUrl: null });
-  };
-
-  const handleIntensity = (value: number) => {
-    editor.setEnvironmentSettings({ intensity: value });
-  };
-
-  const handleRotation = (value: number) => {
-    editor.setEnvironmentSettings({ rotation: value });
   };
 
   const projectHdrFiles = () => bridge.projectFiles().filter((f) => f.type === 'hdr');
@@ -121,34 +115,39 @@ const EnvironmentPanel: Component = () => {
       </Show>
 
       {/* Intensity */}
-      <div
-        style={{ 'margin-bottom': '8px' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-      >
-        <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+      <div style={{ 'margin-bottom': '8px' }}>
+        <div style={{ 'margin-bottom': '2px' }}>
           <span>Intensity</span>
-          <span>{env().intensity.toFixed(2)}</span>
         </div>
-        <input type="range" min="0" max="3" step="0.05"
+        <NumberDrag
           value={env().intensity}
-          onInput={e => handleIntensity(parseFloat(e.target.value))}
-          style={{ width: '100%' }} />
+          min={0}
+          max={3}
+          step={0.05}
+          precision={2}
+          onChange={(v) => {
+            editor.execute(new SetEnvironmentCommand(editor, 'intensity', v, env().intensity));
+          }}
+          onDragEnd={() => editor.history.sealLast()}
+        />
       </div>
 
       {/* Rotation */}
-      <div
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-      >
-        <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+      <div>
+        <div style={{ 'margin-bottom': '2px' }}>
           <span>Rotation</span>
-          <span>{env().rotation}°</span>
         </div>
-        <input type="range" min="0" max="360" step="1"
+        <NumberDrag
           value={env().rotation}
-          onInput={e => handleRotation(parseInt(e.target.value))}
-          style={{ width: '100%' }} />
+          min={0}
+          max={360}
+          step={1}
+          precision={0}
+          onChange={(v) => {
+            editor.execute(new SetEnvironmentCommand(editor, 'rotation', v, env().rotation));
+          }}
+          onDragEnd={() => editor.history.sealLast()}
+        />
       </div>
       </div>
     </div>
