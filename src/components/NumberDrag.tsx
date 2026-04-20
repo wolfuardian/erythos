@@ -47,6 +47,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   };
 
   const handleMouseDown = (e: MouseEvent) => {
+    if (focused()) return;
     e.preventDefault();
     const startX = e.clientX;
     const basis = props.value;
@@ -58,7 +59,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
         localDragging = true;
         setIsDragging(true);
         props.onDragStart?.();
-        document.body.style.cursor = 'ew-resize';
+        document.body.style.cursor = 'none';
       }
       if (localDragging) {
         const raw = basis + dx * (props.step ?? 0.1);
@@ -91,12 +92,13 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   };
 
   const handleBlur = () => {
-    setFocused(false);
     const parsed = parseFloat(inputText());
     if (!isNaN(parsed)) {
       const clamped = applyClamp(parsed, props.min, props.max);
+      setFocused(false);
       props.onChange(clamped);
     } else {
+      setFocused(false);
       setInputText(props.value.toFixed(precision()));
     }
   };
@@ -164,6 +166,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
         {/* Left arrow ‹ */}
         <div
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             props.onChange(applyClamp(props.value - (props.step ?? 0.1), props.min, props.max));
@@ -220,6 +223,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
         {/* Right arrow › */}
         <div
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             props.onChange(applyClamp(props.value + (props.step ?? 0.1), props.min, props.max));
