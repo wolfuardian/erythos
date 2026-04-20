@@ -29,6 +29,7 @@ export const textInputBase = {
   height: '20px',
   outline: 'none',
   width: '100%',
+  'box-shadow': 'var(--shadow-input-inset)',
 } as const;
 
 /** rest 時的底線（佔 2px 高度確保 focus 不跳動） */
@@ -39,8 +40,8 @@ export const textInputRest = {
 
 /** focus 時的底線 + glow */
 export const textInputFocus = {
-  'border-bottom': '2px solid var(--accent-blue)',
-  'box-shadow': '0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent)',
+  'border-bottom': '2px solid var(--accent-gold)',
+  'box-shadow': 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 40%, transparent)',
 } as const;
 
 export const xyzRow = {
