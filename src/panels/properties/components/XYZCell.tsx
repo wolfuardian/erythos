@@ -18,12 +18,11 @@ export const XYZCellReadonly: Component<XYZCellReadonlyProps> = (props) => (
   <div style={{
     display: 'flex',
     'align-items': 'stretch',
-    background: 'var(--bg-input)',
+    background: 'transparent',
     height: '22px',
     overflow: 'hidden',
     flex: 1,
     'border-radius': '3px',
-    'box-shadow': 'var(--shadow-input-inset)',
   }}>
     <span style={{
       width: '18px',
