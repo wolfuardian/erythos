@@ -103,7 +103,12 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     }
   };
 
-  const p = pct();
+  const bgStyle = () => {
+    const p = pct();
+    return p !== null
+      ? `linear-gradient(to right, color-mix(in srgb, var(--accent-gold) 30%, transparent) ${p}%, transparent ${p}%)`
+      : 'var(--bg-input)';
+  };
 
   return (
     <>
@@ -127,9 +132,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           overflow: 'hidden',
           'box-shadow': 'var(--shadow-input-inset)',
           cursor: 'ew-resize',
-          background: p !== null
-            ? `linear-gradient(to right, color-mix(in srgb, var(--accent-gold) 30%, transparent) ${p}%, transparent ${p}%)`
-            : 'var(--bg-input)',
+          background: bgStyle(),
           flex: 1,
         }}
       >
