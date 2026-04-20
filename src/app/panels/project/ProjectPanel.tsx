@@ -226,6 +226,7 @@ const ProjectPanel: Component = () => {
             'border-bottom': '1px solid var(--border-subtle)',
             display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
             height: '30px', 'box-sizing': 'border-box',
+            'background': 'var(--bg-header)',
           }}>
             <span style={{
               color: 'var(--text-muted)', 'font-size': 'var(--font-size-xs)',
@@ -453,6 +454,7 @@ const ProjectPanel: Component = () => {
             padding: '6px 10px',
             'border-bottom': '1px solid var(--border-subtle)',
             display: 'flex', 'align-items': 'center', 'justify-content': 'space-between',
+            'background': 'var(--bg-header)',
           }}>
             <span style={{
               color: 'var(--text-secondary)', 'font-size': 'var(--font-size-sm)',
