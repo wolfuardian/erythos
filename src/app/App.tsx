@@ -33,6 +33,10 @@ const App: Component = () => {
   const editor = new Editor();
   const bridge = createEditorBridge(editor);
   const initPromise = editor.init();
+  initPromise.then(() => {
+    const first = editor.sceneDocument.getAllNodes()[0];
+    if (first) editor.selection.select(first.id);
+  });
 
   // Context menu state for dockview tab right-click
   const [tabCtxMenu, setTabCtxMenu] = createSignal<{
