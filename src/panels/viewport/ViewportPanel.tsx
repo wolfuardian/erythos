@@ -388,6 +388,7 @@ const ViewportPanel: Component = () => {
         overflow: 'hidden',
         background: 'var(--bg-app)',
         position: 'relative',
+        'box-shadow': 'var(--shadow-well-outer)',
       }}
     >
       <Show when={isDragging()}>

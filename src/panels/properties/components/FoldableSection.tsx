@@ -78,7 +78,8 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
             : 'var(--bg-section)',
           padding: '6px 10px',
           'margin-bottom': '6px',
-          'border-radius': 'var(--radius-sm)',
+          'border-radius': 'var(--radius-md)',
+          'box-shadow': 'var(--shadow-well-inner)',
         }}>
           {props.children}
         </div>

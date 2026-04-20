@@ -16,6 +16,7 @@ const SettingsPanel: Component = () => {
       overflow: 'auto',
       background: 'var(--bg-panel)',
       padding: 'var(--space-md)',
+      'box-shadow': 'var(--shadow-well-outer)',
     }}>
       <h3 style={{
         margin: 0,

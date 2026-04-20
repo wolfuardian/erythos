@@ -213,6 +213,8 @@ const ProjectPanel: Component = () => {
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
+      background: 'var(--bg-panel)',
+      'box-shadow': 'var(--shadow-well-outer)',
     }}>
       <Show when={bridge.projectOpen()} fallback={
         /* ── Hub mode ── */

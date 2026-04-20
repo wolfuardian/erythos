@@ -17,6 +17,7 @@ const PropertiesPanel: Component = () => {
       'flex-direction': 'column',
       overflow: 'hidden',
       background: 'var(--bg-panel)',
+      'box-shadow': 'var(--shadow-well-outer)',
     }}>
       {/* Header */}
       <div style={{

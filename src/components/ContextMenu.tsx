@@ -22,7 +22,7 @@ const subMenuStyle = {
   background: 'var(--bg-panel)',
   border: '1px solid var(--border-subtle)',
   'border-radius': 'var(--radius-sm)',
-  'box-shadow': '0 2px 8px rgba(0,0,0,0.3)',
+  'box-shadow': 'var(--shadow-popup)',
   'min-width': '160px',
   padding: 'var(--space-xs) 0',
   'user-select': 'none',
