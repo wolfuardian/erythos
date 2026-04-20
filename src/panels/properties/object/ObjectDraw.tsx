@@ -60,12 +60,17 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
       <div style={fieldRow}>
         <label style={fieldLabel}>Type</label>
         <span style={{
-          ...textInputBase,
-          ...textInputRest,
+          flex: '1',
+          height: '22px',
+          'border-radius': '3px',
+          padding: '0 8px',
           display: 'flex',
           'align-items': 'center',
+          'font-size': 'var(--font-size-sm)',
+          'font-weight': '500',
           color: 'var(--text-secondary)',
           cursor: 'default',
+          background: 'transparent',
         }}>
           {type()}
         </span>
