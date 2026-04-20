@@ -45,8 +45,8 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             'max-width': '400px',
             width: '90%',
             padding: 'var(--space-lg)',
-            'border-radius': 'var(--radius-md)',
-            'box-shadow': '0 4px 24px rgba(0,0,0,0.4)',
+            'border-radius': 'var(--radius-lg)',
+            'box-shadow': 'var(--shadow-well-outer)',
           }}
         >
           <h3 style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>

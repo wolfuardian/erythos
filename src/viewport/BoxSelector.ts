@@ -157,8 +157,8 @@ export class BoxSelector {
     this.overlay = document.createElement('div');
     Object.assign(this.overlay.style, {
       position: 'absolute',
-      border: '1px solid rgba(100, 149, 237, 0.8)',
-      backgroundColor: 'rgba(100, 149, 237, 0.15)',
+      border: '1px solid rgba(82, 127, 200, 0.8)',
+      backgroundColor: 'rgba(82, 127, 200, 0.15)',
       pointerEvents: 'none',
       zIndex: '5',
     });
