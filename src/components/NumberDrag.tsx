@@ -170,7 +170,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           }}
           style={{
             position: 'absolute',
-            left: '0',
+            left: '2px',
             top: '0',
             bottom: '0',
             width: '14px',
