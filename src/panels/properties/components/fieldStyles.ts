@@ -1,4 +1,4 @@
-/** 共用 style 物件（Properties Variant A Tint v2） */
+/** 共用 style 物件（Properties Twilight inset） */
 
 export const fieldRow = {
   display: 'grid',
@@ -20,28 +20,25 @@ export const textInputBase = {
   flex: '1',
   background: 'var(--bg-input)',
   border: 'none',
-  'border-radius': '0',
+  'border-radius': '3px',
   color: 'var(--text-primary)',
   'font-weight': '500',
   'font-size': 'var(--font-size-sm)',
-  padding: '2px 4px',
-  'padding-bottom': '1px',
-  height: '20px',
+  padding: '0 8px',
+  height: '22px',
   outline: 'none',
   width: '100%',
   'box-shadow': 'var(--shadow-input-inset)',
 } as const;
 
-/** rest 時的底線（佔 2px 高度確保 focus 不跳動） */
+/** rest：純 inset shadow，無底線 */
 export const textInputRest = {
-  'border-bottom': '2px solid var(--border-medium)',
-  'box-shadow': 'none',
+  'box-shadow': 'var(--shadow-input-inset)',
 } as const;
 
-/** focus 時的底線 + glow */
+/** focus：inset shadow + 1px gold outline ring */
 export const textInputFocus = {
-  'border-bottom': '2px solid var(--accent-gold)',
-  'box-shadow': 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 40%, transparent)',
+  'box-shadow': 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 50%, transparent)',
 } as const;
 
 export const xyzRow = {
