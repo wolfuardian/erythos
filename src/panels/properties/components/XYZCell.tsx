@@ -42,12 +42,12 @@ export const XYZCellEditable: Component<XYZCellEditableProps> = (props) => {
         flex: 1,
         // Rest: 2px bottom 透明佔位（避免 focus 時 1→2px 跳動）
         'border-bottom': focused()
-          ? '2px solid var(--accent-blue)'
+          ? '2px solid var(--accent-gold)'
           : '2px solid var(--border-medium)',
         // Focus glow（transparent 時不顯示）
         'box-shadow': focused()
-          ? '0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent)'
-          : 'none',
+          ? 'var(--shadow-input-inset), 0 0 0 1px color-mix(in srgb, var(--accent-gold) 40%, transparent)'
+          : 'var(--shadow-input-inset)',
       }}>
       <span style={{
         width: '16px',

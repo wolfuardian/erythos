@@ -1,29 +1,30 @@
-/* Erythos Design Tokens — Dark industrial theme */
+/* Erythos Design Tokens — Twilight persona */
 
 :root {
   /* Background hierarchy */
-  --bg-app: #1a1a1a;
-  --bg-panel: #242424;
-  --bg-section: #2a2a2a;
-  --bg-header: #333333;
-  --bg-input: #1e1e1e;
-  --bg-input-focus: #252525;
-  --bg-hover: #383838;
-  --bg-active: #404040;
-  --bg-selected: #2a4060;
-  --bg-selected-hover: #335070;
-  --bg-tooltip: #1a1a1a;
+  --bg-app: #11131c;
+  --bg-panel: #1a1d2a;
+  --bg-section: #212534;
+  --bg-header: #292d3f;
+  --bg-input: #151826;
+  --bg-input-focus: #1a1e2e;
+  --bg-hover: #2d3148;
+  --bg-active: #3a4060;
+  --bg-selected: #334268;
+  --bg-selected-hover: #3d4d78;
+  --bg-tooltip: #11131c;
 
   /* Text hierarchy */
-  --text-primary: #e0e0e0;
-  --text-secondary: #9c9c9c;
-  --text-muted: #666666;
-  --text-disabled: #4a4a4a;
-  --text-inverse: #1a1a1a;
+  --text-primary: #e8eaf1;
+  --text-secondary: #9ea3b5;
+  --text-muted: #5d6176;
+  --text-disabled: #3e4254;
+  --text-inverse: #11131c;
 
   /* Accent colors */
-  --accent-blue: #4a7fbf;
-  --accent-blue-hover: #5a90d0;
+  --accent-blue: #527fc8;
+  --accent-blue-hover: #6a95d5;
+  --accent-gold: #c0a030;
   --accent-orange: #c06020;
   --accent-orange-hover: #d07030;
   --accent-green: #3a9060;
@@ -34,17 +35,17 @@
   /* Type badge colors */
   --badge-scene: #3a9060;
   --badge-mesh: #4a7fbf;
-  --badge-geometry: #f5a623;  /* 鮮橙色，對齊既有 fallback */
+  --badge-geometry: #f5a623;
   --badge-light: #c0a030;
   --badge-camera: #7a5fb0;
   --badge-group: #c06020;
   --badge-empty: #666666;
 
   /* Borders */
-  --border-subtle: #2e2e2e;
-  --border-medium: #3a3a3a;
-  --border-strong: #4a4a4a;
-  --border-focus: var(--accent-blue);
+  --border-subtle: #262a3c;
+  --border-medium: #383d52;
+  --border-strong: #4a5068;
+  --border-focus: var(--accent-gold);
 
   /* Spacing */
   --space-xs: 2px;
@@ -78,6 +79,9 @@
   /* Shadows */
   --shadow-popup: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-well-outer: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 20px rgba(0,0,0,0.5);
+  --shadow-well-inner: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 6px rgba(0,0,0,0.4);
+  --shadow-input-inset: inset 0 1px 3px rgba(0,0,0,0.35);
 
   /* Transitions */
   --transition-fast: 100ms ease;
@@ -86,8 +90,8 @@
   /* Scrollbar */
   --scrollbar-size: 8px;
   --scrollbar-track: transparent;
-  --scrollbar-thumb: #3a3a3a;
-  --scrollbar-thumb-hover: #4a4a4a;
+  --scrollbar-thumb: #2d3148;
+  --scrollbar-thumb-hover: #383d52;
 }
 
 /* Reset & base */
@@ -209,7 +213,7 @@ input[type="range"] {
   --dv-active-sash-color: transparent;
 
   /* Drag & drop overlay */
-  --dv-drag-over-background-color: rgba(74, 127, 191, 0.15);
+  --dv-drag-over-background-color: rgba(82, 127, 200, 0.15);
   --dv-drag-over-border-color: var(--accent-blue);
 
   /* Misc UI */
