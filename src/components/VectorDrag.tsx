@@ -52,7 +52,7 @@ export const VectorDrag: Component<VectorDragProps> = (props) => {
               >
                 {label}
               </span>
-              <div style={{ flex: 1, 'border-radius': '0 3px 3px 0', overflow: 'hidden', display: 'flex' }}>
+              <div style={{ flex: 1, 'border-radius': '0 3px 3px 0', display: 'flex' }}>
                 <NumberDrag
                   value={val()}
                   onChange={(v) => props.onChange(idx, v)}
