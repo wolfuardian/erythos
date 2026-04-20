@@ -1,5 +1,5 @@
 import { For, type Component } from 'solid-js';
-import { NumberDrag, type NumberDragProps } from './NumberDrag';
+import { NumberDrag } from './NumberDrag';
 
 interface AxisOverride {
   step?: number;
@@ -34,17 +34,6 @@ export const VectorDrag: Component<VectorDragProps> = (props) => {
           const label = idx < AXIS_LABELS.length ? AXIS_LABELS[idx] : String(idx);
           const badgeBg = idx < BADGE_BG.length ? BADGE_BG[idx] : '#666';
 
-          const numberDragProps: NumberDragProps = {
-            get value() { return props.values[idx]; },
-            onChange: (v: number) => props.onChange(idx, v),
-            step: override?.step ?? props.step,
-            min: override?.min ?? props.min,
-            max: override?.max ?? props.max,
-            precision: override?.precision ?? props.precision,
-            onDragStart: props.onDragStart,
-            onDragEnd: props.onDragEnd,
-          };
-
           return (
             <div style={{ display: 'flex', 'align-items': 'stretch', flex: 1 }}>
               <span
@@ -65,7 +54,16 @@ export const VectorDrag: Component<VectorDragProps> = (props) => {
                 {label}
               </span>
               <div style={{ flex: 1, 'border-radius': '0 3px 3px 0', overflow: 'hidden', display: 'flex' }}>
-                <NumberDrag {...numberDragProps} />
+                <NumberDrag
+                  value={props.values[idx]}
+                  onChange={(v) => props.onChange(idx, v)}
+                  step={override?.step ?? props.step}
+                  min={override?.min ?? props.min}
+                  max={override?.max ?? props.max}
+                  precision={override?.precision ?? props.precision}
+                  onDragStart={props.onDragStart}
+                  onDragEnd={props.onDragEnd}
+                />
               </div>
             </div>
           );
