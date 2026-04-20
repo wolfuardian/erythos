@@ -1,4 +1,4 @@
-import { For, type Component } from 'solid-js';
+import { Index, type Component } from 'solid-js';
 import { NumberDrag } from './NumberDrag';
 
 interface AxisOverride {
@@ -26,9 +26,8 @@ const BADGE_BG = ['#c04040', '#3a9060', '#527fc8'];
 export const VectorDrag: Component<VectorDragProps> = (props) => {
   return (
     <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-      <For each={props.values}>
-        {(_val, i) => {
-          const idx = i();
+      <Index each={props.values}>
+        {(val, idx) => {
           const override = props.overrides?.[idx];
 
           const label = idx < AXIS_LABELS.length ? AXIS_LABELS[idx] : String(idx);
@@ -55,7 +54,7 @@ export const VectorDrag: Component<VectorDragProps> = (props) => {
               </span>
               <div style={{ flex: 1, 'border-radius': '0 3px 3px 0', overflow: 'hidden', display: 'flex' }}>
                 <NumberDrag
-                  value={props.values[idx]}
+                  value={val()}
                   onChange={(v) => props.onChange(idx, v)}
                   step={override?.step ?? props.step}
                   min={override?.min ?? props.min}
@@ -68,7 +67,7 @@ export const VectorDrag: Component<VectorDragProps> = (props) => {
             </div>
           );
         }}
-      </For>
+      </Index>
     </div>
   );
 };
