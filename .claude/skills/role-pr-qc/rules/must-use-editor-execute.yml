@@ -1,0 +1,20 @@
+# Command 模式：禁止直接呼叫 editor.addObject，必須走 editor.execute(cmd)
+# Command 類別本身需要直接操作 → 以 ignores 排除 commands/ 目錄
+# 若你的 Command 不在 commands/ 目錄，請調整 ignores 或改用 inside 排除
+
+id: must-use-editor-execute
+language: tsx
+severity: error
+message: 禁止直接呼叫 editor.addObject，應改用 editor.execute(new XxxCommand(...))
+files:
+  - '**/*.ts'
+  - '**/*.tsx'
+ignores:
+  - '**/commands/**'
+  - '**/*Command.ts'
+  - '**/*Command.tsx'
+rule:
+  pattern: $EDITOR.addObject($$$ARGS)
+note: |
+  Command 類別內部允許直接操作 editor；其他呼叫點一律透過 editor.execute(cmd)。
+  若 editor 方法有其他需保護的（removeObject、setPosition 等），複製此規則改 pattern 即可。

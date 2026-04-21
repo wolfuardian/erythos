@@ -1,0 +1,24 @@
+# SolidJS 契約：onMount 存在時，同 scope 內應有 onCleanup
+# 設為 warning（可能誤報：onMount 內 return cleanup function 也是合法模式）
+# 值得人眼看一下，但不阻 PASS
+
+id: solid-onmount-needs-oncleanup
+language: tsx
+severity: warning
+message: onMount 存在但同 scope 內未見 onCleanup — 確認副作用已清理
+rule:
+  pattern: onMount($$$)
+  inside:
+    any:
+      - kind: arrow_function
+      - kind: function_declaration
+      - kind: function_expression
+    stopBy: end
+    not:
+      has:
+        pattern: onCleanup($$$)
+        stopBy: end
+note: |
+  SolidJS 的 onMount 若有 addEventListener / setInterval / setTimeout /
+  第三方 instance 建立，必須有對應 onCleanup 清理，否則 component 卸載時洩漏。
+  合法例外：onMount 內 return () => {...} 當作 cleanup 也可以，此規則會誤報，人眼判斷。
