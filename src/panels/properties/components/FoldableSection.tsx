@@ -1,4 +1,5 @@
 import { createSignal, type Component, type JSX } from 'solid-js';
+import { useArea } from '../../../app/AreaContext';
 
 interface FoldableSectionProps {
   /** localStorage key 後綴，例如 'object' → erythos.foldable.<scope>.object */
@@ -32,13 +33,16 @@ function readStored(scope: string | undefined, sectionKey: string): boolean {
 }
 
 const FoldableSection: Component<FoldableSectionProps> = (props) => {
-  const [expanded, setExpanded] = createSignal(readStored(props.scope, props.sectionKey));
+  const area = useArea();
+  const effectiveScope = () => props.scope ?? area?.id ?? 'default';
+
+  const [expanded, setExpanded] = createSignal(readStored(effectiveScope(), props.sectionKey));
 
   const toggle = () => {
     const next = !expanded();
     setExpanded(next);
     try {
-      localStorage.setItem(storageKey(props.scope, props.sectionKey), String(next));
+      localStorage.setItem(storageKey(effectiveScope(), props.sectionKey), String(next));
     } catch { /* ignore */ }
   };
 

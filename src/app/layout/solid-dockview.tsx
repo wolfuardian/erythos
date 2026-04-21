@@ -18,6 +18,7 @@ export function createDockview(options: DockviewOptions): DockviewApi {
 
   const dockview = new DockviewComponent(options.parentElement, {
     theme: { name: 'erythos', className: 'dockview-theme-erythos' },
+    disableDnd: true,
     createComponent(opts) {
       const Comp = options.components[opts.name];
       if (!Comp) throw new Error(`Unknown panel component: ${opts.name}`);
