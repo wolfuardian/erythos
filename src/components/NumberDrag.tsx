@@ -1,5 +1,7 @@
 import { createSignal, createEffect, onCleanup, type Component } from 'solid-js';
+import { LadderOverlay, TIER_HEIGHT, LADDER_WIDTH } from './LadderOverlay';
 
+const STEPS = [100, 10, 1, 0.1, 0.01, 0.001, 0.0001] as const;
 const DRAG_SENSITIVITY = 0.3;
 
 export interface NumberDragProps {
@@ -27,6 +29,10 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const [isDragging, setIsDragging] = createSignal(false);
   const [inputText, setInputText] = createSignal(props.value.toFixed(precision()));
 
+  const [ladderX, setLadderX] = createSignal(0);
+  const [ladderY, setLadderY] = createSignal(0);
+  const [activeIndex, setActiveIndex] = createSignal(3);  // 預設中間 tier (0.1)
+
   // Sync display value when not focused
   createEffect(() => {
     if (!focused()) {
@@ -51,26 +57,62 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const handleMouseDown = (e: MouseEvent) => {
     if (focused()) return;
     e.preventDefault();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
     let basis = props.value;
-    let accumulatedDx = 0;
-    let dragDelta = 0;
+    let accumDx = 0;
     let localDragging = false;
+    let locked = false;
+    let lastTierIndex = 3;
+
+    setLadderX(startX);
+    setLadderY(startY);
+    setActiveIndex(3);
+
+    const computeTierIndex = (clientY: number): number => {
+      // startY 對應 index 3（中間）。往上 = index 減小；每 TIER_HEIGHT 變一格。
+      const dy = clientY - startY;
+      const raw = 3 + Math.round(dy / TIER_HEIGHT);
+      return Math.max(0, Math.min(STEPS.length - 1, raw));
+    };
 
     const onMouseMove = (me: MouseEvent) => {
-      const dx = me.movementX * DRAG_SENSITIVITY;
-
+      // 1. 進入拖曳狀態（供視覺用）—— 立即設定，無閾值
       if (!localDragging) {
-        accumulatedDx += dx;
-        if (Math.abs(accumulatedDx) > 3) {
-          localDragging = true;
-          setIsDragging(true);
-          props.onDragStart?.();
-          document.body.style.cursor = 'ew-resize';
-          dragDelta = accumulatedDx;
-        }
-      } else {
-        dragDelta += dx;
-        const raw = basis + dragDelta * (props.step ?? 0.1);
+        localDragging = true;
+        setIsDragging(true);
+        props.onDragStart?.();
+      }
+
+      // 2. 決定目前 tier
+      const tierIndex = computeTierIndex(me.clientY);
+      if (tierIndex !== lastTierIndex) {
+        // Tier 切換 — 重設 basis/accumDx，避免 step 突變造成 value 跳
+        basis = props.value;
+        accumDx = 0;
+        lastTierIndex = tierIndex;
+        setActiveIndex(tierIndex);
+      }
+
+      // 3. 判斷 lock/unlock
+      const horizontalFromCenter = me.clientX - startX;
+      const inLockZone = Math.abs(horizontalFromCenter) > LADDER_WIDTH / 2;
+
+      if (inLockZone && !locked) {
+        locked = true;
+        basis = props.value;
+        accumDx = 0;
+      } else if (!inLockZone && locked) {
+        locked = false;
+        basis = props.value;
+        accumDx = 0;
+      }
+
+      // 4. 若 locked，累積 movementX 並更新值
+      if (locked) {
+        accumDx += me.movementX * DRAG_SENSITIVITY;
+        const raw = basis + accumDx * STEPS[tierIndex];
         const clamped = applyClamp(raw, props.min, props.max);
         props.onChange(clamped);
       }
@@ -80,7 +122,6 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       cleanupListeners = null;
-      document.body.style.cursor = '';
       setIsDragging(false);
 
       if (!localDragging) {
@@ -262,6 +303,16 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
 
       </div>
+
+      {/* Ladder overlay — 拖曳中即顯示 */}
+      {isDragging() && (
+        <LadderOverlay
+          x={ladderX()}
+          y={ladderY()}
+          steps={STEPS}
+          activeIndex={activeIndex()}
+        />
+      )}
     </>
   );
 };
