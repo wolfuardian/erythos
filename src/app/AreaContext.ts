@@ -1,8 +1,13 @@
 import { createContext, useContext } from 'solid-js';
-import type { Area } from './types';
 
-export const AreaContext = createContext<Area | undefined>(undefined);
+export interface AreaContextValue {
+  id: string;
+  editorType: string;
+  setEditorType: (nextId: string) => void;
+}
 
-export function useArea(): Area | undefined {
+export const AreaContext = createContext<AreaContextValue | undefined>(undefined);
+
+export function useArea(): AreaContextValue | undefined {
   return useContext(AreaContext);
 }
