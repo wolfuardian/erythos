@@ -1,7 +1,7 @@
 import { createSignal, type Component, type JSX } from 'solid-js';
 
 interface FoldableSectionProps {
-  /** localStorage key 後綴，例如 'object' → erythos.properties.foldable.object */
+  /** localStorage key 後綴，例如 'object' → erythos.foldable.<scope>.object */
   sectionKey: string;
   label: string;
   children: JSX.Element;
@@ -11,13 +11,20 @@ interface FoldableSectionProps {
    * - "subsection": bg-subsection + shadow-well-subtle（Subtle Well，用於巢狀子面板）
    */
   variant?: 'default' | 'subsection';
+  /**
+   * 命名空間，隔離多個 PropertiesPanel 實例的折疊狀態
+   * 預設 'default'，確保現有行為不變
+   */
+  scope?: string;
 }
 
-const STORAGE_PREFIX = 'erythos.properties.foldable.';
+function storageKey(scope: string | undefined, sectionKey: string): string {
+  return `erythos.foldable.${scope ?? 'default'}.${sectionKey}`;
+}
 
-function readStored(key: string): boolean {
+function readStored(scope: string | undefined, sectionKey: string): boolean {
   try {
-    const v = localStorage.getItem(STORAGE_PREFIX + key);
+    const v = localStorage.getItem(storageKey(scope, sectionKey));
     return v === null ? true : v === 'true'; // 預設展開
   } catch {
     return true;
@@ -25,13 +32,13 @@ function readStored(key: string): boolean {
 }
 
 const FoldableSection: Component<FoldableSectionProps> = (props) => {
-  const [expanded, setExpanded] = createSignal(readStored(props.sectionKey));
+  const [expanded, setExpanded] = createSignal(readStored(props.scope, props.sectionKey));
 
   const toggle = () => {
     const next = !expanded();
     setExpanded(next);
     try {
-      localStorage.setItem(STORAGE_PREFIX + props.sectionKey, String(next));
+      localStorage.setItem(storageKey(props.scope, props.sectionKey), String(next));
     } catch { /* ignore */ }
   };
 
