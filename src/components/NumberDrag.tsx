@@ -1,5 +1,7 @@
 import { createSignal, createEffect, onCleanup, type Component } from 'solid-js';
 
+const DRAG_SENSITIVITY = 0.3;
+
 export interface NumberDragProps {
   value: number;
   onChange: (v: number) => void;
@@ -49,52 +51,13 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const handleMouseDown = (e: MouseEvent) => {
     if (focused()) return;
     e.preventDefault();
-    const target = e.currentTarget as HTMLElement;
-    let basis = props.value;           // 改 let，lock 時可重設
-    let accumulatedDx = 0;        // 門檻判斷用（加總 movementX 直到超過 3）
-    let dragDelta = 0;             // 進入拖曳後的位移累積
+    let basis = props.value;
+    let accumulatedDx = 0;
+    let dragDelta = 0;
     let localDragging = false;
-    let skipNextMovement = false;
-
-    // Pointer Lock 必須從 user gesture 觸發才會 engage
-    target.requestPointerLock?.();
-    console.log('[NumberDrag] mousedown, lock requested, pointerLockElement=', document.pointerLockElement);
-
-    // 加 listener 監聽 pointerlockerror
-    const onLockError = (err: Event) => {
-      console.warn('[NumberDrag] pointer lock ERROR', err);
-    };
-    document.addEventListener('pointerlockerror', onLockError);
-
-    const onLockChange = () => {
-      console.log('[NumberDrag] pointerlockchange, engaged=', document.pointerLockElement === target);
-      if (document.pointerLockElement === target) {
-        // Lock 剛 acquire：吞下一個 mousemove（spike 吸收），重設基準
-        skipNextMovement = true;
-        basis = props.value;   // 以 lock 瞬間的 value 為新基準
-        dragDelta = 0;
-      }
-    };
-    document.addEventListener('pointerlockchange', onLockChange);
 
     const onMouseMove = (me: MouseEvent) => {
-      // Clamp 單筆 movementX 避免 pointer lock 未 engage 時 OS 邊緣補償造成暴衝
-      const dx = Math.max(-100, Math.min(100, me.movementX));
-
-      // === DIAGNOSTIC (remove after debugging) ===
-      console.log('[NumberDrag]', {
-        mx: me.movementX,
-        my: me.movementY,
-        clientX: me.clientX,
-        clientY: me.clientY,
-        clampedDx: dx,
-        dragDelta,
-        locked: document.pointerLockElement === target,
-        localDragging,
-        skipNext: skipNextMovement,
-        trusted: me.isTrusted,
-      });
-      // === END DIAGNOSTIC ===
+      const dx = me.movementX * DRAG_SENSITIVITY;
 
       if (!localDragging) {
         accumulatedDx += dx;
@@ -102,15 +65,10 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           localDragging = true;
           setIsDragging(true);
           props.onDragStart?.();
-          document.body.style.cursor = 'none';
-          // requestPointerLock 已在 mousedown 觸發，此處不再呼叫
-          dragDelta = accumulatedDx;  // 繼承門檻累積
+          document.body.style.cursor = 'ew-resize';
+          dragDelta = accumulatedDx;
         }
       } else {
-        if (skipNextMovement) {
-          skipNextMovement = false;
-          return;
-        }
         dragDelta += dx;
         const raw = basis + dragDelta * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
@@ -119,18 +77,11 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     };
 
     const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('pointerlockchange', onLockChange);
-      document.removeEventListener('pointerlockerror', onLockError);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       cleanupListeners = null;
       document.body.style.cursor = '';
       setIsDragging(false);
-
-      // exit pointer lock（只有真的拖曳過才 lock 過，沒 lock 呼叫 exit 也無害）
-      if (document.pointerLockElement) {
-        document.exitPointerLock?.();
-      }
 
       if (!localDragging) {
         inputRef?.focus();
@@ -140,15 +91,12 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       localDragging = false;
     };
 
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
 
     cleanupListeners = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('pointerlockchange', onLockChange);
-      document.removeEventListener('pointerlockerror', onLockError);
-      if (document.pointerLockElement) document.exitPointerLock?.();
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   };
 
@@ -200,7 +148,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           height: '22px',
           'border-radius': '2px',
           overflow: 'hidden',
-          cursor: isDragging() ? 'none' : 'ew-resize',
+          cursor: isDragging() ? 'ew-resize' : 'ew-resize',
           background: cellBg(),
           flex: '1',
           outline: focused() ? '1px solid var(--border-focus)' : 'none',
@@ -275,7 +223,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
             'font-variant-numeric': 'tabular-nums',
             'text-align': 'center',
             padding: '0 16px',
-            cursor: isDragging() ? 'none' : (focused() ? 'text' : 'ew-resize'),
+            cursor: isDragging() ? 'ew-resize' : (focused() ? 'text' : 'ew-resize'),
             '-webkit-appearance': 'none',
             '-moz-appearance': 'textfield',
             position: 'relative',
