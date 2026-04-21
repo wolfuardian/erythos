@@ -1,0 +1,28 @@
+# 事件契約：emit('objectAdded') 所在 scope 應伴隨 emit('sceneGraphChanged')
+# 靜態規則只能抓 local 案例（同 function 內）；跨檔 / 延遲觸發抓不到
+# warning 級，提醒人眼檢查
+
+id: event-order-objectadded-needs-scenegraphchanged
+language: tsx
+severity: warning
+message: emit('objectAdded') 所在 scope 內未見 emit('sceneGraphChanged') — 確認契約順序
+files:
+  - '**/*.ts'
+  - '**/*.tsx'
+rule:
+  pattern: $EMITTER.emit('objectAdded', $$$)
+  inside:
+    any:
+      - kind: method_definition
+      - kind: function_declaration
+      - kind: arrow_function
+      - kind: function_expression
+    stopBy: end
+    not:
+      has:
+        pattern: $EMITTER.emit('sceneGraphChanged', $$$)
+        stopBy: end
+note: |
+  若事件順序是由 Command 框架 / 外層 listener 統一觸發，local 規則會誤報。
+  誤報多時：把「統一觸發端」的檔案加進 ignores，或在規則加 inside 排除 Command.execute。
+  若其他事件配對也存在（objectRemoved → sceneGraphChanged 等），複製此規則改 pattern。
