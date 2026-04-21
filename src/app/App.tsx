@@ -7,15 +7,16 @@ import DockLayout from './layout/DockLayout';
 import type { PanelComponent } from './layout/solid-dockview';
 import type { DockviewApi } from './layout/solid-dockview';
 import { editors } from './editors';
+import { AreaShell } from './AreaShell';
 import Toolbar from '../components/Toolbar';
 import { ContextMenu } from '../components/ContextMenu';
 import type { MenuItem } from '../components/ContextMenu';
 
 const COMPONENTS: Record<string, PanelComponent> = Object.fromEntries(
-  editors.map((e) => [e.id, () => {
-    const C = e.component;
-    return <C />;
-  }])
+  editors.map(e => [
+    e.id,
+    (props) => <AreaShell panel={props.panel} initialEditorType={e.id} />
+  ])
 );
 
 const App: Component = () => {
