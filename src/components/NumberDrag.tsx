@@ -251,52 +251,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           ›
         </div>
 
-        {/* Drag indicator */}
-        {isDragging() && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              'z-index': '3',
-              'pointer-events': 'none',
-              display: 'flex',
-              'align-items': 'center',
-              gap: '0',
-            }}
-          >
-            {/* Left triangle */}
-            <div
-              style={{
-                width: '0',
-                height: '0',
-                'border-top': '4px solid transparent',
-                'border-bottom': '4px solid transparent',
-                'border-right': '5px solid var(--text-secondary)',
-              }}
-            />
-            {/* Center bar */}
-            <div
-              style={{
-                width: '32px',
-                height: '2px',
-                background: 'var(--text-secondary)',
-                'border-radius': '1px',
-              }}
-            />
-            {/* Right triangle */}
-            <div
-              style={{
-                width: '0',
-                height: '0',
-                'border-top': '4px solid transparent',
-                'border-bottom': '4px solid transparent',
-                'border-left': '5px solid var(--text-secondary)',
-              }}
-            />
-          </div>
-        )}
+
       </div>
     </>
   );
