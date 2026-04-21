@@ -10,6 +10,8 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useEditor } from '../../app/EditorContext';
 import * as GlbStore from '../../core/scene/GlbStore';
+import { PanelHeader } from '../../components/PanelHeader';
+
 const LeafPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
@@ -160,6 +162,9 @@ const LeafPanel: Component = () => {
       margin: '0 3px',
       'box-sizing': 'border-box',
     }}>
+      {/* Header */}
+      <PanelHeader title={`Leaves (${bridge.leafAssets().length})`} />
+
       {/* Body: list + preview */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left: leaf list */}

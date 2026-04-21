@@ -3,6 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import ObjectDraw from './object/ObjectDraw';
 import TransformDraw from './object/TransformDraw';
 import MultiSelectDraw from './object/MultiSelectDraw';
+import { PanelHeader } from '../../components/PanelHeader';
 
 const PropertiesPanel: Component = () => {
   const bridge = useEditor();
@@ -22,6 +23,9 @@ const PropertiesPanel: Component = () => {
       margin: '0 3px',
       'box-sizing': 'border-box',
     }}>
+      {/* Header */}
+      <PanelHeader title="Properties" />
+
       {/* Body */}
       <div style={{
         flex: 1,
