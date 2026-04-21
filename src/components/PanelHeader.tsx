@@ -15,7 +15,9 @@ const PanelHeader: Component<PanelHeaderProps> = (props) => {
     <div style={{
       background: 'var(--bg-header)',
       'border-bottom': '1px solid var(--border-subtle)',
-      padding: '6px 10px',
+      height: '24px',
+      padding: '0 10px',
+      'box-sizing': 'border-box',
       color: 'var(--text-muted)',
       'font-size': 'var(--font-size-xs)',
       'text-transform': 'uppercase',
