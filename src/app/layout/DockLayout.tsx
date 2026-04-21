@@ -1,6 +1,7 @@
 import { onMount, onCleanup, type Component } from 'solid-js';
 import { createDockview, type PanelComponent, type DockviewApi } from './solid-dockview';
 import { applyDefaultLayout, saveLayout } from './defaultLayout';
+import { subscribe as subscribeEditorTypes } from '../editorTypeStore';
 
 // dockview CSS
 import 'dockview-core/dist/styles/dockview.css';
@@ -39,11 +40,12 @@ const DockLayout: Component<DockLayoutProps> = (props) => {
     applyDefaultLayout(api);
     props.onReady?.(api);
 
-    // Auto-save layout on changes
-    const disposable = api.onDidLayoutChange(() => saveLayout(api));
+    const disposeLayout = api.onDidLayoutChange(() => saveLayout(api));
+    const unsubscribeEditorTypes = subscribeEditorTypes(() => saveLayout(api));
 
     onCleanup(() => {
-      disposable.dispose();
+      disposeLayout.dispose();
+      unsubscribeEditorTypes();
       api.dispose();
     });
   });
@@ -52,11 +54,7 @@ const DockLayout: Component<DockLayoutProps> = (props) => {
     <div
       ref={containerRef}
       class="erythos-dock"
-      style={{
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-      }}
+      style={{ width: '100%', height: '100%', overflow: 'hidden' }}
     />
   );
 };
