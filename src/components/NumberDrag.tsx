@@ -311,6 +311,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           y={ladderY()}
           steps={STEPS}
           activeIndex={activeIndex()}
+          currentValue={props.value.toFixed(precision())}
         />
       )}
     </>
