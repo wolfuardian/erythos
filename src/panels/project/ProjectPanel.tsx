@@ -1,10 +1,10 @@
 import { createSignal, createResource, onMount, onCleanup, Show, For, type Component } from 'solid-js';
-import { useEditor } from '../../EditorContext';
-import { ErrorDialog } from '../../../components/ErrorDialog';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { PanelHeader } from '../../../components/PanelHeader';
-import type { ProjectEntry } from '../../../core/project/ProjectHandleStore';
-import type { ProjectFile } from '../../../core/project/ProjectFile';
+import { useEditor } from '../../app/EditorContext';
+import { ErrorDialog } from '../../components/ErrorDialog';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PanelHeader } from '../../components/PanelHeader';
+import type { ProjectEntry } from '../../core/project/ProjectHandleStore';
+import type { ProjectFile } from '../../core/project/ProjectFile';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {

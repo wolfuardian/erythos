@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
-import { useEditor } from '../../EditorContext';
-import { setConfirmBeforeLoad } from '../../bridge';
-import { PanelHeader } from '../../../components/PanelHeader';
+import { useEditor } from '../../app/EditorContext';
+import { setConfirmBeforeLoad } from '../../app/bridge';
+import { PanelHeader } from '../../components/PanelHeader';
 
 const SettingsPanel: Component = () => {
   const bridge = useEditor();

@@ -1,7 +1,7 @@
 import { createMemo, createSignal, type Component } from 'solid-js';
-import { useEditor } from '../../EditorContext';
-import type { SceneNode } from '../../../core/scene/SceneFormat';
-import { PanelHeader } from '../../../components/PanelHeader';
+import { useEditor } from '../../app/EditorContext';
+import type { SceneNode } from '../../core/scene/SceneFormat';
+import { PanelHeader } from '../../components/PanelHeader';
 
 function compactJson(json: string): string {
   return json.replace(
