@@ -2,7 +2,6 @@ import { createSignal, createResource, onMount, onCleanup, Show, For, type Compo
 import { useEditor } from '../../app/EditorContext';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectEntry } from '../../core/project/ProjectHandleStore';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 
@@ -223,27 +222,29 @@ const ProjectPanel: Component = () => {
       <Show when={bridge.projectOpen()} fallback={
         /* ── Hub mode ── */
         <>
-          {/* Hub header — 永遠顯示 */}
-          <PanelHeader
-            title="Projects"
-            actions={
-              <Show when={!showCreate()}>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button onClick={() => setShowCreate(true)} style={{
-                    background: 'var(--accent-blue)', color: '#fff', border: 'none',
-                    padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                    'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-                  }}>New</button>
-                  <button onClick={() => void handleAdd()} style={{
-                    background: 'var(--bg-section)', color: 'var(--text-muted)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
-                    'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-                  }}>Add</button>
-                </div>
-              </Show>
-            }
-          />
+          {/* Hub action bar */}
+          <Show when={!showCreate()}>
+            <div style={{
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'flex-end',
+              gap: '4px',
+              padding: '4px 8px',
+              'flex-shrink': 0,
+            }}>
+              <button onClick={() => setShowCreate(true)} style={{
+                background: 'var(--accent-blue)', color: '#fff', border: 'none',
+                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+              }}>New</button>
+              <button onClick={() => void handleAdd()} style={{
+                background: 'var(--bg-section)', color: 'var(--text-muted)',
+                border: '1px solid var(--border-subtle)',
+                padding: '2px 8px', 'border-radius': 'var(--radius-sm)',
+                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+              }}>Add</button>
+            </div>
+          </Show>
 
           {/* Content area — relative 容器，overlay 以此為基準 */}
           <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
@@ -446,17 +447,21 @@ const ProjectPanel: Component = () => {
       }>
         {/* ── Browser mode ── */}
         <>
-          <PanelHeader
-            title={bridge.projectName() ?? 'Project'}
-            actions={
-              <button onClick={() => setShowCloseConfirm(true)} style={{
-                background: 'var(--bg-section)', color: 'var(--text-muted)',
-                border: '1px solid var(--border-subtle)',
-                padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
-                'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-              }}>Close project</button>
-            }
-          />
+          {/* Browser action bar */}
+          <div style={{
+            display: 'flex',
+            'align-items': 'center',
+            'justify-content': 'flex-end',
+            padding: '4px 8px',
+            'flex-shrink': 0,
+          }}>
+            <button onClick={() => setShowCloseConfirm(true)} style={{
+              background: 'var(--bg-section)', color: 'var(--text-muted)',
+              border: '1px solid var(--border-subtle)',
+              padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
+              'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+            }}>Close project</button>
+          </div>
           <div
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true); }}

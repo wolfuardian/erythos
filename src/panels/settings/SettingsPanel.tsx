@@ -1,7 +1,6 @@
 import type { Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import { setConfirmBeforeLoad } from '../../app/bridge';
-import { PanelHeader } from '../../components/PanelHeader';
 
 const SettingsPanel: Component = () => {
   const bridge = useEditor();
@@ -23,7 +22,6 @@ const SettingsPanel: Component = () => {
       margin: '0 3px',
       'box-sizing': 'border-box',
     }}>
-      <PanelHeader title="Settings" />
       <div style={{ flex: '1', overflow: 'auto', padding: 'var(--space-md)' }}>
       <label
         onMouseEnter={(e) => (e.currentTarget as HTMLLabelElement).style.background = 'var(--bg-hover)'}

@@ -14,7 +14,6 @@ import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafComma
 import * as LeafStore from '../../core/scene/LeafStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
-import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 
 const ViewportPanel: Component = () => {
@@ -398,7 +397,6 @@ const ViewportPanel: Component = () => {
         'box-sizing': 'border-box',
       }}
     >
-      <PanelHeader title="Viewport" />
       <div
         ref={canvasRef}
         style={{

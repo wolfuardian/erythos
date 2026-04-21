@@ -9,8 +9,6 @@ import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 import { SaveAsLeafCommand } from '../../core/commands/SaveAsLeafCommand';
-import { PanelHeader } from '../../components/PanelHeader';
-
 interface DropIndicator {
   targetId: string;
   position: 'before' | 'inside' | 'after';
@@ -562,9 +560,6 @@ const SceneTreePanel: Component = () => {
       margin: '0 3px',
       'box-sizing': 'border-box',
     }}>
-      {/* Header */}
-      <PanelHeader title="Scene" />
-
       <div
         ref={containerRef}
         tabIndex={0}
