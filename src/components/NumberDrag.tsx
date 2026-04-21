@@ -67,8 +67,11 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     document.addEventListener('pointerlockchange', onLockChange);
 
     const onMouseMove = (me: MouseEvent) => {
+      // Clamp 單筆 movementX 避免 pointer lock 未 engage 時 OS 邊緣補償造成暴衝
+      const dx = Math.max(-100, Math.min(100, me.movementX));
+
       if (!localDragging) {
-        accumulatedDx += me.movementX;
+        accumulatedDx += dx;
         if (Math.abs(accumulatedDx) > 3) {
           localDragging = true;
           setIsDragging(true);
@@ -83,7 +86,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           skipNextMovement = false;
           return;
         }
-        dragDelta += me.movementX;
+        dragDelta += dx;
         const raw = basis + dragDelta * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
         props.onChange(clamped);
