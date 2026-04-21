@@ -398,7 +398,44 @@ const ViewportPanel: Component = () => {
         'box-sizing': 'border-box',
       }}
     >
-      <PanelHeader title="Viewport" />
+      <PanelHeader title="Viewport" actions={
+        <div style={{
+          display: 'flex',
+          'align-items': 'center',
+          gap: '2px',
+          'user-select': 'none',
+        }}>
+          <For each={(['wireframe', 'solid', 'shading', 'rendering'] as ShadingMode[])}>
+            {(mode) => (
+              <button
+                onClick={() => setRenderMode(mode)}
+                onMouseEnter={() => setHoveredShading(mode)}
+                onMouseLeave={() => setHoveredShading(null)}
+                style={{
+                  background: renderMode() === mode
+                    ? 'var(--bg-active)'
+                    : hoveredShading() === mode
+                      ? 'var(--bg-hover)'
+                      : 'transparent',
+                  border: 'none',
+                  color: renderMode() === mode ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  padding: '2px 6px',
+                  cursor: 'pointer',
+                  'border-radius': '3px',
+                  'font-size': '10px',
+                  'font-weight': renderMode() === mode ? '600' : '400',
+                  height: '18px',
+                  transition: 'background 0.1s',
+                }}
+              >
+                {mode === 'wireframe' ? 'Wire' :
+                 mode === 'solid' ? 'Solid' :
+                 mode === 'shading' ? 'Shading' : 'Render'}
+              </button>
+            )}
+          </For>
+        </div>
+      } />
       <div
         ref={canvasRef}
         style={{
@@ -426,51 +463,6 @@ const ViewportPanel: Component = () => {
           放開以導入模型
         </div>
       </Show>
-      {/* 渲染模式工具列 */}
-      <div style={{
-        position: 'absolute',
-        top: '8px',
-        right: '8px',
-        display: 'flex',
-        'align-items': 'center',
-        gap: '2px',
-        background: 'var(--bg-app)',
-        'border-radius': '5px',
-        padding: '3px',
-        'z-index': '5',
-        'user-select': 'none',
-      }}>
-        <For each={(['wireframe', 'solid', 'shading', 'rendering'] as ShadingMode[])}>
-          {(mode) => (
-            <button
-              onClick={() => setRenderMode(mode)}
-              onMouseEnter={() => setHoveredShading(mode)}
-              onMouseLeave={() => setHoveredShading(null)}
-              style={{
-                background: renderMode() === mode
-                  ? 'rgba(255,255,255,0.18)'
-                  : hoveredShading() === mode
-                    ? 'var(--bg-hover)'
-                    : 'transparent',
-                border: 'none',
-                color: renderMode() === mode ? 'var(--text-primary, #fff)' : 'var(--text-secondary, #aaa)',
-                padding: '3px 8px',
-                cursor: 'pointer',
-                'border-radius': '3px',
-                'font-size': '11px',
-                'font-weight': renderMode() === mode ? '600' : '400',
-                transition: 'background 0.1s',
-              }}
-            >
-              {mode === 'wireframe' ? 'Wire' :
-               mode === 'solid' ? 'Solid' :
-               mode === 'shading' ? 'Shading' : 'Render'}
-            </button>
-          )}
-        </For>
-
-      </div>
-
       {/* Rendering 懸浮面板 */}
       <Show when={renderMode() === 'rendering'}>
         <div style={{
