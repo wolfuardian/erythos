@@ -6,28 +6,17 @@ import { EditorProvider } from './EditorContext';
 import DockLayout from './layout/DockLayout';
 import type { PanelComponent } from './layout/solid-dockview';
 import type { DockviewApi } from './layout/solid-dockview';
-import { ViewportPanel } from '../panels/viewport';
-import { SceneTreePanel } from '../panels/scene-tree';
-import { PropertiesPanel } from '../panels/properties';
-import { LeafPanel } from '../panels/leaf';
-import { EnvironmentPanel } from '../panels/environment';
-import ProjectPanel from '../panels/project/ProjectPanel';
-import ContextPanel from '../panels/context/ContextPanel';
-import SettingsPanel from '../panels/settings/SettingsPanel';
+import { editors } from './editors';
 import Toolbar from '../components/Toolbar';
 import { ContextMenu } from '../components/ContextMenu';
 import type { MenuItem } from '../components/ContextMenu';
 
-const COMPONENTS: Record<string, PanelComponent> = {
-  'viewport': () => <ViewportPanel />,
-  'scene-tree': () => <SceneTreePanel />,
-  'properties': () => <PropertiesPanel />,
-  'project': () => <ProjectPanel />,
-  'context': () => <ContextPanel />,
-  'settings': () => <SettingsPanel />,
-  'leaf': () => <LeafPanel />,
-  'environment': () => <EnvironmentPanel />,
-};
+const COMPONENTS: Record<string, PanelComponent> = Object.fromEntries(
+  editors.map((e) => [e.id, () => {
+    const C = e.component;
+    return <C />;
+  }])
+);
 
 const App: Component = () => {
   const editor = new Editor();
