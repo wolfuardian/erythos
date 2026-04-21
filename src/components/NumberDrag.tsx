@@ -50,10 +50,21 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     if (focused()) return;
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;
-    const basis = props.value;
+    let basis = props.value;           // 改 let，lock 時可重設
     let accumulatedDx = 0;        // 門檻判斷用（加總 movementX 直到超過 3）
     let dragDelta = 0;             // 進入拖曳後的位移累積
     let localDragging = false;
+    let skipNextMovement = false;
+
+    const onLockChange = () => {
+      if (document.pointerLockElement === target) {
+        // Lock 剛 acquire：吞下一個 mousemove（spike 吸收），重設基準
+        skipNextMovement = true;
+        basis = props.value;   // 以 lock 瞬間的 value 為新基準
+        dragDelta = 0;
+      }
+    };
+    document.addEventListener('pointerlockchange', onLockChange);
 
     const onMouseMove = (me: MouseEvent) => {
       if (!localDragging) {
@@ -68,6 +79,10 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           dragDelta = accumulatedDx;  // 繼承門檻累積
         }
       } else {
+        if (skipNextMovement) {
+          skipNextMovement = false;
+          return;
+        }
         dragDelta += me.movementX;
         const raw = basis + dragDelta * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
@@ -78,6 +93,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('pointerlockchange', onLockChange);
       cleanupListeners = null;
       document.body.style.cursor = '';
       setIsDragging(false);
@@ -101,6 +117,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     cleanupListeners = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('pointerlockchange', onLockChange);
       if (document.pointerLockElement) document.exitPointerLock?.();
     };
   };
