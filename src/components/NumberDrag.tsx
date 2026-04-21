@@ -58,8 +58,16 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
     // Pointer Lock 必須從 user gesture 觸發才會 engage
     target.requestPointerLock?.();
+    console.log('[NumberDrag] mousedown, lock requested, pointerLockElement=', document.pointerLockElement);
+
+    // 加 listener 監聽 pointerlockerror
+    const onLockError = (err: Event) => {
+      console.warn('[NumberDrag] pointer lock ERROR', err);
+    };
+    document.addEventListener('pointerlockerror', onLockError);
 
     const onLockChange = () => {
+      console.log('[NumberDrag] pointerlockchange, engaged=', document.pointerLockElement === target);
       if (document.pointerLockElement === target) {
         // Lock 剛 acquire：吞下一個 mousemove（spike 吸收），重設基準
         skipNextMovement = true;
@@ -72,6 +80,21 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     const onMouseMove = (me: MouseEvent) => {
       // Clamp 單筆 movementX 避免 pointer lock 未 engage 時 OS 邊緣補償造成暴衝
       const dx = Math.max(-100, Math.min(100, me.movementX));
+
+      // === DIAGNOSTIC (remove after debugging) ===
+      console.log('[NumberDrag]', {
+        mx: me.movementX,
+        my: me.movementY,
+        clientX: me.clientX,
+        clientY: me.clientY,
+        clampedDx: dx,
+        dragDelta,
+        locked: document.pointerLockElement === target,
+        localDragging,
+        skipNext: skipNextMovement,
+        trusted: me.isTrusted,
+      });
+      // === END DIAGNOSTIC ===
 
       if (!localDragging) {
         accumulatedDx += dx;
@@ -99,6 +122,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
+      document.removeEventListener('pointerlockerror', onLockError);
       cleanupListeners = null;
       document.body.style.cursor = '';
       setIsDragging(false);
@@ -123,6 +147,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
+      document.removeEventListener('pointerlockerror', onLockError);
       if (document.pointerLockElement) document.exitPointerLock?.();
     };
   };
