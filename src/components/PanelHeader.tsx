@@ -1,4 +1,7 @@
 import type { Component, JSX } from 'solid-js';
+import { useArea } from '../app/AreaContext';
+import { EditorSwitcher } from './EditorSwitcher';
+import { editors } from '../app/editors';
 
 export interface PanelHeaderProps {
   title: string;
@@ -6,11 +9,15 @@ export interface PanelHeaderProps {
 }
 
 const PanelHeader: Component<PanelHeaderProps> = (props) => {
+  const area = useArea();
+
   return (
     <div style={{
       background: 'var(--bg-header)',
       'border-bottom': '1px solid var(--border-subtle)',
-      padding: '6px 10px',
+      height: '24px',
+      padding: '0 10px',
+      'box-sizing': 'border-box',
       color: 'var(--text-muted)',
       'font-size': 'var(--font-size-xs)',
       'text-transform': 'uppercase',
@@ -19,9 +26,19 @@ const PanelHeader: Component<PanelHeaderProps> = (props) => {
       display: 'flex',
       'align-items': 'center',
       'justify-content': 'space-between',
+      gap: '6px',
     }}>
       <span>{props.title}</span>
-      {props.actions}
+      <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
+        {props.actions}
+        {area && (
+          <EditorSwitcher
+            editors={editors}
+            currentId={area.editorType}
+            onSelect={area.setEditorType}
+          />
+        )}
+      </div>
     </div>
   );
 };
