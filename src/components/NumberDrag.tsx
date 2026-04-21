@@ -49,20 +49,27 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const handleMouseDown = (e: MouseEvent) => {
     if (focused()) return;
     e.preventDefault();
-    const startX = e.clientX;
+    const target = e.currentTarget as HTMLElement;
     const basis = props.value;
+    let accumulatedDx = 0;        // 門檻判斷用（加總 movementX 直到超過 3）
+    let dragDelta = 0;             // 進入拖曳後的位移累積
     let localDragging = false;
 
     const onMouseMove = (me: MouseEvent) => {
-      const dx = me.clientX - startX;
-      if (!localDragging && Math.abs(dx) > 3) {
-        localDragging = true;
-        setIsDragging(true);
-        props.onDragStart?.();
-        document.body.style.cursor = 'none';
-      }
-      if (localDragging) {
-        const raw = basis + dx * (props.step ?? 0.1);
+      if (!localDragging) {
+        accumulatedDx += me.movementX;
+        if (Math.abs(accumulatedDx) > 3) {
+          localDragging = true;
+          setIsDragging(true);
+          props.onDragStart?.();
+          document.body.style.cursor = 'none';
+          // request pointer lock：target 需為 Element，call 是 async 但不必 await
+          target.requestPointerLock?.();
+          dragDelta = accumulatedDx;  // 繼承門檻累積
+        }
+      } else {
+        dragDelta += me.movementX;
+        const raw = basis + dragDelta * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
         props.onChange(clamped);
       }
@@ -74,6 +81,12 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       cleanupListeners = null;
       document.body.style.cursor = '';
       setIsDragging(false);
+
+      // exit pointer lock（只有真的拖曳過才 lock 過，沒 lock 呼叫 exit 也無害）
+      if (document.pointerLockElement) {
+        document.exitPointerLock?.();
+      }
+
       if (!localDragging) {
         inputRef?.focus();
       } else {
@@ -88,6 +101,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     cleanupListeners = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      if (document.pointerLockElement) document.exitPointerLock?.();
     };
   };
 
