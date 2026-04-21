@@ -28,14 +28,14 @@ const EnvironmentPanel: Component = () => {
   return (
     <div style={{
       width: 'calc(100% - 6px)',
-      height: '100%',
+      height: 'calc(100% - 6px)',
       display: 'flex',
       'flex-direction': 'column',
       overflow: 'hidden',
       background: 'var(--bg-panel)',
       'box-shadow': 'var(--shadow-well-outer)',
       'border-radius': 'var(--radius-lg)',
-      margin: '0 3px',
+      margin: '3px',
       'box-sizing': 'border-box',
     }}>
       {/* Header */}
