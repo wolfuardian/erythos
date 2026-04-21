@@ -1,5 +1,7 @@
 import { createSignal, createEffect, onCleanup, type Component } from 'solid-js';
 
+const DRAG_SENSITIVITY = 0.3;
+
 export interface NumberDragProps {
   value: number;
   onChange: (v: number) => void;
@@ -49,26 +51,25 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
   const handleMouseDown = (e: MouseEvent) => {
     if (focused()) return;
     e.preventDefault();
-    const target = e.currentTarget as HTMLElement;
-    const basis = props.value;
-    let accumulatedDx = 0;        // 門檻判斷用（加總 movementX 直到超過 3）
-    let dragDelta = 0;             // 進入拖曳後的位移累積
+    let basis = props.value;
+    let accumulatedDx = 0;
+    let dragDelta = 0;
     let localDragging = false;
 
     const onMouseMove = (me: MouseEvent) => {
+      const dx = me.movementX * DRAG_SENSITIVITY;
+
       if (!localDragging) {
-        accumulatedDx += me.movementX;
+        accumulatedDx += dx;
         if (Math.abs(accumulatedDx) > 3) {
           localDragging = true;
           setIsDragging(true);
           props.onDragStart?.();
-          document.body.style.cursor = 'none';
-          // request pointer lock：target 需為 Element，call 是 async 但不必 await
-          target.requestPointerLock?.();
-          dragDelta = accumulatedDx;  // 繼承門檻累積
+          document.body.style.cursor = 'ew-resize';
+          dragDelta = accumulatedDx;
         }
       } else {
-        dragDelta += me.movementX;
+        dragDelta += dx;
         const raw = basis + dragDelta * (props.step ?? 0.1);
         const clamped = applyClamp(raw, props.min, props.max);
         props.onChange(clamped);
@@ -76,16 +77,11 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     };
 
     const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       cleanupListeners = null;
       document.body.style.cursor = '';
       setIsDragging(false);
-
-      // exit pointer lock（只有真的拖曳過才 lock 過，沒 lock 呼叫 exit 也無害）
-      if (document.pointerLockElement) {
-        document.exitPointerLock?.();
-      }
 
       if (!localDragging) {
         inputRef?.focus();
@@ -95,13 +91,12 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
       localDragging = false;
     };
 
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
 
     cleanupListeners = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      if (document.pointerLockElement) document.exitPointerLock?.();
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   };
 
@@ -153,7 +148,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           height: '22px',
           'border-radius': '2px',
           overflow: 'hidden',
-          cursor: isDragging() ? 'none' : 'ew-resize',
+          cursor: isDragging() ? 'ew-resize' : 'ew-resize',
           background: cellBg(),
           flex: '1',
           outline: focused() ? '1px solid var(--border-focus)' : 'none',
@@ -228,7 +223,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
             'font-variant-numeric': 'tabular-nums',
             'text-align': 'center',
             padding: '0 16px',
-            cursor: isDragging() ? 'none' : (focused() ? 'text' : 'ew-resize'),
+            cursor: isDragging() ? 'ew-resize' : (focused() ? 'text' : 'ew-resize'),
             '-webkit-appearance': 'none',
             '-moz-appearance': 'textfield',
             position: 'relative',
