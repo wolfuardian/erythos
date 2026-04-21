@@ -56,6 +56,9 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     let localDragging = false;
     let skipNextMovement = false;
 
+    // Pointer Lock 必須從 user gesture 觸發才會 engage
+    target.requestPointerLock?.();
+
     const onLockChange = () => {
       if (document.pointerLockElement === target) {
         // Lock 剛 acquire：吞下一個 mousemove（spike 吸收），重設基準
@@ -77,8 +80,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
           setIsDragging(true);
           props.onDragStart?.();
           document.body.style.cursor = 'none';
-          // request pointer lock：target 需為 Element，call 是 async 但不必 await
-          target.requestPointerLock?.();
+          // requestPointerLock 已在 mousedown 觸發，此處不再呼叫
           dragDelta = accumulatedDx;  // 繼承門檻累積
         }
       } else {
