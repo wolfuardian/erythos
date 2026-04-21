@@ -1,6 +1,5 @@
 import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
-import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../core/commands';
 
@@ -38,9 +37,6 @@ const EnvironmentPanel: Component = () => {
       margin: '0 3px',
       'box-sizing': 'border-box',
     }}>
-      {/* Header */}
-      <PanelHeader title="Environment" />
-
       {/* Body */}
       <div style={{
         flex: 1,
