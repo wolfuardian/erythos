@@ -6,13 +6,15 @@ export interface LadderOverlayProps {
   y: number;                       // popup 正中心的 viewport Y
   steps: readonly number[];        // 七個 step tier，順序由大到小（第 0 個在最上）
   activeIndex: number;             // 目前選中的 tier index (0-based)
+  currentValue: string;            // 已格式化好的值字串（呼叫方負責 toFixed 等）
 }
 
 const TIER_HEIGHT = 28;            // 每行高度 px
 const LADDER_WIDTH = 60;           // popup 寬度 px
+const PREVIEW_HEIGHT = 36;         // 預覽區塊高度 px
 
 export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
-  const totalHeight = () => props.steps.length * TIER_HEIGHT;
+  const tierStackHeight = () => props.steps.length * TIER_HEIGHT;
 
   return (
     <Portal mount={document.body}>
@@ -21,9 +23,8 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
           position: 'fixed',
           left: `${props.x}px`,
           top: `${props.y}px`,
-          transform: 'translate(-50%, -50%)',
+          transform: `translate(-50%, -${tierStackHeight() / 2}px)`,
           width: `${LADDER_WIDTH}px`,
-          height: `${totalHeight()}px`,
           background: 'var(--bg-panel)',
           border: '1px solid var(--border-subtle)',
           'border-radius': 'var(--radius-md)',
@@ -63,6 +64,26 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
             );
           }}
         </For>
+
+        {/* 分隔線 */}
+        <div style={{
+          height: '1px',
+          background: 'var(--border-subtle)',
+          margin: '0 6px',
+        }} />
+
+        {/* 值預覽區塊 */}
+        <div style={{
+          height: `${PREVIEW_HEIGHT}px`,
+          display: 'flex',
+          'align-items': 'center',
+          'justify-content': 'center',
+          'font-size': 'var(--font-size-lg)',
+          'font-weight': '600',
+          color: 'var(--accent-gold)',
+        }}>
+          {props.currentValue}
+        </div>
       </div>
     </Portal>
   );
