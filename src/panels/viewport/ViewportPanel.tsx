@@ -467,7 +467,7 @@ const ViewportPanel: Component = () => {
       <Show when={renderMode() === 'rendering'}>
         <div style={{
           position: 'absolute',
-          top: '40px',
+          top: '8px',
           right: '8px',
           width: '220px',
           'max-height': 'calc(100% - 56px)',
@@ -779,7 +779,7 @@ const ViewportPanel: Component = () => {
       <Show when={renderMode() === 'shading'}>
         <div style={{
           position: 'absolute',
-          top: '40px',
+          top: '8px',
           right: '8px',
           width: '220px',
           'max-height': 'calc(100% - 56px)',
