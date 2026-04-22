@@ -3,6 +3,8 @@ import { store, mutate, addWorkspace } from '../workspaceStore';
 import { WorkspaceTab } from './WorkspaceTab';
 
 export const WorkspaceTabBar: Component = () => {
+  const tabRefs = new Map<string, HTMLElement>();
+
   return (
     <div
       style={{
@@ -15,9 +17,16 @@ export const WorkspaceTabBar: Component = () => {
       }}
     >
       <For each={store().workspaces}>
-        {(w) => <WorkspaceTab workspace={w} />}
+        {(w) => (
+          <WorkspaceTab
+            workspace={w}
+            ref={(el) => tabRefs.set(w.id, el)}
+            tabRefs={tabRefs}
+          />
+        )}
       </For>
       <button
+        type="button"
         onClick={() => mutate(s => addWorkspace(s))}
         style={{
           padding: '0 var(--space-md)',
