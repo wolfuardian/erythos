@@ -2,7 +2,7 @@ import { type Component, Show, createSignal } from 'solid-js';
 import type { DockviewPanelApi } from './layout/solid-dockview';
 import { editors } from './editors';
 import { AreaContext } from './AreaContext';
-import { getEditorType, setEditorType as persistType } from './editorTypeStore';
+import { currentWorkspace, mutate, updateCurrentWorkspace } from './workspaceStore';
 
 interface AreaShellProps {
   panel: DockviewPanelApi;
@@ -10,14 +10,16 @@ interface AreaShellProps {
 }
 
 export const AreaShell: Component<AreaShellProps> = (props) => {
-  // 初始值：若 store 有記錄（使用者之前切換過），用那個；否則用 prop 指定
   const [editorType, setET] = createSignal(
-    getEditorType(props.panel.id) ?? props.initialEditorType
+    currentWorkspace().editorTypes[props.panel.id] ?? props.initialEditorType
   );
 
   const handleSetType = (nextId: string) => {
     setET(nextId);
-    persistType(props.panel.id, nextId);
+    const panelId = props.panel.id;
+    mutate(s => updateCurrentWorkspace(s, {
+      editorTypes: { ...currentWorkspace().editorTypes, [panelId]: nextId },
+    }));
   };
 
   const currentDef = () => editors.find(e => e.id === editorType());
