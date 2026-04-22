@@ -9,8 +9,6 @@ export interface EditorEventMap {
   // ── New UUID-based events (Phase V2-1) ──────────────
   nodeAdded:              [uuid: string];
   nodeRemoved:            [uuid: string];
-  nodeChanged:            [uuid: string];
-  sceneReplaced:          [];
   hoverChanged:           [uuid: string | null];
 
   // ── Stable events (no change) ───────────────────────

@@ -25,21 +25,6 @@ describe('EventEmitter — new UUID-based events', () => {
     expect(received).toEqual(['def-456']);
   });
 
-  it('nodeChanged: on receives the emitted uuid', () => {
-    // No caller in Editor yet (added to EventMap only; caller arrives in V2-2)
-    const received: string[] = [];
-    emitter.on('nodeChanged', (uuid) => received.push(uuid));
-    emitter.emit('nodeChanged', 'ghi-789');
-    expect(received).toEqual(['ghi-789']);
-  });
-
-  it('sceneReplaced: on is called with no payload', () => {
-    let called = false;
-    emitter.on('sceneReplaced', () => { called = true; });
-    emitter.emit('sceneReplaced');
-    expect(called).toBe(true);
-  });
-
   it('hoverChanged: on receives uuid string', () => {
     const received: Array<string | null> = [];
     emitter.on('hoverChanged', (uuid) => received.push(uuid));
