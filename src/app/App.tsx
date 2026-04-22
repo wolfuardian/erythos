@@ -8,6 +8,7 @@ import type { PanelComponent } from './layout/solid-dockview';
 import { editors } from './editors';
 import { AreaShell } from './AreaShell';
 import { Toolbar } from '../components/Toolbar';
+import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
 
 const COMPONENTS: Record<string, PanelComponent> = Object.fromEntries(
   editors.map(e => [
@@ -59,6 +60,7 @@ const App: Component = () => {
         background: 'var(--bg-app)',
       }}>
         <Toolbar />
+        <WorkspaceTabBar />
 
         {/* Dock panels */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
