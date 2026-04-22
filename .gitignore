@@ -6,5 +6,9 @@ dist
 samples
 settings.local.json
 .claude/user/
+.claude/previews/
+.claude/lessons/
+.claude/codebase-spec/
+.claude/session/
 projects/
 .playwright-mcp/
