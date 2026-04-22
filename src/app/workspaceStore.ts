@@ -5,7 +5,7 @@ import { createLayoutPresetTree, createDebugPresetTree, validateTree } from './a
 export interface Workspace {
   id: string;
   name: string;
-  grid: unknown;                       // Dockview toJSON()
+  grid: unknown;                       // AreaTree（序列化為 JSON）
   editorTypes: Record<string, string>; // panelId → editorType
 }
 
@@ -205,4 +205,13 @@ export function mutate(fn: (s: WorkspaceStore) => WorkspaceStore): void {
 export function currentWorkspace(): Workspace {
   const s = store();
   return s.workspaces.find(w => w.id === s.currentWorkspaceId) ?? s.workspaces[0];
+}
+
+/** Remove persisted workspace data so next reload starts fresh (Reset Layout button). */
+export function clearSavedLayout(): void {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_KEY);
+  // also clear old pre-workspaceStore keys
+  localStorage.removeItem('erythos-layout-v1');
+  localStorage.removeItem('erythos-layout-v2');
 }

@@ -31,7 +31,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-three': ['three'],
-          'vendor-dockview': ['dockview-core'],
           'vendor-solid': ['solid-js', 'solid-js/web'],
         },
       },
