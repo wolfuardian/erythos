@@ -11,6 +11,7 @@
 ## 慣例
 - bridge.ts 負責將 core 事件轉為 SolidJS signal，供面板訂閱
 - 不在 app 層寫業務邏輯，只做膠水和佈局
+- workspaceStore.ts 集中管 workspace / area / editorType 持久化；AreaShell / DockLayout / WorkspaceTabBar 皆訂 store signal
 
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
