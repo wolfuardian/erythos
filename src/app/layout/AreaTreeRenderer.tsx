@@ -1,7 +1,8 @@
 import { type Component, createSignal, createEffect, onCleanup, onMount, For } from 'solid-js';
 import { currentWorkspace, mutate, updateCurrentWorkspace } from '../workspaceStore';
 import { AreaShell } from '../AreaShell';
-import { validateTree, computeAreaRect, createLayoutPresetTree, type AreaTree } from '../areaTree';
+import { validateTree, computeAreaRect, createLayoutPresetTree, getAllInternalEdges, type AreaTree } from '../areaTree';
+import { AreaSplitter } from './AreaSplitter';
 
 export const AreaTreeRenderer: Component = () => {
   let containerRef!: HTMLDivElement;
@@ -56,7 +57,16 @@ export const AreaTreeRenderer: Component = () => {
           );
         }}
       </For>
-      {/* Splitter 在 Task 3 (#531) 加 */}
+      <For each={getAllInternalEdges(tree())}>
+        {(edge) => (
+          <AreaSplitter
+            edge={edge}
+            tree={tree()}
+            containerW={containerSize().w}
+            containerH={containerSize().h}
+          />
+        )}
+      </For>
     </div>
   );
 };

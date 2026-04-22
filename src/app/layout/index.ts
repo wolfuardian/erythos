@@ -1,4 +1,5 @@
 export { AreaTreeRenderer } from './AreaTreeRenderer';
+export { AreaSplitter } from './AreaSplitter';
 export { default as DockLayout } from './DockLayout';
 export type { DockLayoutProps } from './DockLayout';
 export { createDockview } from './solid-dockview';
