@@ -16,10 +16,13 @@ import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
+import { useArea } from '../../app/AreaContext';
+import { getSnapshot, setSnapshot } from '../../app/viewportState';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
+  const area = useArea();
   let containerRef!: HTMLDivElement;
   let canvasRef!: HTMLDivElement;
   let viewport: Viewport | null = null;
@@ -263,6 +266,17 @@ const ViewportPanel: Component = () => {
     });
 
     viewport.mount(canvasRef);
+
+    // Restore camera snapshot after mount (controls rebuilt by mount, so restore AFTER)
+    const panelId = area?.id;
+    if (panelId) {
+      const snap = getSnapshot(panelId);
+      if (snap) {
+        viewport.cameraCtrl.camera.position.fromArray(snap.position);
+        viewport.cameraCtrl.controls.target.fromArray(snap.target);
+        viewport.cameraCtrl.controls.update();
+      }
+    }
   });
 
   // Sync selection → viewport (UUID → Object3D)
@@ -378,6 +392,14 @@ const ViewportPanel: Component = () => {
   });
 
   onCleanup(() => {
+    // Save camera snapshot before disposing
+    const panelId = area?.id;
+    if (panelId && viewport) {
+      setSnapshot(panelId, {
+        position: viewport.cameraCtrl.camera.position.toArray() as [number, number, number],
+        target: viewport.cameraCtrl.controls.target.toArray() as [number, number, number],
+      });
+    }
     viewport?.dispose();
     viewport = null;
   });
