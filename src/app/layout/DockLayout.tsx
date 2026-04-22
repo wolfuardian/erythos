@@ -40,17 +40,22 @@ const DockLayout: Component<DockLayoutProps> = (props) => {
     });
 
     applyWorkspace(api, currentWorkspace());
+
+    // ★ 新增：首次 mount 立即存 grid，防止 300ms race
+    const saveNow = () => {
+      mutate(s => updateCurrentWorkspace(s, {
+        grid: api.toJSON(),
+      }));
+    };
+    saveNow();
+
     props.onReady?.(api);
 
     let saveTimer: number | undefined;
 
     const scheduleSave = () => {
       window.clearTimeout(saveTimer);
-      saveTimer = window.setTimeout(() => {
-        mutate(s => updateCurrentWorkspace(s, {
-          grid: api.toJSON(),
-        }));
-      }, DEBOUNCE_MS);
+      saveTimer = window.setTimeout(saveNow, DEBOUNCE_MS);
     };
 
     const disposeLayout = api.onDidLayoutChange(scheduleSave);
@@ -63,6 +68,7 @@ const DockLayout: Component<DockLayoutProps> = (props) => {
         lastId = id;
         api.clear();
         applyWorkspace(api, currentWorkspace());
+        saveNow(); // ★ 新增：切換 workspace 後也立即存
       }
     });
 
