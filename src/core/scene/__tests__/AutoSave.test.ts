@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../../Editor';
-import { saveSnapshot, restoreSnapshot, hasSnapshot } from '../AutoSave';
+import { AutoSave, saveSnapshot, restoreSnapshot, hasSnapshot } from '../AutoSave';
 
 describe('AutoSave', () => {
   let editor: Editor;
@@ -73,5 +73,27 @@ describe('AutoSave', () => {
   it('restoreSnapshot throws on incompatible version', () => {
     const wrongVersion = JSON.stringify({ version: 99, nodes: [] });
     expect(() => restoreSnapshot(editor, wrongVersion)).toThrow('Unsupported scene version: 99');
+  });
+
+  it('scheduleSnapshot does not throw when setItem fails', async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new DOMException('QuotaExceededError');
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const autosave = new AutoSave(editor);
+    const node = editor.sceneDocument.createNode('TestObject');
+    editor.sceneDocument.addNode(node); // triggers scheduleSnapshot via autosave
+
+    await vi.runAllTimersAsync();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[AutoSave] setItem failed'),
+      expect.any(DOMException),
+    );
+
+    warnSpy.mockRestore();
+    setItemSpy.mockRestore();
+    autosave.dispose();
   });
 });
