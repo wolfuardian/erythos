@@ -25,4 +25,16 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-three': ['three'],
+          'vendor-dockview': ['dockview-core'],
+          'vendor-solid': ['solid-js', 'solid-js/web'],
+        },
+      },
+    },
+  },
 });
