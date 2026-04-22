@@ -1,7 +1,7 @@
-import { onMount, onCleanup, type Component } from 'solid-js';
+import { onMount, onCleanup, createEffect, type Component } from 'solid-js';
 import { createDockview, type PanelComponent, type DockviewApi } from './solid-dockview';
-import { applyDefaultLayout, saveLayout } from './defaultLayout';
-import { subscribe as subscribeEditorTypes } from '../editorTypeStore';
+import { applyWorkspace } from './workspaceLayout';
+import { store, currentWorkspace, mutate, updateCurrentWorkspace } from '../workspaceStore';
 
 // dockview CSS
 import 'dockview-core/dist/styles/dockview.css';
@@ -28,6 +28,8 @@ export interface DockLayoutProps {
   onReady?: (api: DockviewApi) => void;
 }
 
+const DEBOUNCE_MS = 300;
+
 const DockLayout: Component<DockLayoutProps> = (props) => {
   let containerRef!: HTMLDivElement;
 
@@ -37,15 +39,36 @@ const DockLayout: Component<DockLayoutProps> = (props) => {
       components: props.components,
     });
 
-    applyDefaultLayout(api);
+    applyWorkspace(api, currentWorkspace());
     props.onReady?.(api);
 
-    const disposeLayout = api.onDidLayoutChange(() => saveLayout(api));
-    const unsubscribeEditorTypes = subscribeEditorTypes(() => saveLayout(api));
+    let saveTimer: number | undefined;
+
+    const scheduleSave = () => {
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        mutate(s => updateCurrentWorkspace(s, {
+          grid: api.toJSON(),
+        }));
+      }, DEBOUNCE_MS);
+    };
+
+    const disposeLayout = api.onDidLayoutChange(scheduleSave);
+
+    // 切 workspace → clear + apply
+    let lastId = store().currentWorkspaceId;
+    createEffect(() => {
+      const id = store().currentWorkspaceId;
+      if (id !== lastId) {
+        lastId = id;
+        api.clear();
+        applyWorkspace(api, currentWorkspace());
+      }
+    });
 
     onCleanup(() => {
+      window.clearTimeout(saveTimer);
       disposeLayout.dispose();
-      unsubscribeEditorTypes();
       api.dispose();
     });
   });
