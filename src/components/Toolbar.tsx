@@ -6,7 +6,7 @@ import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import type { TransformMode } from '../core/EventEmitter';
 import { clearSavedLayout } from '../app/layout/defaultLayout';
 
-const Toolbar: Component = () => {
+export const Toolbar: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
   const [importing, setImporting] = createSignal(false);
@@ -225,8 +225,6 @@ const Toolbar: Component = () => {
     </div>
   );
 };
-
-export default Toolbar;
 
 // ── Sub-components ──────────────────────────────
 

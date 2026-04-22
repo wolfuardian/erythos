@@ -7,7 +7,7 @@ import DockLayout from './layout/DockLayout';
 import type { PanelComponent } from './layout/solid-dockview';
 import { editors } from './editors';
 import { AreaShell } from './AreaShell';
-import Toolbar from '../components/Toolbar';
+import { Toolbar } from '../components/Toolbar';
 
 const COMPONENTS: Record<string, PanelComponent> = Object.fromEntries(
   editors.map(e => [
