@@ -78,8 +78,15 @@ export class AutoSave {
     this.timer = setTimeout(() => {
       this.timer = null;
       const data = saveSnapshot(this.editor);
-      localStorage.setItem(STORAGE_KEY, data);
-      this.editor.events.emit('autosaveStatusChanged', 'saved');
+      try {
+        localStorage.setItem(STORAGE_KEY, data);
+        this.editor.events.emit('autosaveStatusChanged', 'saved');
+      } catch (err) {
+        console.warn(
+          `[AutoSave] setItem failed for key=${STORAGE_KEY} size=${data.length} :`,
+          err,
+        );
+      }
     }, DEBOUNCE_DELAY);
   }
 
