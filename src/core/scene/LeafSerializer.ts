@@ -1,15 +1,6 @@
 import type { SceneNode } from './SceneFormat';
 import type { LeafAsset, LeafNode } from './LeafFormat';
-
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
+import { generateUUID } from '../../utils/uuid';
 
 /**
  * 將 SceneNode 子樹序列化為 LeafAsset。
@@ -48,7 +39,7 @@ export function serializeToLeaf(
 
   return {
     version: 1,
-    id: randomUUID(),
+    id: generateUUID(),
     name,
     modified: new Date().toISOString(),
     nodes: leafNodes,
@@ -66,7 +57,7 @@ export function deserializeFromLeaf(
   parentUUID: string | null = null,
 ): SceneNode[] {
   const localIdToUUID = new Map<number, string>();
-  leaf.nodes.forEach(n => localIdToUUID.set(n.localId, randomUUID()));
+  leaf.nodes.forEach(n => localIdToUUID.set(n.localId, generateUUID()));
 
   return leaf.nodes.map(leafNode => ({
     id: localIdToUUID.get(leafNode.localId)!,

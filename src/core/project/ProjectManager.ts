@@ -10,6 +10,7 @@ import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
 import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
+import { generateUUID } from '../../utils/uuid';
 
 type Listener = () => void;
 
@@ -237,7 +238,7 @@ export class ProjectManager {
         }
       } catch { /* ignore */ }
     }
-    return crypto.randomUUID();
+    return generateUUID();
   }
 
   private emit(): void {

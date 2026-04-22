@@ -1,4 +1,5 @@
 import type { SceneNode, SceneFile } from './SceneFormat';
+import { generateUUID } from '../../utils/uuid';
 
 // ── Internal generic emitter ──────────────────────────────────────────────────
 
@@ -46,19 +47,6 @@ export interface SceneDocumentEventMap {
   nodeRemoved:   [node: SceneNode];
   nodeChanged:   [uuid: string, changed: Partial<SceneNode>];
   sceneReplaced: [];
-}
-
-// ── UUID helper ───────────────────────────────────────────────────────────────
-
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  // Fallback for environments without crypto.randomUUID
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
 }
 
 // ── SceneDocument ─────────────────────────────────────────────────────────────
@@ -161,7 +149,7 @@ export class SceneDocument {
 
   createNode(name: string, parent?: string): SceneNode {
     return {
-      id: randomUUID(),
+      id: generateUUID(),
       name,
       parent: parent ?? null,
       order: 0,

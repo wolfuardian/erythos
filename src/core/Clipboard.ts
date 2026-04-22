@@ -1,20 +1,7 @@
 import type { SceneNode } from './scene/SceneFormat';
+import { generateUUID } from '../utils/uuid';
 
 type Listener = () => void;
-
-// ── UUID helper ─────────────────────────────────────────────────────────────
-// SceneDocument.ts 的 randomUUID 是模組私有函式（沒有 export），無法 import。
-// crypto.randomUUID() 在某些測試環境（jsdom）可能不存在，所以需要 fallback。
-
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
 
 // ── Clipboard ───────────────────────────────────────────────────────────────
 
@@ -43,7 +30,7 @@ export class Clipboard {
     // 2. Build old→new UUID mapping
     const idMap = new Map<string, string>();
     for (const node of clones) {
-      const newId = randomUUID();
+      const newId = generateUUID();
       idMap.set(node.id, newId);
       node.id = newId;
     }

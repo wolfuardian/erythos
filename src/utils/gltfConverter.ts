@@ -1,16 +1,4 @@
-/** UUID v4 fallback for environments where crypto.randomUUID is unavailable. */
-function generateUUID(): string {
-  if (typeof globalThis.crypto?.randomUUID === 'function') {
-    return globalThis.crypto.randomUUID();
-  }
-  // Math.random-based fallback (not cryptographically strong, sufficient for scene IDs)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
+import { generateUUID } from './uuid';
 import type { Group, Object3D } from 'three';
 import { Mesh } from 'three';
 import type { SceneNode, Vec3 } from '../core/scene/SceneFormat';
