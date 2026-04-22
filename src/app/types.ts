@@ -8,6 +8,6 @@ export interface EditorDef {
 }
 
 export interface Area {
-  id: string;          // 穩定 id，目前從 Dockview panel.id 衍生；未來 #465 會改成 UUID
+  id: string;          // 穩定 id（UUID），#465 追蹤
   editorType: string;  // EditorDef['id']
 }
