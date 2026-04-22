@@ -3,19 +3,9 @@ import { Editor } from '../core/Editor';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
-import DockLayout from './layout/DockLayout';
-import type { PanelComponent } from './layout/solid-dockview';
-import { editors } from './editors';
-import { AreaShell } from './AreaShell';
+import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
-
-const COMPONENTS: Record<string, PanelComponent> = Object.fromEntries(
-  editors.map(e => [
-    e.id,
-    (props) => <AreaShell panel={props.panel} initialEditorType={e.id} />
-  ])
-);
 
 const App: Component = () => {
   const editor = new Editor();
@@ -62,9 +52,9 @@ const App: Component = () => {
         <Toolbar />
         <WorkspaceTabBar />
 
-        {/* Dock panels */}
+        {/* Area panels */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <DockLayout components={COMPONENTS} />
+          <AreaTreeRenderer />
         </div>
 
         {/* Status bar */}

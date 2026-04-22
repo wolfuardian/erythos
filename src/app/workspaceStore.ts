@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js';
 import { generateUUID } from '../utils/uuid';
+import { createLayoutPresetTree, createDebugPresetTree, validateTree } from './areaTree';
 
 export interface Workspace {
   id: string;
@@ -22,10 +23,28 @@ export const DEBUG_PRESET_ID  = 'debug-preset';
 
 // ── Presets ────────────────────────────────────────────────────────────
 export function createLayoutPreset(): Workspace {
-  return { id: LAYOUT_PRESET_ID, name: 'Layout', grid: {}, editorTypes: {} };
+  return {
+    id: LAYOUT_PRESET_ID,
+    name: 'Layout',
+    grid: createLayoutPresetTree(),
+    editorTypes: {
+      'scene-tree': 'scene-tree',
+      'viewport': 'viewport',
+      'properties': 'properties',
+    },
+  };
 }
 export function createDebugPreset(): Workspace {
-  return { id: DEBUG_PRESET_ID, name: 'Debug', grid: {}, editorTypes: {} };
+  return {
+    id: DEBUG_PRESET_ID,
+    name: 'Debug',
+    grid: createDebugPresetTree(),
+    editorTypes: {
+      'viewport': 'viewport',
+      'environment': 'environment',
+      'leaf': 'leaf',
+    },
+  };
 }
 export function isPresetId(id: string): boolean {
   return id === LAYOUT_PRESET_ID || id === DEBUG_PRESET_ID;
@@ -57,7 +76,15 @@ export function loadStore(): WorkspaceStore {
         if (!ids.includes(parsed.currentWorkspaceId)) {
           parsed.currentWorkspaceId = ids[0];
         }
-        return parsed;
+        const sanitizedWorkspaces = parsed.workspaces.map(w => {
+          if (validateTree(w.grid)) return w;
+          // validateTree 失敗 → 根據 id 決定 fallback
+          if (w.id === LAYOUT_PRESET_ID) return createLayoutPreset();
+          if (w.id === DEBUG_PRESET_ID)  return createDebugPreset();
+          // 其他 workspace 重建為 blank（保留 id / name，但 grid 換新）
+          return { ...createLayoutPreset(), id: w.id, name: w.name };
+        });
+        return { ...parsed, workspaces: sanitizedWorkspaces };
       }
     }
   } catch { /* fall through */ }
@@ -66,19 +93,14 @@ export function loadStore(): WorkspaceStore {
   try {
     const legacyRaw = localStorage.getItem(LEGACY_KEY);
     if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw) as { grid?: unknown; editorTypes?: Record<string, string> };
-      const layoutWorkspace: Workspace = {
-        ...createLayoutPreset(),
-        grid: legacy.grid ?? {},
-        editorTypes: legacy.editorTypes ?? {},
-      };
+      // Dockview JSON 無法轉換為 AreaTree，直接 reset
+      localStorage.removeItem(LEGACY_KEY);
       const store: WorkspaceStore = {
         version: 1,
         currentWorkspaceId: LAYOUT_PRESET_ID,
-        workspaces: [layoutWorkspace, createDebugPreset()],
+        workspaces: [createLayoutPreset(), createDebugPreset()],
       };
       saveStore(store);
-      localStorage.removeItem(LEGACY_KEY);
       return store;
     }
   } catch { /* fall through */ }
