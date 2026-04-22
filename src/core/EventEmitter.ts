@@ -5,6 +5,17 @@ export type InteractionMode = 'object' | 'edit';
 
 // ── Event map ──────────────────────────────────────────
 
+/**
+ * UI-level events fired on `editor.events`.
+ *
+ * Subscribe from panels / bridge / UI code — this is the stable single-source
+ * for editor-wide UI state (selection, hover, history, modes, autosave).
+ *
+ * `nodeAdded` / `nodeRemoved` are intentionally duplicated from
+ * `SceneDocumentEventMap` with a simpler `uuid` payload. For data-model-level
+ * lifecycle (full SceneNode payload, plus `nodeChanged` / `sceneReplaced`),
+ * subscribe to `editor.sceneDocument.events` instead.
+ */
 export interface EditorEventMap {
   // ── New UUID-based events (Phase V2-1) ──────────────
   nodeAdded:              [uuid: string];
