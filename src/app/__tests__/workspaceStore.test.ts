@@ -35,15 +35,21 @@ it('fresh install: 2 preset，currentId = layout-preset', () => {
   expect(s.workspaces[1].id).toBe(DEBUG_PRESET_ID);
 });
 
-it('migration: 舊 key → 2 workspace，Layout 含舊 grid，舊 key 被刪', () => {
+it('migration: 舊 key 強硬 reset → 2 preset workspace，舊 key 被刪', async () => {
+  const { validateTree } = await import('../areaTree');
   const oldGrid = { panels: ['a', 'b'] };
   storage[LEGACY_KEY] = JSON.stringify({ grid: oldGrid, editorTypes: { p1: 'viewport' } });
   const s = loadStore();
   expect(s.workspaces).toHaveLength(2);
   expect(s.workspaces[0].id).toBe(LAYOUT_PRESET_ID);
-  expect(s.workspaces[0].grid).toEqual(oldGrid);
-  expect(s.workspaces[0].editorTypes).toEqual({ p1: 'viewport' });
+  expect(validateTree(s.workspaces[0].grid)).toBe(true);
+  expect(s.workspaces[0].editorTypes).toMatchObject({
+    'scene-tree': 'scene-tree',
+    viewport: 'viewport',
+    properties: 'properties',
+  });
   expect(s.workspaces[1].id).toBe(DEBUG_PRESET_ID);
+  expect(validateTree(s.workspaces[1].grid)).toBe(true);
   expect(storage[LEGACY_KEY]).toBeUndefined();
 });
 
@@ -114,15 +120,21 @@ it('updateCurrentWorkspace: 只改 current，其他 workspace 不變', () => {
   expect(s1.workspaces[1]).toBe(s0.workspaces[1]);
 });
 
-it('reset preset: grid/editorTypes 回預設、name 保留', () => {
+it('reset preset: grid/editorTypes 回預設、name 保留', async () => {
+  const { validateTree, createLayoutPresetTree } = await import('../areaTree');
   const s0 = renameWorkspace(
     updateCurrentWorkspace(loadStore(), { grid: { x: 1 }, editorTypes: { p: 'v' } }),
     LAYOUT_PRESET_ID, 'MyName'
   );
   const s1 = resetWorkspaceToPreset(s0, LAYOUT_PRESET_ID);
   expect(s1.workspaces[0].name).toBe('MyName');
-  expect(s1.workspaces[0].grid).toEqual({});
-  expect(s1.workspaces[0].editorTypes).toEqual({});
+  expect(validateTree(s1.workspaces[0].grid)).toBe(true);
+  expect(s1.workspaces[0].grid).toEqual(createLayoutPresetTree());
+  expect(s1.workspaces[0].editorTypes).toEqual({
+    'scene-tree': 'scene-tree',
+    viewport: 'viewport',
+    properties: 'properties',
+  });
 });
 
 it('reset 自建 id → 回原 store', () => {
