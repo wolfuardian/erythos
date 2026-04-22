@@ -4,7 +4,7 @@ import { loadGLTFFromFile } from '../utils/gltfLoader';
 import { useEditor } from '../app/EditorContext';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import type { TransformMode } from '../core/EventEmitter';
-import { clearSavedLayout } from '../app/layout/workspaceLayout';
+import { clearSavedLayout } from '../app/workspaceStore';
 
 export const Toolbar: Component = () => {
   const bridge = useEditor();
