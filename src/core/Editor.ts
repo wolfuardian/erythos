@@ -166,7 +166,7 @@ export class Editor {
   }
 
   dispose(): void {
-    this.autosave.dispose();
+    this.autosave?.dispose();
     this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
