@@ -5,3 +5,4 @@ export type { PanelComponent, DockviewApi, DockviewPanelApi } from './solid-dock
 export { applyWorkspace, clearSavedLayout } from './workspaceLayout';
 export { WorkspaceTabBar } from './WorkspaceTabBar';
 export { WorkspaceTab } from './WorkspaceTab';
+export { WorkspaceContextMenu } from './WorkspaceContextMenu';
