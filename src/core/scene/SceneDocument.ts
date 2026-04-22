@@ -30,6 +30,17 @@ class MiniEmitter<M> {
 
 // ── Event map ─────────────────────────────────────────────────────────────────
 
+/**
+ * Data-model-level events fired on `editor.sceneDocument.events`.
+ *
+ * Authoritative source for scene graph mutations. Subscribe from low-level
+ * syncers (Three.js scene rebuild, autosave, bridge) that need the full
+ * `SceneNode` payload or the `nodeChanged` / `sceneReplaced` signals.
+ *
+ * UI code that only needs to know "a node appeared / disappeared" should
+ * prefer `editor.events` (see `EditorEventMap`) which emits a thinner
+ * `uuid`-only payload.
+ */
 export interface SceneDocumentEventMap {
   nodeAdded:     [node: SceneNode];
   nodeRemoved:   [node: SceneNode];
