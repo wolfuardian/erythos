@@ -1,3 +1,4 @@
+export { AreaTreeRenderer } from './AreaTreeRenderer';
 export { default as DockLayout } from './DockLayout';
 export type { DockLayoutProps } from './DockLayout';
 export { createDockview } from './solid-dockview';
