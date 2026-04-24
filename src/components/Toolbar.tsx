@@ -148,7 +148,9 @@ export const Toolbar: Component = () => {
   );
 
   return (
-    <div style={{
+    <div
+      data-devid="toolbar"
+      style={{
       height: 'var(--toolbar-height)',
       background: 'var(--bg-header)',
       'border-bottom': '1px solid var(--border-subtle)',

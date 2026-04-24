@@ -26,6 +26,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
   return (
     <Show when={props.open}>
       <div
+        data-devid="confirm-dialog"
         onClick={props.onCancel}
         style={{
           position: 'fixed',

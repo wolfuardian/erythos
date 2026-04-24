@@ -550,7 +550,9 @@ const SceneTreePanel: Component = () => {
   });
 
   return (
-    <div style={{
+    <div
+      data-devid="scene-tree-panel"
+      style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
       display: 'flex',
