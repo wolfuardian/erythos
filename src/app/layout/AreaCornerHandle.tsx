@@ -63,6 +63,7 @@ export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
     });
 
     let lockedAxis: 'h' | 'v' | undefined = undefined;
+    let newAreaId: string | undefined = undefined;
 
     const cleanup = () => {
       target.releasePointerCapture(e.pointerId);
@@ -106,11 +107,12 @@ export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
                             props.containerW, props.containerH);
         if (ok) {
           try {
+            if (newAreaId === undefined) newAreaId = `area-${Date.now()}`;
             const previewTree = splitArea(
               initialTree, props.areaId, lockedAxis, ratio,
-              `area-${Date.now()}`,
+              newAreaId,
             );
-            setCornerDragStore({ ...base, mode: 'split', splitRatio: ratio, previewTree });
+            setCornerDragStore({ ...base, mode: 'split', splitRatio: ratio, previewTree, newAreaId });
             return;
           } catch (err) {
             console.error('[corner-drag] splitArea failed', err);
@@ -143,8 +145,22 @@ export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
 
     const onUp = () => {
       const s = cornerDragStore();
-      if (s.phase === 'active' && (s.mode === 'split' || s.mode === 'merge') && s.previewTree) {
-        mutate(st => updateCurrentWorkspace(st, { grid: s.previewTree! }));
+      if (s.phase === 'active' && s.previewTree) {
+        if (s.mode === 'split' && s.newAreaId) {
+          const { editorTypes } = currentWorkspace();
+          const inherited = editorTypes[s.srcAreaId] ?? 'viewport';
+          mutate(st => updateCurrentWorkspace(st, {
+            grid: s.previewTree!,
+            editorTypes: { ...editorTypes, [s.newAreaId!]: inherited },
+          }));
+        } else if (s.mode === 'merge' && s.dstAreaId) {
+          const { editorTypes } = currentWorkspace();
+          const { [s.dstAreaId]: _removed, ...remainingTypes } = editorTypes;
+          mutate(st => updateCurrentWorkspace(st, {
+            grid: s.previewTree!,
+            editorTypes: remainingTypes,
+          }));
+        }
       }
       cleanup();
       setCornerDragStore({ phase: 'idle' });
