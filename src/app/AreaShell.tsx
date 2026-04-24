@@ -1,4 +1,5 @@
 import { type Component, Show } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { editors } from './editors';
 import { AreaContext } from './AreaContext';
 import { currentWorkspace, mutate, updateCurrentWorkspace } from './workspaceStore';
@@ -28,10 +29,7 @@ export const AreaShell: Component<AreaShellProps> = (props) => {
       setEditorType: handleSetType,
     }}>
       <Show when={currentDef()}>
-        {(def) => {
-          const Comp = def().component;
-          return <Comp />;
-        }}
+        {(def) => <Dynamic component={def().component} />}
       </Show>
     </AreaContext.Provider>
   );
