@@ -280,7 +280,7 @@ const ViewportPanel: Component = () => {
       },
     });
 
-    viewport.mount(canvasRef);
+    viewport.mount(canvasRef, bridge.sharedGridObjects);
 
     // Active viewport gizmo dragging state — use closure signal to stay in Solid reactive graph
     const onGizmoDraggingChanged = (event: { value: unknown }) => {
