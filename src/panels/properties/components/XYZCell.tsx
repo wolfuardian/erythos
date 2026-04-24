@@ -15,7 +15,7 @@ interface XYZCellReadonlyProps {
 
 /** 唯讀版（MultiSelectDraw 使用） */
 export const XYZCellReadonly: Component<XYZCellReadonlyProps> = (props) => (
-  <div style={{
+  <div data-devid="xyz-cell" style={{
     display: 'flex',
     'align-items': 'stretch',
     background: 'transparent',

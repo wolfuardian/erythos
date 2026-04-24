@@ -11,7 +11,9 @@ const PropertiesPanel: Component = () => {
   const selectedUUIDs = createMemo(() => bridge.selectedUUIDs());
 
   return (
-    <div style={{
+    <div
+      data-devid="properties-panel"
+      style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
       display: 'flex',
