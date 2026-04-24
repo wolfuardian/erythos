@@ -1,4 +1,5 @@
 import { createSignal, type Accessor } from 'solid-js';
+import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
@@ -40,10 +41,12 @@ export interface EditorBridge {
   projectFiles: Accessor<ProjectFile[]>;
   activeViewportId: Accessor<string | null>;
   setActiveViewportId: (id: string | null) => void;
+  /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
+  sharedGridObjects: Object3D[];
   dispose: () => void;
 }
 
-export function createEditorBridge(editor: Editor): EditorBridge {
+export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[] = []): EditorBridge {
   const [selectedUUIDs, setSelectedUUIDs] = createSignal<string[]>([]);
   const [hoveredUUID, setHoveredUUID] = createSignal<string | null>(null);
   const [nodes, setNodes] = createSignal<SceneNode[]>([]);
@@ -169,6 +172,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     projectFiles,
     activeViewportId,
     setActiveViewportId,
+    sharedGridObjects,
     dispose,
   };
 }

@@ -10,7 +10,6 @@ import { GridHelpers } from '../viewport/GridHelpers';
 
 const App: Component = () => {
   const editor = new Editor();
-  const bridge = createEditorBridge(editor);
   const initPromise = editor.init();
   initPromise.then(() => {
     const first = editor.sceneDocument.getAllNodes()[0];
@@ -21,6 +20,9 @@ const App: Component = () => {
   const sharedGrid = new GridHelpers();
   editor.threeScene.add(sharedGrid.grid);
   editor.threeScene.add(sharedGrid.axes);
+  const sharedGridObjects = [sharedGrid.grid, sharedGrid.axes];
+
+  const bridge = createEditorBridge(editor, sharedGridObjects);
 
   // Re-add after SceneSync.rebuild() clears all scene children on scene replace
   const onSceneReplaced = () => {
