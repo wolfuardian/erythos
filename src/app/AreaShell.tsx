@@ -1,4 +1,4 @@
-import { type Component, Show, createSignal } from 'solid-js';
+import { type Component, Show } from 'solid-js';
 import { editors } from './editors';
 import { AreaContext } from './AreaContext';
 import { currentWorkspace, mutate, updateCurrentWorkspace } from './workspaceStore';
@@ -8,12 +8,9 @@ interface AreaShellProps {
 }
 
 export const AreaShell: Component<AreaShellProps> = (props) => {
-  const [editorType, setET] = createSignal(
-    currentWorkspace().editorTypes[props.areaId] ?? 'viewport'
-  );
+  const editorType = () => currentWorkspace().editorTypes[props.areaId] ?? 'viewport';
 
   const handleSetType = (nextId: string) => {
-    setET(nextId);
     mutate(s => updateCurrentWorkspace(s, {
       editorTypes: {
         ...currentWorkspace().editorTypes,
