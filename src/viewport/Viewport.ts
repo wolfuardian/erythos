@@ -4,7 +4,6 @@ import { CameraController } from './CameraController';
 import { GizmoManager } from './GizmoManager';
 import { SelectionPicker } from './SelectionPicker';
 import { BoxSelector } from './BoxSelector';
-import { GridHelpers } from './GridHelpers';
 import { PostProcessing } from './PostProcessing';
 import { ShadingManager, type ShadingMode } from './ShadingManager';
 import type { TransformMode } from '../core/EventEmitter';
@@ -27,7 +26,6 @@ export class Viewport {
   readonly gizmo: GizmoManager;
   readonly picker: SelectionPicker;
   readonly boxSelector: BoxSelector;
-  readonly gridHelpers: GridHelpers;
   readonly postProcessing: PostProcessing;
   readonly shading: ShadingManager;
 
@@ -46,7 +44,6 @@ export class Viewport {
 
     this.vpRenderer = new ViewportRenderer();
     this.cameraCtrl = new CameraController(requestRender);
-    this.gridHelpers = new GridHelpers();
 
     // PostProcessing (created after renderer, before mount)
     this.postProcessing = new PostProcessing(
@@ -96,7 +93,7 @@ export class Viewport {
     });
   }
 
-  mount(container: HTMLElement): void {
+  mount(container: HTMLElement, ignoreObjects: Object3D[] = []): void {
     this.vpRenderer.mount(
       container,
       this.scene,
@@ -125,15 +122,16 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    // Ignore gizmo and grid helpers from raycasting / box-select
+    // Ignore gizmo from raycasting / box-select
     this.picker.addIgnore(this.gizmo.controls.getHelper());
-    this.picker.addIgnore(this.gridHelpers.grid);
-    this.picker.addIgnore(this.gridHelpers.axes);
-
     this.boxSelector.mount(container, this.scene, this.cameraCtrl.camera);
     this.boxSelector.addIgnore(this.gizmo.controls.getHelper());
-    this.boxSelector.addIgnore(this.gridHelpers.grid);
-    this.boxSelector.addIgnore(this.gridHelpers.axes);
+
+    // Ignore caller-provided objects (e.g. shared grid/axes from App layer)
+    for (const obj of ignoreObjects) {
+      this.picker.addIgnore(obj);
+      this.boxSelector.addIgnore(obj);
+    }
 
     this.vpRenderer.requestRender();
   }
