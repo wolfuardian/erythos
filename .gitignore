@@ -12,3 +12,4 @@ settings.local.json
 .claude/session/
 projects/
 .playwright-mcp/
+.superpowers/
