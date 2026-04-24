@@ -14,6 +14,7 @@
 - 匯出 ErrorDialog 讓其他模組也能用
 - 元件一律用 named export（`export { Foo }`），不用 default export，確保跨模組 import 一致
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
+- `data-devid` 導入：當一個組件檔案包含多棵獨立 DOM 樹（如 trigger + Portal popup、主體 + overlay），每棵樹的根都各自掛 `data-devid`，命名 pattern `<parent>-<purpose>`（例：`editor-switcher` + `editor-switcher-dropdown`）
 
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
