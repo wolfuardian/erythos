@@ -120,20 +120,20 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     const rect = btnRef.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const MARGIN = 8;
+    const MARGIN = 12;
     const dropW = 480;
 
     // 水平：預設對齊右邊緣（right = vw - rect.right），若左邊超界則 flip 左對齊，兩者皆不行則 clamp
     const rightAlignLeft = rect.right - dropW; // dropdown 左邊緣的 x（right-aligned）
     let posH: { left?: number; right?: number };
     if (rightAlignLeft >= MARGIN) {
-      // 預設：對齊按鈕右邊緣，用 right 定位
-      posH = { right: vw - rect.right };
+      // 預設：對齊按鈕右邊緣，用 right 定位；clamp 確保不貼右邊
+      posH = { right: Math.max(MARGIN, vw - rect.right) };
     } else if (rect.left + dropW + MARGIN <= vw) {
-      // flip：對齊按鈕左邊緣
-      posH = { left: rect.left };
+      // flip：對齊按鈕左邊緣；clamp 確保不貼左邊
+      posH = { left: Math.max(MARGIN, rect.left) };
     } else {
-      // clamp：貼左 8px
+      // clamp：貼左 12px
       posH = { left: MARGIN };
     }
 
@@ -144,7 +144,8 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     if (rect.bottom + 4 + dropH + MARGIN <= vh) {
       posV = { top: rect.bottom + 4 };
     } else if (rect.top - 4 - dropH >= MARGIN) {
-      posV = { bottom: vh - rect.top + 4 };
+      // flip：用 bottom 定位；clamp 確保不貼底部
+      posV = { bottom: Math.max(MARGIN, vh - rect.top + 4) };
     } else {
       posV = { top: MARGIN };
     }
