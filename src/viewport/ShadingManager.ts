@@ -12,22 +12,23 @@ import {
   type Camera,
   type Material,
   type DataTexture,
-  type Mesh,
   type Light,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export type ShadingMode = 'wireframe' | 'solid' | 'shading' | 'rendering';
 
-interface MaterialBackup { original: Material | Material[]; }
 interface LightBackup { light: Light; visible: boolean; }
 
 export class ShadingManager {
   private renderer: WebGLRenderer;
-  private scene: Scene;
+  private scene: Scene;       // kept for disableSceneLights traverse (see restoreSceneLights note)
+  private sceneHelpers: Scene; // viewport-local; headlight camera lives here
   private camera: Camera;
   private _mode: ShadingMode = 'solid';
-  private materialBackups = new Map<Mesh, MaterialBackup>();
+  private _modeMaterial: Material | null = null;
+  private _envIntensity = 1.0;
+  private _envRotation = 0.0;
   private lightBackups: LightBackup[] = [];
   private headlight: DirectionalLight;
   private headlightTarget: Object3D;
@@ -35,9 +36,10 @@ export class ShadingManager {
   private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
   private _sceneLightsEnabled = true;
 
-  constructor(renderer: WebGLRenderer, scene: Scene, camera: Camera) {
+  constructor(renderer: WebGLRenderer, scene: Scene, sceneHelpers: Scene, camera: Camera) {
     this.renderer = renderer;
     this.scene = scene;
+    this.sceneHelpers = sceneHelpers;
     this.camera = camera;
 
     // headlight 掛在 camera 子節點，position(0,0,1) = 在 camera 背後，
@@ -78,15 +80,11 @@ export class ShadingManager {
   }
 
   setEnvironmentIntensity(intensity: number): void {
-    (this.scene as any).environmentIntensity = intensity;
+    this._envIntensity = intensity;
   }
 
   setEnvironmentRotation(angleRadians: number): void {
-    if (!(this.scene as any).environmentRotation) {
-      (this.scene as any).environmentRotation = new Euler(0, angleRadians, 0);
-    } else {
-      (this.scene as any).environmentRotation.y = angleRadians;
-    }
+    this._envRotation = angleRadians;
   }
 
   setCustomHDRI(hdrTexture: DataTexture | null): void {
@@ -100,10 +98,44 @@ export class ShadingManager {
       pmrem.dispose();
       hdrTexture.dispose(); // DataTexture 不再需要
     }
+    // 不直接寫 scene.environment；由 wrapRender 在每幀 render 時套用
+  }
 
-    // 如果目前在 rendering 模式，立即更新場景環境
+  /**
+   * Render-time state swap：set → renderFn → restore。
+   * Viewport 在 render override 裡呼叫；scene 每幀傳入（不存引用）。
+   */
+  wrapRender(scene: Scene, renderFn: () => void): void {
+    // --- capture ---
+    const prevOverrideMaterial = scene.overrideMaterial;
+    const prevEnvironment = scene.environment;
+    const prevEnvIntensity = (scene as any).environmentIntensity as number | undefined;
+    const prevEnvRotation = (scene as any).environmentRotation?.y as number | undefined;
+
+    // --- set ---
+    scene.overrideMaterial = this._modeMaterial;
+
     if (this._mode === 'rendering') {
-      this.scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
+      scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
+      (scene as any).environmentIntensity = this._envIntensity;
+      if ((scene as any).environmentRotation) {
+        (scene as any).environmentRotation.y = this._envRotation;
+      } else {
+        (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
+      }
+    }
+
+    // --- render ---
+    renderFn();
+
+    // --- restore ---
+    scene.overrideMaterial = prevOverrideMaterial;
+    scene.environment = prevEnvironment;
+    if (prevEnvIntensity !== undefined) {
+      (scene as any).environmentIntensity = prevEnvIntensity;
+    }
+    if (prevEnvRotation !== undefined && (scene as any).environmentRotation) {
+      (scene as any).environmentRotation.y = prevEnvRotation;
     }
   }
 
@@ -112,8 +144,8 @@ export class ShadingManager {
     this.restoreSceneLights();
     this.removeHeadlight();
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.scene.environment = null;
     this._sceneLightsEnabled = true;
+    // 不直接清 scene.environment；由 wrapRender 負責 per-frame restore
   }
 
   private applyMode(): void {
@@ -121,23 +153,22 @@ export class ShadingManager {
       case 'wireframe':
         this.renderer.toneMapping = NoToneMapping;
         this.disableSceneLights();
-        this.overrideMaterials(() => new MeshBasicMaterial({ wireframe: true, color: 0x888888 }));
+        this._modeMaterial = new MeshBasicMaterial({ wireframe: true, color: 0x888888 });
         break;
       case 'solid':
         this.renderer.toneMapping = NoToneMapping;
         this.disableSceneLights();
         this.addHeadlight();
-        this.overrideMaterials(() => new MeshLambertMaterial({ color: 0xffffff }));
+        this._modeMaterial = new MeshLambertMaterial({ color: 0xffffff });
         break;
       case 'shading':
         this.renderer.toneMapping = ACESFilmicToneMapping;
-        // 場景燈預設開，使用者可用 setSceneLightsEnabled 切換
+        this._modeMaterial = null;
         break;
       case 'rendering':
         this.renderer.toneMapping = ACESFilmicToneMapping;
         this.ensureDefaultEnv();
-        // 優先用自訂 HDRI，無則用預設 RoomEnvironment
-        this.scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
+        this._modeMaterial = null;
         break;
     }
   }
@@ -145,11 +176,11 @@ export class ShadingManager {
   private addHeadlight(): void {
     this.camera.add(this.headlight);
     this.camera.add(this.headlightTarget);
-    this.scene.add(this.camera);  // 讓 camera 的子節點（headlight）被 renderer 處理
+    this.sceneHelpers.add(this.camera);  // 改放 sceneHelpers（viewport-local）
   }
 
   private removeHeadlight(): void {
-    this.scene.remove(this.camera);  // 移除 camera 避免影響其他模式
+    this.sceneHelpers.remove(this.camera);  // 從 sceneHelpers 移除
     this.camera.remove(this.headlight);
     this.camera.remove(this.headlightTarget);
   }
@@ -179,20 +210,9 @@ export class ShadingManager {
     pmrem.dispose();
   }
 
-  private overrideMaterials(factory: (mesh: Mesh) => Material): void {
-    this.scene.traverse((child) => {
-      const mesh = child as Mesh;
-      if (!mesh.isMesh) return;
-      this.materialBackups.set(mesh, { original: mesh.material });
-      mesh.material = factory(mesh);
-    });
-  }
-
   private restoreMaterials(): void {
-    for (const [mesh, backup] of this.materialBackups) {
-      mesh.material = backup.original;
-    }
-    this.materialBackups.clear();
+    this._modeMaterial?.dispose();
+    this._modeMaterial = null;
   }
 
   dispose(): void {
