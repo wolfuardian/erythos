@@ -249,6 +249,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
         <Portal mount={document.body}>
           <div
             ref={dropdownRef}
+            data-devid="editor-switcher-dropdown"
             data-editor-switcher-dropdown
             style={{
               position: 'fixed',
