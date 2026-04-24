@@ -108,9 +108,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
   const [open, setOpen] = createSignal(false);
   const [dropdownPos, setDropdownPos] = createSignal<{
     top?: number;
-    bottom?: number;
     left?: number;
-    right?: number;
     visibility: 'hidden' | 'visible';
   }>({ visibility: 'hidden' });
   let btnRef!: HTMLDivElement;
@@ -123,34 +121,19 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     const MARGIN = 12;
     const dropW = 480;
 
-    // 水平：預設對齊右邊緣（right = vw - rect.right），若左邊超界則 flip 左對齊，兩者皆不行則 clamp
-    const rightAlignLeft = rect.right - dropW; // dropdown 左邊緣的 x（right-aligned）
-    let posH: { left?: number; right?: number };
-    if (rightAlignLeft >= MARGIN) {
-      // 預設：對齊按鈕右邊緣，用 right 定位；clamp 確保不貼右邊
-      posH = { right: Math.max(MARGIN, vw - rect.right) };
-    } else if (rect.left + dropW + MARGIN <= vw) {
-      // flip：對齊按鈕左邊緣；clamp 確保不貼左邊
-      posH = { left: Math.max(MARGIN, rect.left) };
-    } else {
-      // clamp：貼左 12px
-      posH = { left: MARGIN };
-    }
+    // 水平：右對齊按鈕（ideal left = rect.right - dropW），clamp 到 [MARGIN, vw - MARGIN - dropW]
+    const idealLeft = rect.right - dropW;
+    const maxLeft = vw - MARGIN - dropW;
+    const left = Math.max(MARGIN, Math.min(idealLeft, maxLeft));
 
-    // 垂直：預設按鈕下方，若不夠則 flip 上方，兩者皆不行則 clamp
+    // 垂直：按鈕下方 4px，clamp 到 [MARGIN, vh - MARGIN - dropH]
     const dropdownEl = dropdownRef as HTMLDivElement | null;
     const dropH = dropdownEl ? dropdownEl.getBoundingClientRect().height : 0;
-    let posV: { top?: number; bottom?: number };
-    if (rect.bottom + 4 + dropH + MARGIN <= vh) {
-      posV = { top: rect.bottom + 4 };
-    } else if (rect.top - 4 - dropH >= MARGIN) {
-      // flip：用 bottom 定位；clamp 確保不貼底部
-      posV = { bottom: Math.max(MARGIN, vh - rect.top + 4) };
-    } else {
-      posV = { top: MARGIN };
-    }
+    const idealTop = rect.bottom + 4;
+    const maxTop = vh - MARGIN - dropH;
+    const top = Math.max(MARGIN, Math.min(idealTop, maxTop));
 
-    return { ...posH, ...posV, visibility: 'visible' as const };
+    return { left, top, visibility: 'visible' as const };
   };
 
   const toggleOpen = () => {
@@ -255,9 +238,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
             style={{
               position: 'fixed',
               top: dropdownPos().top !== undefined ? `${dropdownPos().top}px` : undefined,
-              bottom: dropdownPos().bottom !== undefined ? `${dropdownPos().bottom}px` : undefined,
               left: dropdownPos().left !== undefined ? `${dropdownPos().left}px` : undefined,
-              right: dropdownPos().right !== undefined ? `${dropdownPos().right}px` : undefined,
               visibility: dropdownPos().visibility,
               width: '480px',
               background: 'var(--bg-subsection)',
