@@ -28,6 +28,7 @@ const ViewportPanel: Component = () => {
   let viewport: Viewport | null = null;
 
   const [isDragging, setIsDragging] = createSignal(false);
+  const [gizmoDragging, setGizmoDragging] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
   const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
@@ -50,6 +51,16 @@ const ViewportPanel: Component = () => {
   };
 
   onMount(() => {
+    const onPointerDown = () => {
+      if (area?.id) bridge.setActiveViewportId(area.id);
+    };
+    const onPointerEnter = () => {
+      if (area?.id) bridge.setActiveViewportId(area.id);
+    };
+
+    containerRef.addEventListener('pointerdown', onPointerDown);
+    containerRef.addEventListener('pointerenter', onPointerEnter);
+
     const onDragOver = (e: DragEvent) => {
       e.preventDefault();
       e.dataTransfer!.dropEffect = 'copy';
@@ -132,11 +143,13 @@ const ViewportPanel: Component = () => {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
       if (e.key === 'f' || e.key === 'F') {
-        const uuids = bridge.selectedUUIDs();
-        const primaryUUID = uuids.length > 0 ? uuids[uuids.length - 1] : null;
-        if (primaryUUID && viewport) {
-          const obj = editor.sceneSync.getObject3D(primaryUUID);
-          if (obj) viewport.focusObject(obj);
+        if (!area?.id || bridge.activeViewportId() === area.id) {
+          const uuids = bridge.selectedUUIDs();
+          const primaryUUID = uuids.length > 0 ? uuids[uuids.length - 1] : null;
+          if (primaryUUID && viewport) {
+            const obj = editor.sceneSync.getObject3D(primaryUUID);
+            if (obj) viewport.focusObject(obj);
+          }
         }
       }
 
@@ -179,6 +192,8 @@ const ViewportPanel: Component = () => {
     window.addEventListener('blur', onBlur);
 
     onCleanup(() => {
+      containerRef.removeEventListener('pointerdown', onPointerDown);
+      containerRef.removeEventListener('pointerenter', onPointerEnter);
       containerRef.removeEventListener('dragover', onDragOver);
       containerRef.removeEventListener('dragenter', onDragEnter);
       containerRef.removeEventListener('dragleave', onDragLeave);
@@ -266,6 +281,32 @@ const ViewportPanel: Component = () => {
     });
 
     viewport.mount(canvasRef);
+
+    // Active viewport gizmo dragging state — use closure signal to stay in Solid reactive graph
+    const onGizmoDraggingChanged = (event: { value: unknown }) => {
+      const dragging = event.value as boolean;
+      setGizmoDragging(dragging);
+      if (dragging && area?.id) {
+        // Ensure this viewport is active when drag starts (defensive — pointerdown already set it)
+        bridge.setActiveViewportId(area.id);
+      }
+    };
+    viewport.gizmo.controls.addEventListener('dragging-changed', onGizmoDraggingChanged);
+    onCleanup(() => {
+      viewport?.gizmo.controls.removeEventListener('dragging-changed', onGizmoDraggingChanged);
+    });
+
+    // Hide non-active viewport gizmos during drag; restore all after drag ends
+    createEffect(() => {
+      const activeId = bridge.activeViewportId();
+      const dragging = gizmoDragging();
+      if (!viewport) return;
+      if (dragging) {
+        viewport.gizmo.setVisibleForce(activeId === area?.id);
+      } else {
+        viewport.gizmo.setVisibleForce(true);
+      }
+    });
 
     // Restore camera snapshot after mount (controls rebuilt by mount, so restore AFTER)
     const panelId = area?.id;

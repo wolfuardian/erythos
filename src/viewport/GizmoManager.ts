@@ -116,6 +116,12 @@ export class GizmoManager {
     this.callbacks.requestRender();
   }
 
+  /** 強制設定可見性，拖曳中也可改（供 active viewport 機制使用，繞過 ctrl drag guard） */
+  setVisibleForce(visible: boolean): void {
+    this.controls.getHelper().visible = visible;
+    this.callbacks.requestRender();
+  }
+
   get object(): Object3D | undefined {
     return this.controls.object;
   }
