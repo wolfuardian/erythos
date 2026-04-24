@@ -1,4 +1,4 @@
-import { type Component, createSignal, onCleanup, For } from 'solid-js';
+import { type Component, createSignal, createEffect, onCleanup, For } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { EditorDef } from '../app/types';
 
@@ -186,11 +186,15 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
   document.addEventListener('mousedown', onMouseDown);
   onCleanup(() => document.removeEventListener('mousedown', onMouseDown));
 
-  const onResize = () => {
-    if (open()) setDropdownPos(calcPos());
-  };
-  window.addEventListener('resize', onResize);
-  onCleanup(() => window.removeEventListener('resize', onResize));
+  createEffect(() => {
+    if (!open()) return;
+    const onResize = () => {
+      if (!open()) return;
+      setDropdownPos(calcPos());
+    };
+    window.addEventListener('resize', onResize);
+    onCleanup(() => window.removeEventListener('resize', onResize));
+  });
 
   const groups = () => groupByCategory(props.editors);
 
