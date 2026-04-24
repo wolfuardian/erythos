@@ -406,6 +406,7 @@ const ViewportPanel: Component = () => {
 
   return (
     <div
+      data-devid="viewport-panel"
       ref={containerRef}
       style={{
         width: 'calc(100% - 6px)',
