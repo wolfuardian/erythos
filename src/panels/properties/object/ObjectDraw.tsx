@@ -32,6 +32,7 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   };
 
   return (
+    <div data-devid="object-draw">
     <FoldableSection sectionKey="object" label="OBJECT">
       {/* Name（可編輯） */}
       <div
@@ -76,6 +77,7 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
         </span>
       </div>
     </FoldableSection>
+    </div>
   );
 };
 

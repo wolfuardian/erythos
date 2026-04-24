@@ -58,7 +58,7 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
   return (
     <>
       {/* 多選摘要 */}
-      <div style={{
+      <div data-devid="multi-select-draw" style={{
         color: 'var(--text-secondary)',
         'font-size': 'var(--font-size-sm)',
         'text-align': 'center',
