@@ -38,6 +38,8 @@ export interface EditorBridge {
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
   projectFiles: Accessor<ProjectFile[]>;
+  activeViewportId: Accessor<string | null>;
+  setActiveViewportId: (id: string | null) => void;
   dispose: () => void;
 }
 
@@ -58,6 +60,7 @@ export function createEditorBridge(editor: Editor): EditorBridge {
   const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
   const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
   const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
+  const [activeViewportId, setActiveViewportId] = createSignal<string | null>(null);
 
   // 非同步初始化（fire-and-forget）
   void GlbStore.keys().then(setGlbKeys);
@@ -164,6 +167,8 @@ export function createEditorBridge(editor: Editor): EditorBridge {
     projectOpen,
     projectName,
     projectFiles,
+    activeViewportId,
+    setActiveViewportId,
     dispose,
   };
 }
