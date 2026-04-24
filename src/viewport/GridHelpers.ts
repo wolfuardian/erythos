@@ -15,8 +15,6 @@ export class GridHelpers {
 
   mount(scene: Scene): void {
     this.scene = scene;
-    this.scene.add(this.grid);
-    this.scene.add(this.axes);
   }
 
   setGridVisible(visible: boolean): void {

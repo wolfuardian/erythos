@@ -118,7 +118,6 @@ export class Viewport {
     this.postProcessing.setSize(this.vpRenderer.width, this.vpRenderer.height);
 
     // Mount submodules
-    this.gridHelpers.mount(this.scene);
     this.sceneHelpers.add(this.gizmo.controls.getHelper());
     this.picker.mount(
       this.vpRenderer.domElement,
@@ -126,11 +125,15 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    // Ignore gizmo from raycasting / box-select
+    // Ignore gizmo and grid helpers from raycasting / box-select
     this.picker.addIgnore(this.gizmo.controls.getHelper());
+    this.picker.addIgnore(this.gridHelpers.grid);
+    this.picker.addIgnore(this.gridHelpers.axes);
 
     this.boxSelector.mount(container, this.scene, this.cameraCtrl.camera);
     this.boxSelector.addIgnore(this.gizmo.controls.getHelper());
+    this.boxSelector.addIgnore(this.gridHelpers.grid);
+    this.boxSelector.addIgnore(this.gridHelpers.axes);
 
     this.vpRenderer.requestRender();
   }
@@ -199,7 +202,6 @@ export class Viewport {
     this.picker.dispose();
     this.boxSelector.dispose();
     this.gizmo.dispose();
-    this.gridHelpers.dispose();
     this.postProcessing.dispose();
     this.shading.dispose();
     this.cameraCtrl.dispose();
