@@ -171,8 +171,8 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     setOpen(false);
   };
 
-  // Close on outside click
-  const onMouseDown = (e: MouseEvent) => {
+  // Close on outside pointer-down (covers splitter drag which doesn't fire click)
+  const onPointerDown = (e: PointerEvent) => {
     if (!open()) return;
     const target = e.target as Node;
     if (btnRef && !btnRef.contains(target)) {
@@ -183,8 +183,8 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     }
   };
 
-  document.addEventListener('mousedown', onMouseDown);
-  onCleanup(() => document.removeEventListener('mousedown', onMouseDown));
+  document.addEventListener('pointerdown', onPointerDown);
+  onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
 
   createEffect(() => {
     if (!open()) return;
