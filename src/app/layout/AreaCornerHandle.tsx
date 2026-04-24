@@ -112,7 +112,9 @@ export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
               initialTree, props.areaId, lockedAxis, ratio,
               newAreaId,
             );
-            setCornerDragStore({ ...base, mode: 'split', splitRatio: ratio, previewTree, newAreaId });
+            const inherited = currentWorkspace().editorTypes[props.areaId] ?? 'viewport';
+            const previewEditorTypes = { [newAreaId]: inherited };
+            setCornerDragStore({ ...base, mode: 'split', splitRatio: ratio, previewTree, newAreaId, previewEditorTypes });
             return;
           } catch (err) {
             console.error('[corner-drag] splitArea failed', err);

@@ -3,13 +3,24 @@ import { Dynamic } from 'solid-js/web';
 import { editors } from './editors';
 import { AreaContext } from './AreaContext';
 import { currentWorkspace, mutate, updateCurrentWorkspace } from './workspaceStore';
+import { cornerDragStore } from './cornerDragStore';
 
 interface AreaShellProps {
   areaId: string;
 }
 
 export const AreaShell: Component<AreaShellProps> = (props) => {
-  const editorType = () => currentWorkspace().editorTypes[props.areaId] ?? 'viewport';
+  const editorType = () => {
+    const drag = cornerDragStore();
+    if (
+      drag.phase === 'active' &&
+      drag.previewEditorTypes &&
+      drag.previewEditorTypes[props.areaId] !== undefined
+    ) {
+      return drag.previewEditorTypes[props.areaId];
+    }
+    return currentWorkspace().editorTypes[props.areaId] ?? 'viewport';
+  };
 
   const handleSetType = (nextId: string) => {
     mutate(s => updateCurrentWorkspace(s, {
