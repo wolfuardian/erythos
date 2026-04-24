@@ -23,6 +23,7 @@ export type CornerDragPhase =
       cursorClientX: number;
       cursorClientY: number;
       previewTree?: AreaTree;
+      previewEditorTypes?: Record<string, string>;
       initialTree: AreaTree;
     };
 
