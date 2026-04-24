@@ -3,6 +3,10 @@ import { currentWorkspace, mutate, updateCurrentWorkspace } from '../workspaceSt
 import { AreaShell } from '../AreaShell';
 import { validateTree, computeAreaRect, createLayoutPresetTree, getAllInternalEdges, type AreaTree } from '../areaTree';
 import { AreaSplitter } from './AreaSplitter';
+import { AreaCornerHandle } from './AreaCornerHandle';
+import type { Corner } from '../areaTree';
+
+const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
 
 export const AreaTreeRenderer: Component = () => {
   let containerRef!: HTMLDivElement;
@@ -53,6 +57,17 @@ export const AreaTreeRenderer: Component = () => {
               }}
             >
               <AreaShell areaId={area.id} />
+              <For each={CORNERS}>
+                {(corner) => (
+                  <AreaCornerHandle
+                    areaId={area.id}
+                    corner={corner}
+                    areaRect={rect()!}
+                    containerW={containerSize().w}
+                    containerH={containerSize().h}
+                  />
+                )}
+              </For>
             </div>
           );
         }}
