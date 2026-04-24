@@ -19,6 +19,7 @@ export type CornerDragPhase =
       axis?: 'h' | 'v';
       splitRatio?: number;
       dstAreaId?: string;
+      newAreaId?: string;
       cursorClientX: number;
       cursorClientY: number;
       previewTree?: AreaTree;
