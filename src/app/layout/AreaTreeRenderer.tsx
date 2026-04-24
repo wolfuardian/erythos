@@ -1,12 +1,61 @@
-import { type Component, createSignal, createEffect, onCleanup, onMount, For } from 'solid-js';
+import { type Component, createSignal, createEffect, onCleanup, onMount, For, Show, type Accessor } from 'solid-js';
+import type { CornerDragPhase } from '../cornerDragStore';
 import { currentWorkspace, mutate, updateCurrentWorkspace } from '../workspaceStore';
 import { AreaShell } from '../AreaShell';
 import { validateTree, computeAreaRect, createLayoutPresetTree, getAllInternalEdges, type AreaTree } from '../areaTree';
 import { AreaSplitter } from './AreaSplitter';
 import { AreaCornerHandle } from './AreaCornerHandle';
 import type { Corner } from '../areaTree';
+import { cornerDragStore } from '../cornerDragStore';
 
 const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
+
+const DragOverlay: Component<{ store: Accessor<CornerDragPhase> }> = (props) => {
+  const s = () => props.store();
+  const label = () => {
+    const st = s();
+    if (st.phase !== 'active') return '';
+    return st.mode === 'split' ? (st.axis === 'v' ? 'Split ▶' : 'Split ▼') :
+           st.mode === 'merge' ? 'Merge →' :
+           "Can't do";
+  };
+  const cursor = () => {
+    const st = s();
+    if (st.phase !== 'active') return 'default';
+    return st.mode === 'split' ? (st.axis === 'v' ? 'ew-resize' : 'ns-resize') :
+           st.mode === 'merge' ? 'move' :
+           'not-allowed';
+  };
+  const badgeLeft = () => {
+    const st = s();
+    return st.phase === 'active' ? `${st.cursorClientX + 12}px` : '-9999px';
+  };
+  const badgeTop = () => {
+    const st = s();
+    return st.phase === 'active' ? `${st.cursorClientY + 16}px` : '-9999px';
+  };
+  return (
+    <>
+      <div style={{
+        position: 'fixed', inset: '0', 'z-index': 20,
+        cursor: cursor(), 'pointer-events': 'none',
+      }} />
+      <div style={{
+        position: 'fixed',
+        left: badgeLeft(),
+        top: badgeTop(),
+        padding: '4px 8px',
+        'border-radius': '2px',
+        background: 'rgba(0,0,0,0.85)',
+        color: '#fff',
+        'font-size': '11px',
+        'z-index': 21,
+        'pointer-events': 'none',
+        'user-select': 'none',
+      }}>{label()}</div>
+    </>
+  );
+};
 
 export const AreaTreeRenderer: Component = () => {
   let containerRef!: HTMLDivElement;
@@ -33,6 +82,8 @@ export const AreaTreeRenderer: Component = () => {
   });
 
   const tree = (): AreaTree => {
+    const s = cornerDragStore();
+    if (s.phase === 'active' && s.previewTree) return s.previewTree;
     const g = currentWorkspace().grid;
     return validateTree(g) ? g : createLayoutPresetTree();
   };
@@ -82,6 +133,9 @@ export const AreaTreeRenderer: Component = () => {
           />
         )}
       </For>
+      <Show when={cornerDragStore().phase === 'active'}>
+        <DragOverlay store={cornerDragStore as Accessor<CornerDragPhase>} />
+      </Show>
     </div>
   );
 };
