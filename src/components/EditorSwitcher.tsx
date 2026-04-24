@@ -1,4 +1,4 @@
-import { type Component, createSignal, onCleanup, For } from 'solid-js';
+import { type Component, createSignal, createEffect, onCleanup, For } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { EditorDef } from '../app/types';
 
@@ -106,19 +106,64 @@ const SHORTCUT_MAP: Record<string, string> = {
 
 export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
   const [open, setOpen] = createSignal(false);
-  const [dropdownPos, setDropdownPos] = createSignal({ top: 0, right: 0 });
+  const [dropdownPos, setDropdownPos] = createSignal<{
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+    visibility: 'hidden' | 'visible';
+  }>({ visibility: 'hidden' });
   let btnRef!: HTMLDivElement;
+  let dropdownRef!: HTMLDivElement;
+
+  const calcPos = () => {
+    const rect = btnRef.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const MARGIN = 8;
+    const dropW = 480;
+
+    // 水平：預設對齊右邊緣（right = vw - rect.right），若左邊超界則 flip 左對齊，兩者皆不行則 clamp
+    const rightAlignLeft = rect.right - dropW; // dropdown 左邊緣的 x（right-aligned）
+    let posH: { left?: number; right?: number };
+    if (rightAlignLeft >= MARGIN) {
+      // 預設：對齊按鈕右邊緣，用 right 定位
+      posH = { right: vw - rect.right };
+    } else if (rect.left + dropW + MARGIN <= vw) {
+      // flip：對齊按鈕左邊緣
+      posH = { left: rect.left };
+    } else {
+      // clamp：貼左 8px
+      posH = { left: MARGIN };
+    }
+
+    // 垂直：預設按鈕下方，若不夠則 flip 上方，兩者皆不行則 clamp
+    const dropdownEl = dropdownRef as HTMLDivElement | null;
+    const dropH = dropdownEl ? dropdownEl.getBoundingClientRect().height : 0;
+    let posV: { top?: number; bottom?: number };
+    if (rect.bottom + 4 + dropH + MARGIN <= vh) {
+      posV = { top: rect.bottom + 4 };
+    } else if (rect.top - 4 - dropH >= MARGIN) {
+      posV = { bottom: vh - rect.top + 4 };
+    } else {
+      posV = { top: MARGIN };
+    }
+
+    return { ...posH, ...posV, visibility: 'visible' as const };
+  };
 
   const toggleOpen = () => {
     if (!open()) {
-      // Calculate fixed position from button's bounding rect
-      const rect = btnRef.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
+      // 先以 visibility:hidden 渲染，量測後再顯示
+      setDropdownPos({ visibility: 'hidden' });
+      setOpen(true);
+      // requestAnimationFrame 等 DOM 渲染後量測
+      requestAnimationFrame(() => {
+        setDropdownPos(calcPos());
       });
+    } else {
+      setOpen(false);
     }
-    setOpen(v => !v);
   };
 
   const handleSelect = (id: string) => {
@@ -140,6 +185,16 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
 
   document.addEventListener('mousedown', onMouseDown);
   onCleanup(() => document.removeEventListener('mousedown', onMouseDown));
+
+  createEffect(() => {
+    if (!open()) return;
+    const onResize = () => {
+      if (!open()) return;
+      setDropdownPos(calcPos());
+    };
+    window.addEventListener('resize', onResize);
+    onCleanup(() => window.removeEventListener('resize', onResize));
+  });
 
   const groups = () => groupByCategory(props.editors);
 
@@ -192,11 +247,15 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
       {open() && (
         <Portal mount={document.body}>
           <div
+            ref={dropdownRef}
             data-editor-switcher-dropdown
             style={{
               position: 'fixed',
-              top: `${dropdownPos().top}px`,
-              right: `${dropdownPos().right}px`,
+              top: dropdownPos().top !== undefined ? `${dropdownPos().top}px` : undefined,
+              bottom: dropdownPos().bottom !== undefined ? `${dropdownPos().bottom}px` : undefined,
+              left: dropdownPos().left !== undefined ? `${dropdownPos().left}px` : undefined,
+              right: dropdownPos().right !== undefined ? `${dropdownPos().right}px` : undefined,
+              visibility: dropdownPos().visibility,
               width: '480px',
               background: 'var(--bg-subsection)',
               border: '1px solid var(--border-medium)',
