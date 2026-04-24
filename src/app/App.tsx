@@ -6,15 +6,30 @@ import { EditorProvider } from './EditorContext';
 import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
+import { GridHelpers } from '../viewport/GridHelpers';
 
 const App: Component = () => {
   const editor = new Editor();
-  const bridge = createEditorBridge(editor);
   const initPromise = editor.init();
   initPromise.then(() => {
     const first = editor.sceneDocument.getAllNodes()[0];
     if (first) editor.selection.select(first.id);
   });
+
+  // Shared grid & axes — single instance added once to the shared scene
+  const sharedGrid = new GridHelpers();
+  editor.threeScene.add(sharedGrid.grid);
+  editor.threeScene.add(sharedGrid.axes);
+  const sharedGridObjects = [sharedGrid.grid, sharedGrid.axes];
+
+  const bridge = createEditorBridge(editor, sharedGridObjects);
+
+  // Re-add after SceneSync.rebuild() clears all scene children on scene replace
+  const onSceneReplaced = () => {
+    editor.threeScene.add(sharedGrid.grid);
+    editor.threeScene.add(sharedGrid.axes);
+  };
+  editor.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
   onMount(() => {
     // Register keybindings
@@ -37,6 +52,8 @@ const App: Component = () => {
 
   onCleanup(() => {
     bridge.dispose();
+    editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
+    sharedGrid.dispose();
     void initPromise.then(() => editor.dispose());
   });
 
