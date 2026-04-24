@@ -26,7 +26,9 @@ const EnvironmentPanel: Component = () => {
   };
 
   return (
-    <div style={{
+    <div
+      data-devid="environment-panel"
+      style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
       display: 'flex',
