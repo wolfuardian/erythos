@@ -150,7 +150,9 @@ const LeafPanel: Component = () => {
   });
 
   return (
-    <div style={{
+    <div
+      data-devid="leaf-panel"
+      style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
       display: 'flex',
