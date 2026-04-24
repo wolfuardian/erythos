@@ -25,7 +25,7 @@ const BADGE_BG = ['#c04040', '#3a9060', '#527fc8'];
 
 export const VectorDrag: Component<VectorDragProps> = (props) => {
   return (
-    <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+    <div data-devid="vector-drag" style={{ display: 'flex', gap: '4px', flex: 1 }}>
       <Index each={props.values}>
         {(val, idx) => {
           const override = props.overrides?.[idx];

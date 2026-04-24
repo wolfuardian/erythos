@@ -20,6 +20,7 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
   return (
     <Show when={props.open}>
       <div
+        data-devid="error-dialog"
         onClick={props.onClose}
         style={{
           position: 'fixed',

@@ -211,7 +211,9 @@ const ProjectPanel: Component = () => {
   const formatDate = (ts: number) => new Date(ts).toLocaleDateString();
 
   return (
-    <div style={{
+    <div
+      data-devid="project-panel"
+      style={{
       width: 'calc(100% - 6px)', height: 'calc(100% - 6px)',
       display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
       background: 'var(--bg-panel)',

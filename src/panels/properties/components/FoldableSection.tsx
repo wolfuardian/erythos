@@ -49,7 +49,7 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
   const isSubsection = () => props.variant === 'subsection';
 
   return (
-    <div style={{ 'margin-top': '4px' }}>
+    <div data-devid="foldable-section" style={{ 'margin-top': '4px' }}>
       {/* 分組標題（點擊折疊） */}
       <div
         onClick={toggle}

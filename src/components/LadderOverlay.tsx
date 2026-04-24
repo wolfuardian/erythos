@@ -19,6 +19,7 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
   return (
     <Portal mount={document.body}>
       <div
+        data-devid="ladder-overlay"
         style={{
           position: 'fixed',
           left: `${props.x}px`,

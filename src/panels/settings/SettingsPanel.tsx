@@ -11,7 +11,9 @@ const SettingsPanel: Component = () => {
   };
 
   return (
-    <div style={{
+    <div
+      data-devid="settings-panel"
+      style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
       display: 'flex',

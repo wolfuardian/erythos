@@ -12,7 +12,9 @@ const PanelHeader: Component<PanelHeaderProps> = (props) => {
   const area = useArea();
 
   return (
-    <div style={{
+    <div
+      data-devid="panel-header"
+      style={{
       background: 'var(--bg-header)',
       'border-bottom': '1px solid var(--border-subtle)',
       height: '24px',
