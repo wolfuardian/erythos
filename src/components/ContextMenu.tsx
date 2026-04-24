@@ -164,6 +164,7 @@ const ContextMenu: Component<ContextMenuProps> = (props) => {
 
   return (
     <div
+      data-devid="context-menu"
       ref={menuRef}
       style={{
         position: 'fixed',
