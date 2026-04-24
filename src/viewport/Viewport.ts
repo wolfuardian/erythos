@@ -56,7 +56,7 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    this.shading = new ShadingManager(this.vpRenderer.renderer, this.scene, this.cameraCtrl.camera);
+    this.shading = new ShadingManager(this.vpRenderer.renderer, this.scene, this.sceneHelpers, this.cameraCtrl.camera);
 
     this.gizmo = new GizmoManager(
       this.cameraCtrl.camera,
@@ -107,7 +107,9 @@ export class Viewport {
     this.cameraCtrl.mount(this.vpRenderer.domElement);
 
     // Wire up post-processing as render override
-    this.vpRenderer.setRenderOverride(() => this.postProcessing.render());
+    this.vpRenderer.setRenderOverride(() => {
+      this.shading.wrapRender(this.scene, () => this.postProcessing.render());
+    });
     this.vpRenderer.setBeforeRender(() => this.cameraCtrl.update());
     this.vpRenderer.setOnResize((w, h) => {
       this.postProcessing.setSize(w, h);
