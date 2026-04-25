@@ -12,7 +12,7 @@ import { useEditor } from '../../app/EditorContext';
 import * as GlbStore from '../../core/scene/GlbStore';
 import { PanelHeader } from '../../components/PanelHeader';
 
-const LeafPanel: Component = () => {
+const PrefabPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
   const [activeId, setActiveId] = createSignal<string | null>(null);
@@ -151,7 +151,7 @@ const LeafPanel: Component = () => {
 
   return (
     <div
-      data-devid="leaf-panel"
+      data-devid="prefab-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
@@ -165,7 +165,7 @@ const LeafPanel: Component = () => {
       'box-sizing': 'border-box',
     }}>
       {/* Header */}
-      <PanelHeader title={`Leaves (${bridge.prefabAssets().length})`} />
+      <PanelHeader title={`Prefabs (${bridge.prefabAssets().length})`} />
 
       {/* Body: list + preview */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -187,7 +187,7 @@ const LeafPanel: Component = () => {
                 'text-align': 'center',
                 'line-height': '1.6',
               }}>
-                No leaves saved.<br />
+                No prefabs saved.<br />
                 Right-click a node<br />
                 in Scene tree.
               </div>
@@ -272,7 +272,7 @@ const LeafPanel: Component = () => {
               'text-align': 'center',
               'pointer-events': 'none',
             }}>
-              Select a leaf<br />to preview
+              Select a prefab<br />to preview
             </div>
           </Show>
         </div>
@@ -281,4 +281,4 @@ const LeafPanel: Component = () => {
   );
 };
 
-export default LeafPanel;
+export default PrefabPanel;

@@ -70,11 +70,11 @@ describe('createDebugPresetTree', () => {
     expect(tjunc).toBeDefined();
   });
 
-  it('含 area ids: viewport / environment / leaf', () => {
+  it('含 area ids: viewport / environment / prefab', () => {
     const ids = createDebugPresetTree().areas.map(a => a.id);
     expect(ids).toContain('viewport');
     expect(ids).toContain('environment');
-    expect(ids).toContain('leaf');
+    expect(ids).toContain('prefab');
   });
 });
 
@@ -278,8 +278,8 @@ describe('getAreaAt', () => {
     expect(getAreaAt(createLayoutPresetTree(), 1.5, 0.5)).toBeNull();
   });
 
-  it('Debug: leaf 中心 (0.5, 0.8) → leaf', () => {
-    expect(getAreaAt(createDebugPresetTree(), 0.5, 0.8)).toBe('leaf');
+  it('Debug: prefab 中心 (0.5, 0.8) → prefab', () => {
+    expect(getAreaAt(createDebugPresetTree(), 0.5, 0.8)).toBe('prefab');
   });
 
   it('Debug: environment 中心 (0.85, 0.3) → environment', () => {
@@ -334,10 +334,10 @@ describe('getCornerAt', () => {
     expect(getCornerAt(createLayoutPresetTree(), 0.5, 0.5, W, H)).toBeNull();
   });
 
-  it('Debug T-junction (0.7, 0.6) cursor 右下側 → tl area（viewport 或 leaf 之 tl）', () => {
+  it('Debug T-junction (0.7, 0.6) cursor 右下側 → tl area（viewport 或 prefab 之 tl）', () => {
     // cursor.x >= 0.7 && cursor.y >= 0.6 → targetCorner = tl → find area whose tl = v7
-    // leaf.tl = v5 (0,0.6)、viewport.tl = v0、environment.tl = v4 → leaf 的 tl 不是 v7
-    // viewport.br = v7、environment.bl = v7、leaf.tr = v6 — 需看哪個 corner = v7
+    // prefab.tl = v5 (0,0.6)、viewport.tl = v0、environment.tl = v4 → prefab 的 tl 不是 v7
+    // viewport.br = v7、environment.bl = v7、prefab.tr = v6 — 需看哪個 corner = v7
     // viewport.br = v7 (0.7,0.6)、environment.bl = v7 → targetCorner=tl → no match → hits[0]
     const r = getCornerAt(createDebugPresetTree(), 0.705, 0.605, W, H);
     expect(r).not.toBeNull();
@@ -531,11 +531,11 @@ describe('mergeArea', () => {
     expect(() => mergeArea(t, 'scene-tree', 'properties')).toThrow();
   });
 
-  it('Debug: viewport 吃掉 environment → leaf 仍在、validateTree true', () => {
+  it('Debug: viewport 吃掉 environment → prefab 仍在、validateTree true', () => {
     const t = createDebugPresetTree();
     const result = mergeArea(t, 'viewport', 'environment');
     expect(result.areas).toHaveLength(2);
-    expect(result.areas.find(a => a.id === 'leaf')).toBeDefined();
+    expect(result.areas.find(a => a.id === 'prefab')).toBeDefined();
     expect(validateTree(result)).toBe(true);
   });
 });
