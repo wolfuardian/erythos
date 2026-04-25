@@ -113,6 +113,9 @@ export class ShadingManager {
       } else {
         (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
       }
+    } else {
+      // solid / shading / wireframe：明確隔離 HDRI，不依賴 scene 初始值
+      scene.environment = null;
     }
 
     // --- render ---
@@ -121,11 +124,10 @@ export class ShadingManager {
     // --- restore ---
     scene.overrideMaterial = prevOverrideMaterial;
     scene.environment = prevEnvironment;
-    if (prevEnvIntensity !== undefined) {
-      (scene as any).environmentIntensity = prevEnvIntensity;
-    }
-    if (prevEnvRotation !== undefined && (scene as any).environmentRotation) {
-      (scene as any).environmentRotation.y = prevEnvRotation;
+    // 無條件 restore，避免 rendering mode 的殘留值汙染後續 viewport
+    (scene as any).environmentIntensity = prevEnvIntensity ?? 1.0;
+    if ((scene as any).environmentRotation) {
+      (scene as any).environmentRotation.y = prevEnvRotation ?? 0;
     }
   }
 
