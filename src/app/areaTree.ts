@@ -121,7 +121,7 @@ export function createDebugPresetTree(): AreaTree {
   const areas: ScreenArea[] = [
     { id: 'viewport',     verts: { bl: 'v5', br: 'v7', tl: 'v0', tr: 'v4' } },
     { id: 'environment',  verts: { bl: 'v7', br: 'v6', tl: 'v4', tr: 'v1' } },
-    { id: 'leaf',         verts: { bl: 'v2', br: 'v3', tl: 'v5', tr: 'v6' } },
+    { id: 'prefab',       verts: { bl: 'v2', br: 'v3', tl: 'v5', tr: 'v6' } },
   ];
   return { version: 2, verts, edges, areas };
 }
