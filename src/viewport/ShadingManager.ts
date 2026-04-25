@@ -102,32 +102,34 @@ export class ShadingManager {
     const prevEnvIntensity = (scene as any).environmentIntensity as number | undefined;
     const prevEnvRotation = (scene as any).environmentRotation?.y as number | undefined;
 
-    // --- set ---
-    scene.overrideMaterial = this._modeMaterial;
+    try {
+      // --- set ---
+      scene.overrideMaterial = this._modeMaterial;
 
-    if (this._mode === 'rendering') {
-      scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
-      (scene as any).environmentIntensity = this._envIntensity;
-      if ((scene as any).environmentRotation) {
-        (scene as any).environmentRotation.y = this._envRotation;
+      if (this._mode === 'rendering') {
+        scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
+        (scene as any).environmentIntensity = this._envIntensity;
+        if ((scene as any).environmentRotation) {
+          (scene as any).environmentRotation.y = this._envRotation;
+        } else {
+          (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
+        }
       } else {
-        (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
+        // solid / shading / wireframe：明確隔離 HDRI，不依賴 scene 初始值
+        scene.environment = null;
       }
-    } else {
-      // solid / shading / wireframe：明確隔離 HDRI，不依賴 scene 初始值
-      scene.environment = null;
-    }
 
-    // --- render ---
-    renderFn();
-
-    // --- restore ---
-    scene.overrideMaterial = prevOverrideMaterial;
-    scene.environment = prevEnvironment;
-    // 無條件 restore，避免 rendering mode 的殘留值汙染後續 viewport
-    (scene as any).environmentIntensity = prevEnvIntensity ?? 1.0;
-    if ((scene as any).environmentRotation) {
-      (scene as any).environmentRotation.y = prevEnvRotation ?? 0;
+      // --- render ---
+      renderFn();
+    } finally {
+      // --- restore（renderFn throw 時仍執行）---
+      scene.overrideMaterial = prevOverrideMaterial;
+      scene.environment = prevEnvironment;
+      // 無條件 restore，避免 rendering mode 的殘留值汙染後續 viewport
+      (scene as any).environmentIntensity = prevEnvIntensity ?? 1.0;
+      if ((scene as any).environmentRotation) {
+        (scene as any).environmentRotation.y = prevEnvRotation ?? 0;
+      }
     }
   }
 
