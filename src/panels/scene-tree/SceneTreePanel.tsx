@@ -414,7 +414,7 @@ const SceneTreePanel: Component = () => {
         },
       },
       {
-        label: 'Save as Leaf',
+        label: 'Save as Prefab',
         disabled: selected.length !== 1,
         action: () => {
           const uuid = selected[0];
