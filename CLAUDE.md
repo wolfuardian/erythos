@@ -43,7 +43,7 @@ agent 名稱 = 模組名稱。每個模組有獨立 CLAUDE.md。
 | app | src/app/ | `[app]` |
 | scene-tree | src/panels/scene-tree/ | `[scene-tree]` |
 | properties | src/panels/properties/ | `[properties]` |
-| leaf-panel | src/panels/leaf/ | `[leaf-panel]` |
+| prefab-panel | src/panels/prefab/ | `[prefab-panel]` |
 | environment-panel | src/panels/environment/ | `[environment]` |
 | scripts | scripts/ | `[scripts]` |
 
