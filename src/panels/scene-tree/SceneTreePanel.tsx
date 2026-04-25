@@ -10,6 +10,7 @@ import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 import { SaveAsLeafCommand } from '../../core/commands/SaveAsLeafCommand';
 import { PanelHeader } from '../../components/PanelHeader';
+import { useAreaState } from '../../app/areaState';
 
 interface DropIndicator {
   targetId: string;
@@ -309,7 +310,7 @@ const SceneTreePanel: Component = () => {
   const [draggedId, setDraggedId] = createSignal<string | null>(null);
   const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
-  const [expandedMap, setExpandedMap] = createSignal<Record<string, boolean>>({});
+  const [expandedMap, setExpandedMap] = useAreaState<Record<string, boolean>>('expandedMap', {});
   const [isFileDragging, setIsFileDragging] = createSignal(false);
 
   const isExpanded = (id: string): boolean => expandedMap()[id] ?? false;
