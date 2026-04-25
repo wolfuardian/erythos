@@ -29,7 +29,7 @@ export interface EditorEventMap {
   transformModeChanged:   [mode: TransformMode];
   editorCleared:          [];
   autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved'];
-  leafStoreChanged:       [];
+  prefabStoreChanged:     [];
   environmentChanged:     [];
 
 }

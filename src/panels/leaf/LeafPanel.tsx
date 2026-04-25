@@ -105,7 +105,7 @@ const LeafPanel: Component = () => {
 
   // 載入 leaf 內容到預覽場景
   const loadLeafPreview = async (assetId: string) => {
-    const asset = bridge.leafAssets().find(a => a.id === assetId);
+    const asset = bridge.prefabAssets().find(a => a.id === assetId);
     if (!asset || !previewScene) return;
 
     clearContent();
@@ -165,7 +165,7 @@ const LeafPanel: Component = () => {
       'box-sizing': 'border-box',
     }}>
       {/* Header */}
-      <PanelHeader title={`Leaves (${bridge.leafAssets().length})`} />
+      <PanelHeader title={`Leaves (${bridge.prefabAssets().length})`} />
 
       {/* Body: list + preview */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -178,7 +178,7 @@ const LeafPanel: Component = () => {
           padding: '4px 0',
         }}>
           <Show
-            when={bridge.leafAssets().length > 0}
+            when={bridge.prefabAssets().length > 0}
             fallback={
               <div style={{
                 padding: '12px 10px',
@@ -193,7 +193,7 @@ const LeafPanel: Component = () => {
               </div>
             }
           >
-            <For each={bridge.leafAssets()}>
+            <For each={bridge.prefabAssets()}>
               {(asset) => {
                 const isActive = () => activeId() === asset.id;
                 const [isHovered, setIsHovered] = createSignal(false);
