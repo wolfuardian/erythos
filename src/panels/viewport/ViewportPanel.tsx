@@ -124,8 +124,8 @@ const ViewportPanel: Component = () => {
         return;
       }
 
-      // 路徑 3：Leaf 拖曳（從 Leaf Panel）
-      const leafId = e.dataTransfer?.getData('application/erythos-leaf');
+      // 路徑 3：Prefab 拖曳（從 Prefab Panel）
+      const leafId = e.dataTransfer?.getData('application/erythos-prefab');
       if (leafId) {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
