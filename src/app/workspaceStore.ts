@@ -2,12 +2,29 @@ import { createSignal } from 'solid-js';
 import { generateUUID } from '../utils/uuid';
 import { createLayoutPresetTree, createDebugPresetTree, validateTree } from './areaTree';
 
+// ── Viewport Panel State ────────────────────────────────────────────────
+export interface ViewportSnapshot {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+/** Per-mode scene lights override。undefined = 使用 mode default（不 override）。*/
+export type SceneLightsOverrides = Partial<Record<import('../viewport/ShadingManager').ShadingMode, boolean>>;
+
+export interface ViewportPanelState {
+  camera?: ViewportSnapshot;
+  sceneLightsOverrides?: SceneLightsOverrides;
+  lookdevPreset?: import('../viewport/ShadingManager').LookdevPreset;
+  hdrIntensity?: number;
+  hdrRotation?: number;
+}
+
 export interface Workspace {
   id: string;
   name: string;
   grid: unknown;                       // AreaTree（序列化為 JSON）
   editorTypes: Record<string, string>; // panelId → editorType
-  viewportState: Record<string, { position: [number, number, number]; target: [number, number, number] }>;
+  viewportState: Record<string, ViewportPanelState>;
 }
 
 export interface WorkspaceStore {
@@ -90,7 +107,25 @@ export function loadStore(): WorkspaceStore {
         const migratedWorkspaces = sanitizedWorkspaces.map(w =>
           w.viewportState ? w : { ...w, viewportState: {} }
         );
-        return { ...parsed, workspaces: migratedWorkspaces };
+        const viewportMigratedWorkspaces = migratedWorkspaces.map(w => {
+          if (!w.viewportState) return w;
+          const newViewportState: Record<string, ViewportPanelState> = {};
+          for (const [areaId, state] of Object.entries(w.viewportState)) {
+            // 偵測舊結構：直接含 position 欄位（#587 引入的 ViewportSnapshot 格式）
+            const anyState = state as any;
+            if (Array.isArray(anyState.position)) {
+              // 舊格式 → 包成 ViewportPanelState.camera
+              newViewportState[areaId] = {
+                camera: { position: anyState.position, target: anyState.target },
+              };
+            } else {
+              // 新格式，直接保留
+              newViewportState[areaId] = state as ViewportPanelState;
+            }
+          }
+          return { ...w, viewportState: newViewportState };
+        });
+        return { ...parsed, workspaces: viewportMigratedWorkspaces };
       }
     }
   } catch { /* fall through */ }
