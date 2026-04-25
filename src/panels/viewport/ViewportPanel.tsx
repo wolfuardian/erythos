@@ -18,6 +18,7 @@ import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { useArea } from '../../app/AreaContext';
 import { getSnapshot, setSnapshot } from '../../app/viewportState';
+import { currentWorkspace } from '../../app/workspaceStore';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
@@ -325,15 +326,28 @@ const ViewportPanel: Component = () => {
     });
 
     // Restore camera snapshot after mount (controls rebuilt by mount, so restore AFTER)
-    const panelId = area?.id;
-    if (panelId) {
-      const snap = getSnapshot(panelId);
+    // capture workspaceId 到 closure，避免 workspace 切走後 onCleanup 寫到錯的 workspace
+    const areaId = area?.id;
+    const workspaceId = currentWorkspace().id;
+    if (areaId) {
+      const snap = getSnapshot(workspaceId, areaId);
       if (snap) {
         viewport.cameraCtrl.camera.position.fromArray(snap.position);
         viewport.cameraCtrl.controls.target.fromArray(snap.target);
         viewport.cameraCtrl.controls.update();
       }
     }
+
+    // 離開（panel 卸載）時儲存 camera snapshot；用 closure 的 workspaceId/areaId
+    // 不得即時呼叫 currentWorkspace()，否則 workspace 切走時會寫到錯的 workspace
+    onCleanup(() => {
+      if (!viewport || !areaId) return;
+      const cam = viewport.cameraCtrl;
+      setSnapshot(workspaceId, areaId, {
+        position: cam.camera.position.toArray() as [number, number, number],
+        target:   cam.controls.target.toArray()  as [number, number, number],
+      });
+    });
   });
 
   // Sync selection → viewport (UUID → Object3D)
@@ -449,14 +463,6 @@ const ViewportPanel: Component = () => {
   });
 
   onCleanup(() => {
-    // Save camera snapshot before disposing
-    const panelId = area?.id;
-    if (panelId && viewport) {
-      setSnapshot(panelId, {
-        position: viewport.cameraCtrl.camera.position.toArray() as [number, number, number],
-        target: viewport.cameraCtrl.controls.target.toArray() as [number, number, number],
-      });
-    }
     viewport?.dispose();
     viewport = null;
   });
