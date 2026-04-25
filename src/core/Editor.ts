@@ -12,8 +12,8 @@ import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
-import type { LeafAsset } from './scene/LeafFormat';
-import * as LeafStore from './scene/LeafStore';
+import type { PrefabAsset } from './scene/PrefabFormat';
+import * as PrefabStore from './scene/PrefabStore';
 import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
 
 export class Editor {
@@ -30,7 +30,7 @@ export class Editor {
   autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
-  private _leafAssets = new Map<string, LeafAsset>();
+  private _prefabAssets = new Map<string, PrefabAsset>();
   private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
 
   constructor() {
@@ -52,10 +52,10 @@ export class Editor {
    * App 層需在 editor 對外提供 context 前 await 此方法。
    */
   async init(): Promise<void> {
-    // 0. Restore leaf assets from IndexedDB
-    const leafAssets = await LeafStore.getAll();
-    for (const asset of leafAssets) {
-      this._leafAssets.set(asset.id, asset);
+    // 0. Restore prefab assets from IndexedDB
+    const prefabAssets = await PrefabStore.getAll();
+    for (const asset of prefabAssets) {
+      this._prefabAssets.set(asset.id, asset);
     }
 
     // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
@@ -75,7 +75,7 @@ export class Editor {
     this.autosave = new AutoSave(this);
 
     // 5. Notify bridge signals that async hydrate is complete.
-    this.events.emit('leafStoreChanged');
+    this.events.emit('prefabStoreChanged');
   }
 
   // ── Transform mode ────────────────────────────────
@@ -88,22 +88,22 @@ export class Editor {
     this.events.emit('transformModeChanged', mode);
   }
 
-  // ── Leaf asset API ────────────────────────────────
+  // ── Prefab asset API ──────────────────────────────
 
-  registerLeaf(asset: LeafAsset): void {
-    this._leafAssets.set(asset.id, asset);
-    void LeafStore.put(asset.id, asset);
-    this.events.emit('leafStoreChanged');
+  registerPrefab(asset: PrefabAsset): void {
+    this._prefabAssets.set(asset.id, asset);
+    void PrefabStore.put(asset.id, asset);
+    this.events.emit('prefabStoreChanged');
   }
 
-  unregisterLeaf(id: string): void {
-    this._leafAssets.delete(id);
-    void LeafStore.remove(id);
-    this.events.emit('leafStoreChanged');
+  unregisterPrefab(id: string): void {
+    this._prefabAssets.delete(id);
+    void PrefabStore.remove(id);
+    this.events.emit('prefabStoreChanged');
   }
 
-  getAllLeafAssets(): LeafAsset[] {
-    return Array.from(this._leafAssets.values());
+  getAllPrefabAssets(): PrefabAsset[] {
+    return Array.from(this._prefabAssets.values());
   }
 
   // ── Environment settings ──────────────────────────

@@ -3,7 +3,7 @@ import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
-import type { LeafAsset } from '../core/scene/LeafFormat';
+import type { PrefabAsset } from '../core/scene/PrefabFormat';
 import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import * as GlbStore from '../core/scene/GlbStore';
 import type { ProjectFile } from '../core/project/ProjectFile';
@@ -33,7 +33,7 @@ export interface EditorBridge {
   autosaveStatus: Accessor<'idle' | 'pending' | 'saved'>;
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
-  leafAssets: Accessor<LeafAsset[]>;
+  prefabAssets: Accessor<PrefabAsset[]>;
   environmentSettings: Accessor<EnvironmentSettings>;
   glbKeys: Accessor<string[]>;
   projectOpen: Accessor<boolean>;
@@ -62,7 +62,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
   const [canRedo, setCanRedo] = createSignal(false);
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
-  const [leafAssets, setLeafAssets] = createSignal<LeafAsset[]>(editor.getAllLeafAssets());
+  const [prefabAssets, setPrefabAssets] = createSignal<PrefabAsset[]>(editor.getAllPrefabAssets());
   const [glbKeys, setGlbKeys] = createSignal<string[]>([]);
   const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
   const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
@@ -122,9 +122,9 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
   const onClipboardChanged = () => setHasClipboard(editor.clipboard.hasContent);
   editor.clipboard.on('clipboardChanged', onClipboardChanged);
 
-  // Subscribe to LeafStore events
-  const onLeafStoreChanged = () => setLeafAssets(editor.getAllLeafAssets());
-  editor.events.on('leafStoreChanged', onLeafStoreChanged);
+  // Subscribe to PrefabStore events
+  const onPrefabStoreChanged = () => setPrefabAssets(editor.getAllPrefabAssets());
+  editor.events.on('prefabStoreChanged', onPrefabStoreChanged);
 
   // Subscribe to EnvironmentSettings events
   const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
@@ -150,7 +150,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
     editor.sceneDocument.events.off('nodeChanged', onNodeChanged);
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
-    editor.events.off('leafStoreChanged', onLeafStoreChanged);
+    editor.events.off('prefabStoreChanged', onPrefabStoreChanged);
     editor.events.off('environmentChanged', onEnvChanged);
     unsubProject();
   };
@@ -170,7 +170,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
     autosaveStatus,
     confirmBeforeLoad,
     hasClipboard,
-    leafAssets,
+    prefabAssets,
     environmentSettings,
     glbKeys,
     projectOpen,
