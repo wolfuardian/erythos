@@ -7,6 +7,7 @@ export interface Workspace {
   name: string;
   grid: unknown;                       // AreaTree（序列化為 JSON）
   editorTypes: Record<string, string>; // panelId → editorType
+  viewportState: Record<string, { position: [number, number, number]; target: [number, number, number] }>;
 }
 
 export interface WorkspaceStore {
@@ -32,6 +33,7 @@ export function createLayoutPreset(): Workspace {
       'viewport': 'viewport',
       'properties': 'properties',
     },
+    viewportState: {},
   };
 }
 export function createDebugPreset(): Workspace {
@@ -44,6 +46,7 @@ export function createDebugPreset(): Workspace {
       'environment': 'environment',
       'leaf': 'leaf',
     },
+    viewportState: {},
   };
 }
 export function isPresetId(id: string): boolean {
@@ -84,7 +87,10 @@ export function loadStore(): WorkspaceStore {
           // 其他 workspace 重建為 blank（保留 id / name，但 grid 換新）
           return { ...createLayoutPreset(), id: w.id, name: w.name };
         });
-        return { ...parsed, workspaces: sanitizedWorkspaces };
+        const migratedWorkspaces = sanitizedWorkspaces.map(w =>
+          w.viewportState ? w : { ...w, viewportState: {} }
+        );
+        return { ...parsed, workspaces: migratedWorkspaces };
       }
     }
   } catch { /* fall through */ }
@@ -133,6 +139,7 @@ export function addWorkspace(s: WorkspaceStore, baseId?: string): WorkspaceStore
     name: nextDuplicateName(names, base.name),
     grid: JSON.parse(JSON.stringify(base.grid)),
     editorTypes: JSON.parse(JSON.stringify(base.editorTypes)),
+    viewportState: JSON.parse(JSON.stringify(base.viewportState ?? {})),
   };
   return { ...s, currentWorkspaceId: newW.id, workspaces: [...s.workspaces, newW] };
 }
@@ -162,6 +169,7 @@ export function duplicateWorkspace(s: WorkspaceStore, id: string): WorkspaceStor
     name: nextDuplicateName(names, base.name),
     grid: JSON.parse(JSON.stringify(base.grid)),
     editorTypes: JSON.parse(JSON.stringify(base.editorTypes)),
+    viewportState: JSON.parse(JSON.stringify(base.viewportState ?? {})),
   };
   return { ...s, workspaces: [...s.workspaces, newW] }; // currentId 不變
 }
