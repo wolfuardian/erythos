@@ -26,10 +26,10 @@ export class SaveAsPrefabCommand extends Command {
     // 持久化到 IndexedDB（透過 editor.registerPrefab，同時更新記憶體快取並觸發事件）
     this.editor.registerPrefab(this.savedAsset);
 
-    // 在 root node 標記 leaf 實例（'leaf' key 是 scene 持久化 key，PR 3 前保留）
+    // 在 root node 標記 prefab 實例
     const newComponents = {
       ...(root.components as Record<string, unknown>),
-      leaf: { id: this.savedAsset.id },  // ← PR 3 才改為 'prefab'
+      prefab: { id: this.savedAsset.id },
     };
     this.editor.sceneDocument.updateNode(this.rootUUID, { components: newComponents });
   }
@@ -40,10 +40,10 @@ export class SaveAsPrefabCommand extends Command {
     // 從記憶體快取與 IndexedDB 移除
     this.editor.unregisterPrefab(this.savedAsset.id);
 
-    // 移除 root node 的 leaf 標記
+    // 移除 root node 的 prefab 標記
     const root = this.editor.sceneDocument.getNode(this.rootUUID);
     if (!root) return;
-    const { leaf: _leaf, ...restComponents } = root.components as Record<string, unknown> & { leaf?: unknown };
+    const { prefab: _prefab, ...restComponents } = root.components as Record<string, unknown> & { prefab?: unknown };
     this.editor.sceneDocument.updateNode(this.rootUUID, { components: restComponents });
   }
 }

@@ -6,7 +6,7 @@ import { generateUUID } from '../../utils/uuid';
  * 將 SceneNode 子樹序列化為 PrefabAsset。
  * - UUID 全部剝除，改用 localId 整數做親子引用
  * - root 的 parent（無論指向什麼場景節點）在 prefab 內一律變成 null
- * - 剝除 root node 的 components.leaf（避免 prefab 自我引用）
+ * - 剝除 root node 的 components.prefab（避免 prefab 自我引用）
  */
 export function serializeToPrefab(
   rootUUID: string,
@@ -19,9 +19,9 @@ export function serializeToPrefab(
   subtree.forEach((node, i) => uuidToLocalId.set(node.id, i));
 
   const prefabNodes: PrefabNode[] = subtree.map((node, localId) => {
-    // 剝除 components.leaf（不讓 prefab 資產知道自己是某個場景實例）
+    // 剝除 components.prefab（不讓 prefab 資產知道自己是某個場景實例）
     const components: Record<string, unknown> = { ...(node.components as Record<string, unknown>) };
-    delete components['leaf'];  // ← 'leaf' 字面是 scene 持久化 key，PR 3 處理前保留
+    delete components['prefab'];
 
     return {
       localId,
@@ -50,7 +50,7 @@ export function serializeToPrefab(
  * 將 PrefabAsset 反序列化為 SceneNode[]。
  * - 為每個節點生成全新的 UUID
  * - 根節點的 parent 設為 parentUUID（null 預設）
- * - 不加 components.leaf：由 InstantiatePrefabCommand 負責加上 leaf 標記
+ * - 不加 components.prefab：由 InstantiatePrefabCommand 負責加上 prefab 標記
  */
 export function deserializeFromPrefab(
   prefab: PrefabAsset,
