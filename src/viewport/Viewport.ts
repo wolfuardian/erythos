@@ -53,7 +53,7 @@ export class Viewport {
       this.cameraCtrl.camera,
     );
 
-    this.shading = new ShadingManager(this.vpRenderer.renderer, this.scene, this.sceneHelpers, this.cameraCtrl.camera);
+    this.shading = new ShadingManager(this.vpRenderer.renderer, this.sceneHelpers, this.cameraCtrl.camera);
 
     this.gizmo = new GizmoManager(
       this.cameraCtrl.camera,
