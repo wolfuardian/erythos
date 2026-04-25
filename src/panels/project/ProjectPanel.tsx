@@ -1,5 +1,6 @@
-import { createSignal, createResource, onMount, onCleanup, Show, For, type Component } from 'solid-js';
+import { createSignal, createMemo, createResource, onMount, onCleanup, Show, For, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
+import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PanelHeader } from '../../components/PanelHeader';
@@ -40,7 +41,7 @@ const ProjectPanel: Component = () => {
   const [newName, setNewName] = createSignal('');
   const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
-  const [selectedAssetPath, setSelectedAssetPath] = createSignal<string | null>(null);
+  const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
 
   // ── Duplicate folder check ──
   // 用 createResource 自動處理 race condition（舊的 async 結果被 SolidJS 丟棄）
@@ -157,9 +158,20 @@ const ProjectPanel: Component = () => {
   const assetFiles = () => bridge.projectFiles();
 
   const ALL_TYPES: ProjectFile['type'][] = ['scene', 'glb', 'texture', 'hdr', 'prefab', 'other'];
-  const [activeFilters, setActiveFilters] = createSignal<Set<ProjectFile['type']>>(
-    new Set(ALL_TYPES),
+  const [activeFiltersArr, setActiveFiltersArr] = useAreaState<ProjectFile['type'][]>(
+    'activeFilters',
+    [...ALL_TYPES],
   );
+  const activeFilters = createMemo(() => new Set(activeFiltersArr()));
+  const setActiveFilters = (
+    next: Set<ProjectFile['type']> | ((prev: Set<ProjectFile['type']>) => Set<ProjectFile['type']>),
+  ) => {
+    if (typeof next === 'function') {
+      setActiveFiltersArr(prev => Array.from(next(new Set(prev))));
+    } else {
+      setActiveFiltersArr(Array.from(next));
+    }
+  };
 
   const toggleFilter = (t: ProjectFile['type']) => {
     setActiveFilters((prev) => {
