@@ -28,7 +28,6 @@ const ViewportPanel: Component = () => {
   let viewport: Viewport | null = null;
 
   const [isDragging, setIsDragging] = createSignal(false);
-  const [gizmoDragging, setGizmoDragging] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
   const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
@@ -282,13 +281,14 @@ const ViewportPanel: Component = () => {
 
     viewport.mount(canvasRef, bridge.sharedGridObjects);
 
-    // Active viewport gizmo dragging state — use closure signal to stay in Solid reactive graph
+    // 拖曳開始/結束 → 更新 bridge 全局 draggingViewportId（讓所有 viewport 知道誰在拖）
     const onGizmoDraggingChanged = (event: { value: unknown }) => {
       const dragging = event.value as boolean;
-      setGizmoDragging(dragging);
       if (dragging && area?.id) {
-        // Ensure this viewport is active when drag starts (defensive — pointerdown already set it)
         bridge.setActiveViewportId(area.id);
+        bridge.setDraggingViewportId(area.id);
+      } else {
+        bridge.setDraggingViewportId(null);
       }
     };
     viewport.gizmo.controls.addEventListener('dragging-changed', onGizmoDraggingChanged);
@@ -296,16 +296,32 @@ const ViewportPanel: Component = () => {
       viewport?.gizmo.controls.removeEventListener('dragging-changed', onGizmoDraggingChanged);
     });
 
-    // Hide non-active viewport gizmos during drag; restore all after drag ends
+    // 拖曳過程每幀 bumpDragTick → 非 active viewport 訂 dragTickVersion 後可即時 requestRender
+    const onGizmoChange = () => {
+      if (bridge.draggingViewportId() !== null) {
+        bridge.bumpDragTick();
+      }
+    };
+    viewport.gizmo.controls.addEventListener('change', onGizmoChange);
+    onCleanup(() => {
+      viewport?.gizmo.controls.removeEventListener('change', onGizmoChange);
+    });
+
+    // 訂 draggingViewportId：拖曳中隱藏非拖曳 viewport 的 gizmo helper
     createEffect(() => {
-      const activeId = bridge.activeViewportId();
-      const dragging = gizmoDragging();
+      const draggingId = bridge.draggingViewportId();
       if (!viewport) return;
-      if (dragging) {
-        viewport.gizmo.setVisibleForce(activeId === area?.id);
+      if (draggingId !== null) {
+        viewport.gizmo.setVisibleForce(draggingId === area?.id);
       } else {
         viewport.gizmo.setVisibleForce(true);
       }
+    });
+
+    // 訂 dragTickVersion：拖曳過程讓非 active viewport 即時更新物件 transform 顯示
+    createEffect(() => {
+      bridge.dragTickVersion();
+      viewport?.requestRender();
     });
 
     // Restore camera snapshot after mount (controls rebuilt by mount, so restore AFTER)

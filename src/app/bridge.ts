@@ -41,6 +41,10 @@ export interface EditorBridge {
   projectFiles: Accessor<ProjectFile[]>;
   activeViewportId: Accessor<string | null>;
   setActiveViewportId: (id: string | null) => void;
+  draggingViewportId: Accessor<string | null>;
+  setDraggingViewportId: (id: string | null) => void;
+  dragTickVersion: Accessor<number>;
+  bumpDragTick: () => void;
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
   dispose: () => void;
@@ -64,6 +68,8 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
   const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
   const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
   const [activeViewportId, setActiveViewportId] = createSignal<string | null>(null);
+  const [draggingViewportId, _setDraggingViewportId] = createSignal<string | null>(null);
+  const [dragTickVersion, _bumpDragTick] = createSignal(0);
 
   // 非同步初始化（fire-and-forget）
   void GlbStore.keys().then(setGlbKeys);
@@ -172,6 +178,10 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
     projectFiles,
     activeViewportId,
     setActiveViewportId,
+    draggingViewportId,
+    setDraggingViewportId: _setDraggingViewportId,
+    dragTickVersion,
+    bumpDragTick: () => _bumpDragTick(v => v + 1),
     sharedGridObjects,
     dispose,
   };
