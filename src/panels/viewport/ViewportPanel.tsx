@@ -17,7 +17,7 @@ import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/Ren
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { useArea } from '../../app/AreaContext';
-import { getSnapshot, setSnapshot } from '../../app/viewportState';
+import { getPanelState, setPanelState } from '../../app/viewportState';
 import { currentWorkspace } from '../../app/workspaceStore';
 
 const ViewportPanel: Component = () => {
@@ -43,6 +43,10 @@ const ViewportPanel: Component = () => {
   const isGroupOpen = (key: string) => !groupCollapsed()[key];
   const toggleGroup = (key: string) => setGroupCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
   const [hoveredShading, setHoveredShading] = createSignal<ShadingMode | null>(null);
+
+  // Per-mode scene lights override map
+  // key = ShadingMode，value = override（undefined 代表使用 mode default）
+  const [sceneLightsOverrides, setSceneLightsOverrides] = createSignal<Partial<Record<ShadingMode, boolean>>>({});
 
   const updateSetting = <K extends keyof RenderSettings>(
     key: K,
@@ -326,27 +330,51 @@ const ViewportPanel: Component = () => {
       viewport?.requestRender();
     });
 
-    // Restore camera snapshot after mount (controls rebuilt by mount, so restore AFTER)
+    // Restore panel state after mount (controls rebuilt by mount, so restore AFTER)
     // capture workspaceId 到 closure，避免 workspace 切走後 onCleanup 寫到錯的 workspace
     const areaId = area?.id;
     const workspaceId = currentWorkspace().id;
     if (areaId) {
-      const snap = getSnapshot(workspaceId, areaId);
-      if (snap) {
-        viewport.cameraCtrl.camera.position.fromArray(snap.position);
-        viewport.cameraCtrl.controls.target.fromArray(snap.target);
+      const panelState = getPanelState(workspaceId, areaId);
+      if (panelState?.camera) {
+        viewport.cameraCtrl.camera.position.fromArray(panelState.camera.position);
+        viewport.cameraCtrl.controls.target.fromArray(panelState.camera.target);
         viewport.cameraCtrl.controls.update();
+      }
+      if (panelState?.sceneLightsOverrides) {
+        setSceneLightsOverrides(panelState.sceneLightsOverrides);
+        // 套用當前 mode 的 override（如有）
+        const currentOverride = panelState.sceneLightsOverrides[renderMode()];
+        if (currentOverride !== undefined) {
+          setSceneLightsOn(currentOverride);
+          viewport.shading.setSceneLightsEnabled(currentOverride);
+        }
+      }
+      if (panelState?.lookdevPreset !== undefined) {
+        setLookdevPreset(panelState.lookdevPreset);
+      }
+      if (panelState?.hdrIntensity !== undefined) {
+        setHdrIntensity(panelState.hdrIntensity);
+      }
+      if (panelState?.hdrRotation !== undefined) {
+        setHdrRotation(panelState.hdrRotation);
       }
     }
 
-    // 離開（panel 卸載）時儲存 camera snapshot；用 closure 的 workspaceId/areaId
+    // 離開（panel 卸載）時儲存完整 panel state；用 closure 的 workspaceId/areaId
     // 不得即時呼叫 currentWorkspace()，否則 workspace 切走時會寫到錯的 workspace
     onCleanup(() => {
       if (!viewport || !areaId) return;
       const cam = viewport.cameraCtrl;
-      setSnapshot(workspaceId, areaId, {
-        position: cam.camera.position.toArray() as [number, number, number],
-        target:   cam.controls.target.toArray()  as [number, number, number],
+      setPanelState(workspaceId, areaId, {
+        camera: {
+          position: cam.camera.position.toArray() as [number, number, number],
+          target:   cam.controls.target.toArray()  as [number, number, number],
+        },
+        sceneLightsOverrides: sceneLightsOverrides(),
+        lookdevPreset: lookdevPreset(),
+        hdrIntensity: hdrIntensity(),
+        hdrRotation: hdrRotation(),
       });
     });
   });
@@ -385,12 +413,20 @@ const ViewportPanel: Component = () => {
   });
 
   createEffect(() => {
-    viewport?.setShadingMode(renderMode());
-    viewport?.requestRender();
-  });
-
-  createEffect(() => {
-    viewport?.shading.setSceneLightsEnabled(sceneLightsOn());
+    const mode = renderMode();
+    viewport?.setShadingMode(mode);
+    // 套用當前 mode 的 sceneLightsOverride（沒有 override 時 clear，讓 mode default 生效）
+    const override = sceneLightsOverrides()[mode];
+    if (override !== undefined) {
+      setSceneLightsOn(override);
+      viewport?.shading.setSceneLightsEnabled(override);
+    } else {
+      // 沒有 override，用 mode default（切完 mode 後 ShadingManager.applyMode 已更新 layers）
+      // 同步 sceneLightsOn UI 到 mode default
+      const modeDefault = mode === 'solid' || mode === 'rendering';
+      setSceneLightsOn(modeDefault);
+      viewport?.shading.clearSceneLightsOverride();
+    }
     viewport?.requestRender();
   });
 
@@ -905,7 +941,13 @@ const ViewportPanel: Component = () => {
             <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
               <label style={{ display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={sceneLightsOn()}
-                  onChange={e => setSceneLightsOn(e.target.checked)} />
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setSceneLightsOn(checked);
+                    setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
+                    viewport?.shading.setSceneLightsEnabled(checked);
+                    viewport?.requestRender();
+                  }} />
                 <span style={{ color: 'var(--text-primary, #fff)' }}>Scene Lights</span>
               </label>
             </div>
