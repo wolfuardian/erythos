@@ -63,7 +63,7 @@ export function createDebugPreset(): Workspace {
     editorTypes: {
       'viewport': 'viewport',
       'environment': 'environment',
-      'leaf': 'leaf',
+      'prefab': 'prefab',
     },
     viewportState: {},
   };
@@ -130,7 +130,28 @@ export function loadStore(): WorkspaceStore {
         const panelStatesMigratedWorkspaces = viewportMigratedWorkspaces.map(w =>
           w.panelStates ? w : { ...w, panelStates: {} }
         );
-        return { ...parsed, workspaces: panelStatesMigratedWorkspaces };
+        // Migration: leaf → prefab (issue #526 PR 2)
+        const leafToPrefabMigratedWorkspaces = panelStatesMigratedWorkspaces.map(w => {
+          // A. Debug preset workspace 強制重建
+          if (w.id === 'debug-preset') {
+            const grid = w.grid as { areas?: Array<{ id: string }> };
+            const hasLeafAreaId = Array.isArray(grid?.areas) &&
+              grid.areas.some((a: { id: string }) => a.id === 'leaf');
+            const hasLeafEditorType = 'leaf' in w.editorTypes ||
+              Object.values(w.editorTypes).includes('leaf');
+            if (hasLeafAreaId || hasLeafEditorType) {
+              return createDebugPreset();
+            }
+            return w;
+          }
+          // B. 其他 workspace：editorTypes value rename
+          const newEditorTypes: Record<string, string> = {};
+          for (const [areaId, editorType] of Object.entries(w.editorTypes)) {
+            newEditorTypes[areaId] = editorType === 'leaf' ? 'prefab' : editorType;
+          }
+          return { ...w, editorTypes: newEditorTypes };
+        });
+        return { ...parsed, workspaces: leafToPrefabMigratedWorkspaces };
       }
     }
   } catch { /* fall through */ }
