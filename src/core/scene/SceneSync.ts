@@ -109,6 +109,9 @@ export class SceneSync {
       const light = lightComp.type === 'directional'
         ? new DirectionalLight(lightComp.color, lightComp.intensity)
         : new AmbientLight(lightComp.color, lightComp.intensity);
+      // User lights 放 layer 1，讓各 viewport camera 透過 layer mask 控制可見性
+      // set(1) 覆蓋（清 layer 0、設 layer 1），刻意讓 camera 預設看不到（camera 預設 layer 0）
+      light.layers.set(1);
       obj.add(light);
     } else if (node.components.camera) {
       const camComp = node.components.camera as CameraComponent;

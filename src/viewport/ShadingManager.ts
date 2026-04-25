@@ -12,33 +12,26 @@ import {
   type Camera,
   type Material,
   type DataTexture,
-  type Light,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export type ShadingMode = 'wireframe' | 'solid' | 'shading' | 'rendering';
 
-interface LightBackup { light: Light; visible: boolean; }
-
 export class ShadingManager {
   private renderer: WebGLRenderer;
-  private scene: Scene;       // kept for disableSceneLights traverse (see restoreSceneLights note)
   private sceneHelpers: Scene; // viewport-local; headlight camera lives here
   private camera: Camera;
   private _mode: ShadingMode = 'solid';
   private _modeMaterial: Material | null = null;
   private _envIntensity = 1.0;
   private _envRotation = 0.0;
-  private lightBackups: LightBackup[] = [];
   private headlight: DirectionalLight;
   private headlightTarget: Object3D;
   private defaultEnv: ReturnType<PMREMGenerator['fromScene']> | null = null;
   private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
-  private _sceneLightsEnabled = true;
 
-  constructor(renderer: WebGLRenderer, scene: Scene, sceneHelpers: Scene, camera: Camera) {
+  constructor(renderer: WebGLRenderer, sceneHelpers: Scene, camera: Camera) {
     this.renderer = renderer;
-    this.scene = scene;
     this.sceneHelpers = sceneHelpers;
     this.camera = camera;
 
@@ -52,7 +45,6 @@ export class ShadingManager {
   }
 
   get mode(): ShadingMode { return this._mode; }
-  get sceneLightsEnabled(): boolean { return this._sceneLightsEnabled; }
 
   setMode(mode: ShadingMode): void {
     if (this._mode === mode) return;
@@ -67,16 +59,14 @@ export class ShadingManager {
     this.applyMode();
   }
 
-  /** 僅 shading 模式下有效，切換場景燈影響 */
-  setSceneLightsEnabled(enabled: boolean): void {
-    if (this._mode !== 'shading') return;
-    if (enabled === this._sceneLightsEnabled) return;
-    this._sceneLightsEnabled = enabled;
-    if (enabled) {
-      this.restoreSceneLights();
-    } else {
-      this.disableSceneLights();
-    }
+  /**
+   * Sub-panel Scene Lights toggle. 暫時 no-op — 待 follow-up issue 重新設計
+   * （讓 sub-panel checkbox override mode default 的 camera.layers.enable(1) 邏輯）。
+   * 本 issue (#581) 只做 mode 預設行為，sub-panel UI 互動屬獨立議題。
+   */
+  setSceneLightsEnabled(_enabled: boolean): void {
+    // TODO(#follow-up): 此 method 應 override camera.layers 的 mode default，
+    // 與 applyMode 的 layer 邏輯協調。
   }
 
   setEnvironmentIntensity(intensity: number): void {
@@ -141,10 +131,8 @@ export class ShadingManager {
 
   private restoreAll(): void {
     this.restoreMaterials();
-    this.restoreSceneLights();
     this.removeHeadlight();
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this._sceneLightsEnabled = true;
     // 不直接清 scene.environment；由 wrapRender 負責 per-frame restore
   }
 
@@ -152,21 +140,23 @@ export class ShadingManager {
     switch (this._mode) {
       case 'wireframe':
         this.renderer.toneMapping = NoToneMapping;
-        this.disableSceneLights();
+        this.camera.layers.disable(1); // wireframe：不顯示 user lights（暫定，spec 待定）
         this._modeMaterial = new MeshBasicMaterial({ wireframe: true, color: 0x888888 });
         break;
       case 'solid':
         this.renderer.toneMapping = NoToneMapping;
-        this.disableSceneLights();
+        this.camera.layers.enable(1);  // solid：顯示 user lights
         this.addHeadlight();
         this._modeMaterial = new MeshLambertMaterial({ color: 0xffffff });
         break;
       case 'shading':
         this.renderer.toneMapping = ACESFilmicToneMapping;
+        this.camera.layers.disable(1); // shading：不顯示 user lights（子面板開關 follow-up）
         this._modeMaterial = null;
         break;
       case 'rendering':
         this.renderer.toneMapping = ACESFilmicToneMapping;
+        this.camera.layers.enable(1);  // rendering：顯示 user lights
         this.ensureDefaultEnv();
         this._modeMaterial = null;
         break;
@@ -185,24 +175,6 @@ export class ShadingManager {
     this.camera.remove(this.headlightTarget);
   }
 
-  private disableSceneLights(): void {
-    this.lightBackups = [];
-    this.scene.traverse((child) => {
-      if ((child as unknown as Light).isLight) {
-        const light = child as unknown as Light;
-        this.lightBackups.push({ light, visible: light.visible });
-        light.visible = false;
-      }
-    });
-  }
-
-  private restoreSceneLights(): void {
-    for (const { light, visible } of this.lightBackups) {
-      light.visible = visible;
-    }
-    this.lightBackups = [];
-  }
-
   private ensureDefaultEnv(): void {
     if (this.defaultEnv) return;
     const pmrem = new PMREMGenerator(this.renderer);
@@ -217,7 +189,6 @@ export class ShadingManager {
 
   dispose(): void {
     this.restoreMaterials();
-    this.restoreSceneLights();
     this.removeHeadlight();
     this.defaultEnv?.dispose();
     this.customEnv?.dispose();
