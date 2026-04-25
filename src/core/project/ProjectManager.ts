@@ -44,7 +44,7 @@ export class ProjectManager {
     await projectHandle.getDirectoryHandle('models',   { create: true });
     await projectHandle.getDirectoryHandle('textures', { create: true });
     await projectHandle.getDirectoryHandle('hdris',    { create: true });
-    await projectHandle.getDirectoryHandle('leaves',   { create: true });
+    await projectHandle.getDirectoryHandle('prefabs',  { create: true });
     await projectHandle.getDirectoryHandle('other',    { create: true });
 
     const files = await this.collectFiles(projectHandle);
@@ -164,7 +164,7 @@ export class ProjectManager {
       case 'glb':     return 'models';
       case 'texture': return 'textures';
       case 'hdr':     return 'hdris';
-      case 'leaf':    return 'leaves';
+      case 'prefab':  return 'prefabs';
       default:        return 'other';
     }
   }
