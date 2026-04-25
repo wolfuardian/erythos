@@ -31,6 +31,7 @@ export class ShadingManager {
   private defaultEnv: ReturnType<PMREMGenerator['fromScene']> | null = null;
   private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
   private _lookdevPreset: LookdevPreset = 'room';
+  private _sceneLightsOverride: boolean | undefined = undefined;
 
   constructor(renderer: WebGLRenderer, sceneHelpers: Scene, camera: Camera) {
     this.renderer = renderer;
@@ -61,14 +62,14 @@ export class ShadingManager {
     this.applyMode();
   }
 
-  /**
-   * Sub-panel Scene Lights toggle. 暫時 no-op — 待 follow-up issue 重新設計
-   * （讓 sub-panel checkbox override mode default 的 camera.layers.enable(1) 邏輯）。
-   * 本 issue (#581) 只做 mode 預設行為，sub-panel UI 互動屬獨立議題。
-   */
-  setSceneLightsEnabled(_enabled: boolean): void {
-    // TODO(#follow-up): 此 method 應 override camera.layers 的 mode default，
-    // 與 applyMode 的 layer 邏輯協調。
+  setSceneLightsEnabled(enabled: boolean): void {
+    this._sceneLightsOverride = enabled;
+    this.applyLayerMask();
+  }
+
+  clearSceneLightsOverride(): void {
+    this._sceneLightsOverride = undefined;
+    this.applyLayerMask();
   }
 
   setEnvironmentIntensity(intensity: number): void {
@@ -178,26 +179,46 @@ export class ShadingManager {
     switch (this._mode) {
       case 'wireframe':
         this.renderer.toneMapping = NoToneMapping;
-        this.camera.layers.disable(1); // wireframe：不顯示 user lights（暫定，spec 待定）
         this._modeMaterial = new MeshBasicMaterial({ wireframe: true, color: 0x888888 });
         break;
       case 'solid':
         this.renderer.toneMapping = NoToneMapping;
-        this.camera.layers.enable(1);  // solid：顯示 user lights
         this.addHeadlight();
         this._modeMaterial = new MeshLambertMaterial({ color: 0xffffff });
         break;
       case 'shading':
         this.renderer.toneMapping = ACESFilmicToneMapping;
-        this.camera.layers.disable(1); // shading：不顯示 user lights（子面板開關 follow-up）
         this._modeMaterial = null;
         break;
       case 'rendering':
         this.renderer.toneMapping = ACESFilmicToneMapping;
-        this.camera.layers.enable(1);  // rendering：顯示 user lights
         this.ensureDefaultEnv();
         this._modeMaterial = null;
         break;
+    }
+    this.applyLayerMask();
+  }
+
+  private applyLayerMask(): void {
+    // mode default
+    let defaultEnabled: boolean;
+    switch (this._mode) {
+      case 'solid':
+      case 'rendering':
+        defaultEnabled = true;
+        break;
+      case 'shading':
+      case 'wireframe':
+      default:
+        defaultEnabled = false;
+        break;
+    }
+    // override 蓋掉 default（undefined = 不 override）
+    const enabled = this._sceneLightsOverride ?? defaultEnabled;
+    if (enabled) {
+      this.camera.layers.enable(1);
+    } else {
+      this.camera.layers.disable(1);
     }
   }
 
