@@ -1,5 +1,6 @@
-import { createMemo, createSignal, type Component } from 'solid-js';
+import { createMemo, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
+import { useAreaState } from '../../app/areaState';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { PanelHeader } from '../../components/PanelHeader';
 
@@ -48,9 +49,9 @@ function buildTree(root: SceneNode, allNodes: SceneNode[], strip: boolean): obje
 
 const ContextPanel: Component = () => {
   const bridge = useEditor();
-  const [showTree, setShowTree] = createSignal(false);
-  const [compact, setCompact] = createSignal(false);
-  const [hideDefaults, setHideDefaults] = createSignal(false);
+  const [showTree, setShowTree] = useAreaState<boolean>('showTree', false);
+  const [compact, setCompact] = useAreaState<boolean>('compact', false);
+  const [hideDefaults, setHideDefaults] = useAreaState<boolean>('hideDefaults', false);
 
   const sceneJson = createMemo(() => {
     const uuids = bridge.selectedUUIDs();
