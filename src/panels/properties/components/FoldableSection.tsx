@@ -1,8 +1,9 @@
-import { createSignal, type Component, type JSX } from 'solid-js';
+import { onMount, type Component, type JSX } from 'solid-js';
 import { useArea } from '../../../app/AreaContext';
+import { useAreaState } from '../../../app/areaState';
 
 interface FoldableSectionProps {
-  /** localStorage key 後綴，例如 'object' → erythos.foldable.<scope>.object */
+  /** 對應 panelStates 的 key，同時用於 migration 讀舊 localStorage key */
   sectionKey: string;
   label: string;
   children: JSX.Element;
@@ -13,38 +14,50 @@ interface FoldableSectionProps {
    */
   variant?: 'default' | 'subsection';
   /**
-   * 命名空間，隔離多個 PropertiesPanel 實例的折疊狀態
-   * 預設 'default'，確保現有行為不變
+   * 命名空間，舊 migration 用；新狀態存入 panelStates，不再依賴此值路由
+   * 保留 prop 避免呼叫端報型別錯誤
    */
   scope?: string;
 }
 
-function storageKey(scope: string | undefined, sectionKey: string): string {
-  return `erythos.foldable.${scope ?? 'default'}.${sectionKey}`;
-}
-
-function readStored(scope: string | undefined, sectionKey: string): boolean {
-  try {
-    const v = localStorage.getItem(storageKey(scope, sectionKey));
-    return v === null ? true : v === 'true'; // 預設展開
-  } catch {
-    return true;
-  }
-}
-
 const FoldableSection: Component<FoldableSectionProps> = (props) => {
   const area = useArea();
+  // effectiveScope 僅用於舊 key migration 讀取，不影響新的 panelStates 路由
   const effectiveScope = () => props.scope ?? area?.id ?? 'default';
 
-  const [expanded, setExpanded] = createSignal(readStored(effectiveScope(), props.sectionKey));
+  // --- Migration：在 useAreaState 之前決定 initial ---
+  // 讀舊 key 格式 erythos.foldable.<scope>.<sectionKey>
+  // 若 panelStates 有值（useAreaState 內部會優先用），migration 寫入不影響；
+  // 若 panelStates 無值且舊 key 有值，用舊值作 initial，mount 後強制 set 寫入 panelStates，並清除舊 key。
+  let migratedValue: boolean | null = null;
+  try {
+    const oldKey = `erythos.foldable.${effectiveScope()}.${props.sectionKey}`;
+    const raw = localStorage.getItem(oldKey);
+    if (raw !== null) {
+      migratedValue = raw === 'true';
+    }
+  } catch { /* ignore */ }
 
-  const toggle = () => {
-    const next = !expanded();
-    setExpanded(next);
-    try {
-      localStorage.setItem(storageKey(effectiveScope(), props.sectionKey), String(next));
-    } catch { /* ignore */ }
-  };
+  // 決定 useAreaState 的 initial：
+  // - 若找到舊 key 值，用它（migration fallback）
+  // - 否則預設展開（true）
+  const initial = migratedValue !== null ? migratedValue : true;
+
+  const [expanded, setExpanded] = useAreaState<boolean>(props.sectionKey, initial);
+
+  onMount(() => {
+    // 若有舊 key 值，強制 set 一次以確保寫入 panelStates（避免 useAreaState 拿到 initial 後不觸發 setter）
+    if (migratedValue !== null) {
+      setExpanded(migratedValue);
+      // 清除舊 key（一次性 migration）
+      try {
+        const oldKey = `erythos.foldable.${effectiveScope()}.${props.sectionKey}`;
+        localStorage.removeItem(oldKey);
+      } catch { /* ignore */ }
+    }
+  });
+
+  const toggle = () => setExpanded(v => !v);
 
   const isSubsection = () => props.variant === 'subsection';
 
