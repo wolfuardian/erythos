@@ -10,8 +10,8 @@ import type { Vec3 } from '../../core/scene/SceneFormat';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
-import { InstantiateLeafCommand } from '../../core/commands/InstantiateLeafCommand';
-import * as LeafStore from '../../core/scene/LeafStore';
+import { InstantiatePrefabCommand } from '../../core/commands/InstantiatePrefabCommand';
+import * as PrefabStore from '../../core/scene/PrefabStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
@@ -130,9 +130,9 @@ const ViewportPanel: Component = () => {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
-          const asset = await LeafStore.get(leafId);
+          const asset = await PrefabStore.get(leafId);
           if (asset) {
-            editor.execute(new InstantiateLeafCommand(editor, asset, dropPosition));
+            editor.execute(new InstantiatePrefabCommand(editor, asset, dropPosition));
           }
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));

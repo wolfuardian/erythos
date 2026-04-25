@@ -8,7 +8,7 @@ import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
-import { SaveAsLeafCommand } from '../../core/commands/SaveAsLeafCommand';
+import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
 
@@ -420,7 +420,7 @@ const SceneTreePanel: Component = () => {
           const uuid = selected[0];
           const node = editor.sceneDocument.getNode(uuid);
           if (!node) return;
-          editor.execute(new SaveAsLeafCommand(editor, uuid, node.name));
+          editor.execute(new SaveAsPrefabCommand(editor, uuid, node.name));
         },
       },
       {
