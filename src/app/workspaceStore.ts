@@ -25,6 +25,8 @@ export interface Workspace {
   grid: unknown;                       // AreaTree（序列化為 JSON）
   editorTypes: Record<string, string>; // panelId → editorType
   viewportState: Record<string, ViewportPanelState>;
+  panelStates?: Record<string, Record<string, Record<string, unknown>>>;
+  //             ^areaId   ^editorType  ^hook key
 }
 
 export interface WorkspaceStore {
@@ -125,7 +127,10 @@ export function loadStore(): WorkspaceStore {
           }
           return { ...w, viewportState: newViewportState };
         });
-        return { ...parsed, workspaces: viewportMigratedWorkspaces };
+        const panelStatesMigratedWorkspaces = viewportMigratedWorkspaces.map(w =>
+          w.panelStates ? w : { ...w, panelStates: {} }
+        );
+        return { ...parsed, workspaces: panelStatesMigratedWorkspaces };
       }
     }
   } catch { /* fall through */ }
@@ -175,6 +180,7 @@ export function addWorkspace(s: WorkspaceStore, baseId?: string): WorkspaceStore
     grid: JSON.parse(JSON.stringify(base.grid)),
     editorTypes: JSON.parse(JSON.stringify(base.editorTypes)),
     viewportState: JSON.parse(JSON.stringify(base.viewportState ?? {})),
+    panelStates: JSON.parse(JSON.stringify(base.panelStates ?? {})),
   };
   return { ...s, currentWorkspaceId: newW.id, workspaces: [...s.workspaces, newW] };
 }
@@ -205,6 +211,7 @@ export function duplicateWorkspace(s: WorkspaceStore, id: string): WorkspaceStor
     grid: JSON.parse(JSON.stringify(base.grid)),
     editorTypes: JSON.parse(JSON.stringify(base.editorTypes)),
     viewportState: JSON.parse(JSON.stringify(base.viewportState ?? {})),
+    panelStates: JSON.parse(JSON.stringify(base.panelStates ?? {})),
   };
   return { ...s, workspaces: [...s.workspaces, newW] }; // currentId 不變
 }
