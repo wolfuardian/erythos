@@ -183,6 +183,11 @@ export class Viewport {
     this.vpRenderer.requestRender();
   }
 
+  setLookdevPreset(preset: import('./ShadingManager').LookdevPreset): void {
+    this.shading.setLookdevPreset(preset);
+    this.vpRenderer.requestRender();
+  }
+
   setQuality(quality: import('./PostProcessing').QualityLevel): void {
     this.postProcessing.setQuality(quality);
     this.vpRenderer.syncRender();

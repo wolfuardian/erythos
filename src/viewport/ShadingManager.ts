@@ -16,6 +16,7 @@ import {
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export type ShadingMode = 'wireframe' | 'solid' | 'shading' | 'rendering';
+export type LookdevPreset = 'none' | 'room' | 'factory';
 
 export class ShadingManager {
   private renderer: WebGLRenderer;
@@ -29,6 +30,7 @@ export class ShadingManager {
   private headlightTarget: Object3D;
   private defaultEnv: ReturnType<PMREMGenerator['fromScene']> | null = null;
   private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
+  private _lookdevPreset: LookdevPreset = 'room';
 
   constructor(renderer: WebGLRenderer, sceneHelpers: Scene, camera: Camera) {
     this.renderer = renderer;
@@ -91,6 +93,14 @@ export class ShadingManager {
     // 不直接寫 scene.environment；由 wrapRender 在每幀 render 時套用
   }
 
+  setLookdevPreset(preset: LookdevPreset): void {
+    this._lookdevPreset = preset;
+    // 切換時預建 defaultEnv（room / factory fallback 都需要）
+    if (preset !== 'none') {
+      this.ensureDefaultEnv();
+    }
+  }
+
   /**
    * Render-time state swap：set → renderFn → restore。
    * Viewport 在 render override 裡呼叫；scene 每幀傳入（不存引用）。
@@ -114,8 +124,25 @@ export class ShadingManager {
         } else {
           (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
         }
+      } else if (this._mode === 'shading') {
+        // shading：依 lookdevPreset 決定是否套用環境
+        // factory fallback room（UI 標 disabled，防禦性 fallback）
+        const useRoom = this._lookdevPreset === 'room' || this._lookdevPreset === 'factory';
+        if (useRoom) {
+          this.ensureDefaultEnv();
+          scene.environment = this.defaultEnv?.texture ?? null;
+          (scene as any).environmentIntensity = this._envIntensity;
+          if ((scene as any).environmentRotation) {
+            (scene as any).environmentRotation.y = this._envRotation;
+          } else {
+            (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
+          }
+        } else {
+          // none
+          scene.environment = null;
+        }
       } else {
-        // solid / shading / wireframe：明確隔離 HDRI，不依賴 scene 初始值
+        // solid / wireframe：明確隔離 HDRI
         scene.environment = null;
       }
 
