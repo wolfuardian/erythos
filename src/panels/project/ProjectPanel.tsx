@@ -12,7 +12,7 @@ const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; colo
   glb:     { pill: 'GLB', label: 'Model',   color: 'var(--accent-blue)'   },
   texture: { pill: 'TEX', label: 'Texture', color: 'var(--accent-yellow)' },
   hdr:     { pill: 'HDR', label: 'HDRI',    color: 'var(--accent-orange)' },
-  leaf:    { pill: 'LEA', label: 'Leaf',    color: 'var(--accent-purple)' },
+  prefab:  { pill: 'FAB', label: 'Prefab',  color: 'var(--accent-purple)' },
   other:   { pill: 'OTH', label: 'Other',   color: 'var(--text-muted)'    },
 };
 
@@ -23,7 +23,7 @@ const filterIcon = (t: ProjectFile['type']) => {
     case 'glb':     return <><path d="M8 2l5 3v5l-5 3-5-3V5z"/><line x1="8" y1="2" x2="8" y2="10"/><line x1="3" y1="5" x2="13" y2="10"/></>;
     case 'texture': return <><rect x="2" y="2" width="12" height="12" rx="1"/><rect x="2" y="2" width="6" height="6"/><rect x="8" y="8" width="6" height="6"/></>;
     case 'hdr':     return <><circle cx="8" cy="8" r="5"/><line x1="3" y1="8" x2="13" y2="8"/><path d="M5.5 5a5 5 0 0 0 0 6"/><path d="M10.5 5a5 5 0 0 1 0 6"/></>;
-    case 'leaf':    return <><path d="M4 13c0 0 1-7 7-9"/><path d="M4 13c3-1 8-4 7-9"/><line x1="4" y1="13" x2="8" y2="9"/></>;
+    case 'prefab':  return <><path d="M4 13c0 0 1-7 7-9"/><path d="M4 13c3-1 8-4 7-9"/><line x1="4" y1="13" x2="8" y2="9"/></>;
     case 'other':   return <><rect x="3" y="2" width="8" height="11" rx="1"/><line x1="3" y1="7" x2="11" y2="7"/><text x="7" y="12" text-anchor="middle" font-size="5" stroke="none" fill="currentColor">?</text></>;
   }
 };
@@ -156,7 +156,7 @@ const ProjectPanel: Component = () => {
   // ── Browser: Assets/ ──
   const assetFiles = () => bridge.projectFiles();
 
-  const ALL_TYPES: ProjectFile['type'][] = ['scene', 'glb', 'texture', 'hdr', 'leaf', 'other'];
+  const ALL_TYPES: ProjectFile['type'][] = ['scene', 'glb', 'texture', 'hdr', 'prefab', 'other'];
   const [activeFilters, setActiveFilters] = createSignal<Set<ProjectFile['type']>>(
     new Set(ALL_TYPES),
   );
@@ -423,7 +423,7 @@ const ProjectPanel: Component = () => {
                       'white-space': 'pre',
                     }}>
                       {(newName().trim() && parentHandle())
-                        ? `${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n├── textures/\n├── hdris/\n├── leaves/\n└── other/`
+                        ? `${parentHandle()!.name}/${newName().trim()}/\n├── scenes/\n├── models/\n├── textures/\n├── hdris/\n├── prefabs/\n└── other/`
                         : null}
                     </div>
                   </div>
@@ -606,7 +606,7 @@ const ProjectPanel: Component = () => {
                 'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
               }}>
                 No assets found.<br />
-                Place files in scenes/, models/, textures/,<br />hdris/, leaves/, or other/ folders.
+                Place files in scenes/, models/, textures/,<br />hdris/, prefabs/, or other/ folders.
               </div>
             </Show>
           </div>

@@ -201,7 +201,7 @@ const PrefabPanel: Component = () => {
                   <div
                     draggable
                     onDragStart={(e) => {
-                      e.dataTransfer!.setData('application/erythos-leaf', asset.id);
+                      e.dataTransfer!.setData('application/erythos-prefab', asset.id);
                       e.dataTransfer!.effectAllowed = 'copy';
                     }}
                     onClick={() => setActiveId(isActive() ? null : asset.id)}
