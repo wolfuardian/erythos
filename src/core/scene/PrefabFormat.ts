@@ -1,14 +1,14 @@
-// .leaf 資產格式（純資料型別，不含驗證）
+// .prefab 資產格式（純資料型別，不含驗證）
 
-export interface LeafAsset {
+export interface PrefabAsset {
   version: 1;
-  id: string;        // leaf 資產識別 ID（非場景節點 UUID）
+  id: string;        // prefab 資產識別 ID（非場景節點 UUID）
   name: string;
   modified: string;  // ISO 8601 timestamp
-  nodes: LeafNode[];
+  nodes: PrefabNode[];
 }
 
-export interface LeafNode {
+export interface PrefabNode {
   localId: number;              // 0, 1, 2... 用於親子引用，不是 UUID
   parentLocalId: number | null; // null = root
   name: string;

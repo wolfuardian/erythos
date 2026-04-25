@@ -6,5 +6,5 @@ export { SetNodePropertyCommand } from './SetNodePropertyCommand';
 export { SetTransformCommand } from './SetTransformCommand';
 export { MoveNodeCommand } from './MoveNodeCommand';
 export { SetEnvironmentCommand } from './SetEnvironmentCommand';
-export { InstantiateLeafCommand } from './InstantiateLeafCommand';
-export { SaveAsLeafCommand } from './SaveAsLeafCommand';
+export { InstantiatePrefabCommand } from './InstantiatePrefabCommand';
+export { SaveAsPrefabCommand } from './SaveAsPrefabCommand';
