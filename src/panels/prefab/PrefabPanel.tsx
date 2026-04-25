@@ -9,13 +9,14 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useEditor } from '../../app/EditorContext';
+import { useAreaState } from '../../app/areaState';
 import * as GlbStore from '../../core/scene/GlbStore';
 import { PanelHeader } from '../../components/PanelHeader';
 
 const PrefabPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
-  const [activeId, setActiveId] = createSignal<string | null>(null);
+  const [activeId, setActiveId] = useAreaState<string | null>('activeId', null);
 
   let previewRef!: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
