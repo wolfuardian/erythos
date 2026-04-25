@@ -128,6 +128,7 @@ export class GizmoManager {
 
   dispose(): void {
     this.clearMulti();
+    this.controls.detach();
     this.controls.dispose();
   }
 
