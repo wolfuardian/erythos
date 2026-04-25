@@ -941,6 +941,7 @@ const ViewportPanel: Component = () => {
             <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
               <label style={{ display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={sceneLightsOn()}
+                  disabled={renderMode() !== 'shading'}
                   onChange={e => {
                     const checked = e.target.checked;
                     setSceneLightsOn(checked);
