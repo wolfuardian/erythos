@@ -25,7 +25,7 @@ _Commit 前綴: [app]_
 
 - `EditorBridge`（bridge.ts）：全部 signal + `editor` raw 物件 + `dispose()`
   - 核心 signal：`selectedUUIDs`, `hoveredUUID`, `nodes`, `interactionMode`, `transformMode`, `sceneVersion`, `objectVersion`, `canUndo`, `canRedo`, `autosaveStatus`
-  - 專案 signal：`projectOpen`, `projectName`, `projectFiles`, `leafAssets`, `environmentSettings`, `glbKeys`
+  - 專案 signal：`projectOpen`, `projectName`, `projectFiles`, `prefabAssets`, `environmentSettings`, `glbKeys`
   - Viewport 協調：`activeViewportId` / `setActiveViewportId`, `draggingViewportId` / `setDraggingViewportId`, `dragTickVersion` / `bumpDragTick`, `sharedGridObjects`
 - `Workspace`：`{ id, name, grid: AreaTree, editorTypes: Record<areaId, editorType>, viewportState: Record<areaId, ViewportPanelState> }`
 - `WorkspaceStore`：`{ version: 1, currentWorkspaceId, workspaces: Workspace[] }`
@@ -45,7 +45,7 @@ _Commit 前綴: [app]_
 
 ## Bridge 事件訂閱源
 
-- `editor.events`：selectionChanged / hoverChanged / interactionModeChanged / transformModeChanged / historyChanged / autosaveStatusChanged / leafStoreChanged / environmentChanged
+- `editor.events`：selectionChanged / hoverChanged / interactionModeChanged / transformModeChanged / historyChanged / autosaveStatusChanged / prefabStoreChanged / environmentChanged
 - `editor.sceneDocument.events`：nodeAdded / nodeRemoved / nodeChanged / sceneReplaced
 - `editor.clipboard`：clipboardChanged
 - `editor.projectManager.onChange()`（回傳 unsubscribe fn）
@@ -86,6 +86,7 @@ _Commit 前綴: [app]_
 
 ## 最近 PR
 
+- #526 [core/app] Leaf → Prefab 重命名；bridge signal leafAssets → prefabAssets，event leafStoreChanged → prefabStoreChanged
 - #594 [viewport] per-mode sceneLights override + sub-panel state workspace 持久化
 - #592 [viewport] shading lookdev HDR
 - #587 [viewport] camera snapshot 持久化（workspace.viewportState, closure capture）
