@@ -107,10 +107,13 @@ Viewport.mount() 裡：
 - **onCleanup closure capture race**（#588）：panel cleanup 時若直接讀 `currentWorkspace().id` 會拿到「已切走的」workspace。必須在 mount 時 capture `const workspaceId = currentWorkspace().id`，closure 鎖定。
 - **gizmo dispose 順序**：GizmoManager.dispose 內必須先 `controls.detach()` 再 detach helper，否則 TransformControls 殘留事件監聽。Viewport.dispose 已依正確順序（gizmo 在 postProcessing 之後，vpRenderer 之前）。
 - **ShadingManager.forceApply()**：場景替換（autosave restore）後 scene graph 全換新，mode 相同但材質覆蓋需重建。ViewportPanel 訂 `bridge.sceneVersion()` 後呼叫 `shading.forceApply()`。
-- **Solid 模式 checkbox 互動**（spec §4.2）：spec 規定 Solid/Rendering/Wireframe 子面板不開關 checkbox；**src 目前 checkbox 無 disabled 條件**。已知落差，AH 決策是否補 issue。
+- **拖曳 MIME 型別**（#526 PR3, commit `7cbd021`）：Viewport drop handler 有三條路徑：`application/erythos-glb`（Project 面板 GLB）、`application/erythos-prefab`（Prefab 面板，舊稱 `application/erythos-leaf` 已重命名）、HTML5 File drag。MIME 已是 `prefab`，DB 或 spec 若見 `leaf` 均為過期。
+- **Solid 模式 checkbox 互動**（spec §4.2）：spec 規定 Solid/Rendering/Wireframe 模式 Scene Lights checkbox 不可互動。已於 #598（commit `a77d32b`）修正：checkbox 在 `renderMode() !== 'shading'` 時 `disabled`，即只有 Shading 模式可切換。
 
 ## 最近 PR
 
+- #598 [viewport] fix: Scene Lights checkbox disabled（Solid/Rendering/Wireframe 模式，commit `a77d32b`）
+- #526 PR3 [ui] refactor: leaf → prefab UI text + drag MIME（commit `7cbd021`）
 - #595 [chore] multi-viewport spec §4.2 Solid 燈光永遠開（不開 checkbox）
 - #594 [viewport] per-mode sceneLights override + sub-panel state workspace 持久化
 - #592 [viewport] shading lookdev HDR + HDRI render-time swap
