@@ -21,14 +21,14 @@ export class InstantiatePrefabCommand extends Command {
   }
 
   execute(): void {
-    // 反序列化為全新 UUID 的節點（不含 components.leaf）
+    // 反序列化為全新 UUID 的節點（不含 components.prefab）
     const nodes = deserializeFromPrefab(this.asset, null);
 
-    // 根節點加上 leaf 標記（'leaf' key 是 scene 持久化 key，PR 3 前保留）
+    // 根節點加上 prefab 標記
     const root = nodes[0];
     root.components = {
       ...(root.components as Record<string, unknown>),
-      leaf: { id: this.asset.id },  // ← PR 3 才改為 'prefab'
+      prefab: { id: this.asset.id },
     };
 
     // 若有指定位置，覆蓋根節點位置

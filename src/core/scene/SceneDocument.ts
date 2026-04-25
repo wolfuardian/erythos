@@ -1,6 +1,16 @@
 import type { SceneNode, SceneFile } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
 
+// Migration helper: upgrade old scene files that stored prefab component under 'leaf' key
+function migrateNodeComponents(node: SceneNode): SceneNode {
+  const comp = node.components as Record<string, unknown>;
+  if ('leaf' in comp && !('prefab' in comp)) {
+    const { leaf, ...rest } = comp;
+    return { ...node, components: { ...rest, prefab: leaf } };
+  }
+  return node;
+}
+
 // ── Internal generic emitter ──────────────────────────────────────────────────
 
 type Listener<T extends unknown[]> = (...args: T) => void;
@@ -139,8 +149,9 @@ export class SceneDocument {
 
   deserialize(data: SceneFile): void {
     this._nodes.clear();
-    for (const node of data.nodes) {
-      this._nodes.set(node.id, { ...node });
+    for (const rawNode of data.nodes) {
+      const node = migrateNodeComponents({ ...rawNode });
+      this._nodes.set(node.id, node);
     }
     this.events.emit('sceneReplaced');
   }

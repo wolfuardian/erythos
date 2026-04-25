@@ -1,7 +1,7 @@
 export interface ProjectFile {
-  path: string; // e.g. 'models/chair.glb'
-  name: string; // e.g. 'chair.glb'
-  type: 'glb' | 'leaf' | 'hdr' | 'scene' | 'texture' | 'other';
+  path: string; // e.g. 'prefabs/chair.prefab'
+  name: string; // e.g. 'chair.prefab'
+  type: 'glb' | 'prefab' | 'hdr' | 'scene' | 'texture' | 'other';
 }
 
 export function inferFileType(name: string): ProjectFile['type'] {
@@ -10,8 +10,9 @@ export function inferFileType(name: string): ProjectFile['type'] {
     case 'glb':
     case 'gltf':
       return 'glb';
-    case 'leaf':
-      return 'leaf';
+    case 'leaf':    // legacy alias：舊 user project 的 .leaf 仍可讀
+    case 'prefab':
+      return 'prefab';
     case 'hdr':
       return 'hdr';
     case 'png':
