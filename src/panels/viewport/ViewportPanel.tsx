@@ -37,6 +37,7 @@ const ViewportPanel: Component = () => {
   const [shadingExpanded, setShadingExpanded] = createSignal(true);
   const [hdrIntensity, setHdrIntensity] = createSignal(1.0);
   const [hdrRotation, setHdrRotation] = createSignal(0);
+  const [lookdevPreset, setLookdevPreset] = createSignal<import('../../viewport/ShadingManager').LookdevPreset>('room');
   const [panelExpanded, setPanelExpanded] = createSignal(true);
   const [groupCollapsed, setGroupCollapsed] = createSignal<Record<string, boolean>>({});
   const isGroupOpen = (key: string) => !groupCollapsed()[key];
@@ -391,6 +392,11 @@ const ViewportPanel: Component = () => {
   createEffect(() => {
     viewport?.shading.setSceneLightsEnabled(sceneLightsOn());
     viewport?.requestRender();
+  });
+
+  createEffect(() => {
+    if (renderMode() !== 'shading') return;
+    viewport?.setLookdevPreset(lookdevPreset());
   });
 
   createEffect(() => {
@@ -908,6 +914,8 @@ const ViewportPanel: Component = () => {
             <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ 'margin-bottom': '6px', color: 'var(--text-primary, #fff)' }}>HDR Preset</div>
               <select
+                value={lookdevPreset()}
+                onChange={e => setLookdevPreset(e.target.value as import('../../viewport/ShadingManager').LookdevPreset)}
                 style={{
                   width: '100%',
                   background: 'rgba(255,255,255,0.08)',
@@ -918,7 +926,9 @@ const ViewportPanel: Component = () => {
                   'font-size': '11px',
                 }}
               >
+                <option value="none">None</option>
                 <option value="room">Room</option>
+                <option value="factory" disabled>Factory (WIP)</option>
               </select>
             </div>
 
