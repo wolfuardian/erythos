@@ -125,10 +125,17 @@ export class ShadingManager {
       // --- restore（renderFn throw 時仍執行）---
       scene.overrideMaterial = prevOverrideMaterial;
       scene.environment = prevEnvironment;
-      // 無條件 restore，避免 rendering mode 的殘留值汙染後續 viewport
-      (scene as any).environmentIntensity = prevEnvIntensity ?? 1.0;
+      if (prevEnvIntensity !== undefined) {
+        (scene as any).environmentIntensity = prevEnvIntensity;
+      } else {
+        delete (scene as any).environmentIntensity;
+      }
       if ((scene as any).environmentRotation) {
-        (scene as any).environmentRotation.y = prevEnvRotation ?? 0;
+        if (prevEnvRotation !== undefined) {
+          (scene as any).environmentRotation.y = prevEnvRotation;
+        } else {
+          delete (scene as any).environmentRotation;
+        }
       }
     }
   }
