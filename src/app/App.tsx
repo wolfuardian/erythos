@@ -76,6 +76,9 @@ const App: Component = () => {
     if (!e || !b) return;
     setProjectOpen(false);
 
+    // flush pending autosave before teardown
+    await e.autosave?.flushNow();
+
     // 地雷 2：確實 off sceneReplaced
     if (onSceneReplaced) {
       e.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
@@ -132,11 +135,19 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
       <div style={{ flex: 1 }} />
       <Show when={props.bridge.autosaveStatus() !== 'idle'}>
         <span style={{
-          color: props.bridge.autosaveStatus() === 'pending' ? 'var(--text-muted)' : 'var(--accent-green)',
+          color: props.bridge.autosaveStatus() === 'pending'
+            ? 'var(--text-muted)'
+            : props.bridge.autosaveStatus() === 'error'
+              ? 'var(--accent-red)'
+              : 'var(--accent-green)',
           'font-size': 'var(--font-size-sm)',
           'margin-right': 'var(--space-md)',
         }}>
-          {props.bridge.autosaveStatus() === 'pending' ? 'Saving...' : 'Saved'}
+          {props.bridge.autosaveStatus() === 'pending'
+            ? 'Saving...'
+            : props.bridge.autosaveStatus() === 'error'
+              ? 'Save failed'
+              : 'Saved'}
         </span>
       </Show>
     </div>
