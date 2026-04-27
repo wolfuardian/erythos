@@ -145,7 +145,7 @@ export function getAllInternalEdges(tree: AreaTree): ScreenEdge[]
   - `resizeEdge` clamp：`resizeEdge(Layout, x=0.22 edge, 0.05, 1000)` → clamp 到 `MIN_AREA_PX/1000 = 0.12`
   - `resizeEdge` 純函式：原 tree 不變
 - [ ] **Step 1.9**: `npm run build` 過、`npm run test -- areaTree` 全過
-- [ ] **Step 1.10**: 開 PR 前還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 1.10**: 開 PR 前還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 1.11**: Commit + PR
 
 **Commit**：
@@ -334,7 +334,7 @@ export function createDebugPreset(): Workspace {
 - [ ] **Step 2.6**: 改 `layout/index.ts` 加 `AreaTreeRenderer` barrel export，暫留 DockLayout export（Task 4 再刪）
 - [ ] **Step 2.7**: `npm run build` 過
 - [ ] **Step 2.8**: 手動 QA：清 localStorage → 重整 → 看到 Layout 三欄（無拖曳功能，邊界是死的）；切 Debug → 看到正確佈局；切 workspace 畫面對應更換；視窗 resize → area 等比例縮放
-- [ ] **Step 2.9**: 還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 2.9**: 還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 2.10**: Commit + PR
 
 **Commit**：
@@ -486,7 +486,7 @@ import { AreaSplitter } from './AreaSplitter';
   - 拖動中按 Esc → 位置回到起始
   - 視窗 resize → area 與 splitter 位置 / 大小同步更新
   - Reload → 拖動後的佈局保留
-- [ ] **Step 3.6**: 還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 3.6**: 還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 3.7**: Commit + PR
 
 **Commit**：
@@ -523,7 +523,7 @@ import { AreaSplitter } from './AreaSplitter';
 - [ ] **Step 4.8**: 搜尋 CSS：`grep -rn "dockview" src/*.css src/**/*.css 2>/dev/null`；若有 import 'dockview-core/dist/styles/dockview.css' 或 `.dv-` class 引用 → 處理
 - [ ] **Step 4.9**: `npm run build` 過（若失敗說明 Step 4.1 漏了）
 - [ ] **Step 4.10**: 手動 QA：清 localStorage → 開 app 行為與 Task 3 完成時一致；檢查 DevTools Network 確認 dockview JS 不被載入
-- [ ] **Step 4.11**: 還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 4.11**: 還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 4.12**: Commit + PR
 
 **Commit**：
@@ -554,4 +554,4 @@ Task 1 (areaTree + vitest) ──→ Task 2 (AreaTreeRenderer) ──→ Task 3 
 
 ## Commit message 慣例
 
-所有 commit 用 `[app]` 前綴。每個 PR 結尾帶 `refs #<sub-issue>`。PR 前記得 `git checkout master -- src/app/CLAUDE.md` 還原模組 CLAUDE.md。
+所有 commit 用 `[app]` 前綴。每個 PR 結尾帶 `refs #<sub-issue>`。PR 前記得 `git checkout main -- src/app/CLAUDE.md` 還原模組 CLAUDE.md。

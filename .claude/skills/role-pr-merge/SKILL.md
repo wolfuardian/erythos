@@ -1,6 +1,6 @@
 ---
 name: role-pr-merge
-description: When AH needs to finalize a PR that has "QC PASS" comment, merge it and execute the full post-merge cleanup sequence (merge → close issue → remove worktree → pull master → delete branch → clean module CLAUDE.md → verify build → commit leftover). Use after AH confirms QC PASS on a pull request.
+description: When AH needs to finalize a PR that has "QC PASS" comment, merge it and execute the full post-merge cleanup sequence (merge → close issue → remove worktree → pull main → delete branch → clean module CLAUDE.md → verify build → commit leftover). Use after AH confirms QC PASS on a pull request.
 model: claude-sonnet-4-6
 effort: low
 allowed-tools: Bash, Read, Edit
@@ -10,14 +10,14 @@ allowed-tools: Bash, Read, Edit
 
 ## 目標
 
-QC PASS 的 PR 走完整 merge 收尾，讓 master 回到乾淨狀態。
+QC PASS 的 PR 走完整 merge 收尾，讓 main 回到乾淨狀態。
 
 ## 驗收
 
 - PR merge 成功（無衝突）
 - 關聯 issue 已關閉
 - Worktree 已移除、branch 已刪（本地 + 遠端）
-- master 已同步
+- main 已同步
 - 模組 CLAUDE.md 任務區塊清空（保留 placeholder 註解）
 - `npm run build` 通過，或明確回報錯誤
 - Leftover 檔案按分類處理完畢（可 commit 的 commit，不可的跳過 + 回報）
@@ -37,7 +37,7 @@ AH 提供：
 3. `git worktree remove <worktree-path> --force`
 4. `git checkout -- tsconfig.app.tsbuildinfo 2>/dev/null && git pull`
 5. `git branch -d <branch>` + `git push origin --delete <branch>`
-6. **驗證**模組 CLAUDE.md 已由 AD 整檔還原至 master 原貌（`git diff master~1 -- <path>` 應無差異）。若「當前任務/待修項/上報區」殘留非 placeholder 內容，清空保留 placeholder 註解。**若發現「範圍限制」或「慣例」被異動，停下回報 AH**（AT/AD 流程異常，PM 無權判斷正確原貌）
+6. **驗證**模組 CLAUDE.md 已由 AD 整檔還原至 main 原貌（`git diff main~1 -- <path>` 應無差異）。若「當前任務/待修項/上報區」殘留非 placeholder 內容，清空保留 placeholder 註解。**若發現「範圍限制」或「慣例」被異動，停下回報 AH**（AT/AD 流程異常，PM 無權判斷正確原貌）
 7. `npm run build`
 8. `git status -s` 看 leftover，按下表處理
 

@@ -1,12 +1,12 @@
 # AH 自改 CLAUDE.md 協定
 
-CLAUDE.md 是 AH 主指令來源；自改 = 改自己的指令。走 meta-exception（直 commit master，不走 PR），但需自律。
+CLAUDE.md 是 AH 主指令來源；自改 = 改自己的指令。走 meta-exception（直 commit main，不走 PR），但需自律。
 
 ## 前提檢查（任一不滿足即停）
 
 - 改動非「為當前任務開後門」（避免 in-flight 鬆綁）
 - 涉及鬆綁時，先列「現行規則為何不適用」
-- 確認走 meta-exception（直改 master）
+- 確認走 meta-exception（直改 main）
 
 ## 修改類型與風險
 

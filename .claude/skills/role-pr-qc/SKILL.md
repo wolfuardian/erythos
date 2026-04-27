@@ -130,7 +130,7 @@ gh issue create --label bug --title "[分支簡稱] <問題>" --body "..."
 ## 約束
 
 - 不 commit 到 feat/* 分支（Bash 在手，需明確排除）
-- 不操作 master
+- 不操作 main
 - 跨分支 merge 測試後必須 `git merge --abort`，絕不保留合併狀態
 - **不 `--approve`**（所有 agent 共用同一 GitHub 帳號，無法 self-approve；用 comment 的 `QC PASS` 替代）
 

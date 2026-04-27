@@ -1,9 +1,9 @@
 #!/bin/bash
 # Auto-increment patch version on every commit.
-# Only runs on master — feature branches skip to avoid merge conflicts.
+# Only runs on main — feature branches skip to avoid merge conflicts.
 
 branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$branch" != "master" ]; then
+if [ "$branch" != "main" ]; then
   exit 0
 fi
 
