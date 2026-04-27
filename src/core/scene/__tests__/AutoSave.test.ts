@@ -1,100 +1,71 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Editor } from '../../Editor';
-import { AutoSave, saveSnapshot, restoreSnapshot, hasSnapshot } from '../AutoSave';
-import { ProjectManager } from '../../project/ProjectManager';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { AutoSave } from '../AutoSave';
+
+// mock editor
+function makeEditor() {
+  const listeners: Record<string, (() => void)[]> = {};
+  return {
+    sceneDocument: {
+      events: {
+        on: vi.fn((evt: string, fn: () => void) => {
+          listeners[evt] ??= [];
+          listeners[evt].push(fn);
+        }),
+        off: vi.fn(),
+        emit: vi.fn((evt: string) => listeners[evt]?.forEach(fn => fn())),
+      },
+      serialize: vi.fn(() => ({ version: 1, nodes: [] })),
+    },
+    projectManager: {
+      writeFile: vi.fn().mockResolvedValue(undefined),
+    },
+    events: {
+      emit: vi.fn(),
+    },
+    _listeners: listeners,
+  } as any;
+}
 
 describe('AutoSave', () => {
-  let editor: Editor;
+  beforeEach(() => { vi.useFakeTimers(); });
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-    localStorage.clear();
-    editor = new Editor(new ProjectManager());
-  });
-
-  afterEach(() => {
-    editor.dispose();
-    vi.useRealTimers();
-  });
-
-  it('hasSnapshot returns false when localStorage is empty', () => {
-    expect(hasSnapshot()).toBe(false);
-  });
-
-  it('saveSnapshot serializes scene nodes by name', () => {
-    const node = editor.sceneDocument.createNode('TestObject');
-    editor.sceneDocument.addNode(node);
-
-    const snapshot = saveSnapshot(editor);
-    expect(snapshot).toContain('TestObject');
-  });
-
-  it('restoreSnapshot round-trips scene nodes', () => {
-    const node = editor.sceneDocument.createNode('TestObject');
-    editor.sceneDocument.addNode(node);
-
-    const snapshot = saveSnapshot(editor);
-
-    editor.clear();
-    expect(editor.sceneDocument.getAllNodes()).toHaveLength(0);
-
-    restoreSnapshot(editor, snapshot);
-    expect(editor.sceneDocument.getAllNodes()).toHaveLength(1);
-    expect(editor.sceneDocument.getAllNodes()[0].name).toBe('TestObject');
-  });
-
-  it('restoreSnapshot clears selection', () => {
-    const node = editor.sceneDocument.createNode('TestObject');
-    editor.sceneDocument.addNode(node);
-    editor.selection.select(node.id);
-    expect(editor.selection.count).toBe(1);
-
-    const snapshot = saveSnapshot(editor);
-    restoreSnapshot(editor, snapshot);
-
-    expect(editor.selection.count).toBe(0);
-  });
-
-  it('restoreSnapshot emits sceneReplaced on sceneDocument', () => {
-    const node = editor.sceneDocument.createNode('TestObject');
-    editor.sceneDocument.addNode(node);
-    const snapshot = saveSnapshot(editor);
-
-    let emitted = false;
-    editor.sceneDocument.events.on('sceneReplaced', () => { emitted = true; });
-
-    restoreSnapshot(editor, snapshot);
-    expect(emitted).toBe(true);
-  });
-
-  it('restoreSnapshot throws on invalid JSON', () => {
-    expect(() => restoreSnapshot(editor, 'not valid json{{')).toThrow('Invalid snapshot JSON');
-  });
-
-  it('restoreSnapshot throws on incompatible version', () => {
-    const wrongVersion = JSON.stringify({ version: 99, nodes: [] });
-    expect(() => restoreSnapshot(editor, wrongVersion)).toThrow('Unsupported scene version: 99');
-  });
-
-  it('scheduleSnapshot does not throw when setItem fails', async () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('schedules writeFile after debounce', async () => {
+    const editor = makeEditor();
     const autosave = new AutoSave(editor);
-    const node = editor.sceneDocument.createNode('TestObject');
-    editor.sceneDocument.addNode(node); // triggers scheduleSnapshot via autosave
-
+    editor.sceneDocument.events.emit('nodeAdded');
+    vi.advanceTimersByTime(2000);
     await vi.runAllTimersAsync();
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[AutoSave] setItem failed'),
-      expect.any(DOMException),
+    expect(editor.projectManager.writeFile).toHaveBeenCalledWith(
+      'scenes/scene.erythos',
+      expect.any(String),
     );
-
-    warnSpy.mockRestore();
-    setItemSpy.mockRestore();
     autosave.dispose();
+  });
+
+  it('flushNow writes immediately without waiting for debounce', async () => {
+    const editor = makeEditor();
+    const autosave = new AutoSave(editor);
+    await autosave.flushNow();
+    expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
+    autosave.dispose();
+  });
+
+  it('emits error status when writeFile throws', async () => {
+    const editor = makeEditor();
+    editor.projectManager.writeFile = vi.fn().mockRejectedValue(new Error('disk full'));
+    const autosave = new AutoSave(editor);
+    await autosave.flushNow();
+    expect(editor.events.emit).toHaveBeenCalledWith('autosaveStatusChanged', 'error');
+    autosave.dispose();
+  });
+
+  it('dispose clears timer and removes listeners', () => {
+    const editor = makeEditor();
+    const autosave = new AutoSave(editor);
+    editor.sceneDocument.events.emit('nodeAdded');
+    autosave.dispose();
+    vi.advanceTimersByTime(2000);
+    expect(editor.projectManager.writeFile).not.toHaveBeenCalled();
+    expect(editor.sceneDocument.events.off).toHaveBeenCalledTimes(4);
   });
 });

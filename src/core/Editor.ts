@@ -6,7 +6,7 @@ import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import { Clipboard } from './Clipboard';
 import type { Command } from './Command';
-import { AutoSave, restoreSnapshot, STORAGE_KEY } from './scene/AutoSave';
+import { AutoSave } from './scene/AutoSave';
 import { ProjectManager } from './project/ProjectManager';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
@@ -46,7 +46,7 @@ export class Editor {
   }
 
   /**
-   * 非同步初始化：從 IndexedDB hydrate GLB 快取，再還原 autosave snapshot，最後啟動 AutoSave。
+   * 非同步初始化：從 IndexedDB hydrate GLB 快取，最後啟動 AutoSave。
    * App 層需在 editor 對外提供 context 前 await 此方法。
    */
   async init(): Promise<void> {
@@ -59,20 +59,10 @@ export class Editor {
     // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
     await this.resourceCache.hydrate();
 
-    // 2. Restore autosaved scene snapshot (depends on resourceCache being populated).
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) {
-      try {
-        restoreSnapshot(this, saved);
-      } catch (err) {
-        console.warn('[Editor] Could not restore autosave snapshot:', err);
-      }
-    }
-
-    // 4. Start listening for scene changes and persisting them.
+    // 4. Start autosave listener
     this.autosave = new AutoSave(this);
 
-    // 5. Notify bridge signals that async hydrate is complete.
+    // 5. Notify bridge signals
     this.events.emit('prefabStoreChanged');
   }
 
