@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventEmitter } from '../EventEmitter';
 import { Editor } from '../Editor';
+import { ProjectManager } from '../project/ProjectManager';
 
 // ── Unit tests: new UUID-based events ────────────────────────────────────────
 
@@ -48,7 +49,7 @@ describe('Editor — emits UUID-based events', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {
@@ -89,7 +90,7 @@ describe('Selection — emits hoverChanged', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

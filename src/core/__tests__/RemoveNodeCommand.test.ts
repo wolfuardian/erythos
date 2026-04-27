@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { RemoveNodeCommand } from '../commands/RemoveNodeCommand';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('RemoveNodeCommand', () => {
   let editor: Editor;
@@ -8,7 +9,7 @@ describe('RemoveNodeCommand', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

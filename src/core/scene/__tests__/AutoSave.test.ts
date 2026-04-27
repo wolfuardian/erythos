@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../../Editor';
 import { AutoSave, saveSnapshot, restoreSnapshot, hasSnapshot } from '../AutoSave';
+import { ProjectManager } from '../../project/ProjectManager';
 
 describe('AutoSave', () => {
   let editor: Editor;
@@ -8,7 +9,7 @@ describe('AutoSave', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {
