@@ -35,24 +35,26 @@ AH 提供：
 1. `gh pr merge <PR> --merge`
 2. `gh issue close <N>`（多 issue 就多次）
 3. `git worktree remove <worktree-path> --force`
-4. `git checkout -- tsconfig.app.tsbuildinfo 2>/dev/null && git pull`
+4. `git pull`
 5. `git branch -d <branch>` + `git push origin --delete <branch>`
 6. **驗證**模組 CLAUDE.md 已由 AD 整檔還原至 main 原貌（`git diff main~1 -- <path>` 應無差異）。若「當前任務/待修項/上報區」殘留非 placeholder 內容，清空保留 placeholder 註解。**若發現「範圍限制」或「慣例」被異動，停下回報 AH**（AT/AD 流程異常，PM 無權判斷正確原貌）
 7. `npm run build`
 8. `git status -s` 看 leftover，按下表處理
 
+⚠️ **禁止** `git add -A` / `git add .` / `git add *`。一律明確列檔名 `git add <path1> <path2>`。違者 leftover 雜質會混入收尾 commit。
+
 | 檔案類型 | 處理 |
 |---------|------|
 | `src/<module>/CLAUDE.md`（step 6 清理後） | 可 commit |
 | `package.json` / `package-lock.json`（hook bump） | 可 commit |
-| `tsconfig.app.tsbuildinfo` | 可 commit |
+| `*.tsbuildinfo` | **跳過**（已 .gitignored，若出現代表 .gitignore 失效，回報 AH） |
 | `.claude/previews/*.html` | 跳過 + 回報 AH |
 | 根 `CLAUDE.md` / `.claude/module-cache/*` / `.claude/specs/*` | 跳過 |
 | 其他 unstaged src/ | 跳過 + 回報異常（不應出現） |
 
 可 commit：
 ```bash
-git add <具體檔案>   # 不用 -A
+git add <path1> <path2>   # 明確列檔名，禁用 -A / . / *
 git commit -m "chore: merge 收尾 #<PR>"
 git push
 ```
@@ -65,7 +67,7 @@ Leftover 全數跳過或無改動：不 commit，回報「step 9 跳過 + 原因
 - **不刪** `.claude/previews/*.html`（design source of truth；mockup 非一次性，跨 issue 服役 — 2026-04-18 起一律保留）
 - **不碰** `.claude/module-cache/`（DB 由 EX 維護）
 - **不碰** 根 `CLAUDE.md`（AH 可能在改）
-- **不用** `git add -A`（逐個指定避免誤 commit）
+- **不用** `git add -A` / `git add .` / `git add *`（逐個指定避免誤 commit；step 8 開頭已重申）
 
 ## 異常處理
 
