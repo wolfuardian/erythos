@@ -509,6 +509,12 @@ const ViewportPanel: Component = () => {
     viewport = null;
   });
 
+  const handleNewScene = async () => {
+    // SceneDocument 已是空態（version: 1, nodes: []），不需 reset。
+    // 立即 flushNow 把空 scene 落地到 disk
+    await editor.autosave.flushNow();
+  };
+
   return (
     <div
       data-devid="viewport-panel"
@@ -572,6 +578,40 @@ const ViewportPanel: Component = () => {
           overflow: 'hidden',
         }}
       >
+      {/* γ 狀態 placeholder — 只在 nodes.length === 0 時顯示 */}
+      <Show when={bridge.nodes().length === 0}>
+        <div style={{
+          position: 'absolute', inset: '0',
+          display: 'flex', 'flex-direction': 'column',
+          'align-items': 'center', 'justify-content': 'center',
+          background: 'rgba(0,0,0,0.4)',
+          color: 'var(--text-muted)',
+          'pointer-events': 'auto',
+          'z-index': '10',
+        }}>
+          <div style={{ 'margin-bottom': 'var(--space-md)', 'font-size': 'var(--font-size-lg)' }}>
+            No scene loaded
+          </div>
+          <button
+            onClick={() => void handleNewScene()}
+            style={{
+              background: 'var(--accent-blue)', color: '#fff', border: 'none',
+              padding: '6px 14px', 'border-radius': 'var(--radius-sm)',
+              cursor: 'pointer', 'margin-bottom': 'var(--space-sm)',
+            }}
+          >+ New Scene</button>
+          <button
+            disabled
+            style={{
+              background: 'var(--bg-section)', color: 'var(--text-disabled)',
+              border: '1px solid var(--border-subtle)',
+              padding: '6px 14px', 'border-radius': 'var(--radius-sm)',
+              cursor: 'default',
+            }}
+            title="Multi-scene support coming soon"
+          >📁 Open Scene…</button>
+        </div>
+      </Show>
       <Show when={isDragging()}>
         <div
           style={{
