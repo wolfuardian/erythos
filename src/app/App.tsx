@@ -141,7 +141,7 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
               ? 'var(--accent-red)'
               : 'var(--accent-green)',
           'font-size': 'var(--font-size-sm)',
-          'margin-right': 'var(--space-md)',
+          'margin-right': props.bridge.autosaveStatus() === 'error' ? 'var(--space-sm)' : 'var(--space-md)',
         }}>
           {props.bridge.autosaveStatus() === 'pending'
             ? 'Saving...'
@@ -149,6 +149,23 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
               ? 'Save failed'
               : 'Saved'}
         </span>
+        <Show when={props.bridge.autosaveStatus() === 'error'}>
+          <button
+            onClick={() => void props.bridge.editor.autosave.flushNow()}
+            style={{
+              'font-size': 'var(--font-size-sm)',
+              color: 'var(--text-default)',
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-subtle)',
+              'border-radius': '3px',
+              padding: '1px 6px',
+              cursor: 'pointer',
+              'margin-right': 'var(--space-md)',
+            }}
+          >
+            Retry
+          </button>
+        </Show>
       </Show>
     </div>
   );
