@@ -5,6 +5,7 @@ import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
+import { NewSceneDialog, buildSceneJson } from './NewSceneDialog';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -46,6 +47,7 @@ const ProjectPanel: Component = () => {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
+  const [showNewScene, setShowNewScene] = createSignal(false);
   const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
 
   // ── New IDE state ──
@@ -104,6 +106,31 @@ const ProjectPanel: Component = () => {
       editor.loadScene(parsed);
     } catch (e: any) {
       setErrorTitle('Load Failed');
+      setErrorMsg(e.message || String(e));
+    }
+  };
+
+  const handleCreateScene = async (name: string, template: import('./NewSceneDialog').Template) => {
+    const path = `scenes/${name}`;
+    // 衝突偵測：嘗試讀取，若成功代表已存在
+    try {
+      await editor.projectManager.readFile(path);
+      // 讀成功 → 已存在
+      setErrorTitle('Scene Already Exists');
+      setErrorMsg(`"${name}" already exists. Please choose a different name.`);
+      return;
+    } catch {
+      // 預期路徑（不存在），繼續建立
+    }
+    try {
+      const json = buildSceneJson(template);
+      await editor.projectManager.writeFile(path, json);
+      await editor.projectManager.rescan();
+      const parsed = JSON.parse(json);
+      editor.loadScene(parsed);
+      setShowNewScene(false);
+    } catch (e: any) {
+      setErrorTitle('Create Failed');
       setErrorMsg(e.message || String(e));
     }
   };
@@ -217,7 +244,7 @@ const ProjectPanel: Component = () => {
 
         {/* + New Scene button */}
         <button
-          onClick={() => {}}
+          onClick={() => setShowNewScene(true)}
           style={{
             background: 'var(--accent-blue)',
             color: 'var(--text-primary)',
@@ -504,6 +531,12 @@ const ProjectPanel: Component = () => {
         </Show>
       </div>
 
+      <Show when={showNewScene()}>
+        <NewSceneDialog
+          onClose={() => setShowNewScene(false)}
+          onCreate={handleCreateScene}
+        />
+      </Show>
       <ErrorDialog open={!!errorMsg()} title={errorTitle()} message={errorMsg()} onClose={() => setErrorMsg('')} />
       <ConfirmDialog
         open={showCloseConfirm()}
