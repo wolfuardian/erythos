@@ -79,25 +79,24 @@ export class ProjectManager {
     this.emit();
   }
 
-  /** Open a recent project from stored handle */
-  async openRecent(id: string): Promise<boolean> {
+  /** Set active project handle and scan files (shared path for openRecent / addFromDisk) */
+  async openHandle(handle: FileSystemDirectoryHandle): Promise<void> {
+    this._handle = handle;
+    this._files = await this.collectFiles(handle);
+    this.emit();
+  }
+
+  /** Open a recent project: request permission and return handle; caller calls onOpenProject → openHandle */
+  async openRecent(id: string): Promise<FileSystemDirectoryHandle | null> {
     try {
       const entries = await ProjectHandleStore.loadProjects();
       const entry = entries.find(e => e.id === id);
-      if (!entry) return false;
-
+      if (!entry) return null;
       const perm = await (entry.handle as any).requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return false;
-
-      this._handle = entry.handle;
-      this._files = await this.collectFiles(entry.handle);
-
-      const status = this.computeStatus(this._files);
-      void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now(), status });
-      this.emit();
-      return true;
+      if (perm !== 'granted') return null;
+      return entry.handle;
     } catch {
-      return false;
+      return null;
     }
   }
 

@@ -26,14 +26,13 @@ export class Editor {
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
-  readonly projectManager: ProjectManager;
   autosave!: AutoSave;
 
   private _transformMode: TransformMode = 'translate';
   private _prefabAssets = new Map<string, PrefabAsset>();
   private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
 
-  constructor() {
+  constructor(public readonly projectManager: ProjectManager) {
     this.scene = new Scene();
     this.scene.name = 'Scene';
     this.sceneDocument = new SceneDocument();
@@ -44,7 +43,6 @@ export class Editor {
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
     this.clipboard = new Clipboard();
-    this.projectManager = new ProjectManager();
   }
 
   /**
