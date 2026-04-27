@@ -28,7 +28,7 @@ export interface EditorEventMap {
   interactionModeChanged: [mode: InteractionMode];
   transformModeChanged:   [mode: TransformMode];
   editorCleared:          [];
-  autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved'];
+  autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved' | 'error'];
   prefabStoreChanged:     [];
   environmentChanged:     [];
 
