@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('AddNodeCommand', () => {
   let editor: Editor;
@@ -8,7 +9,7 @@ describe('AddNodeCommand', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../commands/RemoveNodeCommand';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('History', () => {
   let editor: Editor;
@@ -9,7 +10,7 @@ describe('History', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

@@ -135,8 +135,10 @@ const ProjectPanel: Component = () => {
 
   const handleOpenRecent = async (id: string) => {
     try {
-      const ok = await editor.projectManager.openRecent(id);
-      if (!ok) {
+      // openRecent now returns the handle (or null on failure); caller is responsible for openHandle via openProject.
+      // Hub mode is unreachable post-PR-A (no editor → no useEditor) — this code preserved for PR-B cleanup.
+      const handle = await editor.projectManager.openRecent(id);
+      if (!handle) {
         setErrorTitle('Permission Required');
         setErrorMsg('Could not access the project directory. Click again to grant permission.');
       }
