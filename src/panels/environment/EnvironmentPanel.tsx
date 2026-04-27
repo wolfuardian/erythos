@@ -92,29 +92,27 @@ const EnvironmentPanel: Component = () => {
       </div>
 
       {/* Project HDR Dropdown */}
-      <Show when={bridge.projectOpen()}>
-        <div style={{ 'margin-bottom': '12px' }}>
-          <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>From Project</div>
-          <select
-            value=""
-            onChange={(e) => void handleSelectFromProject(e.target.value)}
-            style={{
-              width: '100%',
-              background: 'var(--bg-input)',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--text-primary, #fff)',
-              padding: '4px 6px',
-              'border-radius': '3px',
-              'font-size': '11px',
-            }}
-          >
-            <option value="">From project…</option>
-            <For each={projectHdrFiles()}>
-              {(f) => <option value={f.path}>{f.name || f.path}</option>}
-            </For>
-          </select>
-        </div>
-      </Show>
+      <div style={{ 'margin-bottom': '12px' }}>
+        <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>From Project</div>
+        <select
+          value=""
+          onChange={(e) => void handleSelectFromProject(e.target.value)}
+          style={{
+            width: '100%',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-primary, #fff)',
+            padding: '4px 6px',
+            'border-radius': '3px',
+            'font-size': '11px',
+          }}
+        >
+          <option value="">From project…</option>
+          <For each={projectHdrFiles()}>
+            {(f) => <option value={f.path}>{f.name || f.path}</option>}
+          </For>
+        </select>
+      </div>
 
       {/* Intensity */}
       <div style={{ 'margin-bottom': '8px' }}>
