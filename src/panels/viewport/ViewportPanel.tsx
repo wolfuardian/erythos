@@ -584,32 +584,118 @@ const ViewportPanel: Component = () => {
           position: 'absolute', inset: '0',
           display: 'flex', 'flex-direction': 'column',
           'align-items': 'center', 'justify-content': 'center',
-          background: 'rgba(0,0,0,0.4)',
-          color: 'var(--text-muted)',
+          background: 'color-mix(in srgb, var(--bg-app) 80%, transparent)',
           'pointer-events': 'auto',
           'z-index': '10',
         }}>
-          <div style={{ 'margin-bottom': 'var(--space-md)', 'font-size': 'var(--font-size-lg)' }}>
-            No scene loaded
+          {/* Card container */}
+          <div style={{
+            width: '340px',
+            height: '220px',
+            background: 'var(--bg-section)',
+            'box-shadow': 'var(--shadow-well-outer)',
+            border: '1px solid var(--border-subtle)',
+            'border-radius': 'var(--radius-lg)',
+            padding: '20px',
+            display: 'flex',
+            'flex-direction': 'column',
+            'align-items': 'center',
+            gap: '8px',
+          }}>
+            {/* Cube SVG icon 48×48 */}
+            <svg
+              width="48" height="48" viewBox="0 0 48 48"
+              fill="none"
+              stroke="var(--accent-blue)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M24 6L8 15v18l16 9 16-9V15L24 6z"/>
+              <line x1="24" y1="6" x2="24" y2="42"/>
+              <line x1="8" y1="15" x2="40" y2="15"/>
+              <line x1="8" y1="33" x2="24" y2="24"/>
+              <line x1="40" y1="33" x2="24" y2="24"/>
+            </svg>
+            {/* Title */}
+            <div style={{
+              color: 'var(--text-primary)',
+              'font-size': 'var(--font-size-lg)',
+              'font-weight': '500',
+              'text-align': 'center',
+            }}>
+              No scene loaded
+            </div>
+            {/* Subtitle */}
+            <div style={{
+              color: 'var(--text-muted)',
+              'font-size': 'var(--font-size-xs)',
+              'text-align': 'center',
+              'margin-bottom': '4px',
+            }}>
+              Get started by creating or opening
+            </div>
+            {/* Tile buttons */}
+            <div style={{ display: 'flex', 'flex-direction': 'column', gap: '8px', width: '100%' }}>
+              {/* New Scene tile */}
+              <button
+                onClick={() => void handleNewScene()}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  'align-items': 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: 'var(--bg-section)',
+                  border: '1px solid var(--accent-blue)',
+                  'border-radius': 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  color: 'var(--text-primary)',
+                  'text-align': 'left',
+                }}
+              >
+                <span style={{ 'font-size': '16px', color: 'var(--accent-blue)', 'flex-shrink': '0' }}>+</span>
+                <div>
+                  <div style={{ 'font-size': 'var(--font-size-sm)', 'font-weight': '500' }}>New Scene</div>
+                  <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Start a fresh scene</div>
+                </div>
+              </button>
+              {/* Open Scene tile */}
+              <button
+                onClick={() => {}}
+                title="Multi-scene support coming soon"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  'align-items': 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: 'var(--bg-section)',
+                  border: '1px solid var(--border-subtle)',
+                  'border-radius': 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  color: 'var(--text-primary)',
+                  'text-align': 'left',
+                }}
+              >
+                <svg
+                  width="16" height="16" viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style={{ 'flex-shrink': '0' }}
+                >
+                  <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h3l2 2h4A1.5 1.5 0 0 1 14 6.5v6A1.5 1.5 0 0 1 12.5 14h-9A1.5 1.5 0 0 1 2 12.5v-8z"/>
+                </svg>
+                <div>
+                  <div style={{ 'font-size': 'var(--font-size-sm)', 'font-weight': '500' }}>Open Scene…</div>
+                  <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)' }}>Load an existing scene file</div>
+                </div>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => void handleNewScene()}
-            style={{
-              background: 'var(--accent-blue)', color: '#fff', border: 'none',
-              padding: '6px 14px', 'border-radius': 'var(--radius-sm)',
-              cursor: 'pointer', 'margin-bottom': 'var(--space-sm)',
-            }}
-          >+ New Scene</button>
-          <button
-            disabled
-            style={{
-              background: 'var(--bg-section)', color: 'var(--text-disabled)',
-              border: '1px solid var(--border-subtle)',
-              padding: '6px 14px', 'border-radius': 'var(--radius-sm)',
-              cursor: 'default',
-            }}
-            title="Multi-scene support coming soon"
-          >📁 Open Scene…</button>
         </div>
       </Show>
       <Show when={isDragging()}>
