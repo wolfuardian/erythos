@@ -53,6 +53,7 @@ export function createLayoutPreset(): Workspace {
       'properties': 'properties',
     },
     viewportState: {},
+    panelStates: {},
   };
 }
 export function createDebugPreset(): Workspace {
@@ -66,6 +67,7 @@ export function createDebugPreset(): Workspace {
       'prefab': 'prefab',
     },
     viewportState: {},
+    panelStates: {},
   };
 }
 export function isPresetId(id: string): boolean {
