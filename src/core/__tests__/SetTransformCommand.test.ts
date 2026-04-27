@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { SetTransformCommand } from '../commands/SetTransformCommand';
 import type { Vec3 } from '../scene/SceneFormat';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('SetTransformCommand', () => {
   let editor: Editor;
@@ -9,7 +10,7 @@ describe('SetTransformCommand', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

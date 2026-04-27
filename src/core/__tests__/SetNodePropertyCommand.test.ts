@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Editor } from '../Editor';
 import { SetNodePropertyCommand } from '../commands/SetNodePropertyCommand';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('SetNodePropertyCommand', () => {
   let editor: Editor;
 
   beforeEach(() => {
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

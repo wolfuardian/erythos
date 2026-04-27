@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Scene } from 'three';
 import { Editor } from '../Editor';
+import { ProjectManager } from '../project/ProjectManager';
 
 describe('Editor', () => {
   let editor: Editor;
@@ -8,7 +9,7 @@ describe('Editor', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     localStorage.clear();
-    editor = new Editor();
+    editor = new Editor(new ProjectManager());
   });
 
   afterEach(() => {

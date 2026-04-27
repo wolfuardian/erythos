@@ -1,104 +1,145 @@
-import { type Component, onMount, onCleanup, Show } from 'solid-js';
+import { type Component, createSignal, onCleanup, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
+import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
-import { createEditorBridge } from './bridge';
+import { createEditorBridge, type EditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
 import { GridHelpers } from '../viewport/GridHelpers';
+import { Welcome } from './Welcome';
 
 const App: Component = () => {
-  const editor = new Editor();
-  const initPromise = editor.init();
-  initPromise.then(() => {
-    const first = editor.sceneDocument.getAllNodes()[0];
-    if (first) editor.selection.select(first.id);
-  });
+  // Singleton ProjectManager — 跨 open/close 存活
+  const projectManager = new ProjectManager();
 
-  // Shared grid & axes — single instance added once to the shared scene
-  const sharedGrid = new GridHelpers();
-  editor.threeScene.add(sharedGrid.grid);
-  editor.threeScene.add(sharedGrid.axes);
-  const sharedGridObjects = [sharedGrid.grid, sharedGrid.axes];
+  const [editor, setEditor] = createSignal<Editor | null>(null);
+  const [bridge, setBridge] = createSignal<EditorBridge | null>(null);
+  const [projectOpen, setProjectOpen] = createSignal(false);
+  let sharedGrid: GridHelpers | null = null;
 
-  const bridge = createEditorBridge(editor, sharedGridObjects);
+  // 地雷 2：保存 listener ref 以便 closeProject 時 off
+  let onSceneReplaced: (() => void) | null = null;
 
-  // Re-add after SceneSync.rebuild() clears all scene children on scene replace
-  const onSceneReplaced = () => {
-    editor.threeScene.add(sharedGrid.grid);
-    editor.threeScene.add(sharedGrid.axes);
-  };
-  editor.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
+  const openProject = async (handle: FileSystemDirectoryHandle) => {
+    const e = new Editor(projectManager);
+    await e.init();
+    await projectManager.openHandle(handle);
 
-  onMount(() => {
-    // Register keybindings
-    editor.keybindings.registerMany([
-      { key: 'z', ctrl: true, action: () => editor.undo(), description: 'Undo' },
-      { key: 'y', ctrl: true, action: () => editor.redo(), description: 'Redo' },
-      { key: 'z', ctrl: true, shift: true, action: () => editor.redo(), description: 'Redo (alt)' },
+    try {
+      const sceneFile = await projectManager.readFile('scenes/scene.erythos');
+      const text = await sceneFile.text();
+      e.loadScene(JSON.parse(text));
+    } catch (err: any) {
+      if (err?.name !== 'NotFoundError') {
+        console.warn('[App] Could not load scene.erythos:', err);
+      }
+    }
+
+    sharedGrid = new GridHelpers();
+    e.threeScene.add(sharedGrid.grid);
+    e.threeScene.add(sharedGrid.axes);
+    const sharedGridObjects = [sharedGrid.grid, sharedGrid.axes];
+
+    onSceneReplaced = () => {
+      if (!sharedGrid) return;
+      e.threeScene.add(sharedGrid.grid);
+      e.threeScene.add(sharedGrid.axes);
+    };
+    e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
+
+    const b = createEditorBridge(e, sharedGridObjects);
+
+    e.keybindings.registerMany([
+      { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
+      { key: 'y', ctrl: true, action: () => e.redo(), description: 'Redo' },
+      { key: 'z', ctrl: true, shift: true, action: () => e.redo(), description: 'Redo (alt)' },
       { key: 'Delete', action: () => {
-        const uuid = editor.selection.primary;
-        if (uuid) {
-          editor.execute(new RemoveNodeCommand(editor, uuid));
-        }
+        const uuid = e.selection.primary;
+        if (uuid) e.execute(new RemoveNodeCommand(e, uuid));
       }, description: 'Delete selected' },
-      { key: 'w', action: () => editor.setTransformMode('translate'), description: 'Translate mode' },
-      { key: 'e', action: () => editor.setTransformMode('rotate'), description: 'Rotate mode' },
-      { key: 'r', action: () => editor.setTransformMode('scale'), description: 'Scale mode' },
+      { key: 'w', action: () => e.setTransformMode('translate'), description: 'Translate mode' },
+      { key: 'e', action: () => e.setTransformMode('rotate'), description: 'Rotate mode' },
+      { key: 'r', action: () => e.setTransformMode('scale'), description: 'Scale mode' },
     ]);
-    editor.keybindings.attach();
-  });
+    e.keybindings.attach();
 
-  onCleanup(() => {
-    bridge.dispose();
-    editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
-    sharedGrid.dispose();
-    void initPromise.then(() => editor.dispose());
-  });
+    setEditor(e);
+    setBridge(b);
+    setProjectOpen(true);
+  };
+
+  const closeProject = async () => {
+    const e = editor();
+    const b = bridge();
+    if (!e || !b) return;
+    setProjectOpen(false);
+
+    // 地雷 2：確實 off sceneReplaced
+    if (onSceneReplaced) {
+      e.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
+      onSceneReplaced = null;
+    }
+
+    b.dispose();
+    sharedGrid?.dispose();
+    sharedGrid = null;
+    e.dispose();
+    projectManager.close();
+    setBridge(null);
+    setEditor(null);
+  };
+
+  onCleanup(() => { void closeProject(); });
 
   return (
-    <EditorProvider bridge={bridge}>
-      <div style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        'flex-direction': 'column',
-        background: 'var(--bg-app)',
-      }}>
-        <Toolbar />
-        <WorkspaceTabBar />
-
-        {/* Area panels */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <AreaTreeRenderer />
-        </div>
-
-        {/* Status bar */}
+    <Show when={projectOpen() && editor() && bridge()} fallback={
+      <Welcome projectManager={projectManager} onOpenProject={openProject} />
+    }>
+      <EditorProvider bridge={bridge()!}>
         <div style={{
-          height: 'var(--statusbar-height)',
-          background: 'var(--bg-header)',
-          'border-top': '1px solid var(--border-subtle)',
-          display: 'flex',
-          'align-items': 'center',
-          padding: '0 var(--space-md)',
+          width: '100%', height: '100%',
+          display: 'flex', 'flex-direction': 'column',
+          background: 'var(--bg-app)',
         }}>
-          <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>
-            Ready
-          </span>
-          <div style={{ flex: 1 }} />
-          <Show when={bridge.autosaveStatus() !== 'idle'}>
-            <span style={{
-              color: bridge.autosaveStatus() === 'pending' ? 'var(--text-muted)' : 'var(--accent-green)',
-              'font-size': 'var(--font-size-sm)',
-              'margin-right': 'var(--space-md)',
-            }}>
-              {bridge.autosaveStatus() === 'pending' ? 'Saving...' : 'Saved'}
-            </span>
-          </Show>
+          <Toolbar />
+          <WorkspaceTabBar />
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <AreaTreeRenderer />
+          </div>
+          <StatusBar bridge={bridge()!} />
         </div>
-      </div>
-    </EditorProvider>
+      </EditorProvider>
+    </Show>
+  );
+};
+
+// StatusBar — inline component showing autosave status
+const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
+  return (
+    <div style={{
+      height: 'var(--statusbar-height)',
+      background: 'var(--bg-header)',
+      'border-top': '1px solid var(--border-subtle)',
+      display: 'flex',
+      'align-items': 'center',
+      padding: '0 var(--space-md)',
+    }}>
+      <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>
+        Ready
+      </span>
+      <div style={{ flex: 1 }} />
+      <Show when={props.bridge.autosaveStatus() !== 'idle'}>
+        <span style={{
+          color: props.bridge.autosaveStatus() === 'pending' ? 'var(--text-muted)' : 'var(--accent-green)',
+          'font-size': 'var(--font-size-sm)',
+          'margin-right': 'var(--space-md)',
+        }}>
+          {props.bridge.autosaveStatus() === 'pending' ? 'Saving...' : 'Saved'}
+        </span>
+      </Show>
+    </div>
   );
 };
 
