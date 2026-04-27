@@ -30,7 +30,7 @@ export interface EditorBridge {
   objectVersion: Accessor<number>;
   canUndo: Accessor<boolean>;
   canRedo: Accessor<boolean>;
-  autosaveStatus: Accessor<'idle' | 'pending' | 'saved'>;
+  autosaveStatus: Accessor<'idle' | 'pending' | 'saved' | 'error'>;
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   prefabAssets: Accessor<PrefabAsset[]>;
@@ -60,7 +60,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
   const [objectVersion, setObjectVersion] = createSignal(0);
   const [canUndo, setCanUndo] = createSignal(false);
   const [canRedo, setCanRedo] = createSignal(false);
-  const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved'>('idle');
+  const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
   const [prefabAssets, setPrefabAssets] = createSignal<PrefabAsset[]>(editor.getAllPrefabAssets());
   const [glbKeys, setGlbKeys] = createSignal<string[]>([]);
@@ -87,7 +87,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
       setCanUndo(editor.history.canUndo);
       setCanRedo(editor.history.canRedo);
     },
-    autosaveStatusChanged: (status: 'idle' | 'pending' | 'saved') => setAutosaveStatus(status),
+    autosaveStatusChanged: (status: 'idle' | 'pending' | 'saved' | 'error') => setAutosaveStatus(status),
   } as const;
 
   // SceneDocument event handlers — Commands operate on SceneDocument directly,

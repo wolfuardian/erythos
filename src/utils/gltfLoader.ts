@@ -4,16 +4,7 @@ import type { Editor } from '../core/Editor';
 import * as GlbStore from '../core/scene/GlbStore';
 
 export async function loadGLTFFromFile(file: File, editor: Editor): Promise<string> {
-  let path: string;
-
-  if (editor.projectManager.isOpen) {
-    // 複製檔案到專案目錄，auto-suffix 重名，回傳 project-relative path（如 models/chair.glb）
-    path = await editor.projectManager.importAsset(file);
-  } else {
-    // toy mode 退化：無專案時使用 file.name，GLB 不複製到目錄
-    path = file.name;
-    console.warn('[loadGLTFFromFile] No project open, GLB not copied to project; mesh.source uses file name only');
-  }
+  const path = await editor.projectManager.importAsset(file);
 
   // 群組節點名稱：取最後 '/' 後再去副檔名
   const lastSegment = path.split('/').pop() ?? path;
