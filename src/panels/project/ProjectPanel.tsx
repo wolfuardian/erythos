@@ -28,6 +28,17 @@ const filterIcon = (t: ProjectFile['type']) => {
   }
 };
 
+// ── Folder tree constant ──
+const FOLDERS: Array<{ label: string; type: ProjectFile['type'] | null }> = [
+  { label: 'Assets',   type: null      },  // root → show all
+  { label: 'scenes',   type: 'scene'   },
+  { label: 'models',   type: 'glb'     },
+  { label: 'textures', type: 'texture' },
+  { label: 'hdris',    type: 'hdr'     },
+  { label: 'prefabs',  type: 'prefab'  },
+  { label: 'other',    type: 'other'   },
+];
+
 const ProjectPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
@@ -36,6 +47,11 @@ const ProjectPanel: Component = () => {
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
   const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
+
+  // ── New IDE state ──
+  const [viewMode, setViewMode] = useAreaState<'grid' | 'list'>('viewMode', 'list');
+  const [searchQuery, setSearchQuery] = useAreaState<string>('searchQuery', '');
+  const [selectedFolder, setSelectedFolder] = useAreaState<string | null>('selectedFolder', null);
 
   const handleClose = () => editor.projectManager.close();
 
@@ -68,9 +84,18 @@ const ProjectPanel: Component = () => {
 
   const [hoveredFilter, setHoveredFilter] = createSignal<ProjectFile['type'] | null>(null);
   const [isDragOver, setIsDragOver] = createSignal(false);
+  const [hoveredFolder, setHoveredFolder] = createSignal<string | null>(null);
 
-  const displayedAssets = () => assetFiles().filter((f) => activeFilters().has(f.type));
-  const hiddenCount = () => assetFiles().length - displayedAssets().length;
+  // ── Filtered assets (folder + search + type-filter) ──
+  const displayedAssets = createMemo(() => {
+    const query = searchQuery().toLowerCase();
+    return assetFiles().filter((f) => {
+      const matchesFolder = selectedFolder() === null || f.type === selectedFolder();
+      const matchesSearch = query === '' || f.name.toLowerCase().includes(query);
+      const matchesFilter = activeFilters().has(f.type);
+      return matchesFolder && matchesSearch && matchesFilter;
+    });
+  });
 
   const handleLoadScene = async (path: string) => {
     try {
@@ -109,26 +134,169 @@ const ProjectPanel: Component = () => {
     <div
       data-devid="project-panel"
       style={{
-      width: 'calc(100% - 6px)', height: 'calc(100% - 6px)',
-      display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
-      {/* ── Browser mode ── */}
+        width: 'calc(100% - 6px)', height: 'calc(100% - 6px)',
+        display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
+        background: 'var(--bg-panel)',
+        'box-shadow': 'var(--shadow-well-outer)',
+        'border-radius': 'var(--radius-lg)',
+        margin: '3px',
+        'box-sizing': 'border-box',
+      }}
+    >
+      {/* ── Panel header ── */}
       <PanelHeader
-          title={bridge.projectName() ?? 'Project'}
-          actions={
-            <button onClick={() => setShowCloseConfirm(true)} style={{
-              background: 'var(--bg-section)', color: 'var(--text-muted)',
-              border: '1px solid var(--border-subtle)',
-              padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
-              'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-            }}>Close project</button>
-          }
+        title={bridge.projectName() ?? 'Project'}
+        actions={
+          <button onClick={() => setShowCloseConfirm(true)} style={{
+            background: 'var(--bg-section)', color: 'var(--text-muted)',
+            border: '1px solid var(--border-subtle)',
+            padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
+            'font-size': 'var(--font-size-xs)', cursor: 'pointer',
+          }}>Close project</button>
+        }
+      />
+
+      {/* ── Toolbar row ── */}
+      <div style={{
+        height: '36px',
+        display: 'flex', 'align-items': 'center', gap: '6px',
+        padding: '0 8px',
+        'border-bottom': '1px solid var(--border-subtle)',
+        'flex-shrink': '0',
+      }}>
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Search assets..."
+          value={searchQuery()}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
+          style={{
+            flex: 1,
+            background: 'var(--bg-input)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-subtle)',
+            'border-radius': 'var(--radius-sm)',
+            padding: '3px 6px',
+            'font-size': 'var(--font-size-sm)',
+            'box-shadow': 'var(--shadow-input-inset)',
+            outline: 'none',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent-gold)')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
         />
+
+        {/* Grid / List toggle button */}
+        <button
+          title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
+          onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
+          style={{
+            width: '24px', height: '24px',
+            background: 'var(--bg-section)',
+            border: '1px solid var(--border-subtle)',
+            'border-radius': 'var(--radius-sm)',
+            cursor: 'pointer',
+            display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+            color: 'var(--text-muted)',
+            'flex-shrink': '0',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <Show when={viewMode() === 'list'}>
+              {/* grid icon */}
+              <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
+              <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
+            </Show>
+            <Show when={viewMode() === 'grid'}>
+              {/* list icon */}
+              <line x1="1" y1="3.5" x2="13" y2="3.5"/>
+              <line x1="1" y1="7" x2="13" y2="7"/>
+              <line x1="1" y1="10.5" x2="13" y2="10.5"/>
+            </Show>
+          </svg>
+        </button>
+
+        {/* + New Scene button */}
+        <button
+          onClick={() => {}}
+          style={{
+            background: 'var(--accent-blue)',
+            color: 'var(--text-primary)',
+            border: 'none',
+            'border-radius': 'var(--radius-sm)',
+            padding: '3px 8px',
+            'font-size': 'var(--font-size-sm)',
+            cursor: 'pointer',
+            'white-space': 'nowrap',
+            'flex-shrink': '0',
+          }}
+        >+ New Scene</button>
+      </div>
+
+      {/* ── Breadcrumb row ── */}
+      <div style={{
+        height: 'var(--statusbar-height)',
+        display: 'flex', 'align-items': 'center',
+        padding: '0 10px', gap: '4px',
+        'font-size': 'var(--font-size-sm)',
+        color: 'var(--text-muted)',
+        'border-bottom': '1px solid var(--border-subtle)',
+        'flex-shrink': '0',
+      }}>
+        <span
+          style={{ cursor: 'pointer', color: selectedFolder() ? 'var(--accent-blue)' : 'var(--text-secondary)' }}
+          onClick={() => setSelectedFolder(null)}
+        >Assets</span>
+        <Show when={selectedFolder() !== null}>
+          <span>›</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{selectedFolder()}</span>
+        </Show>
+      </div>
+
+      {/* ── Body row ── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+        {/* ── Left sidebar: folder tree ── */}
+        <div style={{
+          width: '140px',
+          'overflow-y': 'auto',
+          'border-right': '1px solid var(--border-subtle)',
+          'flex-shrink': '0',
+        }}>
+          <For each={FOLDERS}>
+            {(f) => {
+              const isActive = () =>
+                f.type === null
+                  ? selectedFolder() === null
+                  : selectedFolder() === f.type;
+              const isHovered = () => hoveredFolder() === f.label;
+              return (
+                <div
+                  onClick={() => setSelectedFolder(f.type)}
+                  onMouseEnter={() => setHoveredFolder(f.label)}
+                  onMouseLeave={() => setHoveredFolder(null)}
+                  style={{
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    'font-size': 'var(--font-size-sm)',
+                    color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    background: isActive()
+                      ? 'var(--bg-selected)'
+                      : isHovered()
+                        ? 'var(--bg-hover)'
+                        : 'transparent',
+                    'white-space': 'nowrap',
+                    overflow: 'hidden',
+                    'text-overflow': 'ellipsis',
+                  }}
+                >
+                  {f.label}
+                </div>
+              );
+            }}
+          </For>
+        </div>
+
+        {/* ── Right: asset area with drag-drop wrapper ── */}
         <div
           onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
           onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true); }}
@@ -139,134 +307,170 @@ const ProjectPanel: Component = () => {
           }}
           onDrop={(e) => void handleAssetsDrop(e)}
           style={{
-            flex: 1, overflow: 'auto',
+            flex: 1,
+            overflow: 'auto',
             border: isDragOver() ? '2px dashed var(--accent-blue)' : '2px solid transparent',
             background: isDragOver() ? 'rgba(70,130,220,0.08)' : undefined,
             'box-sizing': 'border-box',
             transition: 'border-color 100ms, background 100ms',
+            display: 'flex',
+            'flex-direction': 'column',
           }}
         >
-          {/* ── Assets/ section header ── */}
-          <div style={{
-            padding: '6px 10px',
-            color: 'var(--text-muted)',
-            'font-size': 'var(--font-size-xs)',
-            'text-transform': 'uppercase',
-            'letter-spacing': '0.5px',
-            'border-bottom': '1px solid var(--border-subtle)',
-          }}>
-            Assets
-          </div>
-
-          {/* ── Filter bar ── */}
-          <div style={{
-            display: 'flex', gap: '4px', padding: '6px 10px',
-            'border-bottom': '1px solid var(--border-subtle)',
-            'flex-wrap': 'wrap',
-          }}>
-            <For each={ALL_TYPES}>
-              {(t) => {
-                const meta = TYPE_META[t];
-                return (
-                  <button
-                    aria-label={meta.label}
-                    title={meta.label}
-                    onClick={() => toggleFilter(t)}
-                    onMouseEnter={() => setHoveredFilter(t)}
-                    onMouseLeave={() => setHoveredFilter(null)}
-                    style={{
-                      display: 'flex', 'align-items': 'center', gap: '4px',
-                      padding: '2px 6px',
-                      background: activeFilters().has(t)
-                        ? 'var(--bg-section)'
-                        : hoveredFilter() === t
-                          ? 'var(--bg-hover)'
-                          : 'transparent',
-                      border: '1px solid',
-                      'border-color': activeFilters().has(t) ? 'var(--border-subtle)' : 'transparent',
-                      'border-radius': 'var(--radius-sm)',
-                      cursor: 'pointer',
-                      opacity: activeFilters().has(t) ? '1' : '0.4',
-                    }}
-                  >
-                    <svg
-                      width="16" height="16" viewBox="0 0 16 16"
-                      fill="none" stroke-linecap="round" stroke-linejoin="round"
+          {/* ── Type-filter pill bar (list view only) ── */}
+          <Show when={viewMode() === 'list'}>
+            <div style={{
+              display: 'flex', gap: '4px', padding: '6px 10px',
+              'border-bottom': '1px solid var(--border-subtle)',
+              'flex-wrap': 'wrap',
+              'flex-shrink': '0',
+            }}>
+              <For each={ALL_TYPES}>
+                {(t) => {
+                  const meta = TYPE_META[t];
+                  return (
+                    <button
+                      aria-label={meta.label}
+                      title={meta.label}
+                      onClick={() => toggleFilter(t)}
+                      onMouseEnter={() => setHoveredFilter(t)}
+                      onMouseLeave={() => setHoveredFilter(null)}
                       style={{
-                        'flex-shrink': '0',
-                        stroke: activeFilters().has(t)
-                          ? (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--accent-blue)')
-                          : (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--text-muted)'),
-                        'stroke-width': '1.5',
+                        display: 'flex', 'align-items': 'center', gap: '4px',
+                        padding: '2px 6px',
+                        background: activeFilters().has(t)
+                          ? 'var(--bg-section)'
+                          : hoveredFilter() === t
+                            ? 'var(--bg-hover)'
+                            : 'transparent',
+                        border: '1px solid',
+                        'border-color': activeFilters().has(t) ? 'var(--border-subtle)' : 'transparent',
+                        'border-radius': 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        opacity: activeFilters().has(t) ? '1' : '0.4',
                       }}
                     >
-                      {filterIcon(t)}
-                    </svg>
+                      <svg
+                        width="16" height="16" viewBox="0 0 16 16"
+                        fill="none" stroke-linecap="round" stroke-linejoin="round"
+                        style={{
+                          'flex-shrink': '0',
+                          stroke: activeFilters().has(t)
+                            ? (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--accent-blue)')
+                            : (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--text-muted)'),
+                          'stroke-width': '1.5',
+                        }}
+                      >
+                        {filterIcon(t)}
+                      </svg>
+                      <span style={{
+                        'font-size': 'var(--font-size-xs)',
+                        color: 'var(--text-muted)',
+                      }}>{meta.label}</span>
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
+          </Show>
+
+          {/* ── Grid view ── */}
+          <Show when={viewMode() === 'grid'}>
+            <div style={{ display: 'flex', 'flex-wrap': 'wrap', gap: '8px', padding: '8px' }}>
+              <For each={displayedAssets()}>
+                {(f) => {
+                  const meta = TYPE_META[f.type];
+                  return (
+                    <div
+                      style={{
+                        position: 'relative', width: '72px', cursor: 'pointer',
+                        display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '4px',
+                      }}
+                      onClick={
+                        f.type === 'scene' ? () => void handleLoadScene(f.path) :
+                        f.type === 'glb'   ? () => handleSelectAsset(f.path) : undefined
+                      }
+                    >
+                      {/* Thumbnail placeholder */}
+                      <div style={{
+                        width: '64px', height: '64px',
+                        background: 'var(--bg-section)',
+                        border: `1px solid ${selectedAssetPath() === f.path ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
+                        'border-radius': 'var(--radius-md)',
+                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                        color: meta.color,
+                      }}>
+                        <svg width="24" height="24" viewBox="0 0 16 16" fill="none"
+                          stroke="currentColor" stroke-width="1.5"
+                          stroke-linecap="round" stroke-linejoin="round">
+                          {filterIcon(f.type)}
+                        </svg>
+                      </div>
+                      {/* Type pill, floating bottom-right */}
+                      <span style={{
+                        position: 'absolute', bottom: '20px', right: '0',
+                        background: meta.color + '33', color: meta.color,
+                        'font-size': '7px', 'font-weight': 'bold',
+                        padding: '1px 3px', 'border-radius': '2px',
+                      }}>{meta.pill}</span>
+                      {/* Filename */}
+                      <span style={{
+                        'font-size': 'var(--font-size-xs)', color: 'var(--text-secondary)',
+                        width: '72px', overflow: 'hidden', 'text-overflow': 'ellipsis',
+                        'white-space': 'nowrap', 'text-align': 'center',
+                      }}>{f.name}</span>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
+          </Show>
+
+          {/* ── List view ── */}
+          <Show when={viewMode() === 'list'}>
+            <For each={displayedAssets()}>
+              {(f) => {
+                const meta = TYPE_META[f.type];
+                return (
+                  <div
+                    onClick={
+                      f.type === 'scene' ? () => void handleLoadScene(f.path) :
+                      f.type === 'glb'   ? () => handleSelectAsset(f.path) :
+                      undefined
+                    }
+                    draggable={f.type === 'glb'}
+                    onDragStart={f.type === 'glb' ? (e) => {
+                      e.dataTransfer!.setData('application/erythos-glb', f.path);
+                      e.dataTransfer!.effectAllowed = 'copy';
+                    } : undefined}
+                    style={{
+                      display: 'flex', 'align-items': 'center', gap: '6px',
+                      padding: '5px 10px',
+                      cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
+                      background: (f.type === 'glb' && selectedAssetPath() === f.path)
+                        ? 'var(--bg-selected)'
+                        : undefined,
+                    }}
+                  >
+                    {/* Type pill */}
                     <span style={{
-                      'font-size': 'var(--font-size-xs)',
-                      color: 'var(--text-muted)',
-                    }}>{meta.label}</span>
-                  </button>
+                      width: '16px', height: '20px', 'border-radius': '3px',
+                      background: meta.color + '33',
+                      color: meta.color,
+                      'font-size': '8px', 'font-weight': 'bold',
+                      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
+                      'flex-shrink': '0',
+                      'line-height': '1',
+                    }}>{meta.pill}</span>
+                    {/* Filename */}
+                    <span style={{
+                      'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
+                      overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
+                    }}>{f.name}</span>
+                  </div>
                 );
               }}
             </For>
-          </div>
-
-          {/* ── Asset list ── */}
-          <For each={displayedAssets()}>
-            {(f) => {
-              const meta = TYPE_META[f.type];
-              return (
-                <div
-                  onClick={
-                    f.type === 'scene' ? () => void handleLoadScene(f.path) :
-                    f.type === 'glb'   ? () => handleSelectAsset(f.path) :
-                    undefined
-                  }
-                  draggable={f.type === 'glb'}
-                  onDragStart={f.type === 'glb' ? (e) => {
-                    e.dataTransfer!.setData('application/erythos-glb', f.path);
-                    e.dataTransfer!.effectAllowed = 'copy';
-                  } : undefined}
-                  style={{
-                    display: 'flex', 'align-items': 'center', gap: '6px',
-                    padding: '5px 10px',
-                    cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
-                    background: (f.type === 'glb' && selectedAssetPath() === f.path)
-                      ? 'var(--bg-selected)'
-                      : undefined,
-                  }}
-                >
-                  {/* Type pill */}
-                  <span style={{
-                    width: '16px', height: '20px', 'border-radius': '3px',
-                    background: meta.color + '33',
-                    color: meta.color,
-                    'font-size': '8px', 'font-weight': 'bold',
-                    display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                    'flex-shrink': '0',
-                    'line-height': '1',
-                  }}>{meta.pill}</span>
-                  {/* Filename */}
-                  <span style={{
-                    'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-                    overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
-                  }}>{f.name}</span>
-                </div>
-              );
-            }}
-          </For>
-
-          {/* ── Hidden hint ── */}
-          <Show when={hiddenCount() > 0}>
-            <div style={{
-              padding: '4px 10px',
-              'font-size': 'var(--font-size-xs)',
-              color: 'var(--text-muted)',
-              'border-top': '1px solid var(--border-subtle)',
-            }}>
-              {hiddenCount()} items hidden
-            </div>
           </Show>
 
           {/* ── Empty state ── */}
@@ -280,6 +484,26 @@ const ProjectPanel: Component = () => {
             </div>
           </Show>
         </div>
+      </div>
+
+      {/* ── Status bar ── */}
+      <div style={{
+        height: 'var(--statusbar-height)',
+        display: 'flex', 'align-items': 'center',
+        padding: '0 10px', gap: '8px',
+        'font-size': 'var(--font-size-xs)',
+        color: 'var(--text-muted)',
+        'border-top': '1px solid var(--border-subtle)',
+        'flex-shrink': '0',
+      }}>
+        <span>{displayedAssets().length} items</span>
+        <Show when={!!selectedAssetPath()}>
+          <span style={{ 'margin-left': 'auto', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
+            {selectedAssetPath()}
+          </span>
+        </Show>
+      </div>
+
       <ErrorDialog open={!!errorMsg()} title={errorTitle()} message={errorMsg()} onClose={() => setErrorMsg('')} />
       <ConfirmDialog
         open={showCloseConfirm()}
