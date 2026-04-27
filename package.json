@@ -3,6 +3,25 @@
   "private": true,
   "version": "0.1.185",
   "type": "module",
+  "description": "A web-based 3D editor built with TypeScript, SolidJS, and Three.js.",
+  "author": "Eos Wolfuardian",
+  "license": "MIT",
+  "homepage": "https://github.com/wolfuardian/erythos#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wolfuardian/erythos.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wolfuardian/erythos/issues"
+  },
+  "keywords": [
+    "3d-editor",
+    "threejs",
+    "solidjs",
+    "typescript",
+    "vite",
+    "webgl"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
