@@ -83,6 +83,19 @@ export class ProjectManager {
   async openHandle(handle: FileSystemDirectoryHandle): Promise<void> {
     this._handle = handle;
     this._files = await this.collectFiles(handle);
+
+    // bump lastOpened for the matching entry
+    const entries = await ProjectHandleStore.loadProjects();
+    for (const entry of entries) {
+      try {
+        const same = await (entry.handle as any).isSameEntry(handle);
+        if (same) {
+          void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now() });
+          break;
+        }
+      } catch { /* ignore */ }
+    }
+
     this.emit();
   }
 
