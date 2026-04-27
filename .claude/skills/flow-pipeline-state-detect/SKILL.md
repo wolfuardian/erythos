@@ -1,6 +1,6 @@
 ---
 name: flow-pipeline-state-detect
-description: When AH needs to orient on pipeline state, cross-reference git worktrees, open PRs with QC comments, open issues with dependencies, master divergence, module CLAUDE.md sections, and session handoff, then emit a three-layered snapshot (overview / issue table / environment anomalies). Read-only: produces snapshot only, does not mutate state, does not spawn subagents. Use at session startup or when AH needs orientation before routing.
+description: When AH needs to orient on pipeline state, cross-reference git worktrees, open PRs with QC comments, open issues with dependencies, main divergence, module CLAUDE.md sections, and session handoff, then emit a three-layered snapshot (overview / issue table / environment anomalies). Read-only: produces snapshot only, does not mutate state, does not spawn subagents. Use at session startup or when AH needs orientation before routing.
 model: claude-sonnet-4-6
 effort: low
 allowed-tools: Bash, Read, Grep, Glob
@@ -29,7 +29,7 @@ allowed-tools: Bash, Read, Grep, Glob
 | `open-issue` | issue open、無 worktree、無 PR、無未解 Depends-on、模組 CLAUDE.md 當前任務空 |
 | `blocked-by-dependency` | issue body 含 `Depends-on: #N`，且 #N 仍 open |
 | `task-staged` | 模組 CLAUDE.md「當前任務」有內容、但無對應 worktree（可能為 AT→AD 交棒瞬時態，回報但不驚擾） |
-| `implementing` | worktree 存在、branch ahead of master、無 open PR |
+| `implementing` | worktree 存在、branch ahead of main、無 open PR |
 | `ready-for-qc` | open PR 存在、無 `QC PASS` 也無 `QC FAIL` 痕跡 |
 | `awaiting-qc-fix` | open PR 有 `QC FAIL`、FAIL 之後無新 commit |
 | `fixing` | open PR 有 `QC FAIL`、FAIL 之後有新 commit |
@@ -43,9 +43,9 @@ allowed-tools: Bash, Read, Grep, Glob
 |------|------|
 | `flag-draft` | open PR `isDraft = true`（per-PR 修飾，以 `[draft]` 附加在 L2 Flags 欄） |
 | `flag-blocking-others` | 此 open issue 被其他 open issue 以 `Depends-on` 指向（per-issue 修飾） |
-| `master-ahead` | local master 超前 origin/master |
-| `master-behind` | local master 落後 origin/master |
-| `master-diverged` | master 雙向 diverge |
+| `main-ahead` | local main 超前 origin/main |
+| `main-behind` | local main 落後 origin/main |
+| `main-diverged` | main 雙向 diverge |
 | `handoff-pending` | `.claude/session/current.md` 存在 |
 | `handoff-stale` | handoff mtime > 24h |
 | `orphaned-worktree` | worktree 存在、但無對應 branch 或無對應 open PR 且未 merge |
@@ -65,8 +65,8 @@ allowed-tools: Bash, Read, Grep, Glob
 ```bash
 git worktree list --porcelain
 git branch --list
-git log origin/master..master --oneline          # master 未 push
-git log master..origin/master --oneline          # master 未 pull
+git log origin/main..main --oneline          # main 未 push
+git log main..origin/main --oneline          # main 未 pull
 ```
 
 ### gh 層（限 JSON 欄位節流）
@@ -122,7 +122,7 @@ Flags 欄累積 per-issue B 組修飾（`[draft]` / `[blocking]` 等）。Next s
 ### L3 — 環境異常（B 組非 per-issue 部分）
 
 ```
-- master-ahead      : 1 commit unpushed (d564b20)
+- main-ahead      : 1 commit unpushed (d564b20)
 - ah-inbox          : core/CLAUDE.md 上報區有內容
 - handoff-pending   : .claude/session/current.md exists (mtime: 2h ago)
 ```
@@ -134,7 +134,7 @@ Flags 欄累積 per-issue B 組修飾（`[draft]` / `[blocking]` 等）。Next s
 - **First pass**：逐 PR 跑 `gh pr view`。Open PR ≤ 4 時輕量可接受
 - **升級選項**：Open PR ≥ 5 時改單次 `gh pr list --json number,title,headRefName,isDraft,mergeable,mergeStateStatus,comments,reviews,commits` 一次撈完所有欄位
 - 模組 CLAUDE.md 用 Grep `-A 3` 抓區塊，**不整檔讀**
-- git log 只看 `origin/master..master` 與反向（不跑 `log --all` / `log --graph`）
+- git log 只看 `origin/main..main` 與反向（不跑 `log --all` / `log --graph`）
 - Issue body 用 `gh issue list --json body` 一次取回，正則在本地掃（不逐 issue `gh issue view`）
 - 總 token 目標 ≤ 8k；若超過，L3 警告 `context-pressure` 並截斷最不關鍵項
 

@@ -710,7 +710,7 @@ Phase 6  重建暫移功能（Raycasting + Outline + Gizmo）
 
 ### 6.2 Phase 0 — 前置作業
 
-在 master 上直接處理（非程式碼改動或防禦性改動），不走 feature branch。
+在 main 上直接處理（非程式碼改動或防禦性改動），不走 feature branch。
 
 | # | Issue | 模組 | 說明 |
 |---|-------|------|------|

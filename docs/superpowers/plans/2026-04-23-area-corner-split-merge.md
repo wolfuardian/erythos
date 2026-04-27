@@ -234,7 +234,7 @@ describe('canMerge', () => {
 - [ ] **Step 1.7**: 實作 `mergeArea`：find 共享 edge、搬 src corner、刪 dst 與共享 edge、清理孤兒 vert
 - [ ] **Step 1.8**: 在 `src/app/__tests__/areaTree.test.ts` 加上述 7 個 describe block（table-driven 為主）
 - [ ] **Step 1.9**: `npm run build` 過、`npm run test -- areaTree` 全過
-- [ ] **Step 1.10**: 開 PR 前還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 1.10**: 開 PR 前還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 1.11**: Commit + PR
 
 **Commit**：
@@ -410,7 +410,7 @@ const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
   - pointerup → 回 idle
   - 按住拖動（Task 2 不做 preview，workspace 不變；Task 3 才連 preview）
   - AreaSplitter 邊界拖曳 resize 仍正常（z-index 10 > handle 9，邊優先）
-- [ ] **Step 2.7**: 還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 2.7**: 還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 2.8**: Commit + PR
 
 **Commit**：
@@ -632,7 +632,7 @@ const tree = (): AreaTree => {
 - [ ] **Step 3.3**: `npm run build` 過
 - [ ] **Step 3.4**: 全 matrix 手動 QA（上表）
 - [ ] **Step 3.5**: 邊界測：視窗 resize 中按住 corner drag（應 no-op 不 crash）、快速反覆 pointerdown/up（state 不漏）、drag 中切 workspace（目前無 UI 可切但仍測一次）
-- [ ] **Step 3.6**: 還原 CLAUDE.md：`git checkout master -- src/app/CLAUDE.md`
+- [ ] **Step 3.6**: 還原 CLAUDE.md：`git checkout main -- src/app/CLAUDE.md`
 - [ ] **Step 3.7**: Commit + PR
 
 **Commit**：
@@ -664,4 +664,4 @@ Task 1 (areaTree 純函式 + vitest) ──→ Task 2 (cornerDragStore + handle 
 
 ## Commit message 慣例
 
-所有 commit 用 `[app]` 前綴。每個 PR 結尾帶 `refs #<sub-issue>`。PR 前記得 `git checkout master -- src/app/CLAUDE.md` 還原模組 CLAUDE.md。
+所有 commit 用 `[app]` 前綴。每個 PR 結尾帶 `refs #<sub-issue>`。PR 前記得 `git checkout main -- src/app/CLAUDE.md` 還原模組 CLAUDE.md。

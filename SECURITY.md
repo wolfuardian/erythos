@@ -20,7 +20,7 @@ We aim to acknowledge reports within 7 days.
 
 ## Supported Versions
 
-Erythos is in active development. Security fixes are applied to the latest version on `master`. There are no long-term support branches at this time.
+Erythos is in active development. Security fixes are applied to the latest version on `main`. There are no long-term support branches at this time.
 
 ## Disclosure
 
