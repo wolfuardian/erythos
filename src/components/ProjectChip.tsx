@@ -91,12 +91,8 @@ const ProjectChip: Component<Props> = (props) => {
   const handleCloseProject = () => {
     setOpen(false);
     setExpanded(false);
-    if (props.autosaveStatus === 'error') {
-      setConfirmIntent({ kind: 'close' });
-      setConfirmOpen(true);
-    } else {
-      props.onCloseProject();
-    }
+    setConfirmIntent({ kind: 'close' });
+    setConfirmOpen(true);
   };
 
   const handleOpenProject = (id: string) => {
@@ -140,6 +136,16 @@ const ProjectChip: Component<Props> = (props) => {
     expanded() ? props.recentProjects : props.recentProjects.slice(0, 10);
   const showMoreCount = () => total() - 10;
   const hasRecent = () => total() > 0;
+
+  // Confirm dialog copy — varies by autosave status (see spec §5.3)
+  const dialogTitle = () =>
+    props.autosaveStatus === 'error' ? 'Save Failed — Continue Anyway?' : 'Close project?';
+  const dialogMessage = () =>
+    props.autosaveStatus === 'error'
+      ? 'Recent changes could not be saved. Continuing will lose them.'
+      : 'The current project will be closed.';
+  const dialogConfirm = () =>
+    props.autosaveStatus === 'error' ? 'Continue Anyway' : 'Close';
 
   return (
     <>
@@ -401,9 +407,9 @@ const ProjectChip: Component<Props> = (props) => {
 
       <ConfirmDialog
         open={confirmOpen()}
-        title="Save Failed — Continue Anyway?"
-        message="Recent changes could not be saved. Continuing will lose them."
-        confirmLabel="Continue Anyway"
+        title={dialogTitle()}
+        message={dialogMessage()}
+        confirmLabel={dialogConfirm()}
         cancelLabel="Cancel"
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
