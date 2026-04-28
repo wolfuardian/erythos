@@ -18,22 +18,23 @@ export const XYZCellReadonly: Component<XYZCellReadonlyProps> = (props) => (
   <div data-devid="xyz-cell" style={{
     display: 'flex',
     'align-items': 'stretch',
-    background: 'transparent',
-    height: '22px',
+    background: 'var(--bg-input)',
+    'border-bottom': '1px solid var(--border-medium)',
+    height: '20px',
     overflow: 'hidden',
     flex: 1,
-    'border-radius': '3px',
   }}>
     <span style={{
-      width: '18px',
+      width: '16px',
       display: 'flex',
       'align-items': 'center',
       'justify-content': 'center',
-      'font-size': '10px',
+      'font-size': 'var(--font-size-xs)',
       'font-weight': '700',
-      color: '#fff',
+      color: '#ffffff',
       background: BADGE_BG[props.axis],
-      'border-radius': '2px 0 0 2px',
+      'border-radius': 'var(--radius-sm) 0 0 0',
+      'letter-spacing': '0.3px',
       'flex-shrink': '0',
     }}>
       {props.axis.toUpperCase()}
