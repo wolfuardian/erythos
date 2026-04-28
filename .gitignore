@@ -11,6 +11,7 @@ settings.local.json
 .claude/lessons/
 .claude/codebase-spec/
 .claude/session/
+.claude/scheduled_tasks.lock
 projects/
 .playwright-mcp/
 .superpowers/
