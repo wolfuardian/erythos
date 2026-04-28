@@ -1,5 +1,6 @@
 import { type Component, createSignal } from 'solid-js';
 import { ErrorDialog } from './ErrorDialog';
+import { ProjectChip } from './ProjectChip';
 import { loadGLTFFromFile } from '../utils/gltfLoader';
 import { useEditor } from '../app/EditorContext';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
@@ -154,6 +155,12 @@ export const Toolbar: Component = () => {
       }}>
         Erythos
       </span>
+
+      <ProjectChip
+        projectName={bridge.projectName() ?? ''}
+        autosaveStatus={bridge.autosaveStatus()}
+        onCloseProject={bridge.closeProject}
+      />
 
       <Divider />
 
