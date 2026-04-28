@@ -16,7 +16,7 @@ interface Props {
 /** Pending confirm intent — tracks what to do after user confirms */
 type ConfirmIntent =
   | { kind: 'close' }
-  | { kind: 'open'; id: string };
+  | { kind: 'open'; id: string; name: string };
 
 /** Relative time from timestamp in ms */
 function relativeTime(ts: number): string {
@@ -97,16 +97,12 @@ const ProjectChip: Component<Props> = (props) => {
 
   const handleOpenProject = (id: string) => {
     if (id === props.currentProjectId) return; // no-op for current
-    if (props.autosaveStatus === 'error') {
-      setOpen(false);
-      setExpanded(false);
-      setConfirmIntent({ kind: 'open', id });
-      setConfirmOpen(true);
-    } else {
-      setOpen(false);
-      setExpanded(false);
-      void props.onOpenProject(id);
-    }
+    const target = props.recentProjects.find((e) => e.id === id);
+    const name = target?.name ?? id;
+    setOpen(false);
+    setExpanded(false);
+    setConfirmIntent({ kind: 'open', id, name });
+    setConfirmOpen(true);
   };
 
   const handleConfirm = () => {
@@ -137,15 +133,20 @@ const ProjectChip: Component<Props> = (props) => {
   const showMoreCount = () => total() - 10;
   const hasRecent = () => total() > 0;
 
-  // Confirm dialog copy — varies by autosave status (see spec §5.3)
-  const dialogTitle = () =>
-    props.autosaveStatus === 'error' ? 'Save Failed — Continue Anyway?' : 'Close project?';
+  // Confirm dialog copy — varies by (intent, autosaveStatus) (see spec §5.3)
+  const dialogTitle = () => {
+    if (props.autosaveStatus === 'error') return 'Save Failed — Continue Anyway?';
+    const intent = confirmIntent();
+    return intent.kind === 'close' ? 'Close project?' : `Switch to "${intent.name}"?`;
+  };
   const dialogMessage = () =>
     props.autosaveStatus === 'error'
       ? 'Recent changes could not be saved. Continuing will lose them.'
       : 'The current project will be closed.';
-  const dialogConfirm = () =>
-    props.autosaveStatus === 'error' ? 'Continue Anyway' : 'Close';
+  const dialogConfirm = () => {
+    if (props.autosaveStatus === 'error') return 'Continue Anyway';
+    return confirmIntent().kind === 'close' ? 'Close' : 'Switch';
+  };
 
   return (
     <>
