@@ -137,16 +137,17 @@ get currentId(): string | null {
 
 ## 5. Data flow
 
-### 5.1 切換 project
+### 5.1 切換 project（永遠 confirm）
 ```
 User clicks recent project row
   ↓
 ProjectChip 檢查 props.currentProjectId === entry.id？
   ↓ no                                       ↓ yes (current row)
-checks autosaveStatus()                      no-op (cursor default 已防點)
-  ↓                                  ↓
-'error' → ConfirmDialog              其他 → 直接 onOpenProject(entry.id)
-  ↓ (Continue Anyway)
+ProjectChip 一律彈 ConfirmDialog              no-op (cursor default 已防點)
+（不檢查 autosaveStatus，與 Close Project 同邏輯）
+  ↓                                       ↓
+Confirm                                   Cancel → no-op
+  ↓
 onOpenProject(id)
   ↓
 bridge.openProjectById(id) (App 注入)
@@ -170,7 +171,7 @@ Confirm                                   Cancel → no-op
 onCloseProject() → bridge.closeProject() → App.closeProject() → Welcome
 ```
 
-文案動態（見 §5.3）：autosave error 用 generic 警告文案，否則用簡單 `Close project?`。
+文案動態（見 §5.3）：autosave error 用 generic 警告文案，否則 Close 用 `Close project?`、Switch 用 `Switch to "<name>"?`。
 
 ### 5.2 Show more / less
 ```
@@ -191,12 +192,14 @@ ConfirmDialog 文案根據 (intent, autosaveStatus) 動態切換：
 |------|-------|---------|---------|
 | Close Project，無 error | `Close project?` | `The current project will be closed.` | `Close` |
 | Close Project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
+| Switch project，無 error | `Switch to "<name>"?` | `The current project will be closed.` | `Switch` |
 | Switch project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
-| Switch project，無 error | （不彈，直接執行） | — | — |
 
 cancel button 一律 `Cancel`。
 
-action 視觸發來源（close vs open new）分流：confirm 後執行對應動作（已透過 `confirmIntent: { kind: 'close' } | { kind: 'open', id }` 區分）。
+`<name>` 為目標 recent project 名稱，從 `recentProjects.find(e => e.id === intent.id)?.name` 取得（fallback 到 id）。建議 `confirmIntent` 擴展為 `{ kind: 'open'; id; name }` 以避免每次重新 lookup。
+
+action 視觸發來源（close vs open new）分流：confirm 後執行對應動作（已透過 `confirmIntent: { kind: 'close' } | { kind: 'open', id, name }` 區分）。
 
 ---
 
@@ -263,4 +266,5 @@ action 視觸發來源（close vs open new）分流：confirm 後執行對應動
 | 日期 | 內容 |
 |------|------|
 | 2026-04-28 | 建立 v2 spec — dropdown 加 recent projects + show more/less，取代 v1 spec §10 的「不做 Switch」結論（同 idea 不同形式） |
-| 2026-04-28 | Close Project 點擊一律彈 ConfirmDialog（指揮家要求）— 不再條件性只在 autosave error 才 confirm。新 §5.1b + 更新 §5.3 文案表（一般 close 用 `Close project?`，error 仍用 generic 警告）。Switch project 行為不變（一般情況不 confirm，只在 autosave error 才彈） |
+| 2026-04-28 | Close Project 點擊一律彈 ConfirmDialog（指揮家要求）— 不再條件性只在 autosave error 才 confirm。新 §5.1b + 更新 §5.3 文案表（一般 close 用 `Close project?`，error 仍用 generic 警告）。Switch project 行為當時不變 |
+| 2026-04-28 | Switch project 比照 Close Project 一律 confirm（指揮家補充：同性質破壞性操作）。§5.1 流程更新、§5.3 文案表加 `Switch to "<name>"?`。`confirmIntent.open` 擴 `{ id, name }` 帶目標名稱供文案 lookup |
