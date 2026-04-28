@@ -160,6 +160,9 @@ export const Toolbar: Component = () => {
         projectName={bridge.projectName() ?? ''}
         autosaveStatus={bridge.autosaveStatus()}
         onCloseProject={bridge.closeProject}
+        recentProjects={bridge.recentProjects()}
+        currentProjectId={bridge.currentProjectId()}
+        onOpenProject={bridge.openProjectById}
       />
 
       <Divider />

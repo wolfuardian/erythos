@@ -8,6 +8,7 @@ import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import * as GlbStore from '../core/scene/GlbStore';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
+import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -48,6 +49,12 @@ export interface EditorBridge {
   bumpDragTick: () => void;
   /** Callback injected by App.tsx to close the current project and return to Welcome */
   closeProject: () => void;
+  /** Recent projects list, refreshed on projectManager.onChange() */
+  recentProjects: Accessor<ProjectEntry[]>;
+  /** ID of the currently open project (null if none) */
+  currentProjectId: Accessor<string | null>;
+  /** Callback injected by App.tsx to switch to a different recent project by id */
+  openProjectById: (id: string) => Promise<void>;
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
   dispose: () => void;
@@ -56,6 +63,7 @@ export interface EditorBridge {
 export interface EditorBridgeDeps {
   closeProject: () => void;
   projectManager: ProjectManager;
+  openProjectById: (id: string) => Promise<void>;
 }
 
 export function createEditorBridge(
@@ -82,9 +90,14 @@ export function createEditorBridge(
   const [activeViewportId, setActiveViewportId] = createSignal<string | null>(null);
   const [draggingViewportId, _setDraggingViewportId] = createSignal<string | null>(null);
   const [dragTickVersion, _bumpDragTick] = createSignal(0);
+  const [recentProjects, setRecentProjects] = createSignal<ProjectEntry[]>([]);
+  const [currentProjectId, setCurrentProjectId] = createSignal<string | null>(
+    editor.projectManager.currentId,
+  );
 
   // 非同步初始化（fire-and-forget）
   void GlbStore.keys().then(setGlbKeys);
+  void editor.projectManager.getRecentProjects().then(setRecentProjects);
 
   const bump = (setter: (fn: (v: number) => number) => void) =>
     setter((v) => v + 1);
@@ -150,6 +163,8 @@ export function createEditorBridge(
     setProjectOpen(editor.projectManager.isOpen);
     setProjectName(editor.projectManager.name);
     setProjectFiles(editor.projectManager.getFiles());
+    setCurrentProjectId(editor.projectManager.currentId);
+    void editor.projectManager.getRecentProjects().then(setRecentProjects);
   };
   const unsubProject = editor.projectManager.onChange(onProjectChanged);
 
@@ -195,6 +210,9 @@ export function createEditorBridge(
     dragTickVersion,
     bumpDragTick: () => _bumpDragTick(v => v + 1),
     closeProject: deps?.closeProject ?? (() => {}),
+    recentProjects,
+    currentProjectId,
+    openProjectById: deps?.openProjectById ?? ((_id: string) => Promise.resolve()),
     sharedGridObjects,
     dispose,
   };

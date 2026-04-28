@@ -49,7 +49,7 @@ const App: Component = () => {
     };
     e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
-    const b = createEditorBridge(e, sharedGridObjects, { closeProject, projectManager });
+    const b = createEditorBridge(e, sharedGridObjects, { closeProject, projectManager, openProjectById });
 
     e.keybindings.registerMany([
       { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
@@ -92,6 +92,13 @@ const App: Component = () => {
     projectManager.close();
     setBridge(null);
     setEditor(null);
+  };
+
+  const openProjectById = async (id: string) => {
+    const handle = await projectManager.openRecent(id);
+    if (!handle) return;
+    await closeProject();
+    await openProject(handle);
   };
 
   onCleanup(() => { void closeProject(); });

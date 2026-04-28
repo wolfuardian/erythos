@@ -18,6 +18,7 @@ export class ProjectManager {
   private _handle: FileSystemDirectoryHandle | null = null;
   private _files: ProjectFile[] = [];
   private _listeners = new Set<Listener>();
+  private _currentId: string | null = null;
 
   get name(): string | null {
     return this._handle?.name ?? null;
@@ -25,6 +26,11 @@ export class ProjectManager {
 
   get isOpen(): boolean {
     return this._handle !== null;
+  }
+
+  /** ID of the currently open project entry (null if no project open) */
+  get currentId(): string | null {
+    return this._currentId;
   }
 
   getFiles(): ProjectFile[] {
@@ -84,12 +90,13 @@ export class ProjectManager {
     this._handle = handle;
     this._files = await this.collectFiles(handle);
 
-    // bump lastOpened for the matching entry
+    // bump lastOpened for the matching entry and capture currentId
     const entries = await ProjectHandleStore.loadProjects();
     for (const entry of entries) {
       try {
         const same = await (entry.handle as any).isSameEntry(handle);
         if (same) {
+          this._currentId = entry.id;
           void ProjectHandleStore.saveProject({ ...entry, lastOpened: Date.now() });
           break;
         }
@@ -122,6 +129,7 @@ export class ProjectManager {
   close(): void {
     this._handle = null;
     this._files = [];
+    this._currentId = null;
     this.emit();
   }
 
