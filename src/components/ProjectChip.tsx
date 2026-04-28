@@ -241,7 +241,8 @@ const ProjectChip: Component<Props> = (props) => {
                       <div
                         onClick={() => !isCurrent() && handleOpenProject(entry.id)}
                         style={{
-                          display: 'flex',
+                          display: 'grid',
+                          'grid-template-columns': '24px 1fr 56px',
                           'align-items': 'center',
                           gap: '8px',
                           padding: '4px 10px',
@@ -287,7 +288,6 @@ const ProjectChip: Component<Props> = (props) => {
 
                         {/* Name + time */}
                         <div style={{
-                          flex: '1',
                           'min-width': '0',
                           display: 'flex',
                           'flex-direction': 'column',
@@ -310,24 +310,29 @@ const ProjectChip: Component<Props> = (props) => {
                           </div>
                         </div>
 
-                        {/* CURRENT badge */}
-                        <Show when={isCurrent()}>
-                          <span style={{
-                            'font-size': '7px',
-                            'font-family': 'var(--font-mono)',
-                            'font-weight': '600',
-                            color: 'var(--accent-blue)',
-                            background: 'rgba(82,127,200,0.15)',
-                            border: '1px solid rgba(82,127,200,0.35)',
-                            'border-radius': '2px',
-                            padding: '1px 4px',
-                            'letter-spacing': '0.4px',
-                            'text-transform': 'uppercase',
-                            'flex-shrink': '0',
-                          }}>
-                            Current
-                          </span>
-                        </Show>
+                        {/* CURRENT badge slot — always reserved (3rd grid column) */}
+                        <div style={{
+                          display: 'flex',
+                          'justify-content': 'flex-end',
+                          'align-items': 'center',
+                        }}>
+                          <Show when={isCurrent()}>
+                            <span style={{
+                              'font-size': '7px',
+                              'font-family': 'var(--font-mono)',
+                              'font-weight': '600',
+                              color: 'var(--accent-blue)',
+                              background: 'rgba(82,127,200,0.15)',
+                              border: '1px solid rgba(82,127,200,0.35)',
+                              'border-radius': '2px',
+                              padding: '1px 4px',
+                              'letter-spacing': '0.4px',
+                              'text-transform': 'uppercase',
+                            }}>
+                              Current
+                            </span>
+                          </Show>
+                        </div>
                       </div>
                     );
                   }}

@@ -343,7 +343,8 @@ export const Welcome: Component<Props> = (props) => {
               {(entry) => (
                 <div
                   style={{
-                    display: 'flex',
+                    display: 'grid',
+                    'grid-template-columns': '32px 1fr 80px',
                     'align-items': 'center',
                     gap: 'var(--space-md)',
                     padding: 'var(--space-md) var(--space-sm)',
@@ -358,7 +359,6 @@ export const Welcome: Component<Props> = (props) => {
                 >
                   <ThumbnailPlaceholder />
                   <div style={{
-                    flex: '1',
                     overflow: 'hidden',
                     'min-width': '0',
                   }}>
@@ -387,7 +387,7 @@ export const Welcome: Component<Props> = (props) => {
                     'font-size': 'var(--font-size-xs)',
                     color: 'var(--text-muted)',
                     'white-space': 'nowrap',
-                    'flex-shrink': '0',
+                    'text-align': 'right',
                   }}>
                     {formatLastOpened(entry.lastOpened)}
                   </div>
