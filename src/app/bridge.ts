@@ -7,6 +7,7 @@ import type { PrefabAsset } from '../core/scene/PrefabFormat';
 import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import * as GlbStore from '../core/scene/GlbStore';
 import type { ProjectFile } from '../core/project/ProjectFile';
+import type { ProjectManager } from '../core/project/ProjectManager';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -45,12 +46,23 @@ export interface EditorBridge {
   setDraggingViewportId: (id: string | null) => void;
   dragTickVersion: Accessor<number>;
   bumpDragTick: () => void;
+  /** Callback injected by App.tsx to close the current project and return to Welcome */
+  closeProject: () => void;
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
   dispose: () => void;
 }
 
-export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[] = []): EditorBridge {
+export interface EditorBridgeDeps {
+  closeProject: () => void;
+  projectManager: ProjectManager;
+}
+
+export function createEditorBridge(
+  editor: Editor,
+  sharedGridObjects: Object3D[] = [],
+  deps?: EditorBridgeDeps,
+): EditorBridge {
   const [selectedUUIDs, setSelectedUUIDs] = createSignal<string[]>([]);
   const [hoveredUUID, setHoveredUUID] = createSignal<string | null>(null);
   const [nodes, setNodes] = createSignal<SceneNode[]>([]);
@@ -182,6 +194,7 @@ export function createEditorBridge(editor: Editor, sharedGridObjects: Object3D[]
     setDraggingViewportId: _setDraggingViewportId,
     dragTickVersion,
     bumpDragTick: () => _bumpDragTick(v => v + 1),
+    closeProject: deps?.closeProject ?? (() => {}),
     sharedGridObjects,
     dispose,
   };

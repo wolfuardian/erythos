@@ -49,7 +49,7 @@ const App: Component = () => {
     };
     e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
-    const b = createEditorBridge(e, sharedGridObjects);
+    const b = createEditorBridge(e, sharedGridObjects, { closeProject, projectManager });
 
     e.keybindings.registerMany([
       { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
