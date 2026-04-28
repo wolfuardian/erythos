@@ -6,7 +6,7 @@ import type { Vec3 } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
 import { XYZCellReadonly } from '../components/XYZCell';
 import { VectorDrag } from '../../../components/VectorDrag';
-import { fieldLabel, xyzRow, groupLabelRow } from '../components/fieldStyles';
+import { fieldLabel, xyzRow, groupLabelRow, subGroupLabelRow } from '../components/fieldStyles';
 
 interface TransformDrawProps {
   uuid: string;
@@ -98,7 +98,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       {/* Delta Transform 子 section（hardcoded 0，驗證 deep tint 視覺，階段 2 替換） */}
       <FoldableSection label="DELTA TRANSFORM" variant="subsection" sectionKey="propertiesDeltaTransform">
         {/* Position */}
-        <div style={groupLabelRow}>
+        <div style={subGroupLabelRow}>
           <span style={fieldLabel}>Position</span>
           <div style={xyzRow}>
             <XYZCellReadonly axis="x" value="0" />
@@ -108,7 +108,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
         </div>
 
         {/* Rotation */}
-        <div style={groupLabelRow}>
+        <div style={subGroupLabelRow}>
           <span style={fieldLabel}>Rotation</span>
           <div style={xyzRow}>
             <XYZCellReadonly axis="x" value="0" />
@@ -118,7 +118,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
         </div>
 
         {/* Scale */}
-        <div style={groupLabelRow}>
+        <div style={subGroupLabelRow}>
           <span style={fieldLabel}>Scale</span>
           <div style={xyzRow}>
             <XYZCellReadonly axis="x" value="0" />

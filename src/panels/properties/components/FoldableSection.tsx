@@ -70,17 +70,17 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
           display: 'flex',
           'align-items': 'center',
           gap: '6px',
-          height: '24px',
-          padding: '0 8px',
-          background: isSubsection() ? 'var(--bg-subheader)' : 'var(--bg-header)',
-          'font-size': '11px',
-          color: 'var(--text-primary)',
+          padding: isSubsection() ? '5px 0 5px 14px' : '5px 0 5px 2px',
+          background: 'transparent',
+          'font-size': 'var(--font-size-sm)',
+          color: 'var(--text-secondary)',
           'text-transform': 'uppercase',
-          'letter-spacing': '0.05em',
+          'letter-spacing': '0.5px',
           'font-weight': '600',
           cursor: 'pointer',
           'user-select': 'none',
-          'border-radius': isSubsection() ? '3px 3px 0 0' : '0',
+          'border-bottom': '1px solid var(--border-subtle)',
+          'margin-bottom': '4px',
         }}
       >
         {/* 折疊三角：展開=▼ 折疊=▶ */}
@@ -106,11 +106,13 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
       }}>
         <div style={{ 'min-height': '0', overflow: 'hidden' }}>
           <div style={{
-            background: isSubsection() ? 'var(--bg-subsection)' : 'var(--bg-section)',
+            background: isSubsection()
+              ? 'color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)'
+              : 'var(--bg-section)',
             padding: '6px 10px',
-            'margin-bottom': '6px',
-            'border-radius': isSubsection() ? '0 0 3px 3px' : 'var(--radius-md)',
-            'box-shadow': isSubsection() ? 'var(--shadow-well-subtle)' : 'var(--shadow-well-inner)',
+            'margin-bottom': isSubsection() ? '0' : '6px',
+            'border-radius': 'var(--radius-sm)',
+            'box-shadow': isSubsection() ? 'none' : 'var(--shadow-well-inner)',
           }}>
             {props.children}
           </div>
