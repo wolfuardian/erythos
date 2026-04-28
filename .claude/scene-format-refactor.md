@@ -1,6 +1,6 @@
 # Scene Format Refactor — 計畫文件
 
-**狀態：** 規劃完成，待啟動
+**狀態：** Phase 1–6 全部完成（2026-04-28 audit 確認）
 **規格書：** [scene-format-spec.md](scene-format-spec.md)
 
 ---
@@ -828,3 +828,4 @@ Phase 2 完成後，以下可平行開發：
 | 2026-04-11 | 完成架構設計：SceneDocument + SceneSync + Editor 重構 + Command 重構 + 面板適配 |
 | 2026-04-11 | 完成 API 設計：8 個模組的 interface 定義 |
 | 2026-04-11 | 完成需求清單：7 個 Phase、30 個 issue、6 個里程碑 |
+| 2026-04-28 | Phase 1–6 全部落地確認：SceneDocument / SceneSync / ResourceCache / Bridge / 全 Command / 三個面板 / IO / GLTF Import / Raycasting-Outline-Gizmo-BoxSelect UUID 橋接均完整。P0 前置作業已 obsolete（AutoSave 改寫 project file；vitest 已引入）。`SceneDocument.findAllByPath` 未實作但無 consumer，留待日後若需要再補。 |
