@@ -7,6 +7,9 @@ interface Props {
   onOpenProject: (handle: FileSystemDirectoryHandle) => Promise<void>;
 }
 
+// Session-scoped memory for last picked Parent Location (cleared on page reload)
+let lastPickedParent: FileSystemDirectoryHandle | null = null;
+
 function formatLastOpened(ts: number): string {
   const now = Date.now();
   const diff = now - ts;
@@ -68,7 +71,7 @@ export const Welcome: Component<Props> = (props) => {
   const [recentProjects, setRecentProjects] = createSignal<ProjectEntry[]>([]);
   const [showModal, setShowModal] = createSignal(false);
   const [newName, setNewName] = createSignal('');
-  const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(null);
+  const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(lastPickedParent);
   const [errorMsg, setErrorMsg] = createSignal('');
 
   // Hover states
@@ -102,6 +105,7 @@ export const Welcome: Component<Props> = (props) => {
   const handlePickLocation = async () => {
     try {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      lastPickedParent = handle;
       setParentHandle(handle);
     } catch (e: any) {
       if (e.name !== 'AbortError') setErrorMsg(e.message || String(e));
@@ -119,7 +123,6 @@ export const Welcome: Component<Props> = (props) => {
       if (fresh?.handle) await props.onOpenProject(fresh.handle);
       setShowModal(false);
       setNewName('');
-      setParentHandle(null);
     } catch (e: any) {
       setErrorMsg(e.message || String(e));
     }
@@ -128,7 +131,6 @@ export const Welcome: Component<Props> = (props) => {
   const closeModal = () => {
     setShowModal(false);
     setNewName('');
-    setParentHandle(null);
     setErrorMsg('');
   };
 
