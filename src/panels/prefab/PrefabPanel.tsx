@@ -12,11 +12,13 @@ import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import * as GlbStore from '../../core/scene/GlbStore';
 import { PanelHeader } from '../../components/PanelHeader';
+import { useThumbnails } from './useThumbnails';
 
 const PrefabPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
   const [activeId, setActiveId] = useAreaState<string | null>('activeId', null);
+  const { getThumbnail } = useThumbnails(() => bridge.prefabAssets(), editor);
 
   let previewRef!: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
@@ -224,19 +226,39 @@ const PrefabPanel: Component = () => {
                         : '2px solid transparent',
                     }}
                   >
-                    <span style={{
-                      width: '14px',
-                      height: '14px',
-                      'border-radius': 'var(--radius-sm)',
-                      background: 'var(--badge-mesh, #4a6f5f)',
-                      color: 'var(--text-inverse)',
-                      'font-size': '8px',
-                      'font-weight': 'bold',
-                      display: 'flex',
-                      'align-items': 'center',
-                      'justify-content': 'center',
-                      'flex-shrink': 0,
-                    }}>L</span>
+                    <Show
+                      when={getThumbnail(asset.id)}
+                      fallback={
+                        <span style={{
+                          width: '32px',
+                          height: '32px',
+                          'border-radius': 'var(--radius-sm)',
+                          background: 'var(--badge-mesh, #4a6f5f)',
+                          color: 'var(--text-inverse)',
+                          'font-size': '8px',
+                          'font-weight': 'bold',
+                          display: 'flex',
+                          'align-items': 'center',
+                          'justify-content': 'center',
+                          'flex-shrink': 0,
+                        }}>L</span>
+                      }
+                    >
+                      {(dataURL) => (
+                        <img
+                          src={dataURL()}
+                          width={32}
+                          height={32}
+                          style={{
+                            'border-radius': 'var(--radius-sm)',
+                            'flex-shrink': 0,
+                            display: 'block',
+                            'object-fit': 'cover',
+                          }}
+                          alt={asset.name}
+                        />
+                      )}
+                    </Show>
                     <span style={{
                       'font-size': 'var(--font-size-xs)',
                       color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)',
