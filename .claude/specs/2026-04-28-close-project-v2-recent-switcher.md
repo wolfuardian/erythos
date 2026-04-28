@@ -137,7 +137,7 @@ get currentId(): string | null {
 
 ## 5. Data flow
 
-### 5.1 一般切換
+### 5.1 切換 project
 ```
 User clicks recent project row
   ↓
@@ -159,6 +159,19 @@ App.openProjectById：
 新 bridge 重建，ProjectChip 重新 mount，dropdown 自動關閉（autosaveStatus / projectName 重置）
 ```
 
+### 5.1b Close Project（永遠 confirm）
+```
+User clicks Close Project entry
+  ↓
+ProjectChip 一律彈 ConfirmDialog（不檢查 autosaveStatus）
+  ↓                                       ↓
+Confirm                                   Cancel → no-op
+  ↓
+onCloseProject() → bridge.closeProject() → App.closeProject() → Welcome
+```
+
+文案動態（見 §5.3）：autosave error 用 generic 警告文案，否則用簡單 `Close project?`。
+
 ### 5.2 Show more / less
 ```
 User clicks Show more (n)
@@ -170,15 +183,20 @@ list region 切到 A2（render 全部 + max-height 560px + scrollbar）
 [dropdown 不關，project 不切]
 ```
 
-### 5.3 ConfirmDialog 文案調整
+### 5.3 ConfirmDialog 文案
 
-v1 confirm 用於 Close Project；v2 同 confirm 也要 cover「切換專案」場景。建議文案改為通用形式：
-- title: `Save Failed — Continue Anyway?`
-- message: `Recent changes could not be saved. Continuing will lose them.`
-- confirm: `Continue Anyway`
-- cancel: `Cancel`
+ConfirmDialog 文案根據 (intent, autosaveStatus) 動態切換：
 
-action 視觸發來源（close vs open new）分流：confirm 後執行對應動作。
+| 場景 | title | message | confirm |
+|------|-------|---------|---------|
+| Close Project，無 error | `Close project?` | `The current project will be closed.` | `Close` |
+| Close Project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
+| Switch project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
+| Switch project，無 error | （不彈，直接執行） | — | — |
+
+cancel button 一律 `Cancel`。
+
+action 視觸發來源（close vs open new）分流：confirm 後執行對應動作（已透過 `confirmIntent: { kind: 'close' } | { kind: 'open', id }` 區分）。
 
 ---
 
@@ -245,3 +263,4 @@ action 視觸發來源（close vs open new）分流：confirm 後執行對應動
 | 日期 | 內容 |
 |------|------|
 | 2026-04-28 | 建立 v2 spec — dropdown 加 recent projects + show more/less，取代 v1 spec §10 的「不做 Switch」結論（同 idea 不同形式） |
+| 2026-04-28 | Close Project 點擊一律彈 ConfirmDialog（指揮家要求）— 不再條件性只在 autosave error 才 confirm。新 §5.1b + 更新 §5.3 文案表（一般 close 用 `Close project?`，error 仍用 generic 警告）。Switch project 行為不變（一般情況不 confirm，只在 autosave error 才彈） |
