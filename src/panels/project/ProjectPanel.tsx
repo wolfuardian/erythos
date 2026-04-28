@@ -48,6 +48,10 @@ const ProjectPanel: Component = () => {
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
   const [showNewScene, setShowNewScene] = createSignal(false);
+  const [showLoadConfirm, setShowLoadConfirm] = createSignal(false);
+  const [pendingLoadPath, setPendingLoadPath] = createSignal<string | null>(null);
+  const [showCreateConfirm, setShowCreateConfirm] = createSignal(false);
+  const [pendingCreateArgs, setPendingCreateArgs] = createSignal<{ name: string; template: import('./NewSceneDialog').Template } | null>(null);
   const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
 
   // ── New IDE state ──
@@ -99,13 +103,36 @@ const ProjectPanel: Component = () => {
     });
   });
 
-  const handleLoadScene = async (path: string) => {
+  const doLoadScene = async (path: string) => {
     try {
       const file = await editor.projectManager.readFile(path);
       const parsed = JSON.parse(await file.text());
       editor.loadScene(parsed);
     } catch (e: any) {
       setErrorTitle('Load Failed');
+      setErrorMsg(e.message || String(e));
+    }
+  };
+
+  const handleLoadScene = (path: string) => {
+    if (bridge.confirmBeforeLoad()) {
+      setPendingLoadPath(path);
+      setShowLoadConfirm(true);
+    } else {
+      void doLoadScene(path);
+    }
+  };
+
+  const doCreateScene = async (name: string, template: import('./NewSceneDialog').Template) => {
+    try {
+      const json = buildSceneJson(template);
+      await editor.projectManager.writeFile(`scenes/${name}`, json);
+      await editor.projectManager.rescan();
+      const parsed = JSON.parse(json);
+      editor.loadScene(parsed);
+      setShowNewScene(false);
+    } catch (e: any) {
+      setErrorTitle('Create Failed');
       setErrorMsg(e.message || String(e));
     }
   };
@@ -122,16 +149,11 @@ const ProjectPanel: Component = () => {
     } catch {
       // 預期路徑（不存在），繼續建立
     }
-    try {
-      const json = buildSceneJson(template);
-      await editor.projectManager.writeFile(path, json);
-      await editor.projectManager.rescan();
-      const parsed = JSON.parse(json);
-      editor.loadScene(parsed);
-      setShowNewScene(false);
-    } catch (e: any) {
-      setErrorTitle('Create Failed');
-      setErrorMsg(e.message || String(e));
+    if (bridge.confirmBeforeLoad()) {
+      setPendingCreateArgs({ name, template });
+      setShowCreateConfirm(true);
+    } else {
+      await doCreateScene(name, template);
     }
   };
 
@@ -546,6 +568,34 @@ const ProjectPanel: Component = () => {
         cancelLabel="Back"
         onConfirm={() => { handleClose(); setShowCloseConfirm(false); }}
         onCancel={() => setShowCloseConfirm(false)}
+      />
+      <ConfirmDialog
+        open={showLoadConfirm()}
+        title="Open this scene?"
+        message="Unsaved changes may be lost."
+        confirmLabel="Open scene"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          const path = pendingLoadPath();
+          setShowLoadConfirm(false);
+          setPendingLoadPath(null);
+          if (path !== null) void doLoadScene(path);
+        }}
+        onCancel={() => { setShowLoadConfirm(false); setPendingLoadPath(null); }}
+      />
+      <ConfirmDialog
+        open={showCreateConfirm()}
+        title="Create and open this scene?"
+        message="Unsaved changes may be lost."
+        confirmLabel="Create scene"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          const args = pendingCreateArgs();
+          setShowCreateConfirm(false);
+          setPendingCreateArgs(null);
+          if (args !== null) void doCreateScene(args.name, args.template);
+        }}
+        onCancel={() => { setShowCreateConfirm(false); setPendingCreateArgs(null); }}
       />
     </div>
   );
