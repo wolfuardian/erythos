@@ -242,7 +242,7 @@ const ProjectChip: Component<Props> = (props) => {
                         onClick={() => !isCurrent() && handleOpenProject(entry.id)}
                         style={{
                           display: 'grid',
-                          'grid-template-columns': '24px 1fr 56px',
+                          'grid-template-columns': '24px 1fr 100px',
                           'align-items': 'center',
                           gap: '8px',
                           padding: '4px 10px',
