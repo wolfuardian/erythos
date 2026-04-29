@@ -73,13 +73,6 @@ describe('Editor — emits UUID-based events', () => {
     editor.removeNode(node.id);
     expect(received).toEqual([node.id]);
   });
-
-  it('clear() emits sceneReplaced on sceneDocument', () => {
-    let called = false;
-    editor.sceneDocument.events.on('sceneReplaced', () => { called = true; });
-    editor.clear();
-    expect(called).toBe(true);
-  });
 });
 
 // ── Integration: Selection emits hoverChanged ────────────────────────────────

@@ -133,7 +133,7 @@ export class Editor {
     this.events.emit('nodeRemoved', uuid);
   }
 
-  // ── Scene load / clear ────────────────────────────
+  // ── Scene load ────────────────────────────────────
 
   loadScene(data: SceneFile): void {
     this.selection.clear();
@@ -142,15 +142,6 @@ export class Editor {
     if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
     // SceneSync listens to sceneReplaced on sceneDocument.events and rebuilds Three.js scene
     this.sceneDocument.deserialize(data);
-  }
-
-  clear(): void {
-    this.selection.clear();
-    this.selection.hover(null);
-    this.history.clear();
-    // sceneDocument.deserialize emits sceneReplaced → SceneSync.rebuild() clears Three.js scene
-    this.sceneDocument.deserialize({ version: 1, nodes: [] });
-    this.events.emit('editorCleared');
   }
 
   dispose(): void {
