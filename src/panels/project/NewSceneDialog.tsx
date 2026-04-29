@@ -75,6 +75,7 @@ export const NewSceneDialog: Component<Props> = (props) => {
 
   return (
     <div
+      data-devid="new-scene-dialog"
       style={{
         position: 'fixed', inset: '0',
         background: 'rgba(0,0,0,0.6)',
@@ -93,17 +94,18 @@ export const NewSceneDialog: Component<Props> = (props) => {
         display: 'flex', 'flex-direction': 'column', gap: 'var(--space-xl)',
       }}>
         {/* Title */}
-        <div style={{ 'font-size': 'var(--font-size-xl)', 'font-weight': '600', color: 'var(--text-primary)' }}>
+        <div data-devid="new-scene-dialog-title" style={{ 'font-size': 'var(--font-size-xl)', 'font-weight': '600', color: 'var(--text-primary)' }}>
           Create New Scene
         </div>
 
         {/* Name input */}
-        <div style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+        <div data-devid="new-scene-dialog-name-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
           <label style={{
             'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)',
             'text-transform': 'uppercase', 'letter-spacing': '0.6px', 'font-weight': '600',
           }}>Scene Name</label>
           <input
+            data-devid="new-scene-dialog-name-input"
             value={name()}
             onInput={(e) => { setName(e.currentTarget.value); setLocalErr(''); }}
             placeholder="untitled"
@@ -128,14 +130,15 @@ export const NewSceneDialog: Component<Props> = (props) => {
         </div>
 
         {/* Template chip group */}
-        <div style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+        <div data-devid="new-scene-dialog-template-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
           <label style={{
             'font-size': 'var(--font-size-xs)', color: 'var(--text-muted)',
             'text-transform': 'uppercase', 'letter-spacing': '0.6px', 'font-weight': '600',
           }}>Template</label>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          <div data-devid="new-scene-dialog-template-options" style={{ display: 'flex', gap: 'var(--space-sm)' }}>
             <For each={TEMPLATES}>{(t) =>
               <button
+                data-devid={`new-scene-dialog-template-${t.id}`}
                 onClick={() => setTemplate(t.id)}
                 style={{
                   flex: '1',
@@ -155,14 +158,15 @@ export const NewSceneDialog: Component<Props> = (props) => {
 
         {/* Inline error */}
         {localErr() && (
-          <div style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--accent-red)' }}>
+          <div data-devid="new-scene-dialog-error" style={{ 'font-size': 'var(--font-size-xs)', color: 'var(--accent-red)' }}>
             {localErr()}
           </div>
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 'var(--space-md)', 'justify-content': 'flex-end' }}>
+        <div data-devid="new-scene-dialog-actions" style={{ display: 'flex', gap: 'var(--space-md)', 'justify-content': 'flex-end' }}>
           <button
+            data-devid="new-scene-dialog-cancel"
             style={{
               background: 'transparent',
               border: '1px solid var(--border-subtle)',
@@ -175,6 +179,7 @@ export const NewSceneDialog: Component<Props> = (props) => {
             onClick={props.onClose}
           >Cancel</button>
           <button
+            data-devid="new-scene-dialog-create"
             disabled={busy()}
             style={{
               background: busy() ? 'var(--bg-section)' : 'var(--accent-blue)',
