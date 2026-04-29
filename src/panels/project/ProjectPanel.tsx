@@ -1,11 +1,10 @@
-import { createSignal, createMemo, createEffect, on, For, Show, type Component } from 'solid-js';
+import { createSignal, createMemo, For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
-import { NewSceneDialog, buildSceneJson } from './NewSceneDialog';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -47,16 +46,9 @@ const ProjectPanel: Component = () => {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
-  const [showNewScene, setShowNewScene] = createSignal(false);
   const [showLoadConfirm, setShowLoadConfirm] = createSignal(false);
   const [pendingLoadPath, setPendingLoadPath] = createSignal<string | null>(null);
-  const [showCreateConfirm, setShowCreateConfirm] = createSignal(false);
-  const [pendingCreateArgs, setPendingCreateArgs] = createSignal<{ name: string; template: import('./NewSceneDialog').Template } | null>(null);
   const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
-
-  // Listen for newSceneRequest from any UI surface (e.g. ViewportPanel empty-state tile)
-  // defer:true skips the initial run; only opens dialog on subsequent bumps
-  createEffect(on(bridge.newSceneRequestVersion, () => setShowNewScene(true), { defer: true }));
 
   // ── New IDE state ──
   const [viewMode, setViewMode] = useAreaState<'grid' | 'list'>('viewMode', 'list');
@@ -124,40 +116,6 @@ const ProjectPanel: Component = () => {
       setShowLoadConfirm(true);
     } else {
       void doLoadScene(path);
-    }
-  };
-
-  const doCreateScene = async (name: string, template: import('./NewSceneDialog').Template) => {
-    try {
-      const json = buildSceneJson(template);
-      await editor.projectManager.writeFile(`scenes/${name}`, json);
-      await editor.projectManager.rescan();
-      const parsed = JSON.parse(json);
-      editor.loadScene(parsed);
-      setShowNewScene(false);
-    } catch (e: any) {
-      setErrorTitle('Create Failed');
-      setErrorMsg(e.message || String(e));
-    }
-  };
-
-  const handleCreateScene = async (name: string, template: import('./NewSceneDialog').Template) => {
-    const path = `scenes/${name}`;
-    // 衝突偵測：嘗試讀取，若成功代表已存在
-    try {
-      await editor.projectManager.readFile(path);
-      // 讀成功 → 已存在
-      setErrorTitle('Scene Already Exists');
-      setErrorMsg(`"${name}" already exists. Please choose a different name.`);
-      return;
-    } catch {
-      // 預期路徑（不存在），繼續建立
-    }
-    if (bridge.confirmBeforeLoad()) {
-      setPendingCreateArgs({ name, template });
-      setShowCreateConfirm(true);
-    } else {
-      await doCreateScene(name, template);
     }
   };
 
@@ -270,22 +228,6 @@ const ProjectPanel: Component = () => {
           </svg>
         </button>
 
-        {/* + New Scene button */}
-        <button
-          data-devid="project-panel-new-scene"
-          onClick={() => setShowNewScene(true)}
-          style={{
-            background: 'var(--accent-blue)',
-            color: 'var(--text-primary)',
-            border: 'none',
-            'border-radius': 'var(--radius-sm)',
-            padding: '3px 8px',
-            'font-size': 'var(--font-size-sm)',
-            cursor: 'pointer',
-            'white-space': 'nowrap',
-            'flex-shrink': '0',
-          }}
-        >+ New Scene</button>
       </div>
 
       {/* ── Breadcrumb row ── */}
@@ -560,12 +502,6 @@ const ProjectPanel: Component = () => {
         </Show>
       </div>
 
-      <Show when={showNewScene()}>
-        <NewSceneDialog
-          onClose={() => setShowNewScene(false)}
-          onCreate={handleCreateScene}
-        />
-      </Show>
       <ErrorDialog open={!!errorMsg()} title={errorTitle()} message={errorMsg()} onClose={() => setErrorMsg('')} />
       <ConfirmDialog
         open={showCloseConfirm()}
@@ -589,20 +525,6 @@ const ProjectPanel: Component = () => {
           if (path !== null) void doLoadScene(path);
         }}
         onCancel={() => { setShowLoadConfirm(false); setPendingLoadPath(null); }}
-      />
-      <ConfirmDialog
-        open={showCreateConfirm()}
-        title="Create and open this scene?"
-        message="Unsaved changes may be lost."
-        confirmLabel="Create scene"
-        cancelLabel="Cancel"
-        onConfirm={() => {
-          const args = pendingCreateArgs();
-          setShowCreateConfirm(false);
-          setPendingCreateArgs(null);
-          if (args !== null) void doCreateScene(args.name, args.template);
-        }}
-        onCancel={() => { setShowCreateConfirm(false); setPendingCreateArgs(null); }}
       />
     </div>
   );
