@@ -106,7 +106,28 @@ const ViewportPanel: Component = () => {
         return;
       }
 
-      // 路徑 2：內部 GLB 拖曳（從 Project 面板）
+      // 路徑 2a：內部 GLB multi-list 拖曳（從 Project 面板 multi-select）
+      const internalGlbList = e.dataTransfer?.getData('application/erythos-glb-list');
+      if (internalGlbList) {
+        const paths: string[] = JSON.parse(internalGlbList);
+        const dropPosition = computeDropPosition(e, canvasRef, viewport);
+        const errors: string[] = [];
+        for (const p of paths) {
+          try {
+            const file = await editor.projectManager.readFile(p);
+            const groupUUID = await loadGLTFFromFile(file, editor);
+            if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
+              editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, [0, 0, 0]));
+            }
+          } catch (err) {
+            errors.push(err instanceof Error ? err.message : String(err));
+          }
+        }
+        if (errors.length > 0) setErrorMessage(errors.join('\n'));
+        return;
+      }
+
+      // 路徑 2b：內部 GLB 拖曳（從 Project 面板）
       const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
       if (internalGlb) {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
