@@ -52,7 +52,8 @@ const ProjectPanel: Component = () => {
   const [pendingLoadPath, setPendingLoadPath] = createSignal<string | null>(null);
 
   // ── Multi-select state ──
-  const [selectedAssetPaths, setSelectedAssetPaths] = useAreaState<string[]>('selectedAssetPaths', []);
+  // selection is transient — fresh on reload (IDE convention; persisted selection masks hover feedback)
+  const [selectedAssetPaths, setSelectedAssetPaths] = createSignal<string[]>([]);
   const [lastClickedAssetPath, setLastClickedAssetPath] = createSignal<string | null>(null);
 
   // ── New IDE state ──
@@ -595,8 +596,8 @@ const ProjectPanel: Component = () => {
                           : hovered()
                             ? 'var(--bg-hover)'
                             : undefined,
-                        outline: !selected() && hovered() ? '1px solid var(--border-medium)' : undefined,
-                        'outline-offset': !selected() && hovered() ? '-1px' : undefined,
+                        outline: hovered() ? '1px solid var(--border-medium)' : undefined,
+                        'outline-offset': hovered() ? '-1px' : undefined,
                         'border-radius': hovered() ? 'var(--radius-md)' : undefined,
                       }}
                       onClick={(e) => { e.stopPropagation(); handleAssetClick(e, f.path); }}
@@ -679,17 +680,17 @@ const ProjectPanel: Component = () => {
                     } : undefined}
                     style={{
                       display: 'flex', 'align-items': 'center', gap: '6px',
-                      padding: hovered() && !selected() ? '5px 6px' : '5px 10px',
-                      margin: hovered() && !selected() ? '0 4px' : undefined,
+                      padding: hovered() ? '5px 6px' : '5px 10px',
+                      margin: hovered() ? '0 4px' : undefined,
                       cursor: 'pointer',
                       background: selected()
                         ? 'var(--bg-selected)'
                         : hovered()
                           ? 'var(--bg-hover)'
                           : undefined,
-                      outline: hovered() && !selected() ? '1px solid var(--border-medium)' : undefined,
-                      'outline-offset': hovered() && !selected() ? '-1px' : undefined,
-                      'border-radius': hovered() && !selected() ? 'var(--radius-sm)' : undefined,
+                      outline: hovered() ? '1px solid var(--border-medium)' : undefined,
+                      'outline-offset': hovered() ? '-1px' : undefined,
+                      'border-radius': hovered() ? 'var(--radius-sm)' : undefined,
                     }}
                   >
                     {/* Type pill */}
