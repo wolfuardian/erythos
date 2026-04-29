@@ -146,12 +146,11 @@ const ProjectChip: Component<Props> = (props) => {
       : 'The current project will be closed.';
   const dialogConfirm = () => {
     if (props.autosaveStatus === 'error') return 'Continue Anyway';
-    return confirmIntent().kind === 'close' ? 'Close' : 'Switch';
+    return confirmIntent().kind === 'close' ? 'Close' : 'Switch anyway';
   };
-  // Confirm button variant — close → danger (red), open → default (blue)
-  // autosave error 不改 variant，沿襲對應 intent 的顏色（spec §5.3）
-  const dialogVariant = (): 'default' | 'danger' =>
-    confirmIntent().kind === 'close' ? 'danger' : 'default';
+  // Confirm button variant — both close + open are destructive (drop current project state)
+  // → both use 'danger' (red). autosave error 沿襲（仍 danger）。spec §5.3
+  const dialogVariant = (): 'default' | 'danger' => 'danger';
 
   return (
     <>
