@@ -193,7 +193,7 @@ ConfirmDialog 文案根據 (intent, autosaveStatus) 動態切換：
 |------|-------|---------|---------|
 | Close Project，無 error | `Close project?` | `The current project will be closed.` | `Close` |
 | Close Project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
-| Switch project，無 error | `Switch to "<name>"?` | `The current project will be closed.` | `Switch` |
+| Switch project，無 error | `Switch to "<name>"?` | `The current project will be closed.` | `Switch anyway` |
 | Switch project，autosave error | `Save Failed — Continue Anyway?` | `Recent changes could not be saved. Continuing will lose them.` | `Continue Anyway` |
 
 cancel button 一律 `Cancel`。
@@ -207,9 +207,9 @@ action 視觸發來源（close vs open new）分流：confirm 後執行對應動
 | intent | variant | 顏色 token |
 |--------|---------|-----------|
 | `close` | `danger` | `var(--accent-red)` |
-| `open` | `default` | `var(--accent-blue)` |
+| `open` | `danger` | `var(--accent-red)` |
 
-autosave error 不影響 variant — 沿用對應 intent 的顏色（close+error 仍紅 / open+error 仍藍）。實作：ConfirmDialog 加 `variant?: 'default' \| 'danger'` prop，fulfill 既有 `// TODO #345` 註記。
+兩種 intent 都是 destructive（丟棄當前 project state），UI 一致用紅色 + `anyway` 後綴 confirm label。autosave error 沿用對應 intent 的 variant（仍 danger）。實作：ConfirmDialog 的 `variant?: 'default' \| 'danger'` prop 仍保留以供將來 non-destructive confirm 使用。
 
 ---
 
@@ -280,3 +280,4 @@ autosave error 不影響 variant — 沿用對應 intent 的顏色（close+error
 | 2026-04-28 | Switch project 比照 Close Project 一律 confirm（指揮家補充：同性質破壞性操作）。§5.1 流程更新、§5.3 文案表加 `Switch to "<name>"?`。`confirmIntent.open` 擴 `{ id, name }` 帶目標名稱供文案 lookup |
 | 2026-04-29 | dropdown 預設前 10 → 前 5（指揮家）。§3.1 / §3.3 / §3.4 數字同步。§3.3 加實作約束：show more/less 必須同一 button 切 label，避免 `<Show fallback>` 兩 instance 在 click 後 unmount 觸發 click-outside 誤關 dropdown |
 | 2026-04-29 | §5.3 加 confirm 按鈕 variant 表 — close → danger（紅）、open → default（藍）。autosave error 不改 variant（沿襲 intent 對應顏色）。fulfill ConfirmDialog 的 TODO #345 |
+| 2026-04-29 | Switch project 比照 Close 也用 danger 紅 + `Switch anyway` label（指揮家：destructive 操作 UI 一致）。§5.3 文案表 / variant 表同步 |
