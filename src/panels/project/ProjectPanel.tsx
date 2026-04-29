@@ -663,7 +663,18 @@ const ProjectPanel: Component = () => {
                     onContextMenu={(e) => handleAssetContextMenu(e, f)}
                     draggable={f.type === 'glb'}
                     onDragStart={f.type === 'glb' ? (e) => {
-                      e.dataTransfer!.setData('application/erythos-glb', f.path);
+                      const selected = selectedAssetPaths();
+                      const inSelection = selected.includes(f.path);
+                      const glbPaths = selected.filter(p =>
+                        assetFiles().find(a => a.path === p)?.type === 'glb'
+                      );
+                      if (inSelection && glbPaths.length >= 2) {
+                        // Multi payload: all glb paths from current selection
+                        e.dataTransfer!.setData('application/erythos-glb-list', JSON.stringify(glbPaths));
+                      } else {
+                        // Single payload: just this file
+                        e.dataTransfer!.setData('application/erythos-glb', f.path);
+                      }
                       e.dataTransfer!.effectAllowed = 'copy';
                     } : undefined}
                     style={{
