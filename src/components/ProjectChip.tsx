@@ -127,10 +127,11 @@ const ProjectChip: Component<Props> = (props) => {
       : '1px solid var(--border-subtle)';
 
   // Derived: how many rows to render, show-more visibility
+  const COLLAPSED_LIMIT = 5;
   const total = () => props.recentProjects.length;
   const visibleRows = () =>
-    expanded() ? props.recentProjects : props.recentProjects.slice(0, 10);
-  const showMoreCount = () => total() - 10;
+    expanded() ? props.recentProjects : props.recentProjects.slice(0, COLLAPSED_LIMIT);
+  const showMoreCount = () => total() - COLLAPSED_LIMIT;
   const hasRecent = () => total() > 0;
 
   // Confirm dialog copy — varies by (intent, autosaveStatus) (see spec §5.3)
@@ -170,12 +171,13 @@ const ProjectChip: Component<Props> = (props) => {
           cursor: 'pointer',
           transition: 'background var(--transition-fast), border-color var(--transition-fast)',
           'white-space': 'nowrap',
+          'min-width': '100px',
           'max-width': '180px',
           overflow: 'hidden',
           'text-overflow': 'ellipsis',
         }}
       >
-        <span style={{ overflow: 'hidden', 'text-overflow': 'ellipsis' }}>
+        <span style={{ flex: '1', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>
           {props.projectName}
         </span>
         <span style={{ 'flex-shrink': '0' }}>▾</span>
@@ -339,62 +341,33 @@ const ProjectChip: Component<Props> = (props) => {
                 </For>
               </div>
 
-              {/* Show more / Show less — only when total > 10 */}
-              <Show when={total() > 10}>
-                <Show
-                  when={!expanded()}
-                  fallback={
-                    /* Show less button */
-                    <button
-                      onClick={() => setExpanded(false)}
-                      style={{
-                        padding: '5px 10px',
-                        'font-size': 'var(--font-size-xs)',
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        'align-items': 'center',
-                        gap: '5px',
-                        border: 'none',
-                        background: 'transparent',
-                        width: '100%',
-                        'text-align': 'left',
-                        'font-family': 'inherit',
-                        transition: 'background var(--transition-fast)',
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                    >
-                      <span style={{ 'font-size': '9px' }}>▴</span>
-                      Show less
-                    </button>
-                  }
+              {/* Show more / Show less — single button toggling label/icon
+                  (avoid <Show fallback> two-button instances; click would unmount → click-outside listener
+                  would see detached node and falsely close the dropdown — see spec §3.3) */}
+              <Show when={total() > COLLAPSED_LIMIT}>
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  style={{
+                    padding: '5px 10px',
+                    'font-size': 'var(--font-size-xs)',
+                    color: expanded() ? 'var(--text-muted)' : 'var(--accent-blue)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    'align-items': 'center',
+                    gap: '5px',
+                    border: 'none',
+                    background: 'transparent',
+                    width: '100%',
+                    'text-align': 'left',
+                    'font-family': 'inherit',
+                    transition: 'background var(--transition-fast), color var(--transition-fast)',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  {/* Show more button */}
-                  <button
-                    onClick={() => setExpanded(true)}
-                    style={{
-                      padding: '5px 10px',
-                      'font-size': 'var(--font-size-xs)',
-                      color: 'var(--accent-blue)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      'align-items': 'center',
-                      gap: '5px',
-                      border: 'none',
-                      background: 'transparent',
-                      width: '100%',
-                      'text-align': 'left',
-                      'font-family': 'inherit',
-                      transition: 'background var(--transition-fast)',
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                  >
-                    <span style={{ 'font-size': '9px' }}>⋯</span>
-                    Show more ({showMoreCount()}) ↓
-                  </button>
-                </Show>
+                  <span style={{ 'font-size': '9px' }}>{expanded() ? '▴' : '⋯'}</span>
+                  {expanded() ? 'Show less' : `Show more (${showMoreCount()}) ↓`}
+                </button>
               </Show>
 
               {/* Divider — fixed, outside scroll area */}
