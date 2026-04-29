@@ -148,6 +148,10 @@ const ProjectChip: Component<Props> = (props) => {
     if (props.autosaveStatus === 'error') return 'Continue Anyway';
     return confirmIntent().kind === 'close' ? 'Close' : 'Switch';
   };
+  // Confirm button variant — close → danger (red), open → default (blue)
+  // autosave error 不改 variant，沿襲對應 intent 的顏色（spec §5.3）
+  const dialogVariant = (): 'default' | 'danger' =>
+    confirmIntent().kind === 'close' ? 'danger' : 'default';
 
   return (
     <>
@@ -390,6 +394,7 @@ const ProjectChip: Component<Props> = (props) => {
         message={dialogMessage()}
         confirmLabel={dialogConfirm()}
         cancelLabel="Cancel"
+        variant={dialogVariant()}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
       />

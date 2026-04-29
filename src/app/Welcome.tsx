@@ -134,6 +134,14 @@ export const Welcome: Component<Props> = (props) => {
     setErrorMsg('');
   };
 
+  // Final path preview — shows <parent.name>/<projectName> assemblage
+  const finalPath = (): string | null => {
+    const parent = parentHandle();
+    if (!parent) return null;
+    const name = newName().trim();
+    return name ? `${parent.name}/${name}` : `${parent.name}/...`;
+  };
+
   const subHeaderStyle = {
     'font-size': 'var(--font-size-xs)',
     'font-weight': '600',
@@ -509,6 +517,39 @@ export const Welcome: Component<Props> = (props) => {
                 onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleCreate(); if (e.key === 'Escape') closeModal(); }}
               />
+            </div>
+
+            {/* Final Path preview */}
+            <div data-devid="new-project-modal-path-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+              <label style={{
+                'font-size': 'var(--font-size-xs)',
+                color: 'var(--text-muted)',
+                'text-transform': 'uppercase' as const,
+                'letter-spacing': '0.6px',
+                'font-weight': '600',
+              }}>
+                Final Path
+              </label>
+              <div
+                data-devid="new-project-modal-path-preview"
+                title={finalPath() ?? undefined}
+                style={{
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-subtle)',
+                  'border-radius': 'var(--radius-md)',
+                  padding: 'var(--space-md) var(--space-lg)',
+                  'font-size': 'var(--font-size-sm)',
+                  'font-family': finalPath() ? 'var(--font-mono)' : 'inherit',
+                  'font-style': finalPath() ? 'normal' : 'italic',
+                  color: finalPath() ? 'var(--text-secondary)' : 'var(--text-muted)',
+                  'box-shadow': 'var(--shadow-input-inset)',
+                  overflow: 'hidden',
+                  'text-overflow': 'ellipsis',
+                  'white-space': 'nowrap',
+                }}
+              >
+                {finalPath() ?? 'Pick parent location to preview path'}
+              </div>
             </div>
 
             {/* Modal error */}

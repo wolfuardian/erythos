@@ -8,6 +8,8 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** 'danger' uses --accent-red for destructive actions; defaults to 'default' (blue) */
+  variant?: 'default' | 'danger';
 }
 
 const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
@@ -80,7 +82,6 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             >
               {props.cancelLabel ?? 'Cancel'}
             </button>
-            {/* TODO #345: variant='danger' → background: var(--accent-red) */}
             <button
               data-devid="confirm-dialog-confirm"
               onClick={props.onConfirm}
@@ -89,7 +90,9 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
               style={{
                 padding: '4px 16px',
                 height: '28px',
-                background: confirmHovered() ? 'var(--accent-blue-hover)' : 'var(--accent-blue)',
+                background: props.variant === 'danger'
+                  ? (confirmHovered() ? 'var(--accent-red-hover)' : 'var(--accent-red)')
+                  : (confirmHovered() ? 'var(--accent-blue-hover)' : 'var(--accent-blue)'),
                 color: 'white',
                 'border-radius': 'var(--radius-sm)',
                 'font-size': 'var(--font-size-sm)',
