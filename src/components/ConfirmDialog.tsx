@@ -50,10 +50,10 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             'box-shadow': 'var(--shadow-well-outer)',
           }}
         >
-          <h3 style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+          <h3 data-devid="confirm-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
             {props.title}
           </h3>
-          <p style={{
+          <p data-devid="confirm-dialog-message" style={{
             margin: '0 0 var(--space-md) 0',
             color: 'var(--text-secondary)',
             'font-size': 'var(--font-size-sm)',
@@ -61,8 +61,9 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
           }}>
             {props.message}
           </p>
-          <div style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
+          <div data-devid="confirm-dialog-actions" style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
             <button
+              data-devid="confirm-dialog-cancel"
               onClick={props.onCancel}
               onMouseEnter={() => setCancelHovered(true)}
               onMouseLeave={() => setCancelHovered(false)}
@@ -81,6 +82,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             </button>
             {/* TODO #345: variant='danger' → background: var(--accent-red) */}
             <button
+              data-devid="confirm-dialog-confirm"
               onClick={props.onConfirm}
               onMouseEnter={() => setConfirmHovered(true)}
               onMouseLeave={() => setConfirmHovered(false)}

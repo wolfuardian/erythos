@@ -44,10 +44,10 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
             'box-shadow': 'var(--shadow-well-outer)',
           }}
         >
-          <h3 style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+          <h3 data-devid="error-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
             {props.title}
           </h3>
-          <p style={{
+          <p data-devid="error-dialog-message" style={{
             margin: '0 0 var(--space-md) 0',
             color: 'var(--text-secondary)',
             'font-size': 'var(--font-size-sm)',
@@ -55,8 +55,9 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
           }}>
             {props.message}
           </p>
-          <div style={{ 'text-align': 'right' }}>
+          <div data-devid="error-dialog-actions" style={{ 'text-align': 'right' }}>
             <button
+              data-devid="error-dialog-close"
               onClick={props.onClose}
               style={{
                 padding: '4px 16px',
