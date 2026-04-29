@@ -1,4 +1,4 @@
-import { type Component, createSignal, onCleanup, Show } from 'solid-js';
+import { type Component, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
@@ -9,6 +9,10 @@ import { Toolbar } from '../components/Toolbar';
 import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
+
+// Persisted across page reloads (cleared on explicit Close Project).
+// Stored in localStorage so reload returns to the last opened project.
+const LAST_PROJECT_KEY = 'erythos-last-project-id';
 
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
@@ -68,6 +72,12 @@ const App: Component = () => {
     setEditor(e);
     setBridge(b);
     setProjectOpen(true);
+
+    // Persist for auto-restore on next page reload
+    if (projectManager.currentId) {
+      try { localStorage.setItem(LAST_PROJECT_KEY, projectManager.currentId); }
+      catch { /* localStorage may be disabled — auto-restore disabled silently */ }
+    }
   };
 
   const closeProject = async () => {
@@ -92,6 +102,9 @@ const App: Component = () => {
     projectManager.close();
     setBridge(null);
     setEditor(null);
+
+    // Explicit close → don't auto-restore on next reload
+    try { localStorage.removeItem(LAST_PROJECT_KEY); } catch { /* ignore */ }
   };
 
   const openProjectById = async (id: string) => {
@@ -100,6 +113,22 @@ const App: Component = () => {
     await closeProject();
     await openProject(handle);
   };
+
+  // Auto-restore last opened project on page reload
+  onMount(() => {
+    let lastId: string | null = null;
+    try { lastId = localStorage.getItem(LAST_PROJECT_KEY); } catch { /* no-op */ }
+    if (!lastId) return;
+    void (async () => {
+      const handle = await projectManager.openRecent(lastId);
+      if (!handle) {
+        // permission denied or entry gone — clear and stay on Welcome
+        try { localStorage.removeItem(LAST_PROJECT_KEY); } catch { /* no-op */ }
+        return;
+      }
+      await openProject(handle);
+    })();
+  });
 
   onCleanup(() => { void closeProject(); });
 
