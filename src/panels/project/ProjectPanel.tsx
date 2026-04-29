@@ -1,4 +1,4 @@
-import { createSignal, createMemo, For, Show, type Component } from 'solid-js';
+import { createSignal, createMemo, createEffect, on, For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
@@ -53,6 +53,10 @@ const ProjectPanel: Component = () => {
   const [showCreateConfirm, setShowCreateConfirm] = createSignal(false);
   const [pendingCreateArgs, setPendingCreateArgs] = createSignal<{ name: string; template: import('./NewSceneDialog').Template } | null>(null);
   const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
+
+  // Listen for newSceneRequest from any UI surface (e.g. ViewportPanel empty-state tile)
+  // defer:true skips the initial run; only opens dialog on subsequent bumps
+  createEffect(on(bridge.newSceneRequestVersion, () => setShowNewScene(true), { defer: true }));
 
   // ── New IDE state ──
   const [viewMode, setViewMode] = useAreaState<'grid' | 'list'>('viewMode', 'list');
@@ -196,7 +200,7 @@ const ProjectPanel: Component = () => {
       <PanelHeader
         title={bridge.projectName() ?? 'Project'}
         actions={
-          <button onClick={() => setShowCloseConfirm(true)} style={{
+          <button data-devid="project-panel-close-project" onClick={() => setShowCloseConfirm(true)} style={{
             background: 'var(--bg-section)', color: 'var(--text-muted)',
             border: '1px solid var(--border-subtle)',
             padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
@@ -215,6 +219,7 @@ const ProjectPanel: Component = () => {
       }}>
         {/* Search input */}
         <input
+          data-devid="project-panel-search"
           type="text"
           placeholder="Search assets..."
           value={searchQuery()}
@@ -236,6 +241,7 @@ const ProjectPanel: Component = () => {
 
         {/* Grid / List toggle button */}
         <button
+          data-devid="project-panel-view-toggle"
           title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
           onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
           style={{
@@ -266,6 +272,7 @@ const ProjectPanel: Component = () => {
 
         {/* + New Scene button */}
         <button
+          data-devid="project-panel-new-scene"
           onClick={() => setShowNewScene(true)}
           style={{
             background: 'var(--accent-blue)',
