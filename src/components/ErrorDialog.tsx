@@ -1,4 +1,5 @@
 import { type Component, Show, createEffect, onCleanup } from 'solid-js';
+import { Portal } from 'solid-js/web';
 
 export interface ErrorDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
 
   return (
     <Show when={props.open}>
+      <Portal>
       <div
         data-devid="error-dialog"
         onClick={props.onClose}
@@ -75,6 +77,7 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
           </div>
         </div>
       </div>
+      </Portal>
     </Show>
   );
 };

@@ -1,4 +1,5 @@
 import { createSignal, For, type Component } from 'solid-js';
+import { Portal } from 'solid-js/web';
 
 export type Template = 'empty' | 'default-lights' | 'studio';
 
@@ -74,6 +75,7 @@ export const NewSceneDialog: Component<Props> = (props) => {
   };
 
   return (
+    <Portal>
     <div
       data-devid="new-scene-dialog"
       style={{
@@ -195,5 +197,6 @@ export const NewSceneDialog: Component<Props> = (props) => {
         </div>
       </div>
     </div>
+    </Portal>
   );
 };
