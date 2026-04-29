@@ -1,4 +1,5 @@
 import { type Component, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { Portal } from 'solid-js/web';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
 
   return (
     <Show when={props.open}>
+      <Portal>
       <div
         data-devid="confirm-dialog"
         onClick={props.onCancel}
@@ -104,6 +106,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
           </div>
         </div>
       </div>
+      </Portal>
     </Show>
   );
 };
