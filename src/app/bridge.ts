@@ -1,4 +1,4 @@
-import { createSignal, type Accessor } from 'solid-js';
+import { createSignal, createEffect, type Accessor } from 'solid-js';
 import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
@@ -57,6 +57,12 @@ export interface EditorBridge {
   openProjectById: (id: string) => Promise<void>;
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
+  /** Reactive accessor for the currently active scene path */
+  currentScenePath: Accessor<string>;
+  /** Update the active scene path (kept in sync with autosave) */
+  setCurrentScenePath: (path: string) => void;
+  /** Create a new empty scene file; throws if name already exists */
+  createScene: (name: string) => Promise<string>;
   dispose: () => void;
 }
 
@@ -168,6 +174,12 @@ export function createEditorBridge(
   };
   const unsubProject = editor.projectManager.onChange(onProjectChanged);
 
+  // Bridge currentScenePath signal → editor.events so non-Solid subscribers can listen
+  createEffect(() => {
+    const path = editor.projectManager.currentScenePath();
+    editor.events.emit('currentSceneChanged', path);
+  });
+
   const dispose = () => {
     for (const [event, handler] of Object.entries(editorHandlers)) {
       editor.events.off(event as any, handler as any);
@@ -214,6 +226,9 @@ export function createEditorBridge(
     currentProjectId,
     openProjectById: deps?.openProjectById ?? ((_id: string) => Promise.resolve()),
     sharedGridObjects,
+    currentScenePath: editor.projectManager.currentScenePath,
+    setCurrentScenePath: (path: string) => editor.projectManager.setCurrentScenePath(path),
+    createScene: (name: string) => editor.projectManager.createScene(name),
     dispose,
   };
 }

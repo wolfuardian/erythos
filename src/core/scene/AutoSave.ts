@@ -24,8 +24,9 @@ export class AutoSave {
   async flushNow(): Promise<void> {
     if (this.timer !== null) { clearTimeout(this.timer); this.timer = null; }
     const json = JSON.stringify(this.editor.sceneDocument.serialize());
+    const path = this.editor.projectManager.currentScenePath();
     try {
-      await this.editor.projectManager.writeFile('scenes/scene.erythos', json);
+      await this.editor.projectManager.writeFile(path, json);
       this.editor.events.emit('autosaveStatusChanged', 'saved');
     } catch (err) {
       console.warn('[AutoSave] writeFile failed:', err);

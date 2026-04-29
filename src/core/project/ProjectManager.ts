@@ -6,6 +6,7 @@ declare global {
   }
 }
 
+import { createSignal, type Accessor } from 'solid-js';
 import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
@@ -19,6 +20,25 @@ export class ProjectManager {
   private _files: ProjectFile[] = [];
   private _listeners = new Set<Listener>();
   private _currentId: string | null = null;
+
+  private readonly _currentScenePath: Accessor<string>;
+  private readonly _setCurrentScenePath: (path: string) => void;
+
+  constructor() {
+    const [currentScenePath, setCurrentScenePath] = createSignal<string>('scenes/scene.erythos');
+    this._currentScenePath = currentScenePath;
+    this._setCurrentScenePath = setCurrentScenePath;
+  }
+
+  /** Reactive accessor for the currently active scene path */
+  get currentScenePath(): Accessor<string> {
+    return this._currentScenePath;
+  }
+
+  /** Update the currently active scene path */
+  setCurrentScenePath(path: string): void {
+    this._setCurrentScenePath(path);
+  }
 
   get name(): string | null {
     return this._handle?.name ?? null;
@@ -212,6 +232,49 @@ export class ProjectManager {
       if (!(await exists(candidate))) return candidate;
     }
     throw new Error(`Cannot find a free name for ${baseName} in ${folder}`);
+  }
+
+  /**
+   * Create a new empty scene file at scenes/<name>.erythos.
+   * Throws if a file with that name already exists.
+   * Returns the path on success.
+   */
+  async createScene(name: string): Promise<string> {
+    if (!this._handle) throw new Error('No project open');
+    const filename = `${name}.erythos`;
+    const scenesDir = await this._handle.getDirectoryHandle('scenes', { create: true });
+
+    // Check for existing file — throw if already exists
+    try {
+      await scenesDir.getFileHandle(filename);
+      throw new Error(`Scene "${name}" already exists`);
+    } catch (e: any) {
+      if (e.name !== 'NotFoundError') throw e;
+      // NotFoundError means it's free — proceed
+    }
+
+    const fileHandle = await scenesDir.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify({ version: 1, nodes: [] }));
+    await writable.close();
+
+    await this.rescan();
+    return `scenes/${filename}`;
+  }
+
+  /**
+   * Delete a file within the project by path.
+   * Rescans after deletion.
+   */
+  async deleteFile(path: string): Promise<void> {
+    if (!this._handle) throw new Error('No project open');
+    const parts = path.split('/');
+    let dir = this._handle;
+    for (let i = 0; i < parts.length - 1; i++) {
+      dir = await dir.getDirectoryHandle(parts[i]);
+    }
+    await (dir as any).removeEntry(parts[parts.length - 1]);
+    await this.rescan();
   }
 
   /** Subscribe to projectChanged event */

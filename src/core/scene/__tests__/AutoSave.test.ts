@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AutoSave } from '../AutoSave';
 
 // mock editor
-function makeEditor() {
+function makeEditor(scenePath = 'scenes/scene.erythos') {
   const listeners: Record<string, (() => void)[]> = {};
   return {
     sceneDocument: {
@@ -17,6 +17,7 @@ function makeEditor() {
       serialize: vi.fn(() => ({ version: 1, nodes: [] })),
     },
     projectManager: {
+      currentScenePath: vi.fn(() => scenePath),
       writeFile: vi.fn().mockResolvedValue(undefined),
     },
     events: {
@@ -36,7 +37,19 @@ describe('AutoSave', () => {
     vi.advanceTimersByTime(2000);
     await vi.runAllTimersAsync();
     expect(editor.projectManager.writeFile).toHaveBeenCalledWith(
-      'scenes/scene.erythos',
+      editor.projectManager.currentScenePath(),
+      expect.any(String),
+    );
+    autosave.dispose();
+  });
+
+  it('flushNow writes to currentScenePath, not a hardcoded path', async () => {
+    const customPath = 'scenes/my-level.erythos';
+    const editor = makeEditor(customPath);
+    const autosave = new AutoSave(editor);
+    await autosave.flushNow();
+    expect(editor.projectManager.writeFile).toHaveBeenCalledWith(
+      customPath,
       expect.any(String),
     );
     autosave.dispose();
