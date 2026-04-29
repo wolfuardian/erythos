@@ -1,4 +1,4 @@
-import { createSignal, createMemo, For, Show, type Component } from 'solid-js';
+import { createSignal, createMemo, createEffect, For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
@@ -50,7 +50,10 @@ const ProjectPanel: Component = () => {
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
   const [showLoadConfirm, setShowLoadConfirm] = createSignal(false);
   const [pendingLoadPath, setPendingLoadPath] = createSignal<string | null>(null);
-  const [selectedAssetPath, setSelectedAssetPath] = useAreaState<string | null>('selectedAssetPath', null);
+
+  // ── Multi-select state ──
+  const [selectedAssetPaths, setSelectedAssetPaths] = useAreaState<string[]>('selectedAssetPaths', []);
+  const [lastClickedAssetPath, setLastClickedAssetPath] = createSignal<string | null>(null);
 
   // ── New IDE state ──
   const [viewMode, setViewMode] = useAreaState<'grid' | 'list'>('viewMode', 'list');
@@ -112,6 +115,15 @@ const ProjectPanel: Component = () => {
     });
   });
 
+  // ── Clear selection when folder / filter / search changes ──
+  createEffect(() => {
+    void selectedFolder();
+    void activeFiltersArr();
+    void searchQuery();
+    setSelectedAssetPaths([]);
+    setLastClickedAssetPath(null);
+  });
+
   // ── Load scene: also syncs currentScenePath ──
   const doLoadScene = async (path: string) => {
     try {
@@ -134,8 +146,32 @@ const ProjectPanel: Component = () => {
     }
   };
 
-  const handleSelectAsset = (path: string) => {
-    setSelectedAssetPath(path === selectedAssetPath() ? null : path);
+  // ── Multi-select click handler (all types) ──
+  const handleAssetClick = (e: MouseEvent, path: string) => {
+    const assets = displayedAssets();
+    if (e.shiftKey) {
+      const last = lastClickedAssetPath();
+      const currentIdx = assets.findIndex(f => f.path === path);
+      const lastIdx = last !== null ? assets.findIndex(f => f.path === last) : -1;
+      if (lastIdx === -1) {
+        // No prior anchor → fallback to plain click
+        setSelectedAssetPaths([path]);
+      } else {
+        const start = Math.min(lastIdx, currentIdx);
+        const end = Math.max(lastIdx, currentIdx);
+        setSelectedAssetPaths(assets.slice(start, end + 1).map(f => f.path));
+      }
+    } else if (e.ctrlKey || e.metaKey) {
+      const current = selectedAssetPaths();
+      if (current.includes(path)) {
+        setSelectedAssetPaths(current.filter(p => p !== path));
+      } else {
+        setSelectedAssetPaths([...current, path]);
+      }
+    } else {
+      setSelectedAssetPaths([path]);
+    }
+    setLastClickedAssetPath(path);
   };
 
   const handleAssetsDrop = async (e: DragEvent) => {
@@ -201,6 +237,9 @@ const ProjectPanel: Component = () => {
       { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
     ];
   };
+
+  // ── Selection helper ──
+  const isSelected = (path: string) => selectedAssetPaths().includes(path);
 
   return (
     <div
@@ -371,6 +410,11 @@ const ProjectPanel: Component = () => {
             e.preventDefault();
             setContextMenu({ x: e.clientX, y: e.clientY, file: null });
           }}
+          onClick={() => {
+            // Click on empty area (bubbles up from non-file-row areas) → clear selection
+            setSelectedAssetPaths([]);
+            setLastClickedAssetPath(null);
+          }}
           style={{
             flex: 1,
             overflow: 'auto',
@@ -385,12 +429,15 @@ const ProjectPanel: Component = () => {
         >
           {/* ── Type-filter pill bar (list view only) ── */}
           <Show when={viewMode() === 'list'}>
-            <div style={{
-              display: 'flex', gap: '4px', padding: '6px 10px',
-              'border-bottom': '1px solid var(--border-subtle)',
-              'flex-wrap': 'wrap',
-              'flex-shrink': '0',
-            }}>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: 'flex', gap: '4px', padding: '6px 10px',
+                'border-bottom': '1px solid var(--border-subtle)',
+                'flex-wrap': 'wrap',
+                'flex-shrink': '0',
+              }}
+            >
               <For each={ALL_TYPES}>
                 {(t) => {
                   const meta = TYPE_META[t];
@@ -446,6 +493,8 @@ const ProjectPanel: Component = () => {
               <For each={displayedAssets()}>
                 {(f) => {
                   const meta = TYPE_META[f.type];
+                  const selected = () => isSelected(f.path);
+                  const hovered = () => hoveredAssetPath() === f.path;
                   return (
                     <div
                       data-file-row="true"
@@ -454,15 +503,21 @@ const ProjectPanel: Component = () => {
                       style={{
                         position: 'relative', width: '72px', cursor: 'pointer',
                         display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '4px',
-                        background: hoveredAssetPath() === f.path ? 'var(--bg-hover)' : undefined,
-                        outline: hoveredAssetPath() === f.path ? '1px solid var(--border-medium)' : undefined,
-                        'outline-offset': hoveredAssetPath() === f.path ? '-1px' : undefined,
-                        'border-radius': hoveredAssetPath() === f.path ? 'var(--radius-md)' : undefined,
+                        background: selected()
+                          ? 'var(--bg-selected)'
+                          : hovered()
+                            ? 'var(--bg-hover)'
+                            : undefined,
+                        outline: !selected() && hovered() ? '1px solid var(--border-medium)' : undefined,
+                        'outline-offset': !selected() && hovered() ? '-1px' : undefined,
+                        'border-radius': hovered() ? 'var(--radius-md)' : undefined,
                       }}
-                      onClick={
-                        f.type === 'scene' ? () => void handleLoadScene(f.path) :
-                        f.type === 'glb'   ? () => handleSelectAsset(f.path) : undefined
-                      }
+                      onClick={(e) => { e.stopPropagation(); handleAssetClick(e, f.path); }}
+                      onDblClick={(e) => {
+                        e.stopPropagation();
+                        if (f.type === 'scene') void handleLoadScene(f.path);
+                        // other types: future hook
+                      }}
                       onContextMenu={f.type === 'scene' ? (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -473,7 +528,7 @@ const ProjectPanel: Component = () => {
                       <div style={{
                         width: '64px', height: '64px',
                         background: 'var(--bg-section)',
-                        border: `1px solid ${selectedAssetPath() === f.path ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
+                        border: `1px solid ${selected() ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
                         'border-radius': 'var(--radius-md)',
                         display: 'flex', 'align-items': 'center', 'justify-content': 'center',
                         color: meta.color,
@@ -509,16 +564,19 @@ const ProjectPanel: Component = () => {
             <For each={displayedAssets()}>
               {(f) => {
                 const meta = TYPE_META[f.type];
+                const selected = () => isSelected(f.path);
+                const hovered = () => hoveredAssetPath() === f.path;
                 return (
                   <div
                     data-file-row="true"
                     onMouseEnter={() => setHoveredAssetPath(f.path)}
                     onMouseLeave={() => setHoveredAssetPath(prev => prev === f.path ? null : prev)}
-                    onClick={
-                      f.type === 'scene' ? () => void handleLoadScene(f.path) :
-                      f.type === 'glb'   ? () => handleSelectAsset(f.path) :
-                      undefined
-                    }
+                    onClick={(e) => { e.stopPropagation(); handleAssetClick(e, f.path); }}
+                    onDblClick={(e) => {
+                      e.stopPropagation();
+                      if (f.type === 'scene') void handleLoadScene(f.path);
+                      // other types: future hook
+                    }}
                     onContextMenu={f.type === 'scene' ? (e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -531,17 +589,17 @@ const ProjectPanel: Component = () => {
                     } : undefined}
                     style={{
                       display: 'flex', 'align-items': 'center', gap: '6px',
-                      padding: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '5px 6px' : '5px 10px',
-                      margin: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '0 4px' : undefined,
-                      cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
-                      background: (f.type === 'glb' && selectedAssetPath() === f.path)
+                      padding: hovered() && !selected() ? '5px 6px' : '5px 10px',
+                      margin: hovered() && !selected() ? '0 4px' : undefined,
+                      cursor: 'pointer',
+                      background: selected()
                         ? 'var(--bg-selected)'
-                        : hoveredAssetPath() === f.path
+                        : hovered()
                           ? 'var(--bg-hover)'
                           : undefined,
-                      outline: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '1px solid var(--border-medium)' : undefined,
-                      'outline-offset': hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '-1px' : undefined,
-                      'border-radius': hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? 'var(--radius-sm)' : undefined,
+                      outline: hovered() && !selected() ? '1px solid var(--border-medium)' : undefined,
+                      'outline-offset': hovered() && !selected() ? '-1px' : undefined,
+                      'border-radius': hovered() && !selected() ? 'var(--radius-sm)' : undefined,
                     }}
                   >
                     {/* Type pill */}
@@ -598,9 +656,14 @@ const ProjectPanel: Component = () => {
         'flex-shrink': '0',
       }}>
         <span>{displayedAssets().length} items</span>
-        <Show when={!!selectedAssetPath()}>
+        <Show when={selectedAssetPaths().length === 1}>
           <span style={{ 'margin-left': 'auto', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
-            {selectedAssetPath()}
+            {selectedAssetPaths()[0]}
+          </span>
+        </Show>
+        <Show when={selectedAssetPaths().length > 1}>
+          <span style={{ 'margin-left': 'auto' }}>
+            {selectedAssetPaths().length} items selected
           </span>
         </Show>
       </div>
