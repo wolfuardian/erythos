@@ -55,6 +55,10 @@ export interface EditorBridge {
   currentProjectId: Accessor<string | null>;
   /** Callback injected by App.tsx to switch to a different recent project by id */
   openProjectById: (id: string) => Promise<void>;
+  /** Counter signal — incremented when any UI requests the New Scene dialog. ProjectPanel listens and opens its dialog. */
+  newSceneRequestVersion: Accessor<number>;
+  /** Bump newSceneRequestVersion to request opening the New Scene dialog from anywhere */
+  requestNewScene: () => void;
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
   dispose: () => void;
@@ -94,6 +98,7 @@ export function createEditorBridge(
   const [currentProjectId, setCurrentProjectId] = createSignal<string | null>(
     editor.projectManager.currentId,
   );
+  const [newSceneRequestVersion, setNewSceneRequestVersion] = createSignal(0);
 
   // 非同步初始化（fire-and-forget）
   void GlbStore.keys().then(setGlbKeys);
@@ -213,6 +218,8 @@ export function createEditorBridge(
     recentProjects,
     currentProjectId,
     openProjectById: deps?.openProjectById ?? ((_id: string) => Promise.resolve()),
+    newSceneRequestVersion,
+    requestNewScene: () => setNewSceneRequestVersion((v) => v + 1),
     sharedGridObjects,
     dispose,
   };

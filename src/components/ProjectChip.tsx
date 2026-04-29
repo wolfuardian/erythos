@@ -216,7 +216,7 @@ const ProjectChip: Component<Props> = (props) => {
             >
               {/* States A1/A2/B: has recent projects */}
               {/* Section header */}
-              <div style={{
+              <div data-devid="project-chip-recent-header" style={{
                 padding: '6px 10px 4px',
                 'font-size': 'var(--font-size-xs)',
                 'font-family': 'var(--font-mono)',
@@ -245,6 +245,7 @@ const ProjectChip: Component<Props> = (props) => {
                     const isCurrent = () => entry.id === props.currentProjectId;
                     return (
                       <div
+                        data-devid={`project-chip-row-${entry.id}`}
                         onClick={() => !isCurrent() && handleOpenProject(entry.id)}
                         style={{
                           display: 'grid',
@@ -350,6 +351,7 @@ const ProjectChip: Component<Props> = (props) => {
                   would see detached node and falsely close the dropdown — see spec §3.3) */}
               <Show when={total() > COLLAPSED_LIMIT}>
                 <button
+                  data-devid="project-chip-show-more-toggle"
                   onClick={() => setExpanded((v) => !v)}
                   style={{
                     padding: '5px 10px',
@@ -375,7 +377,7 @@ const ProjectChip: Component<Props> = (props) => {
               </Show>
 
               {/* Divider — fixed, outside scroll area */}
-              <div style={{
+              <div data-devid="project-chip-divider" style={{
                 height: '1px',
                 background: 'var(--border-medium)',
                 'flex-shrink': '0',
@@ -404,6 +406,7 @@ const ProjectChip: Component<Props> = (props) => {
 
 const CloseProjectItem: Component<{ onClick: () => void }> = (props) => (
   <button
+    data-devid="project-chip-close-project"
     onClick={props.onClick}
     style={{
       padding: '6px 10px',

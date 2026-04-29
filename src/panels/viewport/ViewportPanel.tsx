@@ -509,10 +509,10 @@ const ViewportPanel: Component = () => {
     viewport = null;
   });
 
-  const handleNewScene = async () => {
-    // SceneDocument 已是空態（version: 1, nodes: []），不需 reset。
-    // 立即 flushNow 把空 scene 落地到 disk
-    await editor.autosave.flushNow();
+  const handleNewScene = () => {
+    // Trigger ProjectPanel's NewSceneDialog via bridge channel — same UX as
+    // ProjectPanel's `+ New Scene` button (template + name picker).
+    bridge.requestNewScene();
   };
 
   return (
@@ -639,7 +639,8 @@ const ViewportPanel: Component = () => {
             <div style={{ display: 'flex', 'flex-direction': 'column', gap: '8px', width: '100%' }}>
               {/* New Scene tile */}
               <button
-                onClick={() => void handleNewScene()}
+                data-devid="viewport-panel-new-scene-tile"
+                onClick={() => handleNewScene()}
                 style={{
                   width: '100%',
                   display: 'flex',
@@ -662,6 +663,7 @@ const ViewportPanel: Component = () => {
               </button>
               {/* Open Scene tile */}
               <button
+                data-devid="viewport-panel-open-scene-tile"
                 onClick={() => {}}
                 title="Multi-scene support coming soon"
                 style={{
