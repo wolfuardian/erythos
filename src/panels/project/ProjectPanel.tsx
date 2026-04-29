@@ -66,9 +66,9 @@ const ProjectPanel: Component = () => {
   // ── New Scene dialog state ──
   const [showNewScenePrompt, setShowNewScenePrompt] = createSignal(false);
 
-  // ── Delete confirm state ──
+  // ── Delete confirm state: unified for single and batch ──
   const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
-  const [pendingDeletePath, setPendingDeletePath] = createSignal<string | null>(null);
+  const [pendingDeletePaths, setPendingDeletePaths] = createSignal<string[]>([]);
 
   const handleClose = () => editor.projectManager.close();
 
@@ -205,37 +205,124 @@ const ProjectPanel: Component = () => {
     }
   };
 
-  // ── Delete flow ──
+  // ── Delete flow (unified single + batch) ──
   const handleDeleteConfirmed = async () => {
-    const path = pendingDeletePath();
+    const paths = pendingDeletePaths();
     setShowDeleteConfirm(false);
-    setPendingDeletePath(null);
-    if (!path) return;
-    try {
-      await editor.projectManager.deleteFile(path);
-    } catch (e: any) {
-      setErrorTitle('Delete Failed');
-      setErrorMsg(e.message || String(e));
+    setPendingDeletePaths([]);
+    if (paths.length === 0) return;
+
+    const errors: string[] = [];
+    for (const path of paths) {
+      try {
+        await editor.projectManager.deleteFile(path);
+      } catch (e: any) {
+        errors.push(`${path}: ${e.message ?? String(e)}`);
+      }
     }
+
+    // Clear selection for successfully processed paths
+    setSelectedAssetPaths([]);
+
+    if (errors.length > 0) {
+      setErrorTitle('Delete Failed');
+      setErrorMsg(errors.join('\n'));
+    }
+  };
+
+  // ── Build delete confirm message ──
+  const buildDeleteMessage = (paths: string[]): string => {
+    const MAX_SHOWN = 10;
+    const shown = paths.slice(0, MAX_SHOWN);
+    const remaining = paths.length - MAX_SHOWN;
+    let msg = shown.join('\n');
+    if (remaining > 0) {
+      msg += `\n... and ${remaining} more`;
+    }
+    msg += '\n\nThis action cannot be undone.';
+    return msg;
+  };
+
+  // ── Context menu: shared handler for both grid and list ──
+  const handleAssetContextMenu = (e: MouseEvent, f: ProjectFile) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const selected = selectedAssetPaths();
+    const inSelection = selected.includes(f.path);
+    if (!inSelection) {
+      // Right-clicked outside selection → switch selection to this file only
+      setSelectedAssetPaths([f.path]);
+      setLastClickedAssetPath(f.path);
+    }
+    // If in selection and length === 1, or just switched to single → single mode
+    // If in selection and length > 1 → batch mode
+    // (state is set above; contextMenuItems() reads it fresh)
+    setContextMenu({ x: e.clientX, y: e.clientY, file: f });
   };
 
   // ── Context menu items ──
   const contextMenuItems = (): MenuItem[] => {
     const file = contextMenu()?.file ?? null;
-    if (file?.type === 'scene') {
+
+    if (file === null) {
+      // Empty area right-click
       return [
-        { label: 'Open Scene', action: () => handleLoadScene(file.path) },
-        { label: 'Delete', action: () => {
-          setPendingDeletePath(file.path);
+        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
+      ];
+    }
+
+    const selected = selectedAssetPaths();
+    const isBatch = selected.length > 1;
+
+    if (isBatch) {
+      // Batch mode: N items selected
+      const n = selected.length;
+      return [
+        { label: `Delete ${n} items`, action: () => {
+          setPendingDeletePaths([...selected]);
           setShowDeleteConfirm(true);
         }},
         { label: '---' },
         { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
       ];
     }
+
+    // Single mode
+    if (file.type === 'scene') {
+      return [
+        { label: 'Open Scene', action: () => handleLoadScene(file.path) },
+        { label: 'Delete', action: () => {
+          setPendingDeletePaths([file.path]);
+          setShowDeleteConfirm(true);
+        }},
+        { label: '---' },
+        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
+      ];
+    }
+
+    // Single, non-scene type
     return [
+      { label: 'Delete', action: () => {
+        setPendingDeletePaths([file.path]);
+        setShowDeleteConfirm(true);
+      }},
+      { label: '---' },
       { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
     ];
+  };
+
+  // ── Delete confirm dialog props (derived) ──
+  const deleteConfirmTitle = () => {
+    const paths = pendingDeletePaths();
+    return paths.length > 1 ? `Delete ${paths.length} items?` : 'Delete file?';
+  };
+
+  const deleteConfirmMessage = () => {
+    const paths = pendingDeletePaths();
+    if (paths.length === 1) {
+      return `"${paths[0]}" will be permanently deleted.\n\nThis action cannot be undone.`;
+    }
+    return buildDeleteMessage(paths);
   };
 
   // ── Selection helper ──
@@ -518,11 +605,7 @@ const ProjectPanel: Component = () => {
                         if (f.type === 'scene') void handleLoadScene(f.path);
                         // other types: future hook
                       }}
-                      onContextMenu={f.type === 'scene' ? (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setContextMenu({ x: e.clientX, y: e.clientY, file: f });
-                      } : undefined}
+                      onContextMenu={(e) => handleAssetContextMenu(e, f)}
                     >
                       {/* Thumbnail placeholder */}
                       <div style={{
@@ -577,11 +660,7 @@ const ProjectPanel: Component = () => {
                       if (f.type === 'scene') void handleLoadScene(f.path);
                       // other types: future hook
                     }}
-                    onContextMenu={f.type === 'scene' ? (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setContextMenu({ x: e.clientX, y: e.clientY, file: f });
-                    } : undefined}
+                    onContextMenu={(e) => handleAssetContextMenu(e, f)}
                     draggable={f.type === 'glb'}
                     onDragStart={f.type === 'glb' ? (e) => {
                       e.dataTransfer!.setData('application/erythos-glb', f.path);
@@ -694,13 +773,13 @@ const ProjectPanel: Component = () => {
       />
       <ConfirmDialog
         open={showDeleteConfirm()}
-        title="Delete scene?"
-        message={`"${pendingDeletePath()}" will be permanently deleted.`}
+        title={deleteConfirmTitle()}
+        message={deleteConfirmMessage()}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"
         onConfirm={() => void handleDeleteConfirmed()}
-        onCancel={() => { setShowDeleteConfirm(false); setPendingDeletePath(null); }}
+        onCancel={() => { setShowDeleteConfirm(false); setPendingDeletePaths([]); }}
       />
       <PromptDialog
         open={showNewScenePrompt()}
