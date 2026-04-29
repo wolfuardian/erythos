@@ -34,9 +34,9 @@
 
 | State | 觸發 | 內容 |
 |-------|------|------|
-| **A1 Collapsed** | 預設、totalRecent > 10 | sub-header `RECENT PROJECTS` + 前 10 行 + `Show more (n) ↓` + divider + `Close Project` |
+| **A1 Collapsed** | 預設、totalRecent > 5 | sub-header `RECENT PROJECTS` + 前 5 行 + `Show more (n) ↓` + divider + `Close Project` |
 | **A2 Expanded** | A1 點 `Show more` | sub-header + 全部 N 行（list 區 `max-height: 560px` = 20 row + scrollbar）+ `Show less ▴` + divider + `Close Project` |
-| **B Few** | totalRecent ≤ 10 | sub-header + 全 N 行 + (無 show more) + divider + `Close Project` |
+| **B Few** | totalRecent ≤ 5 | sub-header + 全 N 行 + (無 show more) + divider + `Close Project` |
 | **C Empty** | totalRecent = 0 | 只有 `Close Project`（省略孤立 sub-header / divider） |
 | **D Current-in-list** | A1/A2/B 任一含當前 project | 該 row：`background: rgba(82,127,200,0.08)` + `border-left: 2px solid var(--accent-blue)` + `cursor: default`，name 旁加 `CURRENT` badge |
 
@@ -52,14 +52,15 @@
 
 ### 3.3 Show more / less
 
-- `Show more (n) ↓`：n = `totalRecent - 10`
+- `Show more (n) ↓`：n = `totalRecent - 5`
 - `Show less ▴`：A2 狀態出現
 - 樣式同 dropdown 內 entry，但字體用 `var(--text-secondary)` 略淡
 - 點擊**只切 dropdown 內部 expand state**，不關閉 dropdown、不 close project、不跳 Welcome
+- **實作必須是同一 button 元素切 label/icon**，不可用 `<Show fallback>` 切兩個 button instance（後者會在 click 後 unmount → click-outside listener 對 detached node 返 false → 誤關 dropdown）
 
 ### 3.4 List 區捲動規則
 
-- A1：`overflow: hidden`，DOM 端只 render 10 行（不是 CSS truncate；避免半行露出）
+- A1：`overflow: hidden`，DOM 端只 render 5 行（不是 CSS truncate；避免半行露出）
 - A2：`max-height: 560px` + `overflow-y: auto`（超過 20 行才出 scrollbar）
 - B：natural height，無 scroll
 - divider + `Close Project` 固定在 list 區外（不跟著 scroll）
@@ -268,3 +269,4 @@ action 視觸發來源（close vs open new）分流：confirm 後執行對應動
 | 2026-04-28 | 建立 v2 spec — dropdown 加 recent projects + show more/less，取代 v1 spec §10 的「不做 Switch」結論（同 idea 不同形式） |
 | 2026-04-28 | Close Project 點擊一律彈 ConfirmDialog（指揮家要求）— 不再條件性只在 autosave error 才 confirm。新 §5.1b + 更新 §5.3 文案表（一般 close 用 `Close project?`，error 仍用 generic 警告）。Switch project 行為當時不變 |
 | 2026-04-28 | Switch project 比照 Close Project 一律 confirm（指揮家補充：同性質破壞性操作）。§5.1 流程更新、§5.3 文案表加 `Switch to "<name>"?`。`confirmIntent.open` 擴 `{ id, name }` 帶目標名稱供文案 lookup |
+| 2026-04-29 | dropdown 預設前 10 → 前 5（指揮家）。§3.1 / §3.3 / §3.4 數字同步。§3.3 加實作約束：show more/less 必須同一 button 切 label，避免 `<Show fallback>` 兩 instance 在 click 後 unmount 觸發 click-outside 誤關 dropdown |
