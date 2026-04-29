@@ -1,4 +1,4 @@
-import { createSignal, createEffect, type Accessor } from 'solid-js';
+import { createSignal, type Accessor } from 'solid-js';
 import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
@@ -173,12 +173,6 @@ export function createEditorBridge(
     void editor.projectManager.getRecentProjects().then(setRecentProjects);
   };
   const unsubProject = editor.projectManager.onChange(onProjectChanged);
-
-  // Bridge currentScenePath signal → editor.events so non-Solid subscribers can listen
-  createEffect(() => {
-    const path = editor.projectManager.currentScenePath();
-    editor.events.emit('currentSceneChanged', path);
-  });
 
   const dispose = () => {
     for (const [event, handler] of Object.entries(editorHandlers)) {
