@@ -31,6 +31,9 @@ const App: Component = () => {
     await e.init();
     await projectManager.openHandle(handle);
 
+    // Set default scene path before attempting to load
+    projectManager.setCurrentScenePath('scenes/scene.erythos');
+
     try {
       const sceneFile = await projectManager.readFile('scenes/scene.erythos');
       const text = await sceneFile.text();
@@ -39,6 +42,7 @@ const App: Component = () => {
       if (err?.name !== 'NotFoundError') {
         console.warn('[App] Could not load scene.erythos:', err);
       }
+      // Even on NotFoundError keep default path so autosave writes to correct location
     }
 
     sharedGrid = new GridHelpers();

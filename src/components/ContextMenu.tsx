@@ -175,7 +175,10 @@ const ContextMenu: Component<ContextMenuProps> = (props) => {
       }}
     >
       <For each={props.items}>
-        {(item) => <MenuItemRow item={item} onClose={props.onClose} />}
+        {(item) => item.label === '---'
+          ? <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
+          : <MenuItemRow item={item} onClose={props.onClose} />
+        }
       </For>
     </div>
   );

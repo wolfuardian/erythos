@@ -3,6 +3,8 @@ import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PromptDialog } from '../../components/PromptDialog';
+import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 
@@ -55,6 +57,16 @@ const ProjectPanel: Component = () => {
   const [searchQuery, setSearchQuery] = useAreaState<string>('searchQuery', '');
   const [selectedFolder, setSelectedFolder] = useAreaState<string | null>('selectedFolder', null);
 
+  // ── Context menu state ──
+  const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; file: ProjectFile | null } | null>(null);
+
+  // ── New Scene dialog state ──
+  const [showNewScenePrompt, setShowNewScenePrompt] = createSignal(false);
+
+  // ── Delete confirm state ──
+  const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
+  const [pendingDeletePath, setPendingDeletePath] = createSignal<string | null>(null);
+
   const handleClose = () => editor.projectManager.close();
 
   // ── Browser: Assets/ ──
@@ -99,11 +111,13 @@ const ProjectPanel: Component = () => {
     });
   });
 
+  // ── Load scene: also syncs currentScenePath ──
   const doLoadScene = async (path: string) => {
     try {
       const file = await editor.projectManager.readFile(path);
       const parsed = JSON.parse(await file.text());
       editor.loadScene(parsed);
+      bridge.setCurrentScenePath(path);
     } catch (e: any) {
       setErrorTitle('Load Failed');
       setErrorMsg(e.message || String(e));
@@ -139,6 +153,52 @@ const ProjectPanel: Component = () => {
       setErrorTitle('Import Failed');
       setErrorMsg(errors.join('\n'));
     }
+  };
+
+  // ── New Scene flow ──
+  const handleNewScene = async (name: string) => {
+    setShowNewScenePrompt(false);
+    try {
+      const path = await bridge.createScene(name);
+      bridge.setCurrentScenePath(path);
+      editor.loadScene({ version: 1, nodes: [] });
+    } catch (e: any) {
+      setErrorTitle('Create Scene Failed');
+      setErrorMsg(e.message || String(e));
+    }
+  };
+
+  // ── Delete flow ──
+  const handleDeleteConfirmed = async () => {
+    const path = pendingDeletePath();
+    setShowDeleteConfirm(false);
+    setPendingDeletePath(null);
+    if (!path) return;
+    try {
+      await editor.projectManager.deleteFile(path);
+    } catch (e: any) {
+      setErrorTitle('Delete Failed');
+      setErrorMsg(e.message || String(e));
+    }
+  };
+
+  // ── Context menu items ──
+  const contextMenuItems = (): MenuItem[] => {
+    const file = contextMenu()?.file ?? null;
+    if (file?.type === 'scene') {
+      return [
+        { label: 'Open Scene', action: () => handleLoadScene(file.path) },
+        { label: 'Delete', action: () => {
+          setPendingDeletePath(file.path);
+          setShowDeleteConfirm(true);
+        }},
+        { label: '---' },
+        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
+      ];
+    }
+    return [
+      { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
+    ];
   };
 
   return (
@@ -294,7 +354,7 @@ const ProjectPanel: Component = () => {
           </For>
         </div>
 
-        {/* ── Right: asset area with drag-drop wrapper ── */}
+        {/* ── Right: asset area with drag-drop + context menu wrapper ── */}
         <div
           onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
           onDragEnter={(e) => { e.preventDefault(); setIsDragOver(true); }}
@@ -304,6 +364,12 @@ const ProjectPanel: Component = () => {
             }
           }}
           onDrop={(e) => void handleAssetsDrop(e)}
+          onContextMenu={(e) => {
+            // Only fire if not on a file row (file rows have their own context menu)
+            if ((e.target as Element).closest('[data-file-row]')) return;
+            e.preventDefault();
+            setContextMenu({ x: e.clientX, y: e.clientY, file: null });
+          }}
           style={{
             flex: 1,
             overflow: 'auto',
@@ -313,6 +379,7 @@ const ProjectPanel: Component = () => {
             transition: 'border-color 100ms, background 100ms',
             display: 'flex',
             'flex-direction': 'column',
+            position: 'relative',
           }}
         >
           {/* ── Type-filter pill bar (list view only) ── */}
@@ -380,6 +447,7 @@ const ProjectPanel: Component = () => {
                   const meta = TYPE_META[f.type];
                   return (
                     <div
+                      data-file-row="true"
                       style={{
                         position: 'relative', width: '72px', cursor: 'pointer',
                         display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '4px',
@@ -388,6 +456,11 @@ const ProjectPanel: Component = () => {
                         f.type === 'scene' ? () => void handleLoadScene(f.path) :
                         f.type === 'glb'   ? () => handleSelectAsset(f.path) : undefined
                       }
+                      onContextMenu={f.type === 'scene' ? (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setContextMenu({ x: e.clientX, y: e.clientY, file: f });
+                      } : undefined}
                     >
                       {/* Thumbnail placeholder */}
                       <div style={{
@@ -431,11 +504,17 @@ const ProjectPanel: Component = () => {
                 const meta = TYPE_META[f.type];
                 return (
                   <div
+                    data-file-row="true"
                     onClick={
                       f.type === 'scene' ? () => void handleLoadScene(f.path) :
                       f.type === 'glb'   ? () => handleSelectAsset(f.path) :
                       undefined
                     }
+                    onContextMenu={f.type === 'scene' ? (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContextMenu({ x: e.clientX, y: e.clientY, file: f });
+                    } : undefined}
                     draggable={f.type === 'glb'}
                     onDragStart={f.type === 'glb' ? (e) => {
                       e.dataTransfer!.setData('application/erythos-glb', f.path);
@@ -481,6 +560,15 @@ const ProjectPanel: Component = () => {
               Place files in scenes/, models/, textures/,<br />hdris/, prefabs/, or other/ folders.
             </div>
           </Show>
+
+          {/* ── Context menu ── */}
+          <Show when={contextMenu()}>
+            <ContextMenu
+              items={contextMenuItems()}
+              position={{ x: contextMenu()!.x, y: contextMenu()!.y }}
+              onClose={() => setContextMenu(null)}
+            />
+          </Show>
         </div>
       </div>
 
@@ -525,6 +613,25 @@ const ProjectPanel: Component = () => {
           if (path !== null) void doLoadScene(path);
         }}
         onCancel={() => { setShowLoadConfirm(false); setPendingLoadPath(null); }}
+      />
+      <ConfirmDialog
+        open={showDeleteConfirm()}
+        title="Delete scene?"
+        message={`"${pendingDeletePath()}" will be permanently deleted.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteConfirmed()}
+        onCancel={() => { setShowDeleteConfirm(false); setPendingDeletePath(null); }}
+      />
+      <PromptDialog
+        open={showNewScenePrompt()}
+        title="New Scene"
+        message="Enter a name for the new scene."
+        placeholder="scene-name"
+        confirmLabel="Create"
+        onConfirm={(name) => void handleNewScene(name)}
+        onCancel={() => setShowNewScenePrompt(false)}
       />
     </div>
   );
