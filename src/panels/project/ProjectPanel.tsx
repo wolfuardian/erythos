@@ -99,6 +99,7 @@ const ProjectPanel: Component = () => {
   const [hoveredFilter, setHoveredFilter] = createSignal<ProjectFile['type'] | null>(null);
   const [isDragOver, setIsDragOver] = createSignal(false);
   const [hoveredFolder, setHoveredFolder] = createSignal<string | null>(null);
+  const [hoveredAssetPath, setHoveredAssetPath] = createSignal<string | null>(null);
 
   // ── Filtered assets (folder + search + type-filter) ──
   const displayedAssets = createMemo(() => {
@@ -448,9 +449,15 @@ const ProjectPanel: Component = () => {
                   return (
                     <div
                       data-file-row="true"
+                      onMouseEnter={() => setHoveredAssetPath(f.path)}
+                      onMouseLeave={() => setHoveredAssetPath(prev => prev === f.path ? null : prev)}
                       style={{
                         position: 'relative', width: '72px', cursor: 'pointer',
                         display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '4px',
+                        background: hoveredAssetPath() === f.path ? 'var(--bg-hover)' : undefined,
+                        outline: hoveredAssetPath() === f.path ? '1px solid var(--border-medium)' : undefined,
+                        'outline-offset': hoveredAssetPath() === f.path ? '-1px' : undefined,
+                        'border-radius': hoveredAssetPath() === f.path ? 'var(--radius-md)' : undefined,
                       }}
                       onClick={
                         f.type === 'scene' ? () => void handleLoadScene(f.path) :
@@ -505,6 +512,8 @@ const ProjectPanel: Component = () => {
                 return (
                   <div
                     data-file-row="true"
+                    onMouseEnter={() => setHoveredAssetPath(f.path)}
+                    onMouseLeave={() => setHoveredAssetPath(prev => prev === f.path ? null : prev)}
                     onClick={
                       f.type === 'scene' ? () => void handleLoadScene(f.path) :
                       f.type === 'glb'   ? () => handleSelectAsset(f.path) :
@@ -522,11 +531,17 @@ const ProjectPanel: Component = () => {
                     } : undefined}
                     style={{
                       display: 'flex', 'align-items': 'center', gap: '6px',
-                      padding: '5px 10px',
+                      padding: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '5px 6px' : '5px 10px',
+                      margin: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '0 4px' : undefined,
                       cursor: (f.type === 'scene' || f.type === 'glb') ? 'pointer' : 'default',
                       background: (f.type === 'glb' && selectedAssetPath() === f.path)
                         ? 'var(--bg-selected)'
-                        : undefined,
+                        : hoveredAssetPath() === f.path
+                          ? 'var(--bg-hover)'
+                          : undefined,
+                      outline: hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '1px solid var(--border-medium)' : undefined,
+                      'outline-offset': hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? '-1px' : undefined,
+                      'border-radius': hoveredAssetPath() === f.path && !(f.type === 'glb' && selectedAssetPath() === f.path) ? 'var(--radius-sm)' : undefined,
                     }}
                   >
                     {/* Type pill */}
