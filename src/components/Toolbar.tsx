@@ -168,7 +168,6 @@ export const Toolbar: Component = () => {
       <Divider />
 
       {/* File operations */}
-      <ToolbarBtn label="New" onClick={() => editor.clear()} title="New Scene" />
       <ToolbarBtn label="Undo" onClick={() => editor.undo()} disabled={!bridge.canUndo()} title="Undo (Ctrl+Z)" />
       <ToolbarBtn label="Redo" onClick={() => editor.redo()} disabled={!bridge.canRedo()} title="Redo (Ctrl+Y)" />
 
