@@ -1,4 +1,4 @@
-import { type Component, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
@@ -13,6 +13,11 @@ import { Welcome } from './Welcome';
 // Persisted across page reloads (cleared on explicit Close Project).
 // Stored in localStorage so reload returns to the last opened project.
 const LAST_PROJECT_KEY = 'erythos-last-project-id';
+
+// Per-project last edited scene path. Survives Close Project so re-opening
+// the same project resumes the previously active scene.
+const LAST_SCENE_KEY_PREFIX = 'erythos-last-scene-';
+const DEFAULT_SCENE_PATH = 'scenes/scene.erythos';
 
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
@@ -31,19 +36,42 @@ const App: Component = () => {
     await e.init();
     await projectManager.openHandle(handle);
 
-    // Set default scene path before attempting to load
-    projectManager.setCurrentScenePath('scenes/scene.erythos');
-
-    try {
-      const sceneFile = await projectManager.readFile('scenes/scene.erythos');
-      const text = await sceneFile.text();
-      e.loadScene(JSON.parse(text));
-    } catch (err: any) {
-      if (err?.name !== 'NotFoundError') {
-        console.warn('[App] Could not load scene.erythos:', err);
-      }
-      // Even on NotFoundError keep default path so autosave writes to correct location
+    // Resolve scene path: persisted per-project value, fall back to default.
+    const projectId = projectManager.currentId;
+    let scenePath = DEFAULT_SCENE_PATH;
+    if (projectId) {
+      try {
+        const persisted = localStorage.getItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`);
+        if (persisted) scenePath = persisted;
+      } catch { /* localStorage may be disabled */ }
     }
+    projectManager.setCurrentScenePath(scenePath);
+
+    const tryLoadScene = async (path: string): Promise<'ok' | 'notFound' | 'failed'> => {
+      try {
+        const sceneFile = await projectManager.readFile(path);
+        const text = await sceneFile.text();
+        e.loadScene(JSON.parse(text));
+        return 'ok';
+      } catch (err: any) {
+        if (err?.name === 'NotFoundError') return 'notFound';
+        console.warn(`[App] Could not load scene "${path}":`, err);
+        return 'failed';
+      }
+    };
+
+    const result = await tryLoadScene(scenePath);
+    if (result === 'notFound' && scenePath !== DEFAULT_SCENE_PATH) {
+      // Persisted scene was deleted — drop the stale key and retry the default.
+      if (projectId) {
+        try { localStorage.removeItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`); }
+        catch { /* ignore */ }
+      }
+      scenePath = DEFAULT_SCENE_PATH;
+      projectManager.setCurrentScenePath(scenePath);
+      await tryLoadScene(scenePath);
+    }
+    // For default-path NotFoundError keep default so autosave writes to the correct location.
 
     sharedGrid = new GridHelpers();
     e.threeScene.add(sharedGrid.grid);
@@ -117,6 +145,15 @@ const App: Component = () => {
     await closeProject();
     await openProject(handle);
   };
+
+  // Persist active scene path per-project so reload resumes the right scene.
+  createEffect(() => {
+    const path = projectManager.currentScenePath();
+    const id = projectManager.currentId;
+    if (!id) return;
+    try { localStorage.setItem(`${LAST_SCENE_KEY_PREFIX}${id}`, path); }
+    catch { /* localStorage may be disabled */ }
+  });
 
   // Auto-restore last opened project on page reload
   onMount(() => {
