@@ -153,7 +153,23 @@ export function loadStore(): WorkspaceStore {
           }
           return { ...w, editorTypes: newEditorTypes };
         });
-        return { ...parsed, workspaces: leafToPrefabMigratedWorkspaces };
+        // Migration: drop orphan selectedAssetPaths key.
+        // ProjectPanel switched from useAreaState to createSignal (transient selection),
+        // leaving stale entries in panelStates that can't be reached or updated.
+        const orphanKeyDroppedWorkspaces = leafToPrefabMigratedWorkspaces.map(w => {
+          if (!w.panelStates) return w;
+          const cleaned: Record<string, Record<string, Record<string, unknown>>> = {};
+          for (const [areaId, perEditor] of Object.entries(w.panelStates)) {
+            cleaned[areaId] = {};
+            for (const [editorType, hooks] of Object.entries(perEditor)) {
+              const next = { ...hooks };
+              delete next.selectedAssetPaths;
+              cleaned[areaId][editorType] = next;
+            }
+          }
+          return { ...w, panelStates: cleaned };
+        });
+        return { ...parsed, workspaces: orphanKeyDroppedWorkspaces };
       }
     }
   } catch { /* fall through */ }
