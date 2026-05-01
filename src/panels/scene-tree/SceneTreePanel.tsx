@@ -301,7 +301,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           <span style={{ width: '14px', 'flex-shrink': 0 }} />
         </Show>
 
-        {/* Type icon (SVG) */}
+        {/* Type icon (SVG) — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span
           data-testid="scene-tree-row-icon"
           style={{
@@ -312,6 +312,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
             display: 'inline-flex',
             'align-items': 'center',
             'justify-content': 'center',
+            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
           }}
         >
           {(() => {
@@ -320,7 +321,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           })()}
         </span>
 
-        {/* Name */}
+        {/* Name — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span
           data-testid="scene-tree-row-name"
           style={{
@@ -331,6 +332,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
             'white-space': 'nowrap',
             flex: '1',
             'min-width': '0',
+            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
           }}
         >
           {props.node.name}
