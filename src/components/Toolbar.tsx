@@ -1,6 +1,5 @@
 import { type Component } from 'solid-js';
 import { ProjectChip } from './ProjectChip';
-import { SceneOpsToolbar } from './SceneOpsToolbar';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
 
@@ -38,16 +37,6 @@ export const Toolbar: Component = () => {
         currentProjectId={bridge.currentProjectId()}
         onOpenProject={bridge.openProjectById}
       />
-
-      {/* Divider between ProjectChip and SceneOpsToolbar */}
-      <div style={{
-        width: '1px',
-        height: '18px',
-        background: 'var(--border-medium)',
-        margin: '0 var(--space-xs)',
-      }} />
-
-      <SceneOpsToolbar orientation="horizontal" />
 
       {/* Divider before Reset Layout */}
       <div style={{
