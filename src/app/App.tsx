@@ -6,7 +6,6 @@ import { createEditorBridge, type EditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
-import { WorkspaceTabBar } from './layout/WorkspaceTabBar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
 
@@ -184,7 +183,6 @@ const App: Component = () => {
           background: 'var(--bg-app)',
         }}>
           <Toolbar />
-          <WorkspaceTabBar />
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <AreaTreeRenderer />
           </div>
