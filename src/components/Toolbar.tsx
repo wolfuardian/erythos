@@ -56,7 +56,7 @@ export const Toolbar: Component = () => {
           'letter-spacing': '0.08em',
           'line-height': '1',
         }}>
-          E
+          Erythos
         </span>
         <div style={{
           width: '4px',
