@@ -78,15 +78,18 @@ export const Toolbar: Component = () => {
       <div
         data-devid="toolbar-autosave-dot"
         title={`Autosave: ${bridge.autosaveStatus()}`}
-        style={{
-          width: '6px',
-          height: '6px',
-          'border-radius': '50%',
-          background: autosaveDotColor(),
-          margin: '0 6px',
-          'flex-shrink': '0',
-        }}
-      />
+        style={{ display: 'flex', 'align-items': 'center', padding: '0 6px', 'flex-shrink': '0' }}
+      >
+        <div
+          style={{
+            width: '6px',
+            height: '6px',
+            'border-radius': '50%',
+            background: autosaveDotColor(),
+            'flex-shrink': '0',
+          }}
+        />
+      </div>
 
       {/* Project section */}
       <div
