@@ -48,29 +48,38 @@ export const Toolbar: Component = () => {
           'align-self': 'stretch',
         }}
       >
-        <span style={{
-          'font-family': 'var(--font-mono)',
-          color: 'var(--accent-blue)',
-          'font-weight': 'bold',
-          'font-size': '10px',
-          'letter-spacing': '0.08em',
-          'line-height': '1',
-        }}>
+        <span
+          data-devid="toolbar-brand-name"
+          style={{
+            'font-family': 'var(--font-mono)',
+            color: 'var(--accent-blue)',
+            'font-weight': 'bold',
+            'font-size': '10px',
+            'letter-spacing': '0.08em',
+            'line-height': '1',
+          }}
+        >
           Erythos
         </span>
-        <div style={{
-          width: '4px',
-          height: '4px',
-          'border-radius': '50%',
-          background: autosaveDotColor(),
-          'flex-shrink': '0',
-        }} />
-        <span style={{
-          'font-family': 'var(--font-mono)',
-          color: 'var(--text-disabled)',
-          'font-size': '8px',
-          'line-height': '1',
-        }}>
+        <div
+          data-devid="toolbar-brand-autosave-dot"
+          style={{
+            width: '4px',
+            height: '4px',
+            'border-radius': '50%',
+            background: autosaveDotColor(),
+            'flex-shrink': '0',
+          }}
+        />
+        <span
+          data-devid="toolbar-brand-version"
+          style={{
+            'font-family': 'var(--font-mono)',
+            color: 'var(--text-disabled)',
+            'font-size': '8px',
+            'line-height': '1',
+          }}
+        >
           v{__APP_VERSION__}
         </span>
       </div>
