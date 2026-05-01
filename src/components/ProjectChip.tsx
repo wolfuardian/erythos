@@ -36,6 +36,12 @@ function relativeTime(ts: number): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
+function autosaveDotColor(status: 'idle' | 'pending' | 'saved' | 'error'): string {
+  if (status === 'error') return 'var(--accent-red)';
+  if (status === 'pending') return 'var(--accent-gold)';
+  return 'var(--accent-green)'; // 'saved' | 'idle'
+}
+
 const ProjectChip: Component<Props> = (props) => {
   const [open, setOpen] = createSignal(false);
   const [hovered, setHovered] = createSignal(false);
@@ -160,10 +166,11 @@ const ProjectChip: Component<Props> = (props) => {
         onClick={handleChipClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        title={`Autosave: ${props.autosaveStatus}`}
         style={{
           display: 'inline-flex',
           'align-items': 'center',
-          gap: '4px',
+          gap: '6px',
           padding: '2px 8px',
           height: '24px',
           background: chipBg(),
@@ -180,6 +187,17 @@ const ProjectChip: Component<Props> = (props) => {
           'text-overflow': 'ellipsis',
         }}
       >
+        <span
+          data-devid="project-chip-autosave-dot"
+          style={{
+            display: 'inline-block',
+            width: '5px',
+            height: '5px',
+            'border-radius': '50%',
+            background: autosaveDotColor(props.autosaveStatus),
+            'flex-shrink': '0',
+          }}
+        />
         <span style={{ flex: '1', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>
           {props.projectName}
         </span>
