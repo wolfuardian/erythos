@@ -1,4 +1,5 @@
 import { type Component, For, createSignal } from 'solid-js';
+import { BrandMark } from './BrandMark';
 import { ProjectChip } from './ProjectChip';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
@@ -8,14 +9,6 @@ import { WorkspaceTab } from '../app/layout/WorkspaceTab';
 export const Toolbar: Component = () => {
   const bridge = useEditor();
   const tabRefs = new Map<string, HTMLElement>();
-
-  // Autosave dot color
-  const autosaveDotColor = () => {
-    const s = bridge.autosaveStatus();
-    if (s === 'error') return 'var(--accent-red)';
-    if (s === 'pending') return 'var(--accent-gold)';
-    return 'var(--accent-green)'; // 'saved' | 'idle'
-  };
 
   const [resetHovered, setResetHovered] = createSignal(false);
 
@@ -30,65 +23,15 @@ export const Toolbar: Component = () => {
         'align-items': 'center',
         overflow: 'hidden',
         'flex-shrink': '0',
+        'padding-left': '8px',
       }}
     >
-      {/* Brand column */}
+      {/* Brand mark */}
       <div
-        data-devid="toolbar-brand"
-        style={{
-          display: 'flex',
-          'flex-direction': 'column',
-          'align-items': 'center',
-          'justify-content': 'center',
-          background: '#232638',
-          'border-right': '1px solid var(--border-medium)',
-          padding: '0 7px',
-          gap: '1px',
-          'flex-shrink': '0',
-          'align-self': 'stretch',
-        }}
+        data-devid="toolbar-brand-mark"
+        style={{ display: 'flex', 'align-items': 'center', 'flex-shrink': '0' }}
       >
-        <span
-          data-devid="toolbar-brand-name"
-          style={{
-            'font-family': 'var(--font-mono)',
-            color: 'var(--accent-blue)',
-            'font-weight': 'bold',
-            'font-size': '10px',
-            'letter-spacing': '0.08em',
-            'line-height': '1',
-          }}
-        >
-          Erythos
-        </span>
-        <span
-          data-devid="toolbar-brand-version"
-          style={{
-            'font-family': 'var(--font-mono)',
-            color: 'var(--text-disabled)',
-            'font-size': '8px',
-            'line-height': '1',
-          }}
-        >
-          v{__APP_VERSION__}
-        </span>
-      </div>
-
-      {/* Autosave dot — independent indicator */}
-      <div
-        data-devid="toolbar-autosave-dot"
-        title={`Autosave: ${bridge.autosaveStatus()}`}
-        style={{ display: 'flex', 'align-items': 'center', padding: '0 6px', 'flex-shrink': '0' }}
-      >
-        <div
-          style={{
-            width: '6px',
-            height: '6px',
-            'border-radius': '50%',
-            background: autosaveDotColor(),
-            'flex-shrink': '0',
-          }}
-        />
+        <BrandMark appVersion={__APP_VERSION__} />
       </div>
 
       {/* Project section */}
