@@ -15,6 +15,8 @@
 - 元件一律用 named export（`export { Foo }`），不用 default export，確保跨模組 import 一致
 - 全域事件 listener（keydown、resize 等）必須用 `createEffect` 搭配 `onCleanup`，依響應式狀態動態綁定/解綁，不可在 `onMount` 中無條件註冊
 - `data-devid` 導入：當一個組件檔案包含多棵獨立 DOM 樹（如 trigger + Portal popup、主體 + overlay），每棵樹的根都各自掛 `data-devid`，命名 pattern `<parent>-<purpose>`（例：`editor-switcher` + `editor-switcher-dropdown`）
+- `data-devid` 結構一致性：同一 horizontal group（如 Toolbar 的直屬子元素）內，每個直屬子元素都應有 wrapper + 自身 `data-devid`，**避免「無 devid 匿名 wrapper 包住有 devid 元素」這種混合結構**。命名 pattern 同上 `<parent>-<purpose>`（例：`toolbar-brand` / `toolbar-autosave-dot` / `toolbar-project` 為 toolbar 直屬兄弟）
+- `data-devid` 邊界：`data-devid` 標到 horizontal group 的 wrapper 層即可，元件內部排版/視覺零件（純 layout / styling 用的 inner element）不需繼續往下標 devid。例外：內部存在 prefab / sub-component（可重用、可獨立識別的子元素）時才繼續標（例：`toolbar-workspace-tabs` wrapper → 內部 `toolbar-workspace-tab` 是 sub-component 故有 devid）
 
 ## 待修項（由主腦根據 QC issue 填寫）
 <!-- 修完所有項目後 commit message 加上 refs #N，由主腦清除此區塊並送 QC 複審。 -->
