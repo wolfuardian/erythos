@@ -16,6 +16,7 @@ import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
+import { SceneOpsToolbar } from '../../components/SceneOpsToolbar';
 import { useArea } from '../../app/AreaContext';
 import { getPanelState, setPanelState } from '../../app/viewportState';
 import { currentWorkspace } from '../../app/workspaceStore';
@@ -594,6 +595,23 @@ const ViewportPanel: Component = () => {
           overflow: 'hidden',
         }}
       >
+      {/* SceneOps vertical overlay — Phase 3 of #688 */}
+      <div
+        data-devid="viewport-scene-ops-overlay"
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: '8px',
+          background: 'rgba(40, 40, 40, 0.85)',
+          border: '1px solid var(--border-subtle)',
+          'border-radius': '4px',
+          padding: '4px',
+          'z-index': '10',
+          'pointer-events': 'auto',
+        }}
+      >
+        <SceneOpsToolbar orientation="vertical" />
+      </div>
       <Show when={isDragging()}>
         <div
           style={{
