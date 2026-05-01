@@ -61,16 +61,6 @@ export const Toolbar: Component = () => {
         >
           Erythos
         </span>
-        <div
-          data-devid="toolbar-brand-autosave-dot"
-          style={{
-            width: '4px',
-            height: '4px',
-            'border-radius': '50%',
-            background: autosaveDotColor(),
-            'flex-shrink': '0',
-          }}
-        />
         <span
           data-devid="toolbar-brand-version"
           style={{
@@ -82,6 +72,21 @@ export const Toolbar: Component = () => {
         >
           v{__APP_VERSION__}
         </span>
+      </div>
+
+      {/* Autosave dot — independent indicator */}
+      <div style={{ display: 'flex', 'align-items': 'center', padding: '0 6px', 'flex-shrink': '0' }}>
+        <div
+          data-devid="toolbar-autosave-dot"
+          title={`Autosave: ${bridge.autosaveStatus()}`}
+          style={{
+            width: '6px',
+            height: '6px',
+            'border-radius': '50%',
+            background: autosaveDotColor(),
+            'flex-shrink': '0',
+          }}
+        />
       </div>
 
       {/* ProjectChip */}
