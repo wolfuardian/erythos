@@ -107,7 +107,7 @@ export const WorkspaceTab: Component<Props> = (props) => {
   return (
     <>
       <div
-        data-devid="toolbar-workspace-tab"
+        data-testid="toolbar-workspace-tab"
         data-workspace-id={props.workspace.id}
         ref={props.ref}
         onClick={() => {

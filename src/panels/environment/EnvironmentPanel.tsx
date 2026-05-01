@@ -27,7 +27,7 @@ const EnvironmentPanel: Component = () => {
 
   return (
     <div
-      data-devid="environment-panel"
+      data-testid="environment-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',

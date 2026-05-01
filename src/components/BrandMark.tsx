@@ -50,7 +50,7 @@ const BrandMark: Component<Props> = (props) => {
   return (
     <>
       <button
-        data-devid="brand-mark"
+        data-testid="brand-mark"
         ref={buttonRef}
         type="button"
         onClick={handleClick}
@@ -86,7 +86,7 @@ const BrandMark: Component<Props> = (props) => {
       <Show when={open()}>
         <Portal>
           <div
-            data-devid="brand-mark-about"
+            data-testid="brand-mark-about"
             ref={popoverRef}
             style={{
               position: 'fixed',
@@ -105,7 +105,7 @@ const BrandMark: Component<Props> = (props) => {
             }}
           >
             <div
-              data-devid="brand-mark-about-name"
+              data-testid="brand-mark-about-name"
               style={{
                 'font-family': 'var(--font-family)',
                 'font-size': '13px',
@@ -116,7 +116,7 @@ const BrandMark: Component<Props> = (props) => {
               Erythos
             </div>
             <div
-              data-devid="brand-mark-about-version"
+              data-testid="brand-mark-about-version"
               style={{
                 'font-family': 'var(--font-mono)',
                 'font-size': '11px',

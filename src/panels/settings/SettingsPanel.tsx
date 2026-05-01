@@ -12,7 +12,7 @@ const SettingsPanel: Component = () => {
 
   return (
     <div
-      data-devid="settings-panel"
+      data-testid="settings-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',

@@ -179,7 +179,7 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
         }
       `}</style>
       <div
-        data-devid="number-drag"
+        data-testid="number-drag"
         onMouseDown={handleMouseDown}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}

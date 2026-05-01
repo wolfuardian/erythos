@@ -145,7 +145,7 @@ export const SceneOpsToolbar: Component<{
 
   return (
     <div
-      data-devid="scene-ops-toolbar"
+      data-testid="scene-ops-toolbar"
       style={{
         display: 'flex',
         'flex-direction': isHorizontal() ? 'row' : 'column',

@@ -420,7 +420,7 @@ export const Welcome: Component<Props> = (props) => {
       {/* Create New Project Modal */}
       <Show when={showModal()}>
         <div
-          data-devid="new-project-modal"
+          data-testid="new-project-modal"
           style={{
             position: 'fixed',
             inset: '0',
@@ -444,7 +444,7 @@ export const Welcome: Component<Props> = (props) => {
             gap: 'var(--space-xl)',
           }}>
             {/* Modal title */}
-            <div data-devid="new-project-modal-title" style={{
+            <div data-testid="new-project-modal-title" style={{
               'font-size': 'var(--font-size-xl)',
               'font-weight': '600',
               color: 'var(--text-primary)',
@@ -453,7 +453,7 @@ export const Welcome: Component<Props> = (props) => {
             </div>
 
             {/* Pick location */}
-            <div data-devid="new-project-modal-parent-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+            <div data-testid="new-project-modal-parent-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
               <label style={{
                 'font-size': 'var(--font-size-xs)',
                 color: 'var(--text-muted)',
@@ -464,7 +464,7 @@ export const Welcome: Component<Props> = (props) => {
                 Parent Location
               </label>
               <button
-                data-devid="new-project-modal-parent-picker"
+                data-testid="new-project-modal-parent-picker"
                 style={{
                   background: 'var(--bg-section)',
                   border: '1px solid var(--border-subtle)',
@@ -486,7 +486,7 @@ export const Welcome: Component<Props> = (props) => {
             </div>
 
             {/* Project name */}
-            <div data-devid="new-project-modal-name-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+            <div data-testid="new-project-modal-name-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
               <label style={{
                 'font-size': 'var(--font-size-xs)',
                 color: 'var(--text-muted)',
@@ -497,7 +497,7 @@ export const Welcome: Component<Props> = (props) => {
                 Project Name
               </label>
               <input
-                data-devid="new-project-modal-name-input"
+                data-testid="new-project-modal-name-input"
                 value={newName()}
                 onInput={(e) => setNewName(e.currentTarget.value)}
                 placeholder="my-project"
@@ -520,7 +520,7 @@ export const Welcome: Component<Props> = (props) => {
             </div>
 
             {/* Final Path preview */}
-            <div data-devid="new-project-modal-path-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
+            <div data-testid="new-project-modal-path-field" style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-sm)' }}>
               <label style={{
                 'font-size': 'var(--font-size-xs)',
                 color: 'var(--text-muted)',
@@ -531,7 +531,7 @@ export const Welcome: Component<Props> = (props) => {
                 Final Path
               </label>
               <div
-                data-devid="new-project-modal-path-preview"
+                data-testid="new-project-modal-path-preview"
                 title={finalPath() ?? undefined}
                 style={{
                   background: 'var(--bg-input)',
@@ -554,7 +554,7 @@ export const Welcome: Component<Props> = (props) => {
 
             {/* Modal error */}
             <Show when={errorMsg()}>
-              <div data-devid="new-project-modal-error" style={{
+              <div data-testid="new-project-modal-error" style={{
                 'font-size': 'var(--font-size-xs)',
                 color: 'var(--accent-red)',
               }}>
@@ -563,13 +563,13 @@ export const Welcome: Component<Props> = (props) => {
             </Show>
 
             {/* Actions */}
-            <div data-devid="new-project-modal-actions" style={{
+            <div data-testid="new-project-modal-actions" style={{
               display: 'flex',
               gap: 'var(--space-md)',
               'justify-content': 'flex-end',
             }}>
               <button
-                data-devid="new-project-modal-cancel"
+                data-testid="new-project-modal-cancel"
                 style={{
                   background: 'transparent',
                   border: '1px solid var(--border-subtle)',
@@ -584,7 +584,7 @@ export const Welcome: Component<Props> = (props) => {
                 Cancel
               </button>
               <button
-                data-devid="new-project-modal-create"
+                data-testid="new-project-modal-create"
                 style={{
                   background: (!parentHandle() || !newName().trim()) ? 'var(--bg-section)' : 'var(--accent-blue)',
                   border: '1px solid transparent',

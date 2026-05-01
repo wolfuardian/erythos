@@ -56,7 +56,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   };
 
   return (
-    <div data-devid="transform-draw">
+    <div data-testid="transform-draw">
     <FoldableSection sectionKey="transform" label="TRANSFORM">
       {/* Position */}
       <div style={groupLabelRow}>

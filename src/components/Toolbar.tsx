@@ -14,7 +14,7 @@ export const Toolbar: Component = () => {
 
   return (
     <div
-      data-devid="toolbar"
+      data-testid="toolbar"
       style={{
         height: '30px',
         background: 'var(--bg-header)',
@@ -28,7 +28,7 @@ export const Toolbar: Component = () => {
     >
       {/* Brand mark */}
       <div
-        data-devid="toolbar-brand-mark"
+        data-testid="toolbar-brand-mark"
         style={{ display: 'flex', 'align-items': 'center', 'flex-shrink': '0' }}
       >
         <BrandMark appVersion={__APP_VERSION__} />
@@ -36,7 +36,7 @@ export const Toolbar: Component = () => {
 
       {/* Project section */}
       <div
-        data-devid="toolbar-project"
+        data-testid="toolbar-project"
         style={{ display: 'flex', 'align-items': 'center', padding: '0 7px', 'flex-shrink': '0' }}
       >
         <ProjectChip
@@ -54,7 +54,7 @@ export const Toolbar: Component = () => {
 
       {/* Workspace tabs area */}
       <div
-        data-devid="toolbar-workspace-tabs"
+        data-testid="toolbar-workspace-tabs"
         style={{
           display: 'flex',
           'align-items': 'center',
@@ -123,7 +123,7 @@ export const Toolbar: Component = () => {
 
       {/* Reset Layout icon button */}
       <button
-        data-devid="toolbar-reset-layout"
+        data-testid="toolbar-reset-layout"
         onClick={() => { clearSavedLayout(); location.reload(); }}
         title="Reset panel layout to default"
         style={{

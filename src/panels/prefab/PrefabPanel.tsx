@@ -154,7 +154,7 @@ const PrefabPanel: Component = () => {
 
   return (
     <div
-      data-devid="prefab-panel"
+      data-testid="prefab-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',
