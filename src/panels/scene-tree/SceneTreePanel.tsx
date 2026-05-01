@@ -1,4 +1,5 @@
 import { createSignal, For, Show, onMount, onCleanup, type Component } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
@@ -103,6 +104,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
   };
 
   const onDragLeave = (e: DragEvent) => {
+    // Only clear when truly leaving this row, not just entering a child element.
     const row = e.currentTarget as HTMLElement;
     if (!row.contains(e.relatedTarget as Node)) {
       const ind = props.dropIndicator();
@@ -123,6 +125,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
     if (!dragId || !ind || dragId === props.node.id) return;
 
+    // Cycle check: walk target's ancestors; reject if dragged node is one of them.
     const nodes = bridge.nodes();
     let cursor: string | null = props.node.id;
     while (cursor !== null) {
@@ -139,6 +142,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       insertIndex = childNodes().length;
     } else {
       newParentId = props.node.parent;
+      // Filter dragId from siblings so findIndex matches MoveNodeCommand's own filter.
       const siblings = nodes
         .filter(n => n.parent === props.node.parent && n.id !== dragId)
         .sort((a, b) => a.order - b.order);
@@ -146,6 +150,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
       insertIndex = ind.position === 'before' ? idx : idx + 1;
     }
 
+    // No-op check: same parent and same effective position → skip.
     const draggedNode = nodes.find(n => n.id === dragId);
     if (draggedNode && newParentId === draggedNode.parent) {
       const allSiblings = nodes
@@ -204,7 +209,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           position: 'relative',
           display: 'flex',
           'align-items': 'center',
-          height: 'var(--row-height, 22px)',
+          height: 'var(--row-height)',
           'padding-left': `${contentLeft()}px`,
           cursor: 'pointer',
           background: rowBackground(),
@@ -223,7 +228,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
               top: '4px',
               bottom: '4px',
               width: '2px',
-              background: 'var(--accent-blue, var(--accent-primary, #527fc8))',
+              background: 'var(--accent-blue)',
               'border-radius': '1px',
               'pointer-events': 'none',
             }}
@@ -241,7 +246,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
                   top: '0',
                   bottom: '0',
                   width: '1px',
-                  background: 'var(--border-subtle, #262a3c)',
+                  background: 'var(--border-subtle)',
                   opacity: '0.5',
                   'pointer-events': 'none',
                 }}
@@ -258,7 +263,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
             left: `${contentLeft()}px`,
             right: '0',
             height: '2px',
-            background: 'var(--accent-primary, #4a9eff)',
+            background: 'var(--accent-blue)',
             'pointer-events': 'none',
           }} />
         </Show>
@@ -271,7 +276,7 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
             left: `${contentLeft()}px`,
             right: '0',
             height: '2px',
-            background: 'var(--accent-primary, #4a9eff)',
+            background: 'var(--accent-blue)',
             'pointer-events': 'none',
           }} />
         </Show>
@@ -315,17 +320,14 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
             opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
           }}
         >
-          {(() => {
-            const Icon = nodeTypeToIcon(nodeType());
-            return <Icon color={iconColor()} size={13} />;
-          })()}
+          <Dynamic component={nodeTypeToIcon(nodeType())} color={iconColor()} size={13} />
         </span>
 
         {/* Name — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span
           data-testid="scene-tree-row-name"
           style={{
-            'font-size': 'var(--font-size-sm, 10px)',
+            'font-size': 'var(--font-size-sm)',
             color: isSelected() ? 'var(--text-primary)' : 'var(--text-secondary)',
             overflow: 'hidden',
             'text-overflow': 'ellipsis',
