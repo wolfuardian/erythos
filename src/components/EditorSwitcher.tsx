@@ -186,7 +186,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     <>
       {/* Trigger button: 2×2 grid icon + caret */}
       <div
-        data-devid="editor-switcher"
+        data-testid="editor-switcher"
         ref={btnRef}
         onClick={toggleOpen}
         style={{
@@ -233,7 +233,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
         <Portal mount={document.body}>
           <div
             ref={dropdownRef}
-            data-devid="editor-switcher-dropdown"
+            data-testid="editor-switcher-dropdown"
             data-editor-switcher-dropdown
             style={{
               position: 'fixed',

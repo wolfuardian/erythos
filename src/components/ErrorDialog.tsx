@@ -22,7 +22,7 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
     <Show when={props.open}>
       <Portal>
       <div
-        data-devid="error-dialog"
+        data-testid="error-dialog"
         onClick={props.onClose}
         style={{
           position: 'fixed',
@@ -46,10 +46,10 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
             'box-shadow': 'var(--shadow-well-outer)',
           }}
         >
-          <h3 data-devid="error-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+          <h3 data-testid="error-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
             {props.title}
           </h3>
-          <p data-devid="error-dialog-message" style={{
+          <p data-testid="error-dialog-message" style={{
             margin: '0 0 var(--space-md) 0',
             color: 'var(--text-secondary)',
             'font-size': 'var(--font-size-sm)',
@@ -57,9 +57,9 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
           }}>
             {props.message}
           </p>
-          <div data-devid="error-dialog-actions" style={{ 'text-align': 'right' }}>
+          <div data-testid="error-dialog-actions" style={{ 'text-align': 'right' }}>
             <button
-              data-devid="error-dialog-close"
+              data-testid="error-dialog-close"
               onClick={props.onClose}
               style={{
                 padding: '4px 16px',

@@ -47,7 +47,7 @@ const PromptDialog: Component<PromptDialogProps> = (props) => {
     <Show when={props.open}>
       <Portal>
         <div
-          data-devid="prompt-dialog"
+          data-testid="prompt-dialog"
           onClick={props.onCancel}
           style={{
             position: 'fixed',
@@ -71,11 +71,11 @@ const PromptDialog: Component<PromptDialogProps> = (props) => {
               'box-shadow': 'var(--shadow-well-outer)',
             }}
           >
-            <h3 data-devid="prompt-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+            <h3 data-testid="prompt-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
               {props.title}
             </h3>
             <Show when={props.message}>
-              <p data-devid="prompt-dialog-message" style={{
+              <p data-testid="prompt-dialog-message" style={{
                 margin: '0 0 var(--space-sm) 0',
                 color: 'var(--text-secondary)',
                 'font-size': 'var(--font-size-sm)',
@@ -84,7 +84,7 @@ const PromptDialog: Component<PromptDialogProps> = (props) => {
               </p>
             </Show>
             <input
-              data-devid="prompt-dialog-input"
+              data-testid="prompt-dialog-input"
               ref={inputRef}
               type="text"
               placeholder={props.placeholder ?? ''}
@@ -106,9 +106,9 @@ const PromptDialog: Component<PromptDialogProps> = (props) => {
               onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent-gold)')}
               onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
             />
-            <div data-devid="prompt-dialog-actions" style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
+            <div data-testid="prompt-dialog-actions" style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
               <button
-                data-devid="prompt-dialog-cancel"
+                data-testid="prompt-dialog-cancel"
                 onClick={props.onCancel}
                 onMouseEnter={() => setCancelHovered(true)}
                 onMouseLeave={() => setCancelHovered(false)}
@@ -126,7 +126,7 @@ const PromptDialog: Component<PromptDialogProps> = (props) => {
                 {props.cancelLabel ?? 'Cancel'}
               </button>
               <button
-                data-devid="prompt-dialog-confirm"
+                data-testid="prompt-dialog-confirm"
                 onClick={handleConfirm}
                 disabled={!value().trim()}
                 onMouseEnter={() => setConfirmHovered(true)}

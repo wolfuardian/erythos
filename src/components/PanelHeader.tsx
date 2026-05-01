@@ -13,7 +13,7 @@ const PanelHeader: Component<PanelHeaderProps> = (props) => {
 
   return (
     <div
-      data-devid="panel-header"
+      data-testid="panel-header"
       style={{
       background: 'var(--bg-header)',
       'border-bottom': '1px solid var(--border-subtle)',

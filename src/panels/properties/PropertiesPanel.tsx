@@ -12,7 +12,7 @@ const PropertiesPanel: Component = () => {
 
   return (
     <div
-      data-devid="properties-panel"
+      data-testid="properties-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',

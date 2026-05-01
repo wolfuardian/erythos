@@ -331,7 +331,7 @@ const ProjectPanel: Component = () => {
 
   return (
     <div
-      data-devid="project-panel"
+      data-testid="project-panel"
       style={{
         width: 'calc(100% - 6px)', height: 'calc(100% - 6px)',
         display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
@@ -346,7 +346,7 @@ const ProjectPanel: Component = () => {
       <PanelHeader
         title={bridge.projectName() ?? 'Project'}
         actions={
-          <button data-devid="project-panel-close-project" onClick={() => setShowCloseConfirm(true)} style={{
+          <button data-testid="project-panel-close-project" onClick={() => setShowCloseConfirm(true)} style={{
             background: 'var(--bg-section)', color: 'var(--text-muted)',
             border: '1px solid var(--border-subtle)',
             padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
@@ -365,7 +365,7 @@ const ProjectPanel: Component = () => {
       }}>
         {/* Search input */}
         <input
-          data-devid="project-panel-search"
+          data-testid="project-panel-search"
           type="text"
           placeholder="Search assets..."
           value={searchQuery()}
@@ -387,7 +387,7 @@ const ProjectPanel: Component = () => {
 
         {/* Grid / List toggle button */}
         <button
-          data-devid="project-panel-view-toggle"
+          data-testid="project-panel-view-toggle"
           title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
           onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
           style={{

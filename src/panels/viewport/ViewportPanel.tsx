@@ -534,7 +534,7 @@ const ViewportPanel: Component = () => {
 
   return (
     <div
-      data-devid="viewport-panel"
+      data-testid="viewport-panel"
       ref={containerRef}
       style={{
         width: 'calc(100% - 6px)',
@@ -597,7 +597,7 @@ const ViewportPanel: Component = () => {
       >
       {/* SceneOps vertical overlay — Phase 3 of #688 */}
       <div
-        data-devid="viewport-scene-ops-overlay"
+        data-testid="viewport-scene-ops-overlay"
         style={{
           position: 'absolute',
           top: '8px',

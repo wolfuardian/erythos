@@ -77,7 +77,7 @@ const ContextPanel: Component = () => {
 
   return (
     <div
-      data-devid="context-panel"
+      data-testid="context-panel"
       style={{
       width: 'calc(100% - 6px)',
       height: 'calc(100% - 6px)',

@@ -30,7 +30,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
     <Show when={props.open}>
       <Portal>
       <div
-        data-devid="confirm-dialog"
+        data-testid="confirm-dialog"
         onClick={props.onCancel}
         style={{
           position: 'fixed',
@@ -54,10 +54,10 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
             'box-shadow': 'var(--shadow-well-outer)',
           }}
         >
-          <h3 data-devid="confirm-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+          <h3 data-testid="confirm-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
             {props.title}
           </h3>
-          <p data-devid="confirm-dialog-message" style={{
+          <p data-testid="confirm-dialog-message" style={{
             margin: '0 0 var(--space-md) 0',
             color: 'var(--text-secondary)',
             'font-size': 'var(--font-size-sm)',
@@ -65,9 +65,9 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
           }}>
             {props.message}
           </p>
-          <div data-devid="confirm-dialog-actions" style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
+          <div data-testid="confirm-dialog-actions" style={{ 'text-align': 'right', display: 'flex', gap: 'var(--space-sm)', 'justify-content': 'flex-end' }}>
             <button
-              data-devid="confirm-dialog-cancel"
+              data-testid="confirm-dialog-cancel"
               onClick={props.onCancel}
               onMouseEnter={() => setCancelHovered(true)}
               onMouseLeave={() => setCancelHovered(false)}
@@ -85,7 +85,7 @@ const ConfirmDialog: Component<ConfirmDialogProps> = (props) => {
               {props.cancelLabel ?? 'Cancel'}
             </button>
             <button
-              data-devid="confirm-dialog-confirm"
+              data-testid="confirm-dialog-confirm"
               onClick={props.onConfirm}
               onMouseEnter={() => setConfirmHovered(true)}
               onMouseLeave={() => setConfirmHovered(false)}
