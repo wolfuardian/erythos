@@ -107,6 +107,7 @@ export const WorkspaceTab: Component<Props> = (props) => {
   return (
     <>
       <div
+        data-devid={`toolbar-workspace-tab-${props.workspace.id}`}
         ref={props.ref}
         onClick={() => {
           if (editing()) return;
@@ -117,20 +118,27 @@ export const WorkspaceTab: Component<Props> = (props) => {
         onContextMenu={handleContextMenu}
         onPointerDown={handlePointerDown}
         style={{
-          padding: '0 var(--space-md)',
-          height: '100%',
+          padding: '0 10px',
+          height: '22px',
           display: 'flex',
           'align-items': 'center',
+          'justify-content': 'center',
           cursor: editing() ? 'text' : 'grab',
           color: isActive() ? 'var(--text-primary)' : 'var(--text-muted)',
-          background: isActive() ? 'var(--bg-app)' : 'transparent',
-          'border-bottom': isActive()
-            ? '2px solid var(--accent-blue)'
-            : '2px solid transparent',
+          background: isActive() ? 'var(--bg-section)' : 'transparent',
+          border: isActive() ? '1px solid var(--border-medium)' : '1px solid transparent',
+          'border-radius': 'var(--radius-md)',
           'user-select': 'none',
           'touch-action': 'none',
-          'min-width': '80px',
+          'min-width': '58px',
+          'max-width': '120px',
+          'flex-shrink': '0',
+          'font-size': '9px',
+          'white-space': 'nowrap',
+          overflow: 'hidden',
+          'text-overflow': 'ellipsis',
           position: 'relative',
+          transition: 'color var(--transition-fast), background var(--transition-fast)',
         }}
       >
         <Show
