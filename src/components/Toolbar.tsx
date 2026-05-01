@@ -27,7 +27,7 @@ export const Toolbar: Component = () => {
         background: 'var(--bg-header)',
         'border-bottom': '1px solid var(--border-subtle)',
         display: 'flex',
-        'align-items': 'stretch',
+        'align-items': 'center',
         overflow: 'hidden',
         'flex-shrink': '0',
       }}
@@ -75,22 +75,24 @@ export const Toolbar: Component = () => {
       </div>
 
       {/* Autosave dot — independent indicator */}
-      <div style={{ display: 'flex', 'align-items': 'center', padding: '0 6px', 'flex-shrink': '0' }}>
-        <div
-          data-devid="toolbar-autosave-dot"
-          title={`Autosave: ${bridge.autosaveStatus()}`}
-          style={{
-            width: '6px',
-            height: '6px',
-            'border-radius': '50%',
-            background: autosaveDotColor(),
-            'flex-shrink': '0',
-          }}
-        />
-      </div>
+      <div
+        data-devid="toolbar-autosave-dot"
+        title={`Autosave: ${bridge.autosaveStatus()}`}
+        style={{
+          width: '6px',
+          height: '6px',
+          'border-radius': '50%',
+          background: autosaveDotColor(),
+          margin: '0 6px',
+          'flex-shrink': '0',
+        }}
+      />
 
-      {/* ProjectChip */}
-      <div style={{ display: 'flex', 'align-items': 'center', padding: '0 7px', 'flex-shrink': '0' }}>
+      {/* Project section */}
+      <div
+        data-devid="toolbar-project"
+        style={{ display: 'flex', 'align-items': 'center', padding: '0 7px', 'flex-shrink': '0' }}
+      >
         <ProjectChip
           projectName={bridge.projectName() ?? ''}
           autosaveStatus={bridge.autosaveStatus()}
