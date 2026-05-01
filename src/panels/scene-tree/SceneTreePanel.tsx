@@ -1,4 +1,5 @@
 import { createSignal, For, Show, onMount, onCleanup, type Component } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
@@ -11,6 +12,10 @@ import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
+import {
+  EyeOnIcon, EyeOffIcon, CursorOnIcon, CursorOffIcon,
+  nodeTypeToIcon, nodeTypeColor,
+} from './icons';
 
 interface DropIndicator {
   targetId: string;
@@ -20,13 +25,25 @@ interface DropIndicator {
 interface TreeNodeProps {
   node: SceneNode;
   depth: number;
+  /** For each ancestor depth 0..depth-1, whether that ancestor still has more siblings after it.
+   *  Used to decide which indent guide lines to draw continuously vs stopping. */
+  lineageHasMoreSiblings: boolean[];
   draggedId: () => string | null;
   dropIndicator: () => DropIndicator | null;
   setDraggedId: (id: string | null) => void;
   setDropIndicator: (v: DropIndicator | null) => void;
   isExpanded: (id: string) => boolean;
   toggleExpanded: (id: string) => void;
+  eyeOffMap: () => Record<string, boolean>;
+  setEyeOffMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
+  cursorOffMap: () => Record<string, boolean>;
+  setCursorOffMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
 }
+
+// Indent gutter width per depth level (px)
+const INDENT_W = 16;
+// Left base padding before indent
+const ROW_PADDING_LEFT = 4;
 
 const TreeNode: Component<TreeNodeProps> = (props) => {
   const bridge = useEditor();
@@ -34,6 +51,9 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
   const isSelected = () => bridge.selectedUUIDs().includes(props.node.id);
   const isHovered = () => bridge.hoveredUUID() === props.node.id;
+
+  const isEyeOff = () => props.eyeOffMap()[props.node.id] ?? false;
+  const isCursorOff = () => props.cursorOffMap()[props.node.id] ?? false;
 
   const childNodes = () =>
     bridge.nodes()
@@ -60,21 +80,6 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
 
   const handleMouseEnter = () => editor.selection.hover(props.node.id);
   const handleMouseLeave = () => editor.selection.hover(null);
-
-  const typeBadge = () => {
-    switch (inferNodeType(props.node)) {
-      case 'Group':             return { label: 'G', color: 'var(--badge-group)' };
-      case 'Mesh':              return { label: 'M', color: 'var(--badge-mesh)' };
-      case 'Box':               return { label: 'B', color: 'var(--badge-geometry, #f5a623)' };
-      case 'Sphere':            return { label: 'S', color: 'var(--badge-geometry, #f5a623)' };
-      case 'Plane':             return { label: 'P', color: 'var(--badge-geometry, #f5a623)' };
-      case 'Cylinder':          return { label: 'C', color: 'var(--badge-geometry, #f5a623)' };
-      case 'DirectionalLight':  return { label: 'L', color: 'var(--badge-light)' };
-      case 'AmbientLight':      return { label: 'L', color: 'var(--badge-light)' };
-      case 'PerspectiveCamera': return { label: 'C', color: 'var(--badge-camera)' };
-      default:                  return { label: 'O', color: 'var(--badge-empty)' };
-    }
-  };
 
   const onDragStart = (e: DragEvent) => {
     e.stopPropagation();
@@ -172,9 +177,16 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
     return 'transparent';
   };
 
+  // Content-edge offset: where the name/icon area begins (for drop indicators)
+  const contentLeft = () => ROW_PADDING_LEFT + props.depth * INDENT_W;
+
+  const nodeType = () => inferNodeType(props.node);
+  const iconColor = () => nodeTypeColor(nodeType());
+
   return (
     <div>
       <div
+        data-testid="scene-tree-row"
         draggable={true}
         onClick={handleClick}
         onContextMenu={(e) => {
@@ -198,23 +210,60 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           display: 'flex',
           'align-items': 'center',
           height: 'var(--row-height)',
-          'padding-left': `${8 + props.depth * 16}px`,
+          'padding-left': `${contentLeft()}px`,
           cursor: 'pointer',
           background: rowBackground(),
           'border-radius': 'var(--radius-sm)',
+          margin: '0 4px',
           opacity: props.draggedId() === props.node.id ? 0.4 : 1,
           'user-select': 'none',
         }}
       >
+        {/* Selected: left 2px accent bar */}
+        <Show when={isSelected()}>
+          <div
+            style={{
+              position: 'absolute',
+              left: '0',
+              top: '4px',
+              bottom: '4px',
+              width: '2px',
+              background: 'var(--accent-blue)',
+              'border-radius': '1px',
+              'pointer-events': 'none',
+            }}
+          />
+        </Show>
+
+        {/* Indent guide lines */}
+        <For each={props.lineageHasMoreSiblings}>
+          {(hasMore, i) => (
+            <Show when={hasMore}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${ROW_PADDING_LEFT + i() * INDENT_W + 6}px`,
+                  top: '0',
+                  bottom: '0',
+                  width: '1px',
+                  background: 'var(--border-subtle)',
+                  opacity: '0.5',
+                  'pointer-events': 'none',
+                }}
+              />
+            </Show>
+          )}
+        </For>
+
         {/* Drop indicator: before */}
         <Show when={isDropTarget() && indicator()?.position === 'before'}>
           <div style={{
             position: 'absolute',
             top: '0',
-            left: `${8 + props.depth * 16}px`,
+            left: `${contentLeft()}px`,
             right: '0',
             height: '2px',
-            background: 'var(--accent-primary, #4a9eff)',
+            background: 'var(--accent-blue)',
             'pointer-events': 'none',
           }} />
         </Show>
@@ -224,10 +273,10 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
           <div style={{
             position: 'absolute',
             bottom: '0',
-            left: `${8 + props.depth * 16}px`,
+            left: `${contentLeft()}px`,
             right: '0',
             height: '2px',
-            background: 'var(--accent-primary, #4a9eff)',
+            background: 'var(--accent-blue)',
             'pointer-events': 'none',
           }} />
         </Show>
@@ -235,68 +284,152 @@ const TreeNode: Component<TreeNodeProps> = (props) => {
         {/* Expand toggle */}
         <Show when={hasChildren()}>
           <span
+            data-testid="scene-tree-row-expand"
             onClick={(e) => { e.stopPropagation(); props.toggleExpanded(props.node.id); }}
             style={{
               width: '14px',
-              'font-size': '8px',
+              'font-size': '7px',
               color: 'var(--text-muted)',
               'text-align': 'center',
               'flex-shrink': 0,
               'user-select': 'none',
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'center',
+              opacity: '0.6',
             }}
           >
-            {props.isExpanded(props.node.id) ? '\u25BC' : '\u25B6'}
+            {props.isExpanded(props.node.id) ? '▼' : '▶'}
           </span>
         </Show>
         <Show when={!hasChildren()}>
           <span style={{ width: '14px', 'flex-shrink': 0 }} />
         </Show>
 
-        {/* Type badge */}
-        <span style={{
-          width: '16px',
-          height: '16px',
-          'border-radius': 'var(--radius-sm)',
-          background: typeBadge().color,
-          color: 'var(--text-inverse)',
-          'font-size': 'var(--font-size-xs)',
-          'font-weight': 'bold',
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-          'margin-right': 'var(--space-sm)',
-          'flex-shrink': 0,
-        }}>
-          {typeBadge().label}
+        {/* Type icon (SVG) — dims when eye-off (0.38) or cursor-off (0.45) */}
+        <span
+          data-testid="scene-tree-row-icon"
+          style={{
+            width: '13px',
+            height: '13px',
+            'flex-shrink': 0,
+            'margin-right': '5px',
+            display: 'inline-flex',
+            'align-items': 'center',
+            'justify-content': 'center',
+            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
+          }}
+        >
+          <Dynamic component={nodeTypeToIcon(nodeType())} color={iconColor()} size={13} />
         </span>
 
-        {/* Name */}
-        <span style={{
-          'font-size': 'var(--font-size-md)',
-          color: isSelected() ? 'var(--text-primary)' : 'var(--text-secondary)',
-          overflow: 'hidden',
-          'text-overflow': 'ellipsis',
-          'white-space': 'nowrap',
-        }}>
+        {/* Name — dims when eye-off (0.38) or cursor-off (0.45) */}
+        <span
+          data-testid="scene-tree-row-name"
+          style={{
+            'font-size': 'var(--font-size-sm)',
+            color: isSelected() ? 'var(--text-primary)' : 'var(--text-secondary)',
+            overflow: 'hidden',
+            'text-overflow': 'ellipsis',
+            'white-space': 'nowrap',
+            flex: '1',
+            'min-width': '0',
+            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
+          }}
+        >
           {props.node.name}
         </span>
+
+        {/* Toggle column: eye + cursor — always visible */}
+        <div
+          style={{
+            display: 'flex',
+            'align-items': 'center',
+            gap: '2px',
+            'flex-shrink': 0,
+            'padding-right': '6px',
+          }}
+        >
+          {/* Eye toggle */}
+          <span
+            data-testid="scene-tree-row-eye"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              props.setEyeOffMap(prev => ({ ...prev, [props.node.id]: !prev[props.node.id] }));
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              width: '18px',
+              height: '18px',
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'center',
+              'border-radius': 'var(--radius-sm)',
+              'flex-shrink': 0,
+              cursor: 'pointer',
+              color: isEyeOff() ? 'var(--text-disabled)' : 'var(--text-muted)',
+              opacity: isEyeOff() ? 0.45 : 0.9,
+            }}
+          >
+            <Show when={isEyeOff()} fallback={<EyeOnIcon />}>
+              <EyeOffIcon />
+            </Show>
+          </span>
+
+          {/* Cursor (selectability) toggle */}
+          <span
+            data-testid="scene-tree-row-cursor"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              props.setCursorOffMap(prev => ({ ...prev, [props.node.id]: !prev[props.node.id] }));
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              width: '18px',
+              height: '18px',
+              display: 'flex',
+              'align-items': 'center',
+              'justify-content': 'center',
+              'border-radius': 'var(--radius-sm)',
+              'flex-shrink': 0,
+              cursor: 'pointer',
+              color: isCursorOff() ? 'var(--text-disabled)' : 'var(--text-muted)',
+              opacity: isCursorOff() ? 0.45 : 0.9,
+            }}
+          >
+            <Show when={isCursorOff()} fallback={<CursorOnIcon />}>
+              <CursorOffIcon />
+            </Show>
+          </span>
+        </div>
       </div>
 
       {/* Children */}
       <Show when={props.isExpanded(props.node.id) && hasChildren()}>
         <For each={childNodes()}>
-          {(child) => (
-            <TreeNode
-              node={child}
-              depth={props.depth + 1}
-              draggedId={props.draggedId}
-              dropIndicator={props.dropIndicator}
-              setDraggedId={props.setDraggedId}
-              setDropIndicator={props.setDropIndicator}
-              isExpanded={props.isExpanded}
-              toggleExpanded={props.toggleExpanded}
-            />
-          )}
+          {(child, idx) => {
+            const isLast = () => idx() === childNodes().length - 1;
+            const childLineage = () => [...props.lineageHasMoreSiblings, !isLast()];
+            return (
+              <TreeNode
+                node={child}
+                depth={props.depth + 1}
+                lineageHasMoreSiblings={childLineage()}
+                draggedId={props.draggedId}
+                dropIndicator={props.dropIndicator}
+                setDraggedId={props.setDraggedId}
+                setDropIndicator={props.setDropIndicator}
+                isExpanded={props.isExpanded}
+                toggleExpanded={props.toggleExpanded}
+                eyeOffMap={props.eyeOffMap}
+                setEyeOffMap={props.setEyeOffMap}
+                cursorOffMap={props.cursorOffMap}
+                setCursorOffMap={props.setCursorOffMap}
+              />
+            );
+          }}
         </For>
       </Show>
     </div>
@@ -312,6 +445,10 @@ const SceneTreePanel: Component = () => {
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const [expandedMap, setExpandedMap] = useAreaState<Record<string, boolean>>('expandedMap', {});
   const [isFileDragging, setIsFileDragging] = createSignal(false);
+
+  // Visual-only toggle state (P2/P3 will connect these to scene model)
+  const [eyeOffMap, setEyeOffMap] = createSignal<Record<string, boolean>>({});
+  const [cursorOffMap, setCursorOffMap] = createSignal<Record<string, boolean>>({});
 
   const isExpanded = (id: string): boolean => expandedMap()[id] ?? false;
 
@@ -554,17 +691,17 @@ const SceneTreePanel: Component = () => {
     <div
       data-testid="scene-tree-panel"
       style={{
-      width: 'calc(100% - 6px)',
-      height: 'calc(100% - 6px)',
-      display: 'flex',
-      'flex-direction': 'column',
-      overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
+        width: 'calc(100% - 6px)',
+        height: 'calc(100% - 6px)',
+        display: 'flex',
+        'flex-direction': 'column',
+        overflow: 'hidden',
+        background: 'var(--bg-panel)',
+        'box-shadow': 'var(--shadow-well-outer)',
+        'border-radius': 'var(--radius-lg)',
+        margin: '3px',
+        'box-sizing': 'border-box',
+      }}>
       {/* Header */}
       <PanelHeader title="Scene" />
 
@@ -640,56 +777,61 @@ const SceneTreePanel: Component = () => {
           outline: 'none',
         }}
       >
-      <For each={rootNodes()}>
-        {(node) => (
-          <TreeNode
-            node={node}
-            depth={0}
-            draggedId={draggedId}
-            dropIndicator={dropIndicator}
-            setDraggedId={setDraggedId}
-            setDropIndicator={setDropIndicator}
-            isExpanded={isExpanded}
-            toggleExpanded={toggleExpanded}
+        <For each={rootNodes()}>
+          {(node) => (
+            <TreeNode
+              node={node}
+              depth={0}
+              lineageHasMoreSiblings={[]}
+              draggedId={draggedId}
+              dropIndicator={dropIndicator}
+              setDraggedId={setDraggedId}
+              setDropIndicator={setDropIndicator}
+              isExpanded={isExpanded}
+              toggleExpanded={toggleExpanded}
+              eyeOffMap={eyeOffMap}
+              setEyeOffMap={setEyeOffMap}
+              cursorOffMap={cursorOffMap}
+              setCursorOffMap={setCursorOffMap}
+            />
+          )}
+        </For>
+        <Show when={rootNodes().length === 0}>
+          <div style={{
+            padding: 'var(--space-xl)',
+            color: 'var(--text-muted)',
+            'font-size': 'var(--font-size-sm)',
+            'text-align': 'center',
+          }}>
+            Empty scene
+          </div>
+        </Show>
+        <Show when={contextMenu()}>
+          <ContextMenu
+            items={menuItems()}
+            position={contextMenu()!}
+            onClose={() => setContextMenu(null)}
+            align={{ itemIndex: 0, xPercent: 0.65 }}
           />
-        )}
-      </For>
-      <Show when={rootNodes().length === 0}>
-        <div style={{
-          padding: 'var(--space-xl)',
-          color: 'var(--text-muted)',
-          'font-size': 'var(--font-size-sm)',
-          'text-align': 'center',
-        }}>
-          Empty scene
-        </div>
-      </Show>
-      <Show when={contextMenu()}>
-        <ContextMenu
-          items={menuItems()}
-          position={contextMenu()!}
-          onClose={() => setContextMenu(null)}
-          align={{ itemIndex: 0, xPercent: 0.65 }}
-        />
-      </Show>
-      <Show when={isFileDragging()}>
-        <div style={{
-          position: 'absolute',
-          inset: '0',
-          background: 'rgba(100, 149, 237, 0.15)',
-          border: '2px dashed rgba(100, 149, 237, 0.6)',
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-          color: 'var(--text-secondary, #aaa)',
-          'font-size': '13px',
-          'pointer-events': 'none',
-          'z-index': '10',
-          'border-radius': '4px',
-        }}>
-          Drop GLB to import
-        </div>
-      </Show>
+        </Show>
+        <Show when={isFileDragging()}>
+          <div style={{
+            position: 'absolute',
+            inset: '0',
+            background: 'rgba(100, 149, 237, 0.15)',
+            border: '2px dashed rgba(100, 149, 237, 0.6)',
+            display: 'flex',
+            'align-items': 'center',
+            'justify-content': 'center',
+            color: 'var(--text-secondary, #aaa)',
+            'font-size': '13px',
+            'pointer-events': 'none',
+            'z-index': '10',
+            'border-radius': '4px',
+          }}>
+            Drop GLB to import
+          </div>
+        </Show>
       </div>
     </div>
   );
