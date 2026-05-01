@@ -107,7 +107,8 @@ export const WorkspaceTab: Component<Props> = (props) => {
   return (
     <>
       <div
-        data-devid={`toolbar-workspace-tab-${props.workspace.id}`}
+        data-devid="toolbar-workspace-tab"
+        data-workspace-id={props.workspace.id}
         ref={props.ref}
         onClick={() => {
           if (editing()) return;
