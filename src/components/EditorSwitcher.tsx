@@ -41,15 +41,6 @@ function EditorIcon(props: { id: string }) {
           <line x1="6.5" y1="4.2" x2="10.5" y2="7.8" stroke="currentColor" stroke-width="0.8"/>
         </svg>
       );
-    case 'workshop':
-      return (
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <ellipse cx="6.5" cy="7" rx="4" ry="3.5" stroke="currentColor" stroke-width="1" fill="none"/>
-          <line x1="6.5" y1="1.5" x2="6.5" y2="3.5" stroke="currentColor" stroke-width="1"/>
-          <line x1="4" y1="2.5" x2="5" y2="4" stroke="currentColor" stroke-width="0.8"/>
-          <line x1="9" y1="2.5" x2="8" y2="4" stroke="currentColor" stroke-width="0.8"/>
-        </svg>
-      );
     case 'environment':
       return (
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -96,13 +87,12 @@ function EditorIcon(props: { id: string }) {
 
 const SHORTCUT_MAP: Record<string, string> = {
   'scene-tree': 'Shift F1',
-  'workshop': 'Shift F2',
-  'environment': 'Shift F3',
-  'properties': 'Shift F4',
-  'viewport': 'Shift F5',
-  'context': 'Shift F6',
-  'project': 'Shift F7',
-  'settings': 'Shift F8',
+  'environment': 'Shift F2',
+  'properties': 'Shift F3',
+  'viewport': 'Shift F4',
+  'context': 'Shift F5',
+  'project': 'Shift F6',
+  'settings': 'Shift F7',
 };
 
 export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {

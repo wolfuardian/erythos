@@ -154,31 +154,6 @@
   opacity: 0.38;
 }
 
-/* ── Prefab locked row (descendant of a prefab instance) ─────────────────── */
-
-.row.locked {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.row.locked:hover {
-  background: transparent;
-}
-
-/* ── Prefab lock icon ─────────────────────────────────────────────────────── */
-
-.lockIcon {
-  width: 11px;
-  height: 11px;
-  flex-shrink: 0;
-  margin-right: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  opacity: 0.7;
-}
-
 /* ── Prefab FAB badge (instance root) ────────────────────────────────────── */
 
 .fabBadge {

@@ -64,7 +64,6 @@ export function createDebugPreset(): Workspace {
     editorTypes: {
       'viewport': 'viewport',
       'environment': 'environment',
-      'prefab': 'workshop',
     },
     viewportState: {},
     panelStates: {},
@@ -170,10 +169,30 @@ export function loadStore(): WorkspaceStore {
           }
           return { ...w, editorTypes: newEditorTypes };
         });
+        // Migration: workshop → drop (R1: WorkshopPanel decommissioned; AreaShell falls back
+        // to 'viewport' for missing editorType keys, so dropping is safe).
+        const workshopDroppedWorkspaces = prefabToWorkspaceMigratedWorkspaces.map(w => {
+          // A. Debug preset workspace: force-rebuild if editorTypes still references 'workshop'
+          if (w.id === 'debug-preset') {
+            const hasWorkshopEditorType = Object.values(w.editorTypes).includes('workshop');
+            if (hasWorkshopEditorType) {
+              return createDebugPreset();
+            }
+            return w;
+          }
+          // B. Other workspaces: drop editorTypes entries whose value is 'workshop'
+          const newEditorTypes: Record<string, string> = {};
+          for (const [areaId, editorType] of Object.entries(w.editorTypes)) {
+            if (editorType !== 'workshop') {
+              newEditorTypes[areaId] = editorType;
+            }
+          }
+          return { ...w, editorTypes: newEditorTypes };
+        });
         // Migration: drop orphan selectedAssetPaths key.
         // ProjectPanel switched from useAreaState to createSignal (transient selection),
         // leaving stale entries in panelStates that can't be reached or updated.
-        const orphanKeyDroppedWorkspaces = prefabToWorkspaceMigratedWorkspaces.map(w => {
+        const orphanKeyDroppedWorkspaces = workshopDroppedWorkspaces.map(w => {
           if (!w.panelStates) return w;
           const cleaned: Record<string, Record<string, Record<string, unknown>>> = {};
           for (const [areaId, perEditor] of Object.entries(w.panelStates)) {
