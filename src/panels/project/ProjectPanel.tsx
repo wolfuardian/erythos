@@ -379,6 +379,24 @@ const ProjectPanel: Component = () => {
                         // other types: future hook
                       }}
                       onContextMenu={(e) => handleAssetContextMenu(e, f)}
+                      draggable={f.type === 'glb' || f.type === 'prefab'}
+                      onDragStart={(f.type === 'glb' || f.type === 'prefab') ? (e) => {
+                        if (f.type === 'prefab') {
+                          e.dataTransfer!.setData('application/erythos-prefab', f.path);
+                        } else {
+                          const selected = selectedAssetPaths();
+                          const inSelection = selected.includes(f.path);
+                          const glbPaths = selected.filter(p =>
+                            assetFiles().find(a => a.path === p)?.type === 'glb'
+                          );
+                          if (inSelection && glbPaths.length >= 2) {
+                            e.dataTransfer!.setData('application/erythos-glb-list', JSON.stringify(glbPaths));
+                          } else {
+                            e.dataTransfer!.setData('application/erythos-glb', f.path);
+                          }
+                        }
+                        e.dataTransfer!.effectAllowed = 'copy';
+                      } : undefined}
                     >
                       {/* Thumbnail placeholder */}
                       <div
@@ -425,19 +443,21 @@ const ProjectPanel: Component = () => {
                       // other types: future hook
                     }}
                     onContextMenu={(e) => handleAssetContextMenu(e, f)}
-                    draggable={f.type === 'glb'}
-                    onDragStart={f.type === 'glb' ? (e) => {
-                      const selected = selectedAssetPaths();
-                      const inSelection = selected.includes(f.path);
-                      const glbPaths = selected.filter(p =>
-                        assetFiles().find(a => a.path === p)?.type === 'glb'
-                      );
-                      if (inSelection && glbPaths.length >= 2) {
-                        // Multi payload: all glb paths from current selection
-                        e.dataTransfer!.setData('application/erythos-glb-list', JSON.stringify(glbPaths));
+                    draggable={f.type === 'glb' || f.type === 'prefab'}
+                    onDragStart={(f.type === 'glb' || f.type === 'prefab') ? (e) => {
+                      if (f.type === 'prefab') {
+                        e.dataTransfer!.setData('application/erythos-prefab', f.path);
                       } else {
-                        // Single payload: just this file
-                        e.dataTransfer!.setData('application/erythos-glb', f.path);
+                        const selected = selectedAssetPaths();
+                        const inSelection = selected.includes(f.path);
+                        const glbPaths = selected.filter(p =>
+                          assetFiles().find(a => a.path === p)?.type === 'glb'
+                        );
+                        if (inSelection && glbPaths.length >= 2) {
+                          e.dataTransfer!.setData('application/erythos-glb-list', JSON.stringify(glbPaths));
+                        } else {
+                          e.dataTransfer!.setData('application/erythos-glb', f.path);
+                        }
                       }
                       e.dataTransfer!.effectAllowed = 'copy';
                     } : undefined}
