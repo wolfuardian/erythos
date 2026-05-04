@@ -1,4 +1,5 @@
 import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
+import styles from './ViewportPanel.module.css';
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
 import type { Object3D } from 'three';
@@ -44,7 +45,6 @@ const ViewportPanel: Component = () => {
   const [groupCollapsed, setGroupCollapsed] = createSignal<Record<string, boolean>>({});
   const isGroupOpen = (key: string) => !groupCollapsed()[key];
   const toggleGroup = (key: string) => setGroupCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
-  const [hoveredShading, setHoveredShading] = createSignal<ShadingMode | null>(null);
 
   // Per-mode scene lights override map
   // key = ShadingMode，value = override（undefined 代表使用 mode default）
@@ -537,68 +537,27 @@ const ViewportPanel: Component = () => {
     <div
       data-testid="viewport-panel"
       ref={containerRef}
-      style={{
-        width: 'calc(100% - 6px)',
-        height: 'calc(100% - 6px)',
-        display: 'flex',
-        'flex-direction': 'column',
-        overflow: 'hidden',
-        background: 'var(--bg-app)',
-        'box-shadow': 'var(--shadow-well-outer)',
-        'border-radius': 'var(--radius-lg)',
-        margin: '3px',
-        'box-sizing': 'border-box',
-      }}
+      class={styles.container}
     >
       <PanelHeader title="Viewport" actions={
         <ShadingToolbar
           renderMode={renderMode}
           setRenderMode={setRenderMode}
-          hoveredShading={hoveredShading}
-          setHoveredShading={setHoveredShading}
         />
       } />
       <div
         ref={canvasRef}
-        style={{
-          flex: '1',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
+        class={styles.canvas}
       >
       {/* SceneOps vertical overlay — Phase 3 of #688 */}
       <div
         data-testid="viewport-scene-ops-overlay"
-        style={{
-          position: 'absolute',
-          top: '8px',
-          left: '8px',
-          background: 'rgba(40, 40, 40, 0.85)',
-          border: '1px solid var(--border-subtle)',
-          'border-radius': '4px',
-          padding: '4px',
-          'z-index': '10',
-          'pointer-events': 'auto',
-        }}
+        class={styles.sceneOpsOverlay}
       >
         <SceneOpsToolbar orientation="vertical" />
       </div>
       <Show when={isDragging()}>
-        <div
-          style={{
-            position: 'absolute',
-            inset: '0',
-            background: 'rgba(100, 149, 237, 0.25)',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            'font-size': '18px',
-            color: 'var(--text-primary, #fff)',
-            'pointer-events': 'none',
-            'z-index': '10',
-            border: '2px dashed rgba(100, 149, 237, 0.7)',
-          }}
-        >
+        <div class={styles.dropOverlay}>
           放開以導入模型
         </div>
       </Show>
