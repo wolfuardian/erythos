@@ -56,7 +56,7 @@ export const SceneOpsToolbar: Component<{
       try {
         const data = await file.text();
         const parsed = JSON.parse(data);
-        editor.loadScene(parsed);
+        await editor.loadScene(parsed);
       } catch (e: any) {
         setErrorTitle('Load Failed');
         setErrorMsg(e.message || String(e));

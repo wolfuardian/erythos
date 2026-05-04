@@ -16,8 +16,11 @@ function buildNodes(
 ): void {
   const id = generateUUID();
 
+  // Emit mesh: { path, nodePath } — no 'url' here.
+  // url is populated at hydrate time (projectManager.urlFor(path)) or at import
+  // time by the caller of convertGLTFToNodes.
   const components = obj instanceof Mesh
-    ? { mesh: { source: `${filePath}:${nodePath}` } }
+    ? { mesh: { path: filePath, nodePath } }
     : {};
 
   result.push({

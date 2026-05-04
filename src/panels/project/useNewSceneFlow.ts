@@ -32,7 +32,7 @@ export function useNewSceneFlow(props: NewSceneFlowProps): NewSceneFlow {
       try {
         const path = await props.bridge.createScene(name);
         props.bridge.setCurrentScenePath(path);
-        props.editor.loadScene({ version: 1, nodes: [] });
+        await props.editor.loadScene({ version: 1, nodes: [] });
       } catch (e: any) {
         props.setError('Create Scene Failed', e.message || String(e));
       }

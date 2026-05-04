@@ -118,18 +118,17 @@ export class SceneSync {
       obj.add(new PerspectiveCamera(camComp.fov, 1, camComp.near, camComp.far));
     } else if (this.resourceCache && node.components.mesh) {
       const meshComp = node.components.mesh as MeshComponent;
-      const colonIdx = meshComp.source.indexOf(':');
-      const filePath = colonIdx === -1 ? meshComp.source : meshComp.source.slice(0, colonIdx);
-      const nodePath = colonIdx === -1 ? undefined : meshComp.source.slice(colonIdx + 1);
-      if (this.resourceCache.has(filePath)) {
-        const meshObj = this.resourceCache.cloneSubtree(filePath, nodePath);
+      // url is populated at hydrate time via projectManager.urlFor(path).
+      // If url is absent (file not found during hydrate), skip silently — soft-fail.
+      if (meshComp.url && this.resourceCache.has(meshComp.url)) {
+        const meshObj = this.resourceCache.cloneSubtree(meshComp.url, meshComp.nodePath);
         if (meshObj) {
           // Reset clone root transform: applyTransform(obj, node) already applied
           // position/rotation/scale from SceneNode. The clone carries the same
           // values baked into the gltf subtree root — adding meshObj directly
           // would cause double-application (e.g. scale² for artist meter-to-unit root).
           // This reset applies to ALL mesh nodes, not just root clones:
-          // gltfConverter always sets nodePath (format: filePath:nodePath), so
+          // gltfConverter always sets nodePath (path:nodePath), so
           // every clone root's local transform is redundant with applyTransform.
           meshObj.position.set(0, 0, 0);
           meshObj.quaternion.identity();

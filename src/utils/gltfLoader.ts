@@ -1,45 +1,31 @@
 import { ImportGLTFCommand } from '../core/commands/ImportGLTFCommand';
 import { convertGLTFToNodes } from './gltfConverter';
 import type { Editor } from '../core/Editor';
-import * as GlbStore from '../core/scene/GlbStore';
 
 export async function loadGLTFFromFile(file: File, editor: Editor): Promise<string> {
+  // 1. Import the file into the project's models/ folder
   const path = await editor.projectManager.importAsset(file);
 
-  // 群組節點名稱：取最後 '/' 後再去副檔名
+  // 2. Get (or create) a blob URL for the imported asset
+  const url = await editor.projectManager.urlFor(path);
+
+  // 3. Load and cache the GLTF via URL
+  const gltfScene = await editor.resourceCache.loadFromURL(url);
+
+  // 4. Build scene nodes; converter emits { path, nodePath } without url.
+  //    We attach url to every mesh node the converter created.
   const lastSegment = path.split('/').pop() ?? path;
   const fileName = lastSegment.replace(/\.[^.]+$/, '');
-
-  const buffer = await file.arrayBuffer();
-  const gltfScene = await editor.resourceCache.loadFromBuffer(path, buffer);
-
   const groupNode = editor.sceneDocument.createNode(fileName);
   const childNodes = convertGLTFToNodes(gltfScene, groupNode.id, path);
 
-  editor.execute(new ImportGLTFCommand(editor, [groupNode, ...childNodes]));
-  return groupNode.id;
-}
-
-/**
- * 從 GlbStore 快取載入已知 GLB 到場景。
- * filename 語意為 project-relative path（如 models/chair.glb）。
- * 若 filename 不在快取中，返回 null（不拋例外）。
- * 返回 groupNode.id（與 loadGLTFFromFile 一致）。
- */
-export async function loadGLTFFromCache(
-  filename: string,
-  editor: Editor,
-): Promise<string | null> {
-  const buffer = await GlbStore.get(filename);
-  if (!buffer) return null;
-
-  const source = filename;
-  const lastSegment = source.split('/').pop() ?? source;
-  const name = lastSegment.replace(/\.[^.]+$/, '');
-
-  const gltfScene = await editor.resourceCache.loadFromBuffer(source, buffer);
-  const groupNode = editor.sceneDocument.createNode(name);
-  const childNodes = convertGLTFToNodes(gltfScene, groupNode.id, source);
+  // Attach url to all mesh nodes so SceneSync can render them immediately
+  for (const node of childNodes) {
+    const mesh = node.components['mesh'] as { path: string; nodePath?: string; url?: string } | undefined;
+    if (mesh) {
+      mesh.url = url;
+    }
+  }
 
   editor.execute(new ImportGLTFCommand(editor, [groupNode, ...childNodes]));
   return groupNode.id;
