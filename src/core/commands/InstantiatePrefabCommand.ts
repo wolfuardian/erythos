@@ -24,29 +24,36 @@ export class InstantiatePrefabCommand extends Command {
   }
 
   execute(): void {
-    // 反序列化為全新 UUID 的節點（不含 components.prefab）
-    const nodes = deserializeFromPrefab(this.asset, null);
+    // Wrap the entire body in suppress() so that the nodeAdded events fired by
+    // addNode() below do NOT trigger PrefabInstanceWatcher to schedule a write.
+    // Without this guard, instantiating into a scene that already has 2+ instances
+    // of the same prefab would cause a spurious write → round-trip → UUID churn on
+    // those existing instances.
+    this.editor.prefabInstanceWatcher.suppress(() => {
+      // 反序列化為全新 UUID 的節點（不含 components.prefab）
+      const nodes = deserializeFromPrefab(this.asset, null);
 
-    // 根節點加上 prefab 標記（使用 path，不使用 id）
-    const root = nodes[0];
-    root.components = {
-      ...(root.components as Record<string, unknown>),
-      prefab: { path: this.path },
-    };
+      // 根節點加上 prefab 標記（使用 path，不使用 id）
+      const root = nodes[0];
+      root.components = {
+        ...(root.components as Record<string, unknown>),
+        prefab: { path: this.path },
+      };
 
-    // 若有指定位置，覆蓋根節點位置
-    if (this.position) {
-      root.position = [...this.position] as Vec3;
-    }
+      // 若有指定位置，覆蓋根節點位置
+      if (this.position) {
+        root.position = [...this.position] as Vec3;
+      }
 
-    this.instantiatedNodes = nodes;
+      this.instantiatedNodes = nodes;
 
-    for (const node of nodes) {
-      this.editor.sceneDocument.addNode(node);
-    }
+      for (const node of nodes) {
+        this.editor.sceneDocument.addNode(node);
+      }
 
-    // 選取根節點
-    this.editor.selection.select(root.id);
+      // 選取根節點
+      this.editor.selection.select(root.id);
+    });
   }
 
   undo(): void {

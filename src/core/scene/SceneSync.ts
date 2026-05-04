@@ -12,6 +12,7 @@ import type { ResourceCache } from './ResourceCache';
 import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
 import { deserializeFromPrefab } from './PrefabSerializer';
+import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -41,6 +42,9 @@ export class SceneSync {
 
   /** Bound prefabChanged handler for off() symmetry */
   private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
+  /** Reference to PrefabInstanceWatcher for self-write skip check (optional) */
+  private _instanceWatcher: PrefabInstanceWatcher | null = null;
+
   /** Reference to attached PrefabRegistry (for dispose) */
   private _prefabRegistry: PrefabRegistry | null = null;
 
@@ -140,6 +144,19 @@ export class SceneSync {
   }
 
   /**
+   * Attach a PrefabInstanceWatcher so SceneSync can query the self-write registry
+   * before rebuilding individual instances.
+   *
+   * Call once from Editor.init after creating the watcher.
+   * Pass null to detach (called automatically by Editor.dispose order).
+   *
+   * @param watcher - The PrefabInstanceWatcher instance, or null to detach.
+   */
+  attachInstanceWatcher(watcher: PrefabInstanceWatcher | null): void {
+    this._instanceWatcher = watcher;
+  }
+
+  /**
    * Rebuild all scene-graph instance subtrees whose `components.prefab.path`
    * matches the given path (stable across URL rotation).
    *
@@ -153,23 +170,51 @@ export class SceneSync {
     });
 
     for (const instanceRoot of instances) {
-      // Step 1: Remove existing children (recursive) from SceneDocument
-      this._removeDescendants(instanceRoot.id);
+      // Self-write skip: if the PrefabInstanceWatcher wrote this path and this
+      // instance was the originator, skip the rebuild to avoid overwriting the
+      // user's in-progress edit with its own round-trip echo.
+      if (this._instanceWatcher?.hasRecentSelfWrite(path, instanceRoot.id)) {
+        continue;
+      }
 
-      // Step 2: Update the instance root's prefab.url to the new URL
-      // (path remains stable; url must track the new blob URL)
-      const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
-      this.document.updateNode(instanceRoot.id, {
-        components: {
-          ...instanceRoot.components,
-          prefab: { ...currentPrefab, url: newURL },
-        },
-      });
+      // Wrap each instance's rebuild in suppress() so the nodeAdded/nodeRemoved
+      // events fired during _removeDescendants + addNode do NOT arm a new debounce
+      // in PrefabInstanceWatcher. This is the primary guard against rebuild-echo;
+      // the 50ms self-write window is a secondary fallback.
+      const doRebuild = () => {
+        // Step 1: Remove existing children (recursive) from SceneDocument
+        this._removeDescendants(instanceRoot.id);
 
-      // Step 3: Deserialize new prefab content as children of this instance root
-      const childNodes = deserializeFromPrefab(newAsset, instanceRoot.id);
-      for (const node of childNodes) {
-        this.document.addNode(node);
+        // Step 2: Update the instance root's prefab.url to the new URL
+        // (path remains stable; url must track the new blob URL)
+        const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
+        this.document.updateNode(instanceRoot.id, {
+          components: {
+            ...instanceRoot.components,
+            prefab: { ...currentPrefab, url: newURL },
+          },
+        });
+
+        // Step 3: Deserialize new prefab content. The asset's first node is the
+        // prefab root, which corresponds to the existing instance root — we keep
+        // instanceRoot intact (per-instance transform/name/parent per design)
+        // and graft only the prefab root's descendants under it. Without this
+        // skip, every save would nest a fresh prefab-root layer below the
+        // instance root, deepening by one level per write cycle.
+        const deserialized = deserializeFromPrefab(newAsset, null);
+        const prefabRoot = deserialized[0];
+        for (const node of deserialized.slice(1)) {
+          if (node.parent === prefabRoot.id) {
+            node.parent = instanceRoot.id;
+          }
+          this.document.addNode(node);
+        }
+      };
+
+      if (this._instanceWatcher) {
+        this._instanceWatcher.suppress(doRebuild);
+      } else {
+        doRebuild();
       }
     }
   }

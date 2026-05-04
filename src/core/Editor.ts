@@ -11,6 +11,7 @@ import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
 import { PrefabRegistry } from './scene/PrefabRegistry';
+import { PrefabInstanceWatcher } from './scene/PrefabInstanceWatcher';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
 import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
@@ -27,6 +28,7 @@ export class Editor {
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
+  readonly prefabInstanceWatcher: PrefabInstanceWatcher;
   private _transformMode: TransformMode = 'translate';
   private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
 
@@ -43,6 +45,10 @@ export class Editor {
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
     this.clipboard = new Clipboard();
+    this.prefabInstanceWatcher = new PrefabInstanceWatcher(
+      this.sceneDocument,
+      projectManager,
+    );
   }
 
   /**
@@ -68,6 +74,9 @@ export class Editor {
     // auto-rebuild while the user is actively editing the same prefab.
     this.prefabRegistry.attach(this.projectManager);
     this.sceneSync.attachPrefabRegistry(this.prefabRegistry);
+    // Wire PrefabInstanceWatcher into SceneSync so it can query the self-write
+    // registry before rebuilding the originating instance.
+    this.sceneSync.attachInstanceWatcher(this.prefabInstanceWatcher);
 
     // ── Step 3: notify bridge ───────────────────────────────────────────────
     this.events.emit('prefabStoreChanged');
@@ -249,6 +258,11 @@ export class Editor {
   }
 
   dispose(): void {
+    // Dispose watcher first: it unsubscribes from SceneDocument events.
+    // sceneSync.dispose() comes after so the detach order is:
+    //   watcher → sceneSync → prefabRegistry
+    this.prefabInstanceWatcher.dispose();
+    this.sceneSync.attachInstanceWatcher(null);
     this.prefabRegistry.detach();
     this.sceneSync.dispose();
     this.keybindings.dispose();
