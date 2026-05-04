@@ -16,3 +16,4 @@ settings.local.json
 projects/
 .playwright-mcp/
 .superpowers/
+.idea/
