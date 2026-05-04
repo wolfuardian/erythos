@@ -4,10 +4,11 @@ import { useAreaState } from '../../app/areaState';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
-import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
+import { ContextMenu } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 import { ProjectTypeIcon } from './ProjectTypeIcon';
+import { buildProjectMenuItems } from './projectMenuItems';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -251,55 +252,17 @@ const ProjectPanel: Component = () => {
   };
 
   // ── Context menu items ──
-  const contextMenuItems = (): MenuItem[] => {
-    const file = contextMenu()?.file ?? null;
-
-    if (file === null) {
-      // Empty area right-click
-      return [
-        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
-      ];
-    }
-
-    const selected = selectedAssetPaths();
-    const isBatch = selected.length > 1;
-
-    if (isBatch) {
-      // Batch mode: N items selected
-      const n = selected.length;
-      return [
-        { label: `Delete ${n} items`, action: () => {
-          setPendingDeletePaths([...selected]);
-          setShowDeleteConfirm(true);
-        }},
-        { label: '---' },
-        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
-      ];
-    }
-
-    // Single mode
-    if (file.type === 'scene') {
-      return [
-        { label: 'Open Scene', action: () => handleLoadScene(file.path) },
-        { label: 'Delete', action: () => {
-          setPendingDeletePaths([file.path]);
-          setShowDeleteConfirm(true);
-        }},
-        { label: '---' },
-        { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
-      ];
-    }
-
-    // Single, non-scene type
-    return [
-      { label: 'Delete', action: () => {
-        setPendingDeletePaths([file.path]);
+  const contextMenuItems = () =>
+    buildProjectMenuItems({
+      file: contextMenu()?.file ?? null,
+      selectedPaths: selectedAssetPaths(),
+      onLoadScene: handleLoadScene,
+      onRequestDelete: (paths) => {
+        setPendingDeletePaths(paths);
         setShowDeleteConfirm(true);
-      }},
-      { label: '---' },
-      { label: 'New Scene...', action: () => setShowNewScenePrompt(true) },
-    ];
-  };
+      },
+      onRequestNewScene: () => setShowNewScenePrompt(true),
+    });
 
   // ── Delete confirm dialog props (derived) ──
   const deleteConfirmTitle = () => {
