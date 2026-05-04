@@ -32,9 +32,12 @@ const App: Component = () => {
 
   const openProject = async (handle: FileSystemDirectoryHandle) => {
     const e = new Editor(projectManager);
+    // Order matters: openHandle MUST precede init() so that init's IDB→file migration
+    // and PrefabRegistry hydration see isOpen=true. Reversing this guard-skips both,
+    // resulting in empty prefab list + legacy refs stripped as orphans (data loss).
+    await projectManager.openHandle(handle);
     await e.init();
     autosaveHandle = createAutoSave(e);
-    await projectManager.openHandle(handle);
 
     // Resolve scene path: persisted per-project value, fall back to default.
     const projectId = projectManager.currentId;

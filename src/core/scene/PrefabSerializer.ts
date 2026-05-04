@@ -22,7 +22,14 @@ export function serializeToPrefab(
     // 剝除 components.prefab（不讓 prefab 資產知道自己是某個場景實例）
     const components: Record<string, unknown> = { ...(node.components as Record<string, unknown>) };
     delete components['prefab'];
-
+    // Strip runtime-only blob URL fields so they are not persisted to disk.
+    // mesh.url and prefab.url are session-scoped; they must be rehydrated from
+    // mesh.path / prefab.path on the next session load.
+    if (components['mesh'] && typeof components['mesh'] === 'object') {
+      const mesh = { ...(components['mesh'] as Record<string, unknown>) };
+      delete mesh['url'];
+      components['mesh'] = mesh;
+    }
     return {
       localId,
       parentLocalId: node.parent !== null

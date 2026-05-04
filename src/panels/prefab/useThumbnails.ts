@@ -6,7 +6,10 @@
  * - Thumbnails cached as Map<assetId, { modified: string; dataURL: string }>
  * - Invalidated when asset.modified changes
  * - Generated lazily on first reactive access (createEffect watches prefabAssets)
- * - Falls back gracefully when GLB sources are missing or render fails
+ * - Falls back gracefully when mesh sources are missing or render fails
+ *
+ * P1c: removed GlbStore dependency; mesh URLs come from mesh.url (hydrated at load)
+ * or are resolved on-demand via projectManager.urlFor(mesh.path).
  */
 
 import { createSignal, createEffect, onCleanup } from 'solid-js';
@@ -15,7 +18,6 @@ import {
   DirectionalLight, AmbientLight, Box3, Vector3,
   ACESFilmicToneMapping, type Object3D,
 } from 'three';
-import * as GlbStore from '../../core/scene/GlbStore';
 import type { PrefabAsset } from '../../core/scene/PrefabFormat';
 import type { Editor } from '../../core/Editor';
 
@@ -66,40 +68,44 @@ export function useThumbnails(
     const r = getRenderer();
     if (!thumbScene || !thumbCamera) return null;
 
-    // Collect unique GLB sources from mesh components
-    const sources = [
-      ...new Set(
-        asset.nodes
-          .filter(n => (n.components as Record<string, unknown>)?.mesh)
-          .map(
-            n =>
-              (
-                (n.components as Record<string, { source: string }>).mesh
-                  .source
-              ).split(':')[0],
-          ),
-      ),
-    ];
+    // Collect unique mesh URLs from prefab nodes.
+    // P1c: mesh.url is the blob URL (hydrated at scene load).
+    // Fallback: if url is absent, resolve via projectManager.urlFor(mesh.path).
+    const meshURLs = new Set<string>();
+    for (const prefabNode of asset.nodes) {
+      const mesh = (prefabNode.components as Record<string, unknown>)?.['mesh'] as
+        | { url?: string; path?: string }
+        | undefined;
+      if (!mesh) continue;
+      if (mesh.url) {
+        meshURLs.add(mesh.url);
+      } else if (mesh.path) {
+        try {
+          const url = await editor.projectManager.urlFor(mesh.path);
+          meshURLs.add(url);
+        } catch {
+          // soft-fail
+        }
+      }
+    }
 
-    if (sources.length === 0) return null;
+    if (meshURLs.size === 0) return null;
 
     // Temp objects added for this render
     const tempObjects: Object3D[] = [];
 
     try {
-      for (const source of sources) {
+      for (const meshURL of meshURLs) {
         // Ensure GLB is in ResourceCache
-        if (!editor.resourceCache.has(source)) {
-          const buffer = await GlbStore.get(source);
-          if (!buffer) continue;
+        if (!editor.resourceCache.has(meshURL)) {
           try {
-            await editor.resourceCache.loadFromBuffer(source, buffer);
+            await editor.resourceCache.loadFromURL(meshURL);
           } catch {
             continue;
           }
         }
 
-        const obj = editor.resourceCache.cloneSubtree(source);
+        const obj = editor.resourceCache.cloneSubtree(meshURL);
         if (!obj) continue;
         tempObjects.push(obj);
         thumbScene.add(obj);

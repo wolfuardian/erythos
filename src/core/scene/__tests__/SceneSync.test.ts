@@ -259,7 +259,6 @@ describe('SceneSync', () => {
         has: () => hit,
         cloneSubtree: () => (hit ? meshObj.clone(true) : null),
         loadFromURL: async () => new Group(),
-        _loadFromBuffer: async () => new Group(),
         evict: () => {},
         clear: () => {},
       } as unknown as ResourceCache;
@@ -285,7 +284,6 @@ describe('SceneSync', () => {
         has: (url: string) => { capturedUrl = url; return true; },
         cloneSubtree: (url: string, np?: string) => { capturedUrl = url; capturedNodePath = np; return meshObj.clone(true); },
         loadFromURL: async () => new Group(),
-        _loadFromBuffer: async () => new Group(),
         evict: () => {},
         clear: () => {},
       } as unknown as ResourceCache;

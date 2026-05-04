@@ -10,15 +10,16 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
-import * as GlbStore from '../../core/scene/GlbStore';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useThumbnails } from './useThumbnails';
+import { prefabPathForName } from '../../utils/prefabPath';
 import styles from './PrefabPanel.module.css';
 
 const PrefabPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
-  const [activeId, setActiveId] = useAreaState<string | null>('activeId', null);
+  // activeId now stores the prefab path (project-relative), not the asset id
+  const [activePath, setActivePath] = useAreaState<string | null>('activePath', null);
   const { getThumbnail } = useThumbnails(() => bridge.prefabAssets(), editor);
 
   let previewRef!: HTMLDivElement;
@@ -107,34 +108,54 @@ const PrefabPanel: Component = () => {
     controls.update();
   };
 
-  // 載入 leaf 內容到預覽場景
-  const loadLeafPreview = async (assetId: string) => {
-    const asset = bridge.prefabAssets().find(a => a.id === assetId);
+  /**
+   * Load a prefab's GLB meshes into the preview scene.
+   * Uses PrefabRegistry to get the asset, then ResourceCache for the GLB.
+   * Mesh URLs in prefab nodes come from the node's mesh.url (populated at scene load).
+   * Falls back gracefully if any source is missing.
+   */
+  const loadPrefabPreview = async (path: string) => {
+    // Find the asset by path via PrefabRegistry
+    const url = editor.prefabRegistry.getURLForPath(path);
+    if (!url) return;
+    const asset = editor.prefabRegistry.get(url);
     if (!asset || !previewScene) return;
 
     clearContent();
 
-    // 收集 leaf 中所有唯一的 GLB 來源（source 是 "file.glb:path" 格式，取 ":" 前的部分）
-    const sources = [...new Set(
-      asset.nodes
-        .filter(n => (n.components as Record<string, unknown>)?.mesh)
-        .map(n => ((n.components as Record<string, { source: string }>).mesh.source).split(':')[0])
-    )];
-
-    for (const source of sources) {
-      // 確保已在 ResourceCache 中
-      if (!editor.resourceCache.has(source)) {
-        const buffer = await GlbStore.get(source);
-        if (!buffer) continue;
+    // Collect unique mesh URLs from prefab nodes
+    // Prefab nodes store mesh.url (populated when the prefab was instantiated from a scene
+    // that had hydrated mesh.url values). Fall back to mesh.path → urlFor if url is absent.
+    const meshURLs = new Set<string>();
+    for (const prefabNode of asset.nodes) {
+      const mesh = (prefabNode.components as Record<string, unknown>)?.['mesh'] as
+        | { url?: string; path?: string }
+        | undefined;
+      if (!mesh) continue;
+      if (mesh.url) {
+        meshURLs.add(mesh.url);
+      } else if (mesh.path) {
         try {
-          await editor.resourceCache.loadFromBuffer(source, buffer);
+          const meshURL = await editor.projectManager.urlFor(mesh.path);
+          meshURLs.add(meshURL);
+        } catch {
+          // soft-fail — skip this mesh
+        }
+      }
+    }
+
+    for (const meshURL of meshURLs) {
+      // Ensure loaded in ResourceCache
+      if (!editor.resourceCache.has(meshURL)) {
+        try {
+          await editor.resourceCache.loadFromURL(meshURL);
         } catch {
           continue;
         }
       }
 
-      // 從快取 clone（不影響主場景）
-      const obj = editor.resourceCache.cloneSubtree(source);
+      // Clone from cache (does not affect main scene)
+      const obj = editor.resourceCache.cloneSubtree(meshURL);
       if (!obj) continue;
       contentObjects.push(obj);
       previewScene.add(obj);
@@ -143,14 +164,14 @@ const PrefabPanel: Component = () => {
     autoFrame();
   };
 
-  // 選取 leaf 時載入預覽
+  // 選取 prefab 時載入預覽
   createEffect(() => {
-    const id = activeId();
-    if (!id) {
+    const path = activePath();
+    if (!path) {
       clearContent();
       return;
     }
-    void loadLeafPreview(id);
+    void loadPrefabPreview(path);
   });
 
   return (
@@ -160,7 +181,7 @@ const PrefabPanel: Component = () => {
 
       {/* Body: list + preview */}
       <div class={styles.body}>
-        {/* Left: leaf list */}
+        {/* Left: prefab list */}
         <div class={styles.list}>
           <Show
             when={bridge.prefabAssets().length > 0}
@@ -174,15 +195,17 @@ const PrefabPanel: Component = () => {
           >
             <For each={bridge.prefabAssets()}>
               {(asset) => {
-                const isActive = () => activeId() === asset.id;
+                const path = prefabPathForName(asset.name);
+                const isActive = () => activePath() === path;
                 return (
                   <div
                     draggable
                     onDragStart={(e) => {
-                      e.dataTransfer!.setData('application/erythos-prefab', asset.id);
+                      // Payload is path (project-relative), not asset.id
+                      e.dataTransfer!.setData('application/erythos-prefab', path);
                       e.dataTransfer!.effectAllowed = 'copy';
                     }}
-                    onClick={() => setActiveId(isActive() ? null : asset.id)}
+                    onClick={() => setActivePath(isActive() ? null : path)}
                     class={styles.listItem}
                     classList={{ [styles.active]: isActive() }}
                   >
@@ -218,7 +241,7 @@ const PrefabPanel: Component = () => {
           <div ref={previewRef} class={styles.previewCanvas} />
 
           {/* Overlay when nothing selected */}
-          <Show when={!activeId()}>
+          <Show when={!activePath()}>
             <div class={styles.previewOverlay}>
               Select a prefab<br />to preview
             </div>

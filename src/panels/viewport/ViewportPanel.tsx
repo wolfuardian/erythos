@@ -12,7 +12,6 @@ import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
 import { InstantiatePrefabCommand } from '../../core/commands/InstantiatePrefabCommand';
-import * as PrefabStore from '../../core/scene/PrefabStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
@@ -148,14 +147,24 @@ const ViewportPanel: Component = () => {
       }
 
       // 路徑 3：Prefab 拖曳（從 Prefab Panel）
-      const leafId = e.dataTransfer?.getData('application/erythos-prefab');
-      if (leafId) {
+      // Payload is the project-relative path (e.g. "prefabs/chair.prefab")
+      const prefabPath = e.dataTransfer?.getData('application/erythos-prefab');
+      if (prefabPath) {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
-          const asset = await PrefabStore.get(leafId);
-          if (asset) {
-            editor.execute(new InstantiatePrefabCommand(editor, asset, dropPosition));
+          // Look up URL from PrefabRegistry via path, then get the parsed asset
+          const url = editor.prefabRegistry.getURLForPath(prefabPath);
+          if (url) {
+            const asset = editor.prefabRegistry.get(url);
+            if (asset) {
+              editor.execute(new InstantiatePrefabCommand(editor, asset, prefabPath, dropPosition));
+            }
+          } else {
+            // URL not cached yet — load via urlFor + registry
+            const resolvedURL = await editor.projectManager.urlFor(prefabPath);
+            const asset = await editor.prefabRegistry.loadFromURL(resolvedURL, prefabPath);
+            editor.execute(new InstantiatePrefabCommand(editor, asset, prefabPath, dropPosition));
           }
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));

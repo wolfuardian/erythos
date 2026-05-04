@@ -49,8 +49,20 @@ export interface CameraComponent {
   far: number;
 }
 
+/**
+ * PrefabComponent — runtime shape includes `url` (session-scoped blob URL) and
+ * `path` (project-relative canonical path, persisted).
+ *
+ * Serialised form omits `url` — it is recomputed via projectManager.urlFor(path) at hydrate.
+ * `url` is optional because hydrate may soft-fail (file not found → warn + skip).
+ *
+ * Legacy format: `{ id: "<uuid>" }` — migrated to `{ path }` in migrateNodeComponents.
+ */
 export interface PrefabComponent {
-  id: string; // 對應 PrefabAsset.id，標記此節點為某 prefab 的實例根
+  /** Blob URL used by PrefabRegistry.loadFromURL — populated at hydrate time, not persisted */
+  url?: string;
+  /** Project-relative path, e.g. "prefabs/chair.prefab" — persisted */
+  path: string;
 }
 
 export interface SceneFile {
