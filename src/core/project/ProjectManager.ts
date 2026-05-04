@@ -14,11 +14,14 @@ import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 import { generateUUID } from '../../utils/uuid';
 
 type Listener = () => void;
+type FileChangedListener = (path: string, newURL: string) => void;
 
 export class ProjectManager {
   private _handle: FileSystemDirectoryHandle | null = null;
   private _files: ProjectFile[] = [];
   private _listeners = new Set<Listener>();
+  private _fileChangedListeners = new Set<FileChangedListener>();
+  private _urlCache = new Map<string, string>();
   private _currentId: string | null = null;
 
   private readonly _currentScenePath: Accessor<string>;
@@ -147,6 +150,7 @@ export class ProjectManager {
 
   /** Close project (does not remove from recent list) */
   close(): void {
+    this._revokeAllCachedURLs();
     this._handle = null;
     this._files = [];
     this._currentId = null;
@@ -184,6 +188,17 @@ export class ProjectManager {
     const writable = await fileHandle.createWritable();
     await writable.write(data);
     await writable.close();
+
+    // If this path was cached, revoke old URL, mint new one, and emit fileChanged
+    if (this._urlCache.has(path)) {
+      const oldURL = this._urlCache.get(path)!;
+      URL.revokeObjectURL(oldURL);
+      this._urlCache.delete(path);
+      const file = await this.readFile(path);
+      const newURL = URL.createObjectURL(file);
+      this._urlCache.set(path, newURL);
+      this._emitFileChanged(path, newURL);
+    }
   }
 
   /** Copy an external File into the project's correct folder, auto-suffixing on name clash */
@@ -277,6 +292,28 @@ export class ProjectManager {
     await this.rescan();
   }
 
+  /**
+   * Return a blob URL for the file at `path`, creating and caching one on first call.
+   * Subsequent calls with the same path return the same URL (within the session).
+   * Throws if no project is open or the file doesn't exist.
+   * All cached URLs are revoked when the project is closed.
+   */
+  async urlFor(path: string): Promise<string> {
+    if (!this._handle) throw new Error('No project open');
+    const cached = this._urlCache.get(path);
+    if (cached !== undefined) return cached;
+    const file = await this.readFile(path);
+    const url = URL.createObjectURL(file);
+    this._urlCache.set(path, url);
+    return url;
+  }
+
+  /** Subscribe to fileChanged event (fires when a cached file is updated via writeFile) */
+  onFileChanged(fn: FileChangedListener): () => void {
+    this._fileChangedListeners.add(fn);
+    return () => this._fileChangedListeners.delete(fn);
+  }
+
   /** Subscribe to projectChanged event */
   onChange(fn: Listener): () => void {
     this._listeners.add(fn);
@@ -326,5 +363,16 @@ export class ProjectManager {
 
   private emit(): void {
     for (const fn of this._listeners) fn();
+  }
+
+  private _emitFileChanged(path: string, newURL: string): void {
+    for (const fn of this._fileChangedListeners) fn(path, newURL);
+  }
+
+  private _revokeAllCachedURLs(): void {
+    for (const url of this._urlCache.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this._urlCache.clear();
   }
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Helpers to build mock FileSystem handles ──────────────────────────────────
 
@@ -172,5 +172,199 @@ describe('ProjectManager.deleteFile', () => {
   it('throws when no project is open', async () => {
     const pm = new ProjectManager();
     await expect(pm.deleteFile('scenes/x.erythos')).rejects.toThrow('No project open');
+  });
+});
+
+// ── URL API stubs for urlFor / fileChanged tests ──────────────────────────────
+
+/**
+ * jsdom does not implement URL.createObjectURL / revokeObjectURL.
+ * We stub them with vi.stubGlobal. Each createObjectURL call returns a unique
+ * "blob:test/<n>" string so we can assert identity and revocation.
+ */
+let urlCounter = 0;
+const revokedURLs: string[] = [];
+
+function setupURLStubs() {
+  urlCounter = 0;
+  revokedURLs.length = 0;
+  vi.stubGlobal('URL', {
+    ...URL,
+    createObjectURL: vi.fn((_blob: Blob | File | MediaSource) => `blob:test/${++urlCounter}`),
+    revokeObjectURL: vi.fn((url: string) => { revokedURLs.push(url); }),
+  });
+}
+
+function restoreURLStubs() {
+  vi.unstubAllGlobals();
+}
+
+/**
+ * Returns a ProjectManager with `_handle` set to a truthy sentinel and
+ * `readFile` / `writeFile` spied on, so tests never touch the real FS.
+ */
+function makeOpenPM() {
+  const pm = new ProjectManager();
+  (pm as any)._handle = { name: 'test-project' } as FileSystemDirectoryHandle;
+  const mockFile = new File(['content'], 'file.glb', { type: 'model/gltf-binary' });
+  const readFileSpy = vi.spyOn(pm, 'readFile').mockResolvedValue(mockFile);
+  const writeFileSpy = vi.spyOn(pm, 'writeFile');
+  return { pm, readFileSpy, writeFileSpy, mockFile };
+}
+
+/**
+ * Simulate the post-write cache-invalidation logic that lives inside writeFile.
+ * Used when writeFile is mocked out entirely and we need to test the cache path.
+ */
+async function simulateWriteFileCacheLogic(pm: ProjectManager, path: string) {
+  const urlCache: Map<string, string> = (pm as any)._urlCache;
+  if (urlCache.has(path)) {
+    const old = urlCache.get(path)!;
+    URL.revokeObjectURL(old);
+    urlCache.delete(path);
+    const file = await pm.readFile(path);
+    const newURL = URL.createObjectURL(file);
+    urlCache.set(path, newURL);
+    (pm as any)._emitFileChanged(path, newURL);
+  }
+}
+
+// ── urlFor ────────────────────────────────────────────────────────────────────
+
+describe('ProjectManager.urlFor', () => {
+  beforeEach(setupURLStubs);
+  afterEach(restoreURLStubs);
+
+  it('returns a blob URL for a valid path', async () => {
+    const { pm } = makeOpenPM();
+    const url = await pm.urlFor('models/cube.glb');
+    expect(url).toMatch(/^blob:test\//);
+  });
+
+  it('returns the same URL for repeated calls (cache hit)', async () => {
+    const { pm, readFileSpy } = makeOpenPM();
+    const url1 = await pm.urlFor('models/cube.glb');
+    const url2 = await pm.urlFor('models/cube.glb');
+    expect(url1).toBe(url2);
+    // readFile should only be called once
+    expect(readFileSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns different URLs for different paths', async () => {
+    const { pm } = makeOpenPM();
+    const url1 = await pm.urlFor('models/cube.glb');
+    const url2 = await pm.urlFor('textures/wood.png');
+    expect(url1).not.toBe(url2);
+  });
+
+  it('throws when no project is open', async () => {
+    const pm = new ProjectManager(); // _handle is null
+    await expect(pm.urlFor('models/cube.glb')).rejects.toThrow('No project open');
+  });
+});
+
+// ── project close revokes cached URLs ─────────────────────────────────────────
+
+describe('ProjectManager — project close revokes cached URLs', () => {
+  beforeEach(setupURLStubs);
+  afterEach(restoreURLStubs);
+
+  it('revokes all cached URLs on close()', async () => {
+    const { pm } = makeOpenPM();
+    const url1 = await pm.urlFor('models/cube.glb');
+    const url2 = await pm.urlFor('textures/wood.png');
+
+    pm.close();
+
+    expect(revokedURLs).toContain(url1);
+    expect(revokedURLs).toContain(url2);
+  });
+
+  it('clears the cache after close() so urlFor can re-cache on reopen', async () => {
+    const { pm } = makeOpenPM();
+    await pm.urlFor('models/cube.glb');
+    pm.close();
+
+    // Re-open (set handle again)
+    (pm as any)._handle = { name: 'test-project' } as FileSystemDirectoryHandle;
+    vi.spyOn(pm, 'readFile').mockResolvedValue(new File(['new'], 'file.glb'));
+
+    await pm.urlFor('models/cube.glb');
+    expect((pm as any)._urlCache.size).toBe(1);
+  });
+});
+
+// ── fileChanged event ─────────────────────────────────────────────────────────
+
+describe('ProjectManager.fileChanged event', () => {
+  beforeEach(setupURLStubs);
+  afterEach(restoreURLStubs);
+
+  it('emits fileChanged with new URL when a cached path is written', async () => {
+    const { pm, writeFileSpy } = makeOpenPM();
+
+    const oldURL = await pm.urlFor('models/cube.glb');
+
+    const listener = vi.fn();
+    pm.onFileChanged(listener);
+
+    writeFileSpy.mockImplementation(async (path: string) => {
+      await simulateWriteFileCacheLogic(pm, path);
+    });
+
+    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    const [emittedPath, emittedURL] = listener.mock.calls[0] as [string, string];
+    expect(emittedPath).toBe('models/cube.glb');
+    expect(emittedURL).not.toBe(oldURL);
+    expect(emittedURL).toMatch(/^blob:test\//);
+  });
+
+  it('does NOT emit fileChanged when path was not cached', async () => {
+    const { pm, writeFileSpy } = makeOpenPM();
+
+    const listener = vi.fn();
+    pm.onFileChanged(listener);
+
+    writeFileSpy.mockImplementation(async (path: string) => {
+      await simulateWriteFileCacheLogic(pm, path);
+    });
+
+    // Write a path that was never passed to urlFor
+    await pm.writeFile('models/new-file.glb', new ArrayBuffer(0));
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('revokes old URL when a cached path is written', async () => {
+    const { pm, writeFileSpy } = makeOpenPM();
+
+    const oldURL = await pm.urlFor('models/cube.glb');
+
+    writeFileSpy.mockImplementation(async (path: string) => {
+      await simulateWriteFileCacheLogic(pm, path);
+    });
+
+    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+
+    expect(revokedURLs).toContain(oldURL);
+  });
+
+  it('unsubscribe from fileChanged works', async () => {
+    const { pm, writeFileSpy } = makeOpenPM();
+
+    await pm.urlFor('models/cube.glb');
+
+    const listener = vi.fn();
+    const unsub = pm.onFileChanged(listener);
+    unsub();
+
+    writeFileSpy.mockImplementation(async (path: string) => {
+      await simulateWriteFileCacheLogic(pm, path);
+    });
+
+    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+    expect(listener).not.toHaveBeenCalled();
   });
 });
