@@ -10,15 +10,11 @@ import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
-
-// Persisted across page reloads (cleared on explicit Close Project).
-// Stored in localStorage so reload returns to the last opened project.
-const LAST_PROJECT_KEY = 'erythos-last-project-id';
-
-// Per-project last edited scene path. Survives Close Project so re-opening
-// the same project resumes the previously active scene.
-const LAST_SCENE_KEY_PREFIX = 'erythos-last-scene-';
-const DEFAULT_SCENE_PATH = 'scenes/scene.erythos';
+import {
+  DEFAULT_SCENE_PATH,
+  getLastProjectId, setLastProjectId, clearLastProjectId,
+  getLastScenePath, setLastScenePath, clearLastScenePath,
+} from './projectSession';
 
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
@@ -43,10 +39,8 @@ const App: Component = () => {
     const projectId = projectManager.currentId;
     let scenePath = DEFAULT_SCENE_PATH;
     if (projectId) {
-      try {
-        const persisted = localStorage.getItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`);
-        if (persisted) scenePath = persisted;
-      } catch { /* localStorage may be disabled */ }
+      const persisted = getLastScenePath(projectId);
+      if (persisted) scenePath = persisted;
     }
     projectManager.setCurrentScenePath(scenePath);
 
@@ -66,10 +60,7 @@ const App: Component = () => {
     const result = await tryLoadScene(scenePath);
     if (result === 'notFound' && scenePath !== DEFAULT_SCENE_PATH) {
       // Persisted scene was deleted — drop the stale key and retry the default.
-      if (projectId) {
-        try { localStorage.removeItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`); }
-        catch { /* ignore */ }
-      }
+      if (projectId) clearLastScenePath(projectId);
       scenePath = DEFAULT_SCENE_PATH;
       projectManager.setCurrentScenePath(scenePath);
       await tryLoadScene(scenePath);
@@ -114,10 +105,7 @@ const App: Component = () => {
     setProjectOpen(true);
 
     // Persist for auto-restore on next page reload
-    if (projectManager.currentId) {
-      try { localStorage.setItem(LAST_PROJECT_KEY, projectManager.currentId); }
-      catch { /* localStorage may be disabled — auto-restore disabled silently */ }
-    }
+    if (projectManager.currentId) setLastProjectId(projectManager.currentId);
   };
 
   const closeProject = async () => {
@@ -146,7 +134,7 @@ const App: Component = () => {
     setEditor(null);
 
     // Explicit close → don't auto-restore on next reload
-    try { localStorage.removeItem(LAST_PROJECT_KEY); } catch { /* ignore */ }
+    clearLastProjectId();
   };
 
   const openProjectById = async (id: string) => {
@@ -160,21 +148,18 @@ const App: Component = () => {
   createEffect(() => {
     const path = projectManager.currentScenePath();
     const id = projectManager.currentId;
-    if (!id) return;
-    try { localStorage.setItem(`${LAST_SCENE_KEY_PREFIX}${id}`, path); }
-    catch { /* localStorage may be disabled */ }
+    if (id) setLastScenePath(id, path);
   });
 
   // Auto-restore last opened project on page reload
   onMount(() => {
-    let lastId: string | null = null;
-    try { lastId = localStorage.getItem(LAST_PROJECT_KEY); } catch { /* no-op */ }
+    const lastId = getLastProjectId();
     if (!lastId) return;
     void (async () => {
       const handle = await projectManager.openRecent(lastId);
       if (!handle) {
         // permission denied or entry gone — clear and stay on Welcome
-        try { localStorage.removeItem(LAST_PROJECT_KEY); } catch { /* no-op */ }
+        clearLastProjectId();
         return;
       }
       await openProject(handle);
