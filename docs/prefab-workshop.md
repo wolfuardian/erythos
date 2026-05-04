@@ -66,7 +66,8 @@ User edits prefab in Workshop
   → ProjectManager.fileChanged(path, newURL)
   → PrefabRegistry refetches URL → updates cached PrefabAsset
   → emits prefabChanged(url)
-  → SceneSync finds all nodes with components.prefab.url === url
+  → SceneSync finds all nodes with components.prefab.path === path
+    (matched by path, not URL — blob URLs rotate on each rewrite)
   → rebuilds each instance subtree from updated PrefabAsset
 ```
 
