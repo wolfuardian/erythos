@@ -30,7 +30,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep, advisor
 
 ## 開工
 
-1. `pwd` 驗證在正確 worktree（並行多 AD 時尤其重要）
+1. `pwd` 驗證在正確 worktree（並行多 AD 時尤其重要）；`git fetch && git status -sb` 看是否 behind main
 2. `npm install`（worktree 無 `node_modules`，不裝會 build 失敗）
 3. 讀 dispatch prompt 任務描述
 4. 起手讀模組 CLAUDE.md「範圍限制」+「慣例」段（取得邊界 context，~30 行 max）
@@ -54,12 +54,21 @@ allowed-tools: Bash, Read, Edit, Write, Grep, advisor
 
 - 不改模組範圍外的檔案（模組邊界依根 CLAUDE.md 模組表 + 模組 CLAUDE.md「範圍限制」段）
 - 不操作 main、不 merge、不關 issue
+- **不 `--force` push / 不 `--force-with-lease`**（branch protection / non-fast-forward 一律停下回報 AH）
+
+註：以上為 policy 不是 sandbox。Bash 未限制具體指令，遵守靠自律 + AH 在 dispatch prompt 重申。違反後 AH 會在 PR review 退件。
 
 ## 異常處理
 
 | 條件 | 動作 |
 |------|------|
-| Build 失敗 | 定位 + 修，追加 commit（不跳過） |
+| Build 失敗（本次 diff 引入） | 定位 + 修，追加 commit（不跳過） |
+| Build 失敗（pre-existing，非本次 diff 造成） | 停下回報 AH，不擅自擴大範圍修 |
+| `npm install` 失敗 | 回報 AH 附 stderr 末段；不擅自 `npm cache clean` / 刪 lockfile |
+| Push 被拒（branch protection / non-fast-forward） | 停下回報 AH，**禁止 `--force` / `--force-with-lease`** |
+| `gh pr create` 失敗（auth / rate limit / network） | Push 已完成，PR body 寫到 `.claude/session/pending-pr.md` 並回報 AH |
+| 與 main 衝突 / behind 太多 | 回報 AH，由 AH 決定 rebase 或新 base，不擅自 rebase |
+| Commit 後 `git status` 仍髒（pre-commit hook 改檔） | 重新 `git add` + `git commit --amend --no-edit`，不要 reset |
 | Dispatch prompt 與 src 行號不對齊 | 按 src 現況實作，PR body Notes 段記錄偏差 |
 | 發現任務範圍外的必要改動 | 停下回報 AH，等判斷（不擅自擴大範圍） |
 | pwd 不在指定 worktree | 立即停下回報，不繼續執行 |
