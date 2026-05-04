@@ -1,0 +1,27 @@
+/** PropertiesPanel — CSS Modules (refs #732) */
+
+.panel {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-well-outer);
+  border-radius: var(--radius-lg);
+  margin: 3px;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 10px 10px;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding-top: var(--space-2xl);
+}

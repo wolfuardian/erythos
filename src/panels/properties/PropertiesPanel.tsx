@@ -4,6 +4,7 @@ import ObjectDraw from './object/ObjectDraw';
 import TransformDraw from './object/TransformDraw';
 import MultiSelectDraw from './object/MultiSelectDraw';
 import { PanelHeader } from '../../components/PanelHeader';
+import styles from './PropertiesPanel.module.css';
 
 const PropertiesPanel: Component = () => {
   const bridge = useEditor();
@@ -11,36 +12,14 @@ const PropertiesPanel: Component = () => {
   const selectedUUIDs = createMemo(() => bridge.selectedUUIDs());
 
   return (
-    <div
-      data-testid="properties-panel"
-      style={{
-      width: 'calc(100% - 6px)',
-      height: 'calc(100% - 6px)',
-      display: 'flex',
-      'flex-direction': 'column',
-      overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
+    <div data-testid="properties-panel" class={styles.panel}>
       {/* Header */}
       <PanelHeader title="Properties" />
 
       {/* Body */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '4px 10px 10px',
-      }}>
+      <div class={styles.body}>
         <Switch fallback={
-          <div style={{
-            color: 'var(--text-muted)',
-            'font-size': 'var(--font-size-sm)',
-            'text-align': 'center',
-            'padding-top': 'var(--space-2xl)',
-          }}>
+          <div class={styles.empty}>
             No object selected
           </div>
         }>
