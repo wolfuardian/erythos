@@ -6,31 +6,123 @@
  * — a separate concern handled by Editor.init.
  *
  * Events:
- *   'changed' — fired whenever the cached set changes (load, evict, clear).
- *   Subscribe from bridge to keep prefabAssets() signal in sync.
+ *   'changed'       — fired whenever the cached set changes (load, evict, clear).
+ *                     Subscribe from bridge to keep prefabAssets() signal in sync.
+ *   'prefabChanged' — fired after a file-write causes a registered prefab to be
+ *                     refetched. Payload: (url, asset, path) where url is the NEW
+ *                     blob URL (old URL was revoked by ProjectManager), asset is
+ *                     the freshly-parsed PrefabAsset, and path is the stable
+ *                     project-relative path. SceneSync subscribes to this to
+ *                     rebuild instance subtrees.
  */
 
 import type { PrefabAsset } from './PrefabFormat';
+import type { ProjectManager } from '../project/ProjectManager';
 
 type Listener = () => void;
+type PrefabChangedListener = (url: string, asset: PrefabAsset, path: string) => void;
 
 export class PrefabRegistry {
   private readonly _cache = new Map<string, PrefabAsset>(); // url → asset
   private readonly _pathToURL = new Map<string, string>();   // project-relative path → url
   private readonly _listeners = new Set<Listener>();
+  private readonly _prefabChangedListeners = new Set<PrefabChangedListener>();
+
+  /** Unsubscribe function returned by projectManager.onFileChanged; stored for dispose. */
+  private _detachFileChanged: (() => void) | null = null;
 
   // ── Listeners ──────────────────────────────────────────────────────────────
 
-  on(_event: 'changed', fn: Listener): void {
-    this._listeners.add(fn);
+  on(event: 'changed', fn: Listener): void;
+  on(event: 'prefabChanged', fn: PrefabChangedListener): void;
+  on(event: 'changed' | 'prefabChanged', fn: Listener | PrefabChangedListener): void {
+    if (event === 'changed') {
+      this._listeners.add(fn as Listener);
+    } else {
+      this._prefabChangedListeners.add(fn as PrefabChangedListener);
+    }
   }
 
-  off(_event: 'changed', fn: Listener): void {
-    this._listeners.delete(fn);
+  off(event: 'changed', fn: Listener): void;
+  off(event: 'prefabChanged', fn: PrefabChangedListener): void;
+  off(event: 'changed' | 'prefabChanged', fn: Listener | PrefabChangedListener): void {
+    if (event === 'changed') {
+      this._listeners.delete(fn as Listener);
+    } else {
+      this._prefabChangedListeners.delete(fn as PrefabChangedListener);
+    }
   }
 
   private _emit(): void {
     for (const fn of this._listeners) fn();
+  }
+
+  private _emitPrefabChanged(url: string, asset: PrefabAsset, path: string): void {
+    for (const fn of this._prefabChangedListeners) fn(url, asset, path);
+  }
+
+  // ── FileChanged bridge ─────────────────────────────────────────────────────
+
+  /**
+   * Wire PrefabRegistry to a ProjectManager so that file writes automatically
+   * invalidate and refetch the affected prefab entry, then emit `prefabChanged`.
+   *
+   * Call once from Editor.init — symmetric with the single-document model.
+   * Only the main SceneSync (not sandbox ones) subscribes to `prefabChanged`.
+   *
+   * @param projectManager - The app's ProjectManager instance.
+   */
+  attach(projectManager: ProjectManager): void {
+    // Detach any previous binding (idempotent re-attach guard)
+    this._detachFileChanged?.();
+
+    this._detachFileChanged = projectManager.onFileChanged(async (path, newURL) => {
+      // Only process paths we know about
+      const oldURL = this._pathToURL.get(path);
+      if (oldURL === undefined) return;
+
+      // Evict stale cache entry for the old URL
+      this._cache.delete(oldURL);
+      // Update path → URL mapping to the newly minted URL
+      this._pathToURL.set(path, newURL);
+
+      // Refetch fresh asset from new URL (async: await ensures cache is warm
+      // before emitting so listeners can safely call registry.get(newURL))
+      let asset: PrefabAsset;
+      try {
+        const response = await fetch(newURL);
+        if (!response.ok) {
+          console.warn(
+            `[PrefabRegistry] refetch failed for "${path}" (${newURL}): ` +
+            `${response.status} ${response.statusText}`,
+          );
+          return;
+        }
+        asset = (await response.json()) as PrefabAsset;
+        if (asset.version !== 1 || !Array.isArray(asset.nodes)) {
+          console.warn(`[PrefabRegistry] invalid prefab format after refetch: "${path}"`);
+          return;
+        }
+      } catch (err) {
+        console.warn(`[PrefabRegistry] refetch error for "${path}":`, err);
+        return;
+      }
+
+      // Store freshly parsed asset
+      this._cache.set(newURL, asset);
+      this._emit();
+
+      // Notify live-sync subscribers with the new URL, asset, and stable path
+      this._emitPrefabChanged(newURL, asset, path);
+    });
+  }
+
+  /**
+   * Detach the projectManager file-change subscription (call from Editor.dispose).
+   */
+  detach(): void {
+    this._detachFileChanged?.();
+    this._detachFileChanged = null;
   }
 
   // ── Core API ───────────────────────────────────────────────────────────────

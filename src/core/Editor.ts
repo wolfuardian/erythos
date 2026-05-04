@@ -105,7 +105,15 @@ export class Editor {
     // ── Step 2: hydrate PrefabRegistry from project files ──────────────────
     await this._hydratePrefabRegistry();
 
-    // ── Step 3: notify bridge ───────────────────────────────────────────────
+    // ── Step 3: wire live-sync event chain ─────────────────────────────────
+    // PrefabRegistry listens to projectManager.fileChanged → refetches → emits prefabChanged.
+    // Main SceneSync subscribes to prefabChanged → rebuilds instance subtrees.
+    // Sandbox SceneSyncs (Workshop) deliberately do NOT subscribe — they must not
+    // auto-rebuild while the user is actively editing the same prefab.
+    this.prefabRegistry.attach(this.projectManager);
+    this.sceneSync.attachPrefabRegistry(this.prefabRegistry);
+
+    // ── Step 4: notify bridge ───────────────────────────────────────────────
     this.events.emit('prefabStoreChanged');
   }
 
@@ -286,6 +294,7 @@ export class Editor {
   }
 
   dispose(): void {
+    this.prefabRegistry.detach();
     this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();

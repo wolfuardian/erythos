@@ -9,12 +9,16 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useEditor } from '../../app/EditorContext';
 import { PanelHeader } from '../../components/PanelHeader';
+import { PromptDialog } from '../../components/PromptDialog';
 import { SceneDocument } from '../../core/scene/SceneDocument';
 import { History } from '../../core/History';
 import { EventEmitter } from '../../core/EventEmitter';
 import { SceneSync } from '../../core/scene/SceneSync';
-import { deserializeFromPrefab } from '../../core/scene/PrefabSerializer';
+import { deserializeFromPrefab, serializeToPrefab } from '../../core/scene/PrefabSerializer';
+import { prefabPathForName } from '../../utils/prefabPath';
+import { generateUUID } from '../../utils/uuid';
 import type { ProjectFile } from '../../core/project/ProjectFile';
+import type { SceneNode } from '../../core/scene/SceneFormat';
 import AssetBrowser from './AssetBrowser';
 import styles from './WorkshopPanel.module.css';
 
@@ -39,6 +43,7 @@ const WorkshopPanel: Component = () => {
   const [currentPrefabPath, setCurrentPrefabPath] = createSignal<string | null>(null);
   const [statusText, setStatusText] = createSignal('Empty sandbox');
   const [isDragOver, setIsDragOver] = createSignal(false);
+  const [showNamePrompt, setShowNamePrompt] = createSignal(false);
 
   // ── Mount / Cleanup ──────────────────────────────────────────────────────
   onMount(() => {
@@ -164,8 +169,8 @@ const WorkshopPanel: Component = () => {
     sandboxDocument.addNode(node);
 
     setStatusText(currentPrefabPath()
-      ? `Editing: ${currentPrefabPath()} (read-only — Save in P3)`
-      : 'Empty sandbox');
+      ? `Editing: ${currentPrefabPath()} (unsaved)`
+      : 'Unsaved sandbox — click Save to write to disk');
   };
 
   // ── Open prefab action ───────────────────────────────────────────────────
@@ -215,7 +220,7 @@ const WorkshopPanel: Component = () => {
     sandboxDocument.deserialize({ version: 1, nodes });
     sandboxHistory.clear();
     setCurrentPrefabPath(file.path);
-    setStatusText(`Editing: ${file.path} (read-only — Save in P3)`);
+    setStatusText(`Editing: ${file.path}`);
   };
 
   // ── Discard ──────────────────────────────────────────────────────────────
@@ -227,6 +232,114 @@ const WorkshopPanel: Component = () => {
     setStatusText('Empty sandbox');
   };
 
+  // ── Save / Commit ─────────────────────────────────────────────────────────
+
+  /**
+   * Build PrefabAsset from sandbox state using the synthetic-root strategy (b):
+   * - If sandbox has exactly 1 root node → serialize it directly as the prefab root.
+   * - If sandbox has 0 or >1 root nodes → create an in-memory synthetic root node
+   *   (no mesh, name = prefab name) that parents all sandbox roots. The sandbox
+   *   SceneDocument is NOT mutated; the synthetic node exists only for serialization.
+   */
+  const buildPrefabAsset = (prefabName: string) => {
+    const allNodes = sandboxDocument.getAllNodes();
+    const roots = sandboxDocument.getRoots();
+
+    if (roots.length === 1) {
+      // Single root — serialize subtree directly
+      return serializeToPrefab(roots[0].id, allNodes, prefabName);
+    }
+
+    // Multi-root (or empty) — synthesize a root in-memory without mutating sandbox
+    const syntheticId = generateUUID();
+    const syntheticRoot: SceneNode = {
+      id: syntheticId,
+      name: prefabName || 'Root',
+      parent: null,
+      order: 0,
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [1, 1, 1],
+      components: {},
+      userData: {},
+    };
+
+    // Reparent sandbox roots to synthetic root in an augmented node list
+    const augmented: SceneNode[] = [
+      syntheticRoot,
+      ...allNodes.map(n =>
+        n.parent === null ? { ...n, parent: syntheticId } : n,
+      ),
+    ];
+
+    return serializeToPrefab(syntheticId, augmented, prefabName);
+  };
+
+  /**
+   * Write the prefab asset to disk via editor.projectManager, update PrefabRegistry.
+   * Returns the written path on success or null on failure.
+   */
+  const commitPrefab = async (prefabName: string, targetPath: string): Promise<string | null> => {
+    const asset = buildPrefabAsset(prefabName);
+
+    try {
+      await editor.projectManager.writeFile(targetPath, JSON.stringify(asset));
+      // Ensure URL is registered in PrefabRegistry so live-sync has the path→url mapping.
+      // writeFile fires fileChanged → PrefabRegistry.attach() handler refetches.
+      // But if this path was not previously cached (new file), we prime the registry here.
+      const url = await editor.projectManager.urlFor(targetPath);
+      if (!editor.prefabRegistry.has(url)) {
+        editor.prefabRegistry.set(url, asset, targetPath);
+      }
+      await editor.projectManager.rescan();
+      editor.events.emit('prefabStoreChanged');
+      return targetPath;
+    } catch (err) {
+      console.warn('[Workshop] commitPrefab failed:', err);
+      setStatusText(`Save failed: ${String(err)}`);
+      return null;
+    }
+  };
+
+  /** Entry point: Save button click */
+  const handleSave = async () => {
+    const path = currentPrefabPath();
+    if (path) {
+      // Already has a path → overwrite in-place
+      const prefabName = path.split('/').pop()?.replace(/\.prefab$/, '') ?? 'prefab';
+      setStatusText('Saving…');
+      const written = await commitPrefab(prefabName, path);
+      if (written) {
+        setStatusText(`Saved → ${written}`);
+      }
+    } else {
+      // Blank sandbox → prompt for filename
+      setShowNamePrompt(true);
+    }
+  };
+
+  const handleNameConfirm = async (name: string) => {
+    setShowNamePrompt(false);
+    const targetPath = prefabPathForName(name);
+
+    // Check if file already exists → confirm overwrite
+    const exists = editor.projectManager.getFiles().some(f => f.path === targetPath);
+    if (exists) {
+      if (!window.confirm(`"${targetPath}" already exists. Overwrite?`)) return;
+    }
+
+    setStatusText('Saving…');
+    const written = await commitPrefab(name, targetPath);
+    if (written) {
+      setCurrentPrefabPath(written);
+      setStatusText(`Saved → ${written}`);
+    }
+  };
+
+  const handleNameCancel = () => {
+    setShowNamePrompt(false);
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -234,13 +347,23 @@ const WorkshopPanel: Component = () => {
       <PanelHeader
         title="Workshop"
         actions={
-          <button
-            class={styles.discardBtn}
-            onClick={handleDiscard}
-            title="Discard sandbox content"
-          >
-            Discard
-          </button>
+          <>
+            <button
+              data-testid="workshop-save-btn"
+              class={styles.saveBtn}
+              onClick={handleSave}
+              title="Save prefab to disk"
+            >
+              Save
+            </button>
+            <button
+              class={styles.discardBtn}
+              onClick={handleDiscard}
+              title="Discard sandbox content"
+            >
+              Discard
+            </button>
+          </>
         }
       />
 
@@ -268,6 +391,18 @@ const WorkshopPanel: Component = () => {
 
       {/* Status bar */}
       <div class={styles.statusBar}>{statusText()}</div>
+
+      {/* Name prompt for new prefab */}
+      <PromptDialog
+        open={showNamePrompt()}
+        title="Save Prefab"
+        message="Enter a name for this prefab file."
+        placeholder="my-prefab"
+        confirmLabel="Save"
+        cancelLabel="Cancel"
+        onConfirm={handleNameConfirm}
+        onCancel={handleNameCancel}
+      />
     </div>
   );
 };
