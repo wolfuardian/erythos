@@ -4,20 +4,11 @@ import { useEditor } from '../../app/EditorContext';
 import { MoveNodeCommand } from '../../core/commands/MoveNodeCommand';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { inferNodeType } from '../../core/scene/inferNodeType';
-import { isPrefabDescendant } from '../../core/scene/PrefabInstance';
 import {
   EyeOnIcon, EyeOffIcon, CursorOnIcon, CursorOffIcon,
   nodeTypeToIcon, nodeTypeColor,
 } from './icons';
 import styles from './TreeNode.module.css';
-
-/** Small inline lock SVG — 11×11, matches lock glyph convention for scene tree */
-const LockIcon: Component = () => (
-  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="2" y="5" width="7" height="5" rx="1"/>
-    <path d="M3.5 5V3.5a2 2 0 0 1 4 0V5"/>
-  </svg>
-);
 
 export interface DropIndicator {
   targetId: string;
@@ -59,8 +50,6 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   const isEyeOff = () => props.eyeOffMap()[props.node.id] ?? false;
   const isCursorOff = () => props.cursorOffMap()[props.node.id] ?? false;
 
-  /** True if this node is a descendant of a prefab instance root (locked, non-editable). */
-  const isLocked = () => isPrefabDescendant(props.node.id, bridge.nodes());
   /** True if this node is itself a prefab instance root (has components.prefab). */
   const isPrefabRoot = () => props.node.components.prefab != null;
 
@@ -76,7 +65,6 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
-    if (isLocked()) return; // prefab descendant — non-selectable
     if (e.ctrlKey || e.metaKey) {
       editor.selection.toggle(props.node.id);
     } else {
@@ -92,15 +80,9 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   const handleMouseLeave = () => editor.selection.hover(null);
 
   const onDragStart = (e: DragEvent) => {
-    if (isLocked()) { e.preventDefault(); return; } // prefab descendant — not draggable
     e.stopPropagation();
     props.setDraggedId(props.node.id);
     e.dataTransfer!.effectAllowed = 'move';
-    // Scene-subtree drag protocol: also set MIME payload so Workshop can recognize this drag.
-    e.dataTransfer!.setData(
-      'application/erythos-scene-subtree',
-      JSON.stringify({ rootUUID: props.node.id }),
-    );
   };
 
   const onDragOver = (e: DragEvent) => {
@@ -194,10 +176,9 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     <div>
       <div
         data-testid="scene-tree-row"
-        draggable={!isLocked()}
+        draggable
         onClick={handleClick}
         onContextMenu={(e) => {
-          if (isLocked()) { e.stopPropagation(); return; } // prefab descendant — no context menu
           if (e.ctrlKey || e.metaKey) {
             editor.selection.toggle(props.node.id);
           } else {
@@ -219,7 +200,6 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
           [styles.hovered]: isHovered(),
           [styles.dropTargetInside]: isDropTarget() && indicator()?.position === 'inside',
           [styles.dragging]: props.draggedId() === props.node.id,
-          [styles.locked]: isLocked(),
         }}
         // inline-allowed: CSS variable injection — depth-based padding-left consumed by CSS
         style={{ '--depth': props.depth, '--row-padding-left': `${ROW_PADDING_LEFT}px`, '--indent-w': `${INDENT_W}px` }}
@@ -285,13 +265,6 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
         >
           <Dynamic component={nodeTypeToIcon(nodeType())} color={iconColor()} size={13} />
         </span>
-
-        {/* Lock icon — shown for prefab descendants */}
-        <Show when={isLocked()}>
-          <span class={styles.lockIcon}>
-            <LockIcon />
-          </span>
-        </Show>
 
         {/* Name — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span

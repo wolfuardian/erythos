@@ -8,7 +8,6 @@ import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
-import { isPrefabDescendant, findPrefabInstanceRoot } from '../../core/scene/PrefabInstance';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
@@ -247,12 +246,7 @@ const ViewportPanel: Component = () => {
           const uuid = editor.sceneSync.getUUID(obj);
           if (uuid) editor.selection.toggle(uuid);
         } else {
-          const rawUuid = obj ? editor.sceneSync.getUUID(obj) : null;
-          // If the clicked object is a prefab descendant, select the instance root instead.
-          const nodes = editor.sceneDocument.getAllNodes();
-          const uuid = rawUuid && isPrefabDescendant(rawUuid, nodes)
-            ? findPrefabInstanceRoot(rawUuid, nodes)
-            : rawUuid;
+          const uuid = obj ? editor.sceneSync.getUUID(obj) : null;
           editor.selection.select(uuid);
         }
       },
@@ -260,16 +254,6 @@ const ViewportPanel: Component = () => {
         editor.selection.hover(obj ? editor.sceneSync.getUUID(obj) : null);
       },
       isEntity: (obj) => editor.sceneSync.getUUID(obj) !== null,
-      resolveTarget: (obj, modifier) => {
-        // Ctrl: phase 1 already stopped at the nearest entity — return as-is.
-        if (modifier.ctrl) return obj;
-        // No Ctrl: walk up to the scene root child (original behaviour).
-        let cur = obj;
-        while (cur.parent && cur.parent !== editor.threeScene) {
-          cur = cur.parent;
-        }
-        return cur;
-      },
       onBoxSelect: (objects, modifier) => {
         if (!modifier.ctrl) {
           editor.selection.select(null);

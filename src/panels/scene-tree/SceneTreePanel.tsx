@@ -1,11 +1,11 @@
 import { createSignal, For, Show, onMount, onCleanup, type Component } from 'solid-js';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
-import { isPrefabDescendant } from '../../core/scene/PrefabInstance';
 import { useEditor } from '../../app/EditorContext';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
+import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { ContextMenu } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
@@ -107,6 +107,14 @@ const SceneTreePanel: Component = () => {
       editor.execute(new MultiCmdsCommand(editor, cmds));
     }
     editor.selection.select(null);
+  };
+
+  const handleSaveAsPrefab = () => {
+    const selected = bridge.selectedUUIDs();
+    const uuid = selected[0];
+    const node = editor.sceneDocument.getNode(uuid);
+    if (!node) return;
+    editor.execute(new SaveAsPrefabCommand(editor, uuid, node.name));
   };
 
   const handleCopy = () => {
@@ -247,19 +255,16 @@ const SceneTreePanel: Component = () => {
 
           if (e.key === 'ArrowDown') {
             e.preventDefault();
-            const allNodes = bridge.nodes();
-            const candidates = flat.slice(currentIdx + 1).filter(n => !isPrefabDescendant(n.id, allNodes));
+            const candidates = flat.slice(currentIdx + 1);
             if (candidates.length > 0) editor.selection.select(candidates[0].id);
-            else if (currentIdx === -1) {
-              const first = flat.find(n => !isPrefabDescendant(n.id, allNodes));
-              if (first) editor.selection.select(first.id);
+            else if (currentIdx === -1 && flat.length > 0) {
+              editor.selection.select(flat[0].id);
             }
           }
 
           if (e.key === 'ArrowUp') {
             e.preventDefault();
-            const allNodes = bridge.nodes();
-            const candidates = flat.slice(0, currentIdx > 0 ? currentIdx : 0).filter(n => !isPrefabDescendant(n.id, allNodes));
+            const candidates = flat.slice(0, currentIdx > 0 ? currentIdx : 0);
             if (candidates.length > 0) editor.selection.select(candidates[candidates.length - 1].id);
           }
 
@@ -338,6 +343,7 @@ const SceneTreePanel: Component = () => {
               onCreateEmpty: handleCreateEmpty,
               onCreatePrimitive: createPrimitive,
               onDelete: handleDelete,
+              onSaveAsPrefab: handleSaveAsPrefab,
               onCopy: handleCopy,
               onCut: handleCut,
               onPaste: handlePaste,
