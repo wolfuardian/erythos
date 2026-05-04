@@ -196,6 +196,74 @@ describe('SceneDocument', () => {
     });
   });
 
+  // ── migrateNodeComponents ───────────────────────────────────────────────────
+
+  describe('mesh migration (legacy source → { path, nodePath? })', () => {
+    it('migrates legacy mesh.source (filename only) to { path }', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'model.glb' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const mesh = node.components['mesh'] as Record<string, unknown>;
+      expect(mesh['path']).toBe('models/model.glb');
+      expect(mesh['source']).toBeUndefined();
+      expect(mesh['nodePath']).toBeUndefined();
+    });
+
+    it('migrates legacy mesh.source with colon (filename:nodePath)', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'character.glb:Torso' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const mesh = node.components['mesh'] as Record<string, unknown>;
+      expect(mesh['path']).toBe('models/character.glb');
+      expect(mesh['nodePath']).toBe('Torso');
+      expect(mesh['source']).toBeUndefined();
+    });
+
+    it('preserves source that already contains "/" as-is (path-like)', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'models/chair.glb' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const mesh = node.components['mesh'] as Record<string, unknown>;
+      expect(mesh['path']).toBe('models/chair.glb');
+      expect(mesh['source']).toBeUndefined();
+    });
+
+    it('does not touch mesh that already has { path } shape (no source)', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { mesh: { path: 'models/desk.glb', nodePath: 'Legs' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const mesh = node.components['mesh'] as Record<string, unknown>;
+      expect(mesh['path']).toBe('models/desk.glb');
+      expect(mesh['nodePath']).toBe('Legs');
+    });
+
+    it('still migrates leaf → prefab alongside mesh migration', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const comp = node.components as Record<string, unknown>;
+      expect('prefab' in comp).toBe(true);
+      expect('leaf' in comp).toBe(false);
+      const mesh = comp['mesh'] as Record<string, unknown>;
+      expect(mesh['path']).toBe('models/a.glb');
+    });
+  });
+
   describe('createNode', () => {
     it('generates a node with correct defaults', () => {
       const doc = new SceneDocument();

@@ -1,6 +1,5 @@
 import { Group, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import * as GlbStore from './GlbStore';
 
 type ParserFn = (buffer: ArrayBuffer, path: string) => Promise<{ scene: Group }>;
 
@@ -26,63 +25,55 @@ export function _clearParser(): void {
 /**
  * ResourceCache — 記憶體內 GLB/GLTF 快取。
  *
- * 快取鍵為 filePath（不含 nodePath）。
+ * 快取鍵為 URL（blob: URL）。
  * page reload 後清空（已知限制）。
+ *
+ * P1b migration: cache is now URL-keyed. GlbStore integration removed.
+ * Scene persistence uses path (not URL); URL is recomputed via projectManager.urlFor(path) at load.
  */
 export class ResourceCache {
   private readonly cache = new Map<string, Group>();
 
   /**
-   * 解析 ArrayBuffer 並以 source（filePath）為快取鍵存入快取。
-   * 若同一 source 已快取，會以新結果覆寫。
+   * Fetch a blob URL, parse the GLB/GLTF, and cache under that URL.
+   * If the same URL is already cached, returns the cached entry without re-fetching.
    */
-  async loadFromBuffer(source: string, buffer: ArrayBuffer): Promise<Group> {
-    const parser = getParser();
-    const gltf = await parser(buffer, '');
-    this.cache.set(source, gltf.scene);
-    // Fire-and-forget: persist buffer to IndexedDB for cross-reload recovery.
-    GlbStore.put(source, buffer).catch(err =>
-      console.warn('[ResourceCache] GlbStore.put failed:', err)
-    );
-    return gltf.scene;
+  async loadFromURL(url: string): Promise<Group> {
+    const existing = this.cache.get(url);
+    if (existing) return existing;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`[ResourceCache] fetch failed for URL ${url}: ${response.status} ${response.statusText}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return this.loadFromBuffer(url, buffer);
   }
 
   /**
-   * 從 IndexedDB 讀取所有已存的 GLB buffer，解析後填充記憶體快取。
-   * 應在 autosave restore 前呼叫，確保 SceneSync rebuild 時 mesh 已就位。
+   * 解析 ArrayBuffer 並以 url 為快取鍵存入快取。
+   * 若同一 url 已快取，會以新結果覆寫。
+   *
+   * Kept public in P1b: PrefabPanel and useThumbnails still call it directly.
+   * P1c will remove those consumers, after which this can be made private or
+   * collapsed into loadFromURL.
    */
-  async hydrate(): Promise<void> {
-    let allKeys: string[];
-    try {
-      allKeys = await GlbStore.keys();
-    } catch (err) {
-      console.warn('[ResourceCache] hydrate: failed to read IndexedDB keys:', err);
-      return;
-    }
-    console.log(`[ResourceCache] hydrate: restoring ${allKeys.length} GLB(s) from IndexedDB`);
+  async loadFromBuffer(url: string, buffer: ArrayBuffer): Promise<Group> {
     const parser = getParser();
-    for (const source of allKeys) {
-      try {
-        const buffer = await GlbStore.get(source);
-        if (!buffer) continue;
-        const gltf = await parser(buffer, '');
-        this.cache.set(source, gltf.scene);
-        console.log(`[ResourceCache] hydrate: restored "${source}"`);
-      } catch (err) {
-        console.warn(`[ResourceCache] hydrate: failed to restore "${source}":`, err);
-      }
-    }
+    const gltf = await parser(buffer, '');
+    this.cache.set(url, gltf.scene);
+    return gltf.scene;
   }
 
   /**
    * 從快取中 clone 子樹並回傳。
    *
-   * @param source  filePath（快取鍵，不含 nodePath）
+   * @param url      blob URL（快取鍵）
    * @param nodePath 可選；`|` 分隔的逐層路徑（如 `"Body|Arm|Hand"`），省略時 clone 整個 scene root
    * @returns 淺 clone 的 Object3D（不含子孫），快取未命中或節點不存在時回傳 null
    */
-  cloneSubtree(source: string, nodePath?: string): Object3D | null {
-    const root = this.cache.get(source);
+  cloneSubtree(url: string, nodePath?: string): Object3D | null {
+    const root = this.cache.get(url);
     if (!root) return null;
 
     if (!nodePath) return root.clone(false);
@@ -91,25 +82,19 @@ export class ResourceCache {
     return target ? target.clone(false) : null;
   }
 
-  /** 檢查 filePath 是否已在快取中。 */
-  has(source: string): boolean {
-    return this.cache.has(source);
+  /** 檢查 url 是否已在快取中。 */
+  has(url: string): boolean {
+    return this.cache.has(url);
   }
 
-  /** 移除快取中的特定 source；source 不存在時為 no-op。 */
-  evict(source: string): void {
-    this.cache.delete(source);
-    GlbStore.remove(source).catch(err =>
-      console.warn('[ResourceCache] GlbStore.remove failed:', err)
-    );
+  /** 移除快取中的特定 url；url 不存在時為 no-op。 */
+  evict(url: string): void {
+    this.cache.delete(url);
   }
 
   /** 清除所有快取項目。 */
   clear(): void {
     this.cache.clear();
-    GlbStore.clear().catch(err =>
-      console.warn('[ResourceCache] GlbStore.clear failed:', err)
-    );
   }
 }
 

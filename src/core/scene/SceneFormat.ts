@@ -12,8 +12,20 @@ export interface SceneNode {
   userData: Record<string, unknown>;
 }
 
+/**
+ * MeshComponent — runtime shape includes `url` (blob URL for loading),
+ * `path` (project-relative canonical path, persisted), and optional `nodePath`.
+ *
+ * Serialised form omits `url` — it is recomputed via projectManager.urlFor(path) at hydrate.
+ * `url` is optional because hydrate may soft-fail (file not found → warn + skip).
+ */
 export interface MeshComponent {
-  source: string;
+  /** Blob URL used by ResourceCache.loadFromURL — populated at hydrate time, not persisted */
+  url?: string;
+  /** Project-relative path, e.g. "models/chair.glb" — persisted */
+  path: string;
+  /** Optional sub-tree path within the GLTF, e.g. "Body|Arm" — persisted */
+  nodePath?: string;
 }
 
 export interface GeometryComponent {

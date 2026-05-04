@@ -2,13 +2,49 @@ import type { SceneNode, SceneFile } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
 
 // Migration helper: upgrade old scene files that stored prefab component under 'leaf' key
+// and/or mesh component in legacy { source } format.
 function migrateNodeComponents(node: SceneNode): SceneNode {
   const comp = node.components as Record<string, unknown>;
-  if ('leaf' in comp && !('prefab' in comp)) {
-    const { leaf, ...rest } = comp;
-    return { ...node, components: { ...rest, prefab: leaf } };
+  let updated = { ...comp };
+
+  // Migration 1: 'leaf' → 'prefab'
+  if ('leaf' in updated && !('prefab' in updated)) {
+    const { leaf, ...rest } = updated;
+    updated = { ...rest, prefab: leaf };
   }
-  return node;
+
+  // Migration 2: mesh.source (legacy) → mesh.{ path, nodePath? }
+  //
+  // Legacy formats:
+  //   mesh: { source: "model.glb" }              — filename only
+  //   mesh: { source: "character.glb:Torso" }    — filename + nodePath (colon separator)
+  //
+  // Assumption: legacy filename lives in models/<filename>.
+  // Exception: if source already contains '/', treat as a path-like value and preserve it.
+  //
+  // No 'url' field is set here — it is populated at hydrate time via
+  // projectManager.urlFor(path). If hydrate soft-fails (file not found),
+  // mesh.url remains absent and SceneSync skips the mesh silently.
+  if ('mesh' in updated) {
+    const mesh = updated['mesh'] as Record<string, unknown>;
+    if (typeof mesh['source'] === 'string') {
+      const source = mesh['source'] as string;
+      const colonIdx = source.indexOf(':');
+      const filenameRaw = colonIdx === -1 ? source : source.slice(0, colonIdx);
+      const nodePath   = colonIdx === -1 ? undefined : source.slice(colonIdx + 1);
+      // If filenameRaw already contains '/', treat it as a project-relative path
+      const path = filenameRaw.includes('/') ? filenameRaw : `models/${filenameRaw}`;
+      const { source: _src, ...meshRest } = mesh;
+      updated['mesh'] = {
+        ...meshRest,
+        path,
+        ...(nodePath !== undefined ? { nodePath } : {}),
+      };
+    }
+  }
+
+  if (updated === comp) return node;
+  return { ...node, components: updated };
 }
 
 // ── Internal generic emitter ──────────────────────────────────────────────────

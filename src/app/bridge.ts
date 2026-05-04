@@ -5,7 +5,6 @@ import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
 import type { PrefabAsset } from '../core/scene/PrefabFormat';
 import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
-import * as GlbStore from '../core/scene/GlbStore';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
@@ -38,7 +37,6 @@ export interface EditorBridge {
   hasClipboard: Accessor<boolean>;
   prefabAssets: Accessor<PrefabAsset[]>;
   environmentSettings: Accessor<EnvironmentSettings>;
-  glbKeys: Accessor<string[]>;
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
   projectFiles: Accessor<ProjectFile[]>;
@@ -91,7 +89,6 @@ export function createEditorBridge(
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
   const [prefabAssets, setPrefabAssets] = createSignal<PrefabAsset[]>(editor.getAllPrefabAssets());
-  const [glbKeys, setGlbKeys] = createSignal<string[]>([]);
   const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
   const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
   const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
@@ -104,7 +101,6 @@ export function createEditorBridge(
   );
 
   // 非同步初始化（fire-and-forget）
-  void GlbStore.keys().then(setGlbKeys);
   void editor.projectManager.getRecentProjects().then(setRecentProjects);
 
   const bump = (setter: (fn: (v: number) => number) => void) =>
@@ -127,7 +123,6 @@ export function createEditorBridge(
   // so only these events capture all scene changes (not editor.events).
   const onNodeAdded = (_node: SceneNode) => {
     setNodes(editor.sceneDocument.getAllNodes());
-    void GlbStore.keys().then(setGlbKeys);
   };
   const onNodeRemoved = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
   const onNodeChanged = (_uuid: string, _changed: Partial<SceneNode>) => {
@@ -137,7 +132,6 @@ export function createEditorBridge(
   const onSceneReplaced = () => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setSceneVersion);
-    void GlbStore.keys().then(setGlbKeys);
   };
 
   // Subscribe to editor events
@@ -208,7 +202,6 @@ export function createEditorBridge(
     hasClipboard,
     prefabAssets,
     environmentSettings,
-    glbKeys,
     projectOpen,
     projectName,
     projectFiles,

@@ -43,18 +43,16 @@ export class Editor {
   }
 
   /**
-   * 非同步初始化：從 IndexedDB hydrate GLB 快取，最後啟動 AutoSave。
+   * 非同步初始化：還原 prefab assets，啟動 AutoSave。
+   * GLB hydration 已移至 loadScene (P1b) — 不再需要 GlbStore restore。
    * App 層需在 editor 對外提供 context 前 await 此方法。
    */
   async init(): Promise<void> {
-    // 0. Restore prefab assets from IndexedDB
+    // Restore prefab assets from IndexedDB
     const prefabAssets = await PrefabStore.getAll();
     for (const asset of prefabAssets) {
       this._prefabAssets.set(asset.id, asset);
     }
-
-    // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
-    await this.resourceCache.hydrate();
 
     // Notify bridge signals
     this.events.emit('prefabStoreChanged');
@@ -129,13 +127,51 @@ export class Editor {
 
   // ── Scene load ────────────────────────────────────
 
-  loadScene(data: SceneFile): void {
+  /**
+   * Load a scene: deserialize nodes, then hydrate mesh URLs.
+   *
+   * Hydrate walk (P1b):
+   *   After deserialize, walk all nodes with mesh.path and populate mesh.url
+   *   via projectManager.urlFor(path). Hydrate is done here (caller of deserialize)
+   *   so SceneDocument stays pure data and SceneSync stays synchronous.
+   *
+   *   Failure mode: soft-fail per node — if urlFor throws (file not found), log
+   *   a warning and leave mesh.url absent. SceneSync will skip the mesh silently.
+   *   This mirrors the pre-P1b behavior where a GlbStore cache miss = empty Object3D.
+   *
+   * @param data - Parsed SceneFile (may be legacy with mesh.source — migrateNodeComponents handles that)
+   */
+  async loadScene(data: SceneFile): Promise<void> {
     this.selection.clear();
     this.selection.hover(null);
     this.history.clear();
     if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
-    // SceneSync listens to sceneReplaced on sceneDocument.events and rebuilds Three.js scene
+
+    // Deserialize first — migrateNodeComponents runs here, converting legacy mesh.source → mesh.path
     this.sceneDocument.deserialize(data);
+
+    // Hydrate mesh URLs: resolve path → blob URL → load into ResourceCache
+    for (const node of this.sceneDocument.getAllNodes()) {
+      const mesh = node.components['mesh'] as { path?: string; nodePath?: string; url?: string } | undefined;
+      if (!mesh || !mesh.path) continue;
+      if (mesh.url) continue; // already hydrated (e.g. freshly imported)
+
+      try {
+        const url = await this.projectManager.urlFor(mesh.path);
+        if (!this.resourceCache.has(url)) {
+          await this.resourceCache.loadFromURL(url);
+        }
+        // Update the in-memory node directly (no Command — this is infrastructure, not user action)
+        mesh.url = url;
+      } catch (err) {
+        console.warn(`[Editor] loadScene: could not hydrate mesh "${mesh.path}" — mesh will be invisible:`, err);
+      }
+    }
+
+    // Trigger SceneSync rebuild now that URLs are populated
+    // sceneReplaced was already emitted by deserialize, so SceneSync's rebuild ran before hydration.
+    // Kick a second rebuild to pick up the populated urls.
+    this.sceneSync.rebuild();
   }
 
   dispose(): void {

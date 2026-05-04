@@ -117,7 +117,7 @@ const ProjectPanel: Component = () => {
     try {
       const file = await editor.projectManager.readFile(path);
       const parsed = JSON.parse(await file.text());
-      editor.loadScene(parsed);
+      await editor.loadScene(parsed);
       bridge.setCurrentScenePath(path);
     } catch (e: any) {
       setErrorTitle('Load Failed');

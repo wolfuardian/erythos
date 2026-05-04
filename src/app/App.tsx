@@ -49,7 +49,7 @@ const App: Component = () => {
       try {
         const sceneFile = await projectManager.readFile(path);
         const text = await sceneFile.text();
-        e.loadScene(JSON.parse(text));
+        await e.loadScene(JSON.parse(text));
         return 'ok';
       } catch (err: any) {
         if (err?.name === 'NotFoundError') return 'notFound';

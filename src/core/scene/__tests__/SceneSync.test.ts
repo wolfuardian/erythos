@@ -258,7 +258,8 @@ describe('SceneSync', () => {
       return {
         has: () => hit,
         cloneSubtree: () => (hit ? meshObj.clone(true) : null),
-        loadFromBuffer: async () => new Group(),
+        loadFromURL: async () => new Group(),
+        _loadFromBuffer: async () => new Group(),
         evict: () => {},
         clear: () => {},
       } as unknown as ResourceCache;
@@ -268,22 +269,23 @@ describe('SceneSync', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { source: 'model.glb' } },
+        components: { mesh: { url: 'blob:test/1', path: 'models/model.glb' } },
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0].name).toBe('cloned-mesh');
     });
 
-    it('cache hit with nodePath: parses filePath:nodePath correctly', () => {
-      let capturedFilePath = '';
+    it('cache hit with nodePath: passes url and nodePath to cloneSubtree', () => {
+      let capturedUrl = '';
       let capturedNodePath: string | undefined;
       const meshObj = new Object3D();
       meshObj.name = 'Torso';
       const mockCache = {
-        has: (fp: string) => { capturedFilePath = fp; return true; },
-        cloneSubtree: (_fp: string, np?: string) => { capturedNodePath = np; return meshObj.clone(true); },
-        loadFromBuffer: async () => new Group(),
+        has: (url: string) => { capturedUrl = url; return true; },
+        cloneSubtree: (url: string, np?: string) => { capturedUrl = url; capturedNodePath = np; return meshObj.clone(true); },
+        loadFromURL: async () => new Group(),
+        _loadFromBuffer: async () => new Group(),
         evict: () => {},
         clear: () => {},
       } as unknown as ResourceCache;
@@ -291,9 +293,9 @@ describe('SceneSync', () => {
       const syncWithCache = new SceneSync(doc, scene, mockCache);
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { source: 'character.glb:Torso' } },
+        components: { mesh: { url: 'blob:test/char', path: 'models/character.glb', nodePath: 'Torso' } },
       }));
-      expect(capturedFilePath).toBe('character.glb');
+      expect(capturedUrl).toBe('blob:test/char');
       expect(capturedNodePath).toBe('Torso');
     });
 
@@ -301,7 +303,18 @@ describe('SceneSync', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { source: 'missing.glb' } },
+        components: { mesh: { url: 'blob:test/missing', path: 'models/missing.glb' } },
+      }));
+      const obj = syncWithCache.getObject3D('mesh-node')!;
+      expect(obj.children).toHaveLength(0);
+    });
+
+    it('missing url (hydrate soft-fail): falls back to empty Object3D', () => {
+      const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
+      doc.addNode(makeNode({
+        id: 'mesh-node',
+        // url absent — file-not-found during hydrate
+        components: { mesh: { path: 'models/missing.glb' } },
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(0);
@@ -318,7 +331,7 @@ describe('SceneSync', () => {
       // sync (no cache) is the default created in beforeEach
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { source: 'model.glb' } },
+        components: { mesh: { url: 'blob:test/1', path: 'models/model.glb' } },
       }));
       const obj = sync.getObject3D('mesh-node');
       expect(obj).not.toBeNull();
