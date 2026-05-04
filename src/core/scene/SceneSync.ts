@@ -177,23 +177,35 @@ export class SceneSync {
         continue;
       }
 
-      // Step 1: Remove existing children (recursive) from SceneDocument
-      this._removeDescendants(instanceRoot.id);
+      // Wrap each instance's rebuild in suppress() so the nodeAdded/nodeRemoved
+      // events fired during _removeDescendants + addNode do NOT arm a new debounce
+      // in PrefabInstanceWatcher. This is the primary guard against rebuild-echo;
+      // the 50ms self-write window is a secondary fallback.
+      const doRebuild = () => {
+        // Step 1: Remove existing children (recursive) from SceneDocument
+        this._removeDescendants(instanceRoot.id);
 
-      // Step 2: Update the instance root's prefab.url to the new URL
-      // (path remains stable; url must track the new blob URL)
-      const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
-      this.document.updateNode(instanceRoot.id, {
-        components: {
-          ...instanceRoot.components,
-          prefab: { ...currentPrefab, url: newURL },
-        },
-      });
+        // Step 2: Update the instance root's prefab.url to the new URL
+        // (path remains stable; url must track the new blob URL)
+        const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
+        this.document.updateNode(instanceRoot.id, {
+          components: {
+            ...instanceRoot.components,
+            prefab: { ...currentPrefab, url: newURL },
+          },
+        });
 
-      // Step 3: Deserialize new prefab content as children of this instance root
-      const childNodes = deserializeFromPrefab(newAsset, instanceRoot.id);
-      for (const node of childNodes) {
-        this.document.addNode(node);
+        // Step 3: Deserialize new prefab content as children of this instance root
+        const childNodes = deserializeFromPrefab(newAsset, instanceRoot.id);
+        for (const node of childNodes) {
+          this.document.addNode(node);
+        }
+      };
+
+      if (this._instanceWatcher) {
+        this._instanceWatcher.suppress(doRebuild);
+      } else {
+        doRebuild();
       }
     }
   }

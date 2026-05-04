@@ -22,9 +22,11 @@ const DEBOUNCE_MS = 250;
  *   writeFile → ProjectManager.fileChanged → PrefabRegistry fetch (async HTTP) →
  *   prefabChanged → SceneSync._rebuildPrefabInstances
  *
- * 50ms is a reasonable upper bound in normal operation. If storage is exceptionally
- * slow, this can be increased — the worst outcome is the originating instance
- * receives a redundant (but functionally correct) rebuild once.
+ * 50ms is a fallback for external file edits or unforeseen event paths. The primary
+ * guard against rebuild-echo is the `suppress()` wrap around InstantiatePrefabCommand
+ * and SceneSync._rebuildPrefabInstances. If storage is exceptionally slow and the
+ * fallback window is exceeded, the worst outcome is the originating instance receives
+ * a redundant (but functionally correct) rebuild once.
  */
 export const SELF_WRITE_WINDOW_MS = 50;
 
@@ -74,6 +76,14 @@ export class PrefabInstanceWatcher {
   /** path → self-write grace window entry */
   private readonly _selfWrites = new Map<string, SelfWriteEntry>();
 
+  /**
+   * Re-entrant suppress counter. While > 0, ALL nodeAdded/nodeRemoved/nodeChanged
+   * events are completely ignored (no debounce scheduled). Use `suppress()` to
+   * increment/decrement atomically around a block of SceneDocument mutations that
+   * must not trigger a write (e.g. InstantiatePrefabCommand.execute, SceneSync rebuild).
+   */
+  private _suppressDepth = 0;
+
   // Bound handlers so we can pass the same reference to off()
   private readonly _onNodeAdded: (node: SceneNode) => void;
   private readonly _onNodeRemoved: (node: SceneNode) => void;
@@ -119,6 +129,34 @@ export class PrefabInstanceWatcher {
       return false;
     }
     return entry.instanceRootId === instanceRootId;
+  }
+
+  /**
+   * Execute `fn` with all mutation-event scheduling silenced.
+   *
+   * While `fn` is running, any `nodeAdded`, `nodeRemoved`, or `nodeChanged`
+   * event fired against this watcher's SceneDocument will be completely ignored
+   * — no debounce is armed, no write is scheduled.
+   *
+   * The counter is re-entrant / nestable: nested `suppress()` calls simply
+   * increment/decrement the depth; scheduling resumes only when the outermost
+   * call returns.
+   *
+   * Intended callers:
+   *   - `InstantiatePrefabCommand.execute()` — adding freshly-deserialized nodes
+   *     must not be treated as a "user edited a prefab" mutation.
+   *   - `SceneSync._rebuildPrefabInstances` per-instance loop — rebuild-echo
+   *     mutations must not re-arm the debounce. This is the primary guard;
+   *     the 50ms self-write window (Level 1) is a fallback for external file
+   *     edits or unforeseen event paths.
+   */
+  suppress<T>(fn: () => T): T {
+    this._suppressDepth++;
+    try {
+      return fn();
+    } finally {
+      this._suppressDepth--;
+    }
   }
 
   /**
@@ -202,12 +240,21 @@ export class PrefabInstanceWatcher {
   /**
    * Schedule (or re-arm) a debounced write for `prefabPath` originating from `instanceRootId`.
    *
-   * Skips silently if a self-write grace window is active for the path (Level 1
-   * cascade suppression — prevents events from SceneSync's rebuild of other instances
-   * from triggering a second write).
+   * Skips silently if:
+   *   - suppress depth > 0 (suppress() is active — e.g. during InstantiatePrefabCommand or
+   *     SceneSync._rebuildPrefabInstances). This is the primary guard against spurious writes.
+   *   - a self-write grace window is active for the path (Level 1 fallback — covers external
+   *     file edits or event paths not wrapped by suppress()).
+   *
+   * 50ms is a fallback for external file edits or unforeseen event paths. The primary guard
+   * against rebuild-echo is the `suppress()` wrap around InstantiatePrefabCommand and
+   * SceneSync._rebuildPrefabInstances.
    */
   private _scheduleWrite(prefabPath: string, instanceRootId: string): void {
-    // Level 1 cascade suppression: if we already wrote this path recently,
+    // Primary guard: if suppress() is active, completely ignore this mutation.
+    if (this._suppressDepth > 0) return;
+
+    // Level 1 cascade suppression (fallback): if we already wrote this path recently,
     // the current events are the echo from SceneSync rebuilding other instances.
     // Drop without scheduling another write.
     const existing = this._selfWrites.get(prefabPath);

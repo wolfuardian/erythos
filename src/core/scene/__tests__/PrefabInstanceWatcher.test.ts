@@ -269,6 +269,37 @@ describe('PrefabInstanceWatcher — dispose cancels pending writes', () => {
     expect(pm.writeFile).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
+
+  it('does not fire writeFile when a nodeAdded event fires after dispose() (listener removed)', async () => {
+    vi.useFakeTimers();
+    const doc = new SceneDocument();
+    const { pm } = makeProjectManagerMock();
+    const watcher = new PrefabInstanceWatcher(doc, pm as any);
+
+    // Setup instance + flush setup debounce
+    const instanceRoot = doc.createNode('Instance');
+    instanceRoot.components = { prefab: { path: 'prefabs/chair.prefab', url: 'blob:original' } };
+    doc.addNode(instanceRoot);
+    const child = doc.createNode('Child');
+    child.parent = instanceRoot.id;
+    doc.addNode(child);
+    await vi.advanceTimersByTimeAsync(250);
+    pm.writeFile.mockClear();
+
+    // Dispose — listeners should be removed
+    watcher.dispose();
+
+    // Fire a mutation event after dispose (simulates SceneSync or other code adding nodes)
+    const newChild = doc.createNode('PostDisposeChild');
+    newChild.parent = instanceRoot.id;
+    doc.addNode(newChild);
+
+    // Advance well past the debounce window — no new debounce should have been armed
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(pm.writeFile).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });
 
 describe('PrefabInstanceWatcher — hasRecentSelfWrite', () => {
@@ -397,6 +428,12 @@ describe('PrefabInstanceWatcher — self-write cascade suppression', () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    // Advance past where a cascade-scheduled debounce would fire (T + 250ms)
+    // AND past the self-write window expiry (T + 50ms).
+    // If cascade suppression broke and a debounce got scheduled during the rebuild,
+    // it would fire here and writeFile would be called — making this assertion meaningful.
+    await vi.advanceTimersByTimeAsync(300);
+
     // No second write should have been scheduled
     expect(pm.writeFile).not.toHaveBeenCalled();
 
@@ -405,6 +442,83 @@ describe('PrefabInstanceWatcher — self-write cascade suppression', () => {
     sync.dispose();
     registry.detach();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+});
+
+describe('PrefabInstanceWatcher — suppress() silences mutations during instantiate', () => {
+  it('does not schedule a write when addNode fires during suppress() (InstantiatePrefabCommand pattern)', async () => {
+    vi.useFakeTimers();
+    const doc = new SceneDocument();
+    const { pm } = makeProjectManagerMock();
+    const watcher = new PrefabInstanceWatcher(doc, pm as any);
+
+    // Setup an existing instance of the same prefab (the "already in scene" instances)
+    const existingRoot = doc.createNode('ExistingInstance');
+    existingRoot.components = { prefab: { path: 'prefabs/chair.prefab', url: 'blob:v1' } };
+    doc.addNode(existingRoot);
+    const existingChild = doc.createNode('ExistingSeat');
+    existingChild.parent = existingRoot.id;
+    doc.addNode(existingChild);
+
+    // Flush setup debounce + advance past self-write window
+    await vi.advanceTimersByTimeAsync(250);
+    await vi.advanceTimersByTimeAsync(100);
+    pm.writeFile.mockClear();
+
+    // Simulate InstantiatePrefabCommand.execute(): wrap all addNode calls in suppress()
+    watcher.suppress(() => {
+      const newRoot = doc.createNode('NewInstance');
+      newRoot.components = { prefab: { path: 'prefabs/chair.prefab', url: 'blob:v1' } };
+      doc.addNode(newRoot);
+      const newChild = doc.createNode('NewSeat');
+      newChild.parent = newRoot.id;
+      doc.addNode(newChild);
+    });
+
+    // Advance well past debounce — no write should have been scheduled
+    await vi.advanceTimersByTimeAsync(250 + 50 + 10);
+
+    expect(pm.writeFile).not.toHaveBeenCalled();
+
+    watcher.dispose();
+    vi.useRealTimers();
+  });
+
+  it('suppress() is re-entrant: nested calls only resume scheduling after outermost exits', async () => {
+    vi.useFakeTimers();
+    const doc = new SceneDocument();
+    const { pm } = makeProjectManagerMock();
+    const watcher = new PrefabInstanceWatcher(doc, pm as any);
+
+    const instanceRoot = doc.createNode('Instance');
+    instanceRoot.components = { prefab: { path: 'prefabs/chair.prefab', url: 'blob:v1' } };
+    doc.addNode(instanceRoot);
+    const child = doc.createNode('Seat');
+    child.parent = instanceRoot.id;
+    doc.addNode(child);
+    await vi.advanceTimersByTimeAsync(250);
+    await vi.advanceTimersByTimeAsync(100);
+    pm.writeFile.mockClear();
+
+    // Two nested suppress calls — inner exits first, mutations should still be silent
+    watcher.suppress(() => {
+      watcher.suppress(() => {
+        doc.updateNode(child.id, { name: 'InnerChange' });
+      });
+      // Outer suppress still active — should remain silent
+      doc.updateNode(child.id, { name: 'OuterChange' });
+    });
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(pm.writeFile).not.toHaveBeenCalled();
+
+    // After suppress fully exits, mutations should be observable again
+    doc.updateNode(child.id, { name: 'PostSuppress' });
+    await vi.advanceTimersByTimeAsync(300);
+    expect(pm.writeFile).toHaveBeenCalledOnce();
+
+    watcher.dispose();
     vi.useRealTimers();
   });
 });
