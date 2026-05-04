@@ -1,0 +1,11 @@
+.splitter {
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+  z-index: 10;
+  cursor: ns-resize;
+}
+
+.splitter.vertical {
+  cursor: ew-resize;
+}

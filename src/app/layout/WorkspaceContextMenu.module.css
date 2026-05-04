@@ -1,0 +1,27 @@
+.menu {
+  position: fixed;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 160px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.menuItem {
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.menuItem:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.menuItem.disabled {
+  cursor: default;
+  color: var(--text-disabled);
+  pointer-events: none;
+}

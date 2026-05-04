@@ -6,6 +6,7 @@ import {
 import { store, mutate, setCurrent, renameWorkspace, reorderWorkspace } from '../workspaceStore';
 import type { Workspace } from '../workspaceStore';
 import { WorkspaceContextMenu } from './WorkspaceContextMenu';
+import styles from './WorkspaceTab.module.css';
 
 interface Props {
   workspace: Workspace;
@@ -21,6 +22,7 @@ interface MenuPos {
 export const WorkspaceTab: Component<Props> = (props) => {
   const isActive = () => store().currentWorkspaceId === props.workspace.id;
   let suppressNextClick = false;
+  const [dragging, setDragging] = createSignal(false);
 
   // ── drag-reorder ──────────────────────────────────────────
   const handlePointerDown = (e: PointerEvent) => {
@@ -46,13 +48,13 @@ export const WorkspaceTab: Component<Props> = (props) => {
         }
       }
 
-      el.style.opacity = '0.5';
+      setDragging(true);
     };
 
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      el.style.opacity = '';
+      setDragging(false);
 
       if (hasDragged && hoveredIdx !== fromIdx) {
         suppressNextClick = true;
@@ -118,28 +120,11 @@ export const WorkspaceTab: Component<Props> = (props) => {
         onDblClick={(e) => { e.preventDefault(); startEdit(); }}
         onContextMenu={handleContextMenu}
         onPointerDown={handlePointerDown}
-        style={{
-          padding: '0 10px',
-          height: '22px',
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-          cursor: editing() ? 'text' : 'grab',
-          color: isActive() ? 'var(--text-primary)' : 'var(--text-muted)',
-          background: isActive() ? 'var(--bg-section)' : 'transparent',
-          border: isActive() ? '1px solid var(--border-medium)' : '1px solid transparent',
-          'border-radius': 'var(--radius-md)',
-          'user-select': 'none',
-          'touch-action': 'none',
-          'min-width': '58px',
-          'max-width': '120px',
-          'flex-shrink': '0',
-          'font-size': '9px',
-          'white-space': 'nowrap',
-          overflow: 'hidden',
-          'text-overflow': 'ellipsis',
-          position: 'relative',
-          transition: 'color var(--transition-fast), background var(--transition-fast)',
+        class={styles.tab}
+        classList={{
+          [styles.active]: isActive(),
+          [styles.editing]: editing(),
+          [styles.dragging]: dragging(),
         }}
       >
         <Show
@@ -156,16 +141,7 @@ export const WorkspaceTab: Component<Props> = (props) => {
               // select all text after mount so user can immediately type
               setTimeout(() => el?.select(), 0);
             }}
-            style={{
-              background: 'var(--bg-input, var(--bg-app))',
-              border: '1px solid var(--accent-blue)',
-              color: 'var(--text-primary)',
-              'font-size': 'inherit',
-              padding: '0 4px',
-              width: '100%',
-              outline: 'none',
-              'border-radius': '2px',
-            }}
+            class={styles.renameInput}
             onClick={(e) => e.stopPropagation()}
           />
         </Show>

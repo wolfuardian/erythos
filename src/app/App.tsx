@@ -15,6 +15,7 @@ import {
   getLastProjectId, setLastProjectId, clearLastProjectId,
   getLastScenePath, setLastScenePath, clearLastScenePath,
 } from './projectSession';
+import styles from './App.module.css';
 
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
@@ -173,13 +174,9 @@ const App: Component = () => {
       <Welcome projectManager={projectManager} onOpenProject={openProject} />
     }>
       <EditorProvider bridge={bridge()!} editors={editors}>
-        <div style={{
-          width: '100%', height: '100%',
-          display: 'flex', 'flex-direction': 'column',
-          background: 'var(--bg-app)',
-        }}>
+        <div class={styles.root}>
           <Toolbar />
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div class={styles.contentArea}>
             <AreaTreeRenderer />
           </div>
           <StatusBar bridge={bridge()!} />
@@ -191,48 +188,30 @@ const App: Component = () => {
 
 // StatusBar — inline component showing autosave status
 const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
+  const status = () => props.bridge.autosaveStatus();
   return (
-    <div style={{
-      height: 'var(--statusbar-height)',
-      background: 'var(--bg-header)',
-      'border-top': '1px solid var(--border-subtle)',
-      display: 'flex',
-      'align-items': 'center',
-      padding: '0 var(--space-md)',
-    }}>
-      <span style={{ color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)' }}>
-        Ready
-      </span>
-      <div style={{ flex: 1 }} />
-      <Show when={props.bridge.autosaveStatus() !== 'idle'}>
-        <span style={{
-          color: props.bridge.autosaveStatus() === 'pending'
-            ? 'var(--text-muted)'
-            : props.bridge.autosaveStatus() === 'error'
-              ? 'var(--accent-red)'
-              : 'var(--accent-green)',
-          'font-size': 'var(--font-size-sm)',
-          'margin-right': props.bridge.autosaveStatus() === 'error' ? 'var(--space-sm)' : 'var(--space-md)',
-        }}>
-          {props.bridge.autosaveStatus() === 'pending'
+    <div class={styles.statusBar}>
+      <span class={styles.statusReady}>Ready</span>
+      <div class={styles.statusSpacer} />
+      <Show when={status() !== 'idle'}>
+        <span
+          class={styles.statusSaveText}
+          classList={{
+            [styles.pending]: status() === 'pending',
+            [styles.saved]: status() === 'saved',
+            [styles.error]: status() === 'error',
+          }}
+        >
+          {status() === 'pending'
             ? 'Saving...'
-            : props.bridge.autosaveStatus() === 'error'
+            : status() === 'error'
               ? 'Save failed'
               : 'Saved'}
         </span>
-        <Show when={props.bridge.autosaveStatus() === 'error'}>
+        <Show when={status() === 'error'}>
           <button
+            class={styles.retryButton}
             onClick={() => void props.bridge.autosaveFlush()}
-            style={{
-              'font-size': 'var(--font-size-sm)',
-              color: 'var(--text-default)',
-              background: 'var(--bg-panel)',
-              border: '1px solid var(--border-subtle)',
-              'border-radius': '3px',
-              padding: '1px 6px',
-              cursor: 'pointer',
-              'margin-right': 'var(--space-md)',
-            }}
           >
             Retry
           </button>
