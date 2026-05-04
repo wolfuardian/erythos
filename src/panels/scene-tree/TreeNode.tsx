@@ -83,6 +83,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     e.stopPropagation();
     props.setDraggedId(props.node.id);
     e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('application/erythos-scene-node', props.node.id);
   };
 
   const onDragOver = (e: DragEvent) => {
@@ -176,7 +177,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     <div>
       <div
         data-testid="scene-tree-row"
-        draggable
+        draggable={true}
         onClick={handleClick}
         onContextMenu={(e) => {
           if (e.ctrlKey || e.metaKey) {
