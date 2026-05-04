@@ -37,9 +37,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-three': ['three'],
-          'vendor-solid': ['solid-js', 'solid-js/web'],
+        // Match the vite 7 object-form behavior:
+        //   manualChunks: { 'vendor-three': ['three'], 'vendor-solid': ['solid-js', 'solid-js/web'] }
+        // Old form matched only the package entry; subpaths like `three/examples/*`
+        // (GLTFLoader, OrbitControls, etc.) stayed in the main bundle.
+        // The function form needs explicit subpath exclusion to preserve that split.
+        manualChunks: (id) => {
+          if (/[\\/]node_modules[\\/]three[\\/](?!examples[\\/]|addons[\\/])/.test(id)) {
+            return 'vendor-three';
+          }
+          if (/[\\/]node_modules[\\/]solid-js[\\/]/.test(id)) {
+            return 'vendor-solid';
+          }
         },
       },
     },
