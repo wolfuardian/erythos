@@ -9,6 +9,9 @@ import type {
 } from './SceneFormat';
 import type { SceneDocument } from './SceneDocument';
 import type { ResourceCache } from './ResourceCache';
+import type { PrefabRegistry } from './PrefabRegistry';
+import type { PrefabAsset } from './PrefabFormat';
+import { deserializeFromPrefab } from './PrefabSerializer';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -35,6 +38,11 @@ export class SceneSync {
 
   // Orphan tracking: child UUID → set of Object3D waiting for this parent
   private readonly pendingChildren = new Map<string, Set<Object3D>>();
+
+  /** Bound prefabChanged handler for off() symmetry */
+  private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
+  /** Reference to attached PrefabRegistry (for dispose) */
+  private _prefabRegistry: PrefabRegistry | null = null;
 
   constructor(document: SceneDocument, threeScene: Scene, resourceCache?: ResourceCache) {
     this.document = document;
@@ -87,9 +95,95 @@ export class SceneSync {
     this.document.events.off('nodeChanged', this.onNodeChanged);
     this.document.events.off('sceneReplaced', this.onSceneReplaced);
 
+    // Unsubscribe from prefab live-sync if attached
+    if (this._prefabRegistry && this._onPrefabChanged) {
+      this._prefabRegistry.off('prefabChanged', this._onPrefabChanged);
+      this._onPrefabChanged = null;
+      this._prefabRegistry = null;
+    }
+
     this.uuidToObj.clear();
     this.objToUuid.clear();
     this.pendingChildren.clear();
+  }
+
+  // ── PrefabRegistry live-sync ───────────────────────────────────────────────
+
+  /**
+   * Opt-in subscription to PrefabRegistry's `prefabChanged` event.
+   *
+   * Called once from `Editor.init` on the main SceneSync only. Sandbox
+   * SceneSyncs (Workshop) deliberately do NOT call this — they must not
+   * auto-rebuild when the file the user is actively editing is saved.
+   *
+   * ARCHITECTURAL EXCEPTION: The rebuild below mutates SceneDocument OUTSIDE
+   * the Command/undo pipeline. This is intentional for P3 live-sync:
+   * - Prefab edits are file-level operations (Workshop commit writes a .prefab file).
+   * - Main editor undo/redo does not cover prefab file-level changes.
+   * - Reversing a prefab edit is done via Workshop reopen + further edits,
+   *   or filesystem-level revert.
+   * See docs/prefab-workshop.md §"Open Questions" and §"Event Flow & Live Sync".
+   *
+   * @param registry - The app's PrefabRegistry instance.
+   */
+  attachPrefabRegistry(registry: PrefabRegistry): void {
+    // Detach any prior subscription (idempotent guard)
+    if (this._prefabRegistry && this._onPrefabChanged) {
+      this._prefabRegistry.off('prefabChanged', this._onPrefabChanged);
+    }
+
+    this._prefabRegistry = registry;
+    this._onPrefabChanged = (url, asset, path) => {
+      this._rebuildPrefabInstances(url, asset, path);
+    };
+    registry.on('prefabChanged', this._onPrefabChanged);
+  }
+
+  /**
+   * Rebuild all scene-graph instance subtrees whose `components.prefab.path`
+   * matches the given path (stable across URL rotation).
+   *
+   * ARCHITECTURAL EXCEPTION: direct SceneDocument mutation outside Command.
+   * See attachPrefabRegistry() for rationale.
+   */
+  private _rebuildPrefabInstances(newURL: string, newAsset: PrefabAsset, path: string): void {
+    const instances = this.document.getAllNodes().filter((n) => {
+      const prefab = n.components['prefab'] as { path?: string } | undefined;
+      return prefab?.path === path;
+    });
+
+    for (const instanceRoot of instances) {
+      // Step 1: Remove existing children (recursive) from SceneDocument
+      this._removeDescendants(instanceRoot.id);
+
+      // Step 2: Update the instance root's prefab.url to the new URL
+      // (path remains stable; url must track the new blob URL)
+      const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
+      this.document.updateNode(instanceRoot.id, {
+        components: {
+          ...instanceRoot.components,
+          prefab: { ...currentPrefab, url: newURL },
+        },
+      });
+
+      // Step 3: Deserialize new prefab content as children of this instance root
+      const childNodes = deserializeFromPrefab(newAsset, instanceRoot.id);
+      for (const node of childNodes) {
+        this.document.addNode(node);
+      }
+    }
+  }
+
+  /**
+   * Recursively remove all descendants of the given node from SceneDocument.
+   * Children are removed depth-first (leaf → root order) to avoid dangling refs.
+   */
+  private _removeDescendants(parentId: string): void {
+    const children = this.document.getChildren(parentId);
+    for (const child of children) {
+      this._removeDescendants(child.id);
+      this.document.removeNode(child.id);
+    }
   }
 
   // ── Event handlers (private) ───────────────────────────────────────────────

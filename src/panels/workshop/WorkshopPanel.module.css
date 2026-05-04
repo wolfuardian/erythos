@@ -63,7 +63,23 @@
   text-overflow: ellipsis;
 }
 
-/* ── Discard button in header ── */
+/* ── Header action buttons ── */
+.saveBtn {
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  background: var(--accent-primary-muted, rgba(74, 127, 191, 0.2));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.saveBtn:hover {
+  background: var(--accent-primary-muted-hover, rgba(74, 127, 191, 0.4));
+  color: var(--text-primary);
+}
+
 .discardBtn {
   padding: 2px 8px;
   font-size: var(--font-size-xs);
