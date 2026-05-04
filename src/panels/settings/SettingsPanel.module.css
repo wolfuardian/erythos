@@ -1,0 +1,34 @@
+.panel {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-well-outer);
+  border-radius: var(--radius-lg);
+  margin: 3px;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: 4px var(--space-sm);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.settingRow:hover {
+  background: var(--bg-hover);
+}

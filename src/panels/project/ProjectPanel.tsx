@@ -11,6 +11,7 @@ import { ProjectTypeIcon } from './ProjectTypeIcon';
 import { buildProjectMenuItems } from './projectMenuItems';
 import { useNewSceneFlow } from './useNewSceneFlow';
 import { useDeleteFlow } from './useDeleteFlow';
+import styles from './ProjectPanel.module.css';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -89,10 +90,7 @@ const ProjectPanel: Component = () => {
     });
   };
 
-  const [hoveredFilter, setHoveredFilter] = createSignal<ProjectFile['type'] | null>(null);
   const [isDragOver, setIsDragOver] = createSignal(false);
-  const [hoveredFolder, setHoveredFolder] = createSignal<string | null>(null);
-  const [hoveredAssetPath, setHoveredAssetPath] = createSignal<string | null>(null);
 
   // ── Filtered assets (folder + search + type-filter) ──
   const displayedAssets = createMemo(() => {
@@ -215,37 +213,24 @@ const ProjectPanel: Component = () => {
   return (
     <div
       data-testid="project-panel"
-      style={{
-        width: 'calc(100% - 6px)', height: 'calc(100% - 6px)',
-        display: 'flex', 'flex-direction': 'column', overflow: 'hidden',
-        background: 'var(--bg-panel)',
-        'box-shadow': 'var(--shadow-well-outer)',
-        'border-radius': 'var(--radius-lg)',
-        margin: '3px',
-        'box-sizing': 'border-box',
-      }}
+      class={styles.panel}
     >
       {/* ── Panel header ── */}
       <PanelHeader
         title={bridge.projectName() ?? 'Project'}
         actions={
-          <button data-testid="project-panel-close-project" onClick={() => setShowCloseConfirm(true)} style={{
-            background: 'var(--bg-section)', color: 'var(--text-muted)',
-            border: '1px solid var(--border-subtle)',
-            padding: '2px 6px', 'border-radius': 'var(--radius-sm)',
-            'font-size': 'var(--font-size-xs)', cursor: 'pointer',
-          }}>Close project</button>
+          <button
+            data-testid="project-panel-close-project"
+            class={styles.closeBtn}
+            onClick={() => setShowCloseConfirm(true)}
+          >
+            Close project
+          </button>
         }
       />
 
       {/* ── Toolbar row ── */}
-      <div style={{
-        height: '36px',
-        display: 'flex', 'align-items': 'center', gap: '6px',
-        padding: '0 8px',
-        'border-bottom': '1px solid var(--border-subtle)',
-        'flex-shrink': '0',
-      }}>
+      <div class={styles.toolbar}>
         {/* Search input */}
         <input
           data-testid="project-panel-search"
@@ -253,19 +238,7 @@ const ProjectPanel: Component = () => {
           placeholder="Search assets..."
           value={searchQuery()}
           onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          style={{
-            flex: 1,
-            background: 'var(--bg-input)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-subtle)',
-            'border-radius': 'var(--radius-sm)',
-            padding: '3px 6px',
-            'font-size': 'var(--font-size-sm)',
-            'box-shadow': 'var(--shadow-input-inset)',
-            outline: 'none',
-          }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent-gold)')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+          class={styles.searchInput}
         />
 
         {/* Grid / List toggle button */}
@@ -273,16 +246,7 @@ const ProjectPanel: Component = () => {
           data-testid="project-panel-view-toggle"
           title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
           onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
-          style={{
-            width: '24px', height: '24px',
-            background: 'var(--bg-section)',
-            border: '1px solid var(--border-subtle)',
-            'border-radius': 'var(--radius-sm)',
-            cursor: 'pointer',
-            display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-            color: 'var(--text-muted)',
-            'flex-shrink': '0',
-          }}
+          class={styles.viewToggleBtn}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
             <Show when={viewMode() === 'list'}>
@@ -302,61 +266,34 @@ const ProjectPanel: Component = () => {
       </div>
 
       {/* ── Breadcrumb row ── */}
-      <div style={{
-        height: 'var(--statusbar-height)',
-        display: 'flex', 'align-items': 'center',
-        padding: '0 10px', gap: '4px',
-        'font-size': 'var(--font-size-sm)',
-        color: 'var(--text-muted)',
-        'border-bottom': '1px solid var(--border-subtle)',
-        'flex-shrink': '0',
-      }}>
+      <div class={styles.breadcrumb}>
         <span
-          style={{ cursor: 'pointer', color: selectedFolder() ? 'var(--accent-blue)' : 'var(--text-secondary)' }}
+          class={styles.breadcrumbRoot}
+          classList={{ [styles.active]: selectedFolder() === null }}
           onClick={() => setSelectedFolder(null)}
         >Assets</span>
         <Show when={selectedFolder() !== null}>
           <span>›</span>
-          <span style={{ color: 'var(--text-secondary)' }}>{selectedFolder()}</span>
+          <span class={styles.breadcrumbSub}>{selectedFolder()}</span>
         </Show>
       </div>
 
       {/* ── Body row ── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div class={styles.body}>
 
         {/* ── Left sidebar: folder tree ── */}
-        <div style={{
-          width: '140px',
-          'overflow-y': 'auto',
-          'border-right': '1px solid var(--border-subtle)',
-          'flex-shrink': '0',
-        }}>
+        <div class={styles.sidebar}>
           <For each={FOLDERS}>
             {(f) => {
               const isActive = () =>
                 f.type === null
                   ? selectedFolder() === null
                   : selectedFolder() === f.type;
-              const isHovered = () => hoveredFolder() === f.label;
               return (
                 <div
                   onClick={() => setSelectedFolder(f.type)}
-                  onMouseEnter={() => setHoveredFolder(f.label)}
-                  onMouseLeave={() => setHoveredFolder(null)}
-                  style={{
-                    padding: '5px 10px',
-                    cursor: 'pointer',
-                    'font-size': 'var(--font-size-sm)',
-                    color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive()
-                      ? 'var(--bg-selected)'
-                      : isHovered()
-                        ? 'var(--bg-hover)'
-                        : 'transparent',
-                    'white-space': 'nowrap',
-                    overflow: 'hidden',
-                    'text-overflow': 'ellipsis',
-                  }}
+                  class={styles.folderItem}
+                  classList={{ [styles.folderActive]: isActive() }}
                 >
                   {f.label}
                 </div>
@@ -386,28 +323,14 @@ const ProjectPanel: Component = () => {
             setSelectedAssetPaths([]);
             setLastClickedAssetPath(null);
           }}
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            border: isDragOver() ? '2px dashed var(--accent-blue)' : '2px solid transparent',
-            background: isDragOver() ? 'rgba(70,130,220,0.08)' : undefined,
-            'box-sizing': 'border-box',
-            transition: 'border-color 100ms, background 100ms',
-            display: 'flex',
-            'flex-direction': 'column',
-            position: 'relative',
-          }}
+          class={styles.assetArea}
+          classList={{ [styles.dragOver]: isDragOver() }}
         >
           {/* ── Type-filter pill bar (list view only) ── */}
           <Show when={viewMode() === 'list'}>
             <div
               onClick={(e) => e.stopPropagation()}
-              style={{
-                display: 'flex', gap: '4px', padding: '6px 10px',
-                'border-bottom': '1px solid var(--border-subtle)',
-                'flex-wrap': 'wrap',
-                'flex-shrink': '0',
-              }}
+              class={styles.filterBar}
             >
               <For each={ALL_TYPES}>
                 {(t) => {
@@ -417,40 +340,19 @@ const ProjectPanel: Component = () => {
                       aria-label={meta.label}
                       title={meta.label}
                       onClick={() => toggleFilter(t)}
-                      onMouseEnter={() => setHoveredFilter(t)}
-                      onMouseLeave={() => setHoveredFilter(null)}
-                      style={{
-                        display: 'flex', 'align-items': 'center', gap: '4px',
-                        padding: '2px 6px',
-                        background: activeFilters().has(t)
-                          ? 'var(--bg-section)'
-                          : hoveredFilter() === t
-                            ? 'var(--bg-hover)'
-                            : 'transparent',
-                        border: '1px solid',
-                        'border-color': activeFilters().has(t) ? 'var(--border-subtle)' : 'transparent',
-                        'border-radius': 'var(--radius-sm)',
-                        cursor: 'pointer',
-                        opacity: activeFilters().has(t) ? '1' : '0.4',
-                      }}
+                      class={styles.filterBtn}
+                      classList={{ [styles.filterActive]: activeFilters().has(t) }}
                     >
                       <svg
                         width="16" height="16" viewBox="0 0 16 16"
                         fill="none" stroke-linecap="round" stroke-linejoin="round"
-                        style={{
-                          'flex-shrink': '0',
-                          stroke: activeFilters().has(t)
-                            ? (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--accent-blue)')
-                            : (hoveredFilter() === t ? 'var(--text-primary)' : 'var(--text-muted)'),
-                          'stroke-width': '1.5',
-                        }}
+                        class={styles.filterIcon}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
                       >
                         <ProjectTypeIcon type={t} />
                       </svg>
-                      <span style={{
-                        'font-size': 'var(--font-size-xs)',
-                        color: 'var(--text-muted)',
-                      }}>{meta.label}</span>
+                      <span class={styles.filterLabel}>{meta.label}</span>
                     </button>
                   );
                 }}
@@ -460,29 +362,16 @@ const ProjectPanel: Component = () => {
 
           {/* ── Grid view ── */}
           <Show when={viewMode() === 'grid'}>
-            <div style={{ display: 'flex', 'flex-wrap': 'wrap', gap: '8px', padding: '8px' }}>
+            <div class={styles.gridArea}>
               <For each={displayedAssets()}>
                 {(f) => {
                   const meta = TYPE_META[f.type];
                   const selected = () => isSelected(f.path);
-                  const hovered = () => hoveredAssetPath() === f.path;
                   return (
                     <div
                       data-file-row="true"
-                      onMouseEnter={() => setHoveredAssetPath(f.path)}
-                      onMouseLeave={() => setHoveredAssetPath(prev => prev === f.path ? null : prev)}
-                      style={{
-                        position: 'relative', width: '72px', cursor: 'pointer',
-                        display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '4px',
-                        background: selected()
-                          ? 'var(--bg-selected)'
-                          : hovered()
-                            ? 'var(--bg-hover)'
-                            : undefined,
-                        outline: hovered() ? '1px solid var(--border-medium)' : undefined,
-                        'outline-offset': hovered() ? '-1px' : undefined,
-                        'border-radius': hovered() ? 'var(--radius-md)' : undefined,
-                      }}
+                      class={styles.gridItem}
+                      classList={{ [styles.assetSelected]: selected() }}
                       onClick={(e) => { e.stopPropagation(); handleAssetClick(e, f.path); }}
                       onDblClick={(e) => {
                         e.stopPropagation();
@@ -492,14 +381,11 @@ const ProjectPanel: Component = () => {
                       onContextMenu={(e) => handleAssetContextMenu(e, f)}
                     >
                       {/* Thumbnail placeholder */}
-                      <div style={{
-                        width: '64px', height: '64px',
-                        background: 'var(--bg-section)',
-                        border: `1px solid ${selected() ? 'var(--accent-blue)' : 'var(--border-subtle)'}`,
-                        'border-radius': 'var(--radius-md)',
-                        display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                        color: meta.color,
-                      }}>
+                      <div
+                        class={styles.gridThumb}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
+                      >
                         <svg width="24" height="24" viewBox="0 0 16 16" fill="none"
                           stroke="currentColor" stroke-width="1.5"
                           stroke-linecap="round" stroke-linejoin="round">
@@ -507,18 +393,13 @@ const ProjectPanel: Component = () => {
                         </svg>
                       </div>
                       {/* Type pill, floating bottom-right */}
-                      <span style={{
-                        position: 'absolute', bottom: '20px', right: '0',
-                        background: meta.color + '33', color: meta.color,
-                        'font-size': '7px', 'font-weight': 'bold',
-                        padding: '1px 3px', 'border-radius': '2px',
-                      }}>{meta.pill}</span>
+                      <span
+                        class={styles.gridPill}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
+                      >{meta.pill}</span>
                       {/* Filename */}
-                      <span style={{
-                        'font-size': 'var(--font-size-xs)', color: 'var(--text-secondary)',
-                        width: '72px', overflow: 'hidden', 'text-overflow': 'ellipsis',
-                        'white-space': 'nowrap', 'text-align': 'center',
-                      }}>{f.name}</span>
+                      <span class={styles.gridName}>{f.name}</span>
                     </div>
                   );
                 }}
@@ -532,12 +413,11 @@ const ProjectPanel: Component = () => {
               {(f) => {
                 const meta = TYPE_META[f.type];
                 const selected = () => isSelected(f.path);
-                const hovered = () => hoveredAssetPath() === f.path;
                 return (
                   <div
                     data-file-row="true"
-                    onMouseEnter={() => setHoveredAssetPath(f.path)}
-                    onMouseLeave={() => setHoveredAssetPath(prev => prev === f.path ? null : prev)}
+                    class={styles.listItem}
+                    classList={{ [styles.assetSelected]: selected() }}
                     onClick={(e) => { e.stopPropagation(); handleAssetClick(e, f.path); }}
                     onDblClick={(e) => {
                       e.stopPropagation();
@@ -561,36 +441,15 @@ const ProjectPanel: Component = () => {
                       }
                       e.dataTransfer!.effectAllowed = 'copy';
                     } : undefined}
-                    style={{
-                      display: 'flex', 'align-items': 'center', gap: '6px',
-                      padding: hovered() ? '5px 6px' : '5px 10px',
-                      margin: hovered() ? '0 4px' : undefined,
-                      cursor: 'pointer',
-                      background: selected()
-                        ? 'var(--bg-selected)'
-                        : hovered()
-                          ? 'var(--bg-hover)'
-                          : undefined,
-                      outline: hovered() ? '1px solid var(--border-medium)' : undefined,
-                      'outline-offset': hovered() ? '-1px' : undefined,
-                      'border-radius': hovered() ? 'var(--radius-sm)' : undefined,
-                    }}
                   >
                     {/* Type pill */}
-                    <span style={{
-                      width: '16px', height: '20px', 'border-radius': '3px',
-                      background: meta.color + '33',
-                      color: meta.color,
-                      'font-size': '8px', 'font-weight': 'bold',
-                      display: 'flex', 'align-items': 'center', 'justify-content': 'center',
-                      'flex-shrink': '0',
-                      'line-height': '1',
-                    }}>{meta.pill}</span>
+                    <span
+                      class={styles.listPill}
+                      // inline-allowed: CSS variable injection — type-specific accent token
+                      style={{ '--type-color': meta.color }}
+                    >{meta.pill}</span>
                     {/* Filename */}
-                    <span style={{
-                      'font-size': 'var(--font-size-sm)', color: 'var(--text-secondary)',
-                      overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap', flex: 1,
-                    }}>{f.name}</span>
+                    <span class={styles.listName}>{f.name}</span>
                   </div>
                 );
               }}
@@ -599,10 +458,7 @@ const ProjectPanel: Component = () => {
 
           {/* ── Empty state ── */}
           <Show when={assetFiles().length === 0}>
-            <div style={{
-              padding: '16px 12px', color: 'var(--text-muted)',
-              'font-size': 'var(--font-size-xs)', 'text-align': 'center', 'line-height': '1.6',
-            }}>
+            <div class={styles.emptyState}>
               No assets found.<br />
               Place files in scenes/, models/, textures/,<br />hdris/, prefabs/, or other/ folders.
             </div>
@@ -620,23 +476,15 @@ const ProjectPanel: Component = () => {
       </div>
 
       {/* ── Status bar ── */}
-      <div style={{
-        height: 'var(--statusbar-height)',
-        display: 'flex', 'align-items': 'center',
-        padding: '0 10px', gap: '8px',
-        'font-size': 'var(--font-size-xs)',
-        color: 'var(--text-muted)',
-        'border-top': '1px solid var(--border-subtle)',
-        'flex-shrink': '0',
-      }}>
+      <div class={styles.statusBar}>
         <span>{displayedAssets().length} items</span>
         <Show when={selectedAssetPaths().length === 1}>
-          <span style={{ 'margin-left': 'auto', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
+          <span class={styles.statusPath}>
             {selectedAssetPaths()[0]}
           </span>
         </Show>
         <Show when={selectedAssetPaths().length > 1}>
-          <span style={{ 'margin-left': 'auto' }}>
+          <span class={styles.statusCount}>
             {selectedAssetPaths().length} items selected
           </span>
         </Show>

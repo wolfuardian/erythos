@@ -3,6 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../core/commands';
+import styles from './EnvironmentPanel.module.css';
 
 const EnvironmentPanel: Component = () => {
   const bridge = useEditor();
@@ -26,86 +27,37 @@ const EnvironmentPanel: Component = () => {
   };
 
   return (
-    <div
-      data-testid="environment-panel"
-      style={{
-      width: 'calc(100% - 6px)',
-      height: 'calc(100% - 6px)',
-      display: 'flex',
-      'flex-direction': 'column',
-      overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
+    <div data-testid="environment-panel" class={styles.panel}>
       {/* Header */}
       <PanelHeader title="Environment" />
 
       {/* Body */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '10px',
-        'box-sizing': 'border-box',
-        'font-size': '11px',
-        color: 'var(--text-secondary, #aaa)',
-      }}>
+      <div class={styles.body}>
 
       {/* HDR Image section */}
-      <div style={{ 'margin-bottom': '12px' }}>
-        <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>HDR Image</div>
+      <div class={styles.section}>
+        <div class={styles.sectionLabel}>HDR Image</div>
 
         <Show when={env().hdrUrl}>
-          <div style={{
-            display: 'flex',
-            'justify-content': 'space-between',
-            'align-items': 'center',
-          }}>
-            <span style={{
-              color: 'var(--accent-green, #6c6)',
-              'font-size': '10px',
-              overflow: 'hidden',
-              'text-overflow': 'ellipsis',
-              'white-space': 'nowrap',
-              flex: 1,
-            }}>
+          <div class={styles.hdrRow}>
+            <span class={styles.hdrUrl}>
               {env().hdrUrl}
             </span>
             <button
               onClick={handleClear}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                'font-size': '12px',
-                'flex-shrink': 0,
-                padding: '0 4px',
-              }}
+              class={styles.clearBtn}
             >×</button>
           </div>
         </Show>
       </div>
 
       {/* Project HDR Dropdown */}
-      <div style={{ 'margin-bottom': '12px' }}>
-        <div style={{ 'margin-bottom': '4px', color: 'var(--text-primary, #fff)' }}>From Project</div>
+      <div class={styles.section}>
+        <div class={styles.sectionLabel}>From Project</div>
         <select
           value=""
           onChange={(e) => void handleSelectFromProject(e.target.value)}
-          style={{
-            width: '100%',
-            background: 'var(--bg-input)',
-            border: '1px solid var(--border-subtle)',
-            color: 'var(--text-primary, #fff)',
-            padding: '4px 6px',
-            'border-radius': '3px',
-            'font-size': '11px',
-          }}
+          class={styles.select}
         >
           <option value="">From project…</option>
           <For each={projectHdrFiles()}>
@@ -115,8 +67,8 @@ const EnvironmentPanel: Component = () => {
       </div>
 
       {/* Intensity */}
-      <div style={{ 'margin-bottom': '8px' }}>
-        <div style={{ 'margin-bottom': '2px' }}>
+      <div class={styles.fieldSection}>
+        <div class={styles.fieldLabel}>
           <span>Intensity</span>
         </div>
         <NumberDrag
@@ -134,7 +86,7 @@ const EnvironmentPanel: Component = () => {
 
       {/* Rotation */}
       <div>
-        <div style={{ 'margin-bottom': '2px' }}>
+        <div class={styles.fieldLabel}>
           <span>Rotation</span>
         </div>
         <NumberDrag

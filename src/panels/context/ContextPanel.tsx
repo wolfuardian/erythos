@@ -3,6 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { PanelHeader } from '../../components/PanelHeader';
+import styles from './ContextPanel.module.css';
 
 function compactJson(json: string): string {
   return json.replace(
@@ -76,43 +77,17 @@ const ContextPanel: Component = () => {
   });
 
   return (
-    <div
-      data-testid="context-panel"
-      style={{
-      width: 'calc(100% - 6px)',
-      height: 'calc(100% - 6px)',
-      display: 'flex',
-      'flex-direction': 'column',
-      overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
+    <div data-testid="context-panel" class={styles.panel}>
       <PanelHeader title="Context" />
-      <div style={{ flex: '1', overflow: 'auto', padding: 'var(--space-md)' }}>
-      <div style={{
-        display: 'flex',
-        'align-items': 'center',
-        gap: 'var(--space-sm)',
-        'margin-bottom': 'var(--space-md)',
-      }}>
+      <div class={styles.body}>
+      <div class={styles.controls}>
         <input
           type="checkbox"
           checked={showTree()}
           onChange={(e) => setShowTree(e.currentTarget.checked)}
           id="show-tree-toggle"
         />
-        <label
-          for="show-tree-toggle"
-          style={{
-            color: 'var(--text-secondary)',
-            'font-size': 'var(--font-size-sm)',
-            cursor: 'pointer',
-            'user-select': 'none',
-          }}
-        >
+        <label for="show-tree-toggle" class={styles.label}>
           Show Tree
         </label>
 
@@ -121,17 +96,9 @@ const ContextPanel: Component = () => {
           checked={compact()}
           onChange={(e) => setCompact(e.currentTarget.checked)}
           id="compact-toggle"
-          style={{ 'margin-left': 'var(--space-md)' }}
+          class={styles.checkboxGap}
         />
-        <label
-          for="compact-toggle"
-          style={{
-            color: 'var(--text-secondary)',
-            'font-size': 'var(--font-size-sm)',
-            cursor: 'pointer',
-            'user-select': 'none',
-          }}
-        >
+        <label for="compact-toggle" class={styles.label}>
           Compact
         </label>
 
@@ -140,29 +107,14 @@ const ContextPanel: Component = () => {
           checked={hideDefaults()}
           onChange={(e) => setHideDefaults(e.currentTarget.checked)}
           id="hide-defaults-toggle"
-          style={{ 'margin-left': 'var(--space-md)' }}
+          class={styles.checkboxGap}
         />
-        <label
-          for="hide-defaults-toggle"
-          style={{
-            color: 'var(--text-secondary)',
-            'font-size': 'var(--font-size-sm)',
-            cursor: 'pointer',
-            'user-select': 'none',
-          }}
-        >
+        <label for="hide-defaults-toggle" class={styles.label}>
           Hide Defaults
         </label>
       </div>
 
-      <pre style={{
-        margin: '0',
-        color: 'var(--text-primary)',
-        'font-size': 'var(--font-size-sm)',
-        'white-space': 'pre-wrap',
-        'word-break': 'break-all',
-        'user-select': 'text',
-      }}>
+      <pre class={styles.pre}>
         {sceneJson()}
       </pre>
       </div>

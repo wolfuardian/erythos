@@ -1,5 +1,5 @@
 import {
-  createSignal, For, Show, onMount, onCleanup, createEffect,
+  For, Show, onMount, onCleanup, createEffect,
   type Component,
 } from 'solid-js';
 import {
@@ -13,6 +13,7 @@ import { useAreaState } from '../../app/areaState';
 import * as GlbStore from '../../core/scene/GlbStore';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useThumbnails } from './useThumbnails';
+import styles from './PrefabPanel.module.css';
 
 const PrefabPanel: Component = () => {
   const bridge = useEditor();
@@ -153,43 +154,18 @@ const PrefabPanel: Component = () => {
   });
 
   return (
-    <div
-      data-testid="prefab-panel"
-      style={{
-      width: 'calc(100% - 6px)',
-      height: 'calc(100% - 6px)',
-      display: 'flex',
-      'flex-direction': 'column',
-      overflow: 'hidden',
-      background: 'var(--bg-panel)',
-      'box-shadow': 'var(--shadow-well-outer)',
-      'border-radius': 'var(--radius-lg)',
-      margin: '3px',
-      'box-sizing': 'border-box',
-    }}>
+    <div data-testid="prefab-panel" class={styles.panel}>
       {/* Header */}
       <PanelHeader title={`Prefabs (${bridge.prefabAssets().length})`} />
 
       {/* Body: list + preview */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div class={styles.body}>
         {/* Left: leaf list */}
-        <div style={{
-          width: '160px',
-          'flex-shrink': 0,
-          'border-right': '1px solid var(--border-subtle)',
-          overflow: 'auto',
-          padding: '4px 0',
-        }}>
+        <div class={styles.list}>
           <Show
             when={bridge.prefabAssets().length > 0}
             fallback={
-              <div style={{
-                padding: '12px 10px',
-                color: 'var(--text-muted)',
-                'font-size': 'var(--font-size-xs)',
-                'text-align': 'center',
-                'line-height': '1.6',
-              }}>
+              <div class={styles.emptyHint}>
                 No prefabs saved.<br />
                 Right-click a node<br />
                 in Scene tree.
@@ -199,7 +175,6 @@ const PrefabPanel: Component = () => {
             <For each={bridge.prefabAssets()}>
               {(asset) => {
                 const isActive = () => activeId() === asset.id;
-                const [isHovered, setIsHovered] = createSignal(false);
                 return (
                   <div
                     draggable
@@ -208,40 +183,13 @@ const PrefabPanel: Component = () => {
                       e.dataTransfer!.effectAllowed = 'copy';
                     }}
                     onClick={() => setActiveId(isActive() ? null : asset.id)}
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                    style={{
-                      display: 'flex',
-                      'align-items': 'center',
-                      gap: '6px',
-                      padding: '5px 8px',
-                      cursor: 'grab',
-                      background: isActive()
-                        ? 'var(--bg-selected, rgba(74,127,191,0.2))'
-                        : isHovered()
-                          ? 'var(--bg-hover)'
-                          : 'transparent',
-                      'border-left': isActive()
-                        ? '2px solid var(--accent-primary, #4a7fbf)'
-                        : '2px solid transparent',
-                    }}
+                    class={styles.listItem}
+                    classList={{ [styles.active]: isActive() }}
                   >
                     <Show
                       when={getThumbnail(asset.id)}
                       fallback={
-                        <span style={{
-                          width: '32px',
-                          height: '32px',
-                          'border-radius': 'var(--radius-sm)',
-                          background: 'var(--badge-mesh, #4a6f5f)',
-                          color: 'var(--text-inverse)',
-                          'font-size': '8px',
-                          'font-weight': 'bold',
-                          display: 'flex',
-                          'align-items': 'center',
-                          'justify-content': 'center',
-                          'flex-shrink': 0,
-                        }}>L</span>
+                        <span class={styles.fallbackThumb}>L</span>
                       }
                     >
                       {(dataURL) => (
@@ -249,24 +197,12 @@ const PrefabPanel: Component = () => {
                           src={dataURL()}
                           width={32}
                           height={32}
-                          style={{
-                            'border-radius': 'var(--radius-sm)',
-                            'flex-shrink': 0,
-                            display: 'block',
-                            'object-fit': 'cover',
-                          }}
+                          class={styles.thumbnail}
                           alt={asset.name}
                         />
                       )}
                     </Show>
-                    <span style={{
-                      'font-size': 'var(--font-size-xs)',
-                      color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      overflow: 'hidden',
-                      'text-overflow': 'ellipsis',
-                      'white-space': 'nowrap',
-                      flex: 1,
-                    }}>
+                    <span class={styles.itemName}>
                       {asset.name}
                     </span>
                   </div>
@@ -277,24 +213,13 @@ const PrefabPanel: Component = () => {
         </div>
 
         {/* Right: 3D preview (always mounted so renderer stays alive) */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div class={styles.preview}>
           {/* Renderer canvas target */}
-          <div ref={previewRef} style={{ width: '100%', height: '100%' }} />
+          <div ref={previewRef} class={styles.previewCanvas} />
 
           {/* Overlay when nothing selected */}
           <Show when={!activeId()}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              'align-items': 'center',
-              'justify-content': 'center',
-              background: 'var(--bg-panel, #1a1a1a)',
-              color: 'var(--text-muted)',
-              'font-size': 'var(--font-size-xs)',
-              'text-align': 'center',
-              'pointer-events': 'none',
-            }}>
+            <div class={styles.previewOverlay}>
               Select a prefab<br />to preview
             </div>
           </Show>
