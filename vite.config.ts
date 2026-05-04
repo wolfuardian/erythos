@@ -17,6 +17,14 @@ export default defineConfig({
     __GIT_HASH__: JSON.stringify(gitHash()),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
   },
+  css: {
+    modules: {
+      localsConvention: 'camelCase',
+      generateScopedName: process.env.NODE_ENV === 'production'
+        ? '[hash:base64:6]'
+        : '[name]__[local]__[hash:base64:4]',
+    },
+  },
   resolve: {
     alias: {
       '@': '/src',

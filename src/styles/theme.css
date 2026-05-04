@@ -172,17 +172,6 @@ button {
   cursor: pointer;
 }
 
-/* Project panel — overlay slide-in */
-@keyframes overlaySlideIn {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
-}
-
-@keyframes overlaySlideOut {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-100%); }
-}
-
 /* Form control accent (override browser default pink on checkbox/range) */
 input[type="checkbox"],
 input[type="range"] {
