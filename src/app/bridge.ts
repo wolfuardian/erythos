@@ -81,7 +81,7 @@ export function createEditorBridge(
 ): EditorBridge {
   const [selectedUUIDs, setSelectedUUIDs] = createSignal<string[]>([]);
   const [hoveredUUID, setHoveredUUID] = createSignal<string | null>(null);
-  const [nodes, setNodes] = createSignal<SceneNode[]>([]);
+  const [nodes, setNodes] = createSignal<SceneNode[]>(editor.sceneDocument.getAllNodes());
   const [interactionMode, setMode] = createSignal<InteractionMode>('object');
   const [transformMode, setTransformMode] = createSignal<TransformMode>('translate');
   const [sceneVersion, setSceneVersion] = createSignal(0);
