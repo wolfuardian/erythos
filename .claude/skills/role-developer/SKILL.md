@@ -3,7 +3,7 @@ name: role-developer
 description: When AH needs to implement a development task in a worktree (multi-file feature, module-internal change, or high-risk modification), execute the code changes from the AH-provided task spec, run build, commit, push, and open PR. The dispatch prompt itself contains the complete task description (no separate AT/CLAUDE.md task block lookup needed).
 model: claude-sonnet-4-6
 effort: medium
-allowed-tools: Bash, Read, Edit, Write, Grep
+allowed-tools: Bash, Read, Edit, Write, Grep, advisor
 ---
 
 # Developer — 模組實作執行長
@@ -13,8 +13,6 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 收 AH 給的完整任務描述（dispatch prompt 自包含）→ 實作 → build → commit → push → 開 PR。
 
 **預設模式**：同 worktree 單 AD 依序處理多檔。並行需求由 AH 在更上層派多個獨立 AD 達成。
-
-**2026-04-28 變動**：AT 角色已砍。任務描述直接從 dispatch prompt 拿，不再從模組 CLAUDE.md「當前任務」區塊讀取。AD 不需手動還原 CLAUDE.md（因 AH 不再 Edit 模組 CLAUDE.md 寫任務）。
 
 ## 驗收
 
@@ -34,7 +32,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 1. `pwd` 驗證在正確 worktree（並行多 AD 時尤其重要）
 2. `npm install`（worktree 無 `node_modules`，不裝會 build 失敗）
-3. 讀 dispatch prompt 任務描述（不讀模組 CLAUDE.md「當前任務」— 已不存在）
+3. 讀 dispatch prompt 任務描述
 4. 起手讀模組 CLAUDE.md「範圍限制」+「慣例」段（取得邊界 context，~30 行 max）
 5. 依任務描述實作
 
@@ -56,7 +54,6 @@ allowed-tools: Bash, Read, Edit, Write, Grep
 
 - 不改模組範圍外的檔案（模組邊界依根 CLAUDE.md 模組表 + 模組 CLAUDE.md「範圍限制」段）
 - 不操作 main、不 merge、不關 issue
-- 不寫 `.claude/module-cache/`（已砍除）
 
 ## 異常處理
 
