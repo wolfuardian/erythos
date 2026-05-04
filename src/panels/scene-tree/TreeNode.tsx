@@ -177,7 +177,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     <div>
       <div
         data-testid="scene-tree-row"
-        draggable
+        draggable={true}
         onClick={handleClick}
         onContextMenu={(e) => {
           if (e.ctrlKey || e.metaKey) {
