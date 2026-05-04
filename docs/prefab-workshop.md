@@ -1,7 +1,13 @@
 # Prefab Workshop — Design
 
-Status: Draft (2026-05-04)
+Status: **SUPERSEDED by `docs/prefab-inline-edit.md`** (2026-05-04)
 Owner: AH
+
+The Workshop sub-editor model described below was implemented across P2 / P3 / P4 (PRs #759, #761, #764, #766) but shipped without browser e2e validation and turned out non-functional in practice (drag-drop didn't work, Save flow unclear, etc.). The redesign in `docs/prefab-inline-edit.md` keeps the URL-first asset model from P1 (a/b/c) and the live-sync rebuild engine from P3, but replaces the Workshop sub-editor with in-place editing of prefab instances directly in the main scene tree.
+
+The original design is preserved below for historical reference.
+
+---
 
 This document captures the forward design for redesigning the Prefab system around two principles: **URL-first asset references** and **Pure-mirror live sync**. It also introduces the **Workshop** sub-editor concept (sandbox model).
 
