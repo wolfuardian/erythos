@@ -37,7 +37,8 @@
     "audit:leaf": "node scripts/audit/leaf.mjs",
     "audit:project": "node scripts/audit/project.mjs",
     "audit:settings": "node scripts/audit/settings.mjs",
-    "audit:context": "node scripts/audit/context.mjs"
+    "audit:context": "node scripts/audit/context.mjs",
+    "audit:inline-style": "node scripts/audit/inline-style.mjs"
   },
   "dependencies": {
     "solid-js": "^1.9.12",
