@@ -91,4 +91,16 @@
 .nameSpan {
   font-size: var(--font-size-sm);
   font-weight: 500;
+  color: var(--text-primary);
+}
+
+.nameSpan.mixed {
+  color: var(--text-muted);
+}
+
+.summary {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin-bottom: var(--space-lg);
 }

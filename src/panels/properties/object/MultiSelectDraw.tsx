@@ -58,12 +58,7 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
   return (
     <>
       {/* 多選摘要 */}
-      <div data-testid="multi-select-draw" style={{
-        color: 'var(--text-secondary)',
-        'font-size': 'var(--font-size-sm)',
-        'text-align': 'center',
-        'margin-bottom': 'var(--space-lg)',
-      }}>
+      <div data-testid="multi-select-draw" class={styles.summary}>
         {props.uuids.length} objects selected
       </div>
 
@@ -73,7 +68,7 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
           <label class={styles.fieldLabel}>Name</label>
           <span
             class={styles.nameSpan}
-            style={{ color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)' }}
+            classList={{ [styles.mixed]: info()?.name === MIXED }}
           >
             {info()?.name ?? MIXED}
           </span>
