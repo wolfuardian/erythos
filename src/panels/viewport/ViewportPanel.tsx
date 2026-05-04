@@ -8,6 +8,7 @@ import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
+import { isPrefabDescendant, findPrefabInstanceRoot } from '../../core/scene/PrefabInstance';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
@@ -246,7 +247,12 @@ const ViewportPanel: Component = () => {
           const uuid = editor.sceneSync.getUUID(obj);
           if (uuid) editor.selection.toggle(uuid);
         } else {
-          const uuid = obj ? editor.sceneSync.getUUID(obj) : null;
+          const rawUuid = obj ? editor.sceneSync.getUUID(obj) : null;
+          // If the clicked object is a prefab descendant, select the instance root instead.
+          const nodes = editor.sceneDocument.getAllNodes();
+          const uuid = rawUuid && isPrefabDescendant(rawUuid, nodes)
+            ? findPrefabInstanceRoot(rawUuid, nodes)
+            : rawUuid;
           editor.selection.select(uuid);
         }
       },
