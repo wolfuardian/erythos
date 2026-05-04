@@ -4,19 +4,19 @@ import { generateUUID } from '../../utils/uuid';
 /**
  * Migration helper: upgrade old scene files.
  *
- * @param node        The raw node from the serialised scene file.
- * @param prefabIdToPath  Optional map from legacy prefab uuid → project-relative path,
- *                    built once at Editor.init from the IndexedDB PrefabStore migration.
- *                    When provided, prefab.id refs are resolved to prefab.path.
+ * @param node  The raw node from the serialised scene file.
  *
  * Migrations applied (in order):
  *   1. 'leaf' → 'prefab'               (very old format)
- *   2. prefab.id → prefab.path         (P1c: UUID → path-based refs)
- *   3. mesh.source → mesh.{path,nodePath?}  (P1b legacy format)
+ *   2. mesh.source → mesh.{path,nodePath?}  (P1b legacy format)
+ *
+ * Note: prefab.id → prefab.path migration (P1c) has been removed in P4.
+ *   The IDB→file migration that built the prefabIdToPath map is no longer run.
+ *   Scene files with legacy prefab.id refs will have the prefab component stripped
+ *   (soft-fail) — any such nodes were written before P1c and are considered stale.
  */
 function migrateNodeComponents(
   node: SceneNode,
-  prefabIdToPath?: Record<string, string>,
 ): SceneNode {
   const comp = node.components as Record<string, unknown>;
   let mutated = false;
@@ -29,33 +29,21 @@ function migrateNodeComponents(
     mutated = true;
   }
 
-  // Migration 2: prefab.id (UUID) → prefab.{ path }
-  //
-  // Legacy format: prefab: { id: "<asset-uuid>" }
-  // New format:    prefab: { path: "prefabs/<name>.prefab" }
-  //
-  // Resolution strategy: look up uuid in prefabIdToPath map (built from IDB migration).
-  // If not found (orphan ref): strip prefab component with warning.
+  // Strip stale prefab.id refs (legacy P1c format no longer resolvable post-P4).
+  // Any node still carrying prefab.id (UUID) has no corresponding file — strip it.
   if ('prefab' in updated) {
     const prefab = updated['prefab'] as Record<string, unknown>;
     if (typeof prefab['id'] === 'string' && !prefab['path']) {
-      const uuid = prefab['id'] as string;
-      const path = prefabIdToPath?.[uuid];
-      if (path) {
-        updated = { ...updated, prefab: { path } };
-      } else {
-        // Orphan ref: strip with warning (mirrors mesh soft-fail)
-        console.warn(
-          `[SceneDocument] migrateNodeComponents: prefab.id "${uuid}" has no known path — stripping prefab component`,
-        );
-        const { prefab: _pf, ...rest } = updated;
-        updated = rest;
-      }
+      console.warn(
+        `[SceneDocument] migrateNodeComponents: prefab.id "${prefab['id']}" has no resolvable path (P4: PrefabStore removed) — stripping prefab component`,
+      );
+      const { prefab: _pf, ...rest } = updated;
+      updated = rest;
       mutated = true;
     }
   }
 
-  // Migration 3: mesh.source (legacy) → mesh.{ path, nodePath? }
+  // Migration 2: mesh.source (legacy) → mesh.{ path, nodePath? }
   //
   // Legacy formats:
   //   mesh: { source: "model.glb" }              — filename only
@@ -259,15 +247,12 @@ export class SceneDocument {
   }
 
   /**
-   * @param data           Parsed SceneFile (may be legacy format — migration runs here).
-   * @param prefabIdToPath Optional map from legacy prefab UUID → project-relative path.
-   *                       Provided by Editor.loadScene after running the IDB→file migration.
-   *                       When present, `prefab.id` refs are resolved to `prefab.{ path }`.
+   * @param data  Parsed SceneFile (may be legacy format — migration runs here).
    */
-  deserialize(data: SceneFile, prefabIdToPath?: Record<string, string>): void {
+  deserialize(data: SceneFile): void {
     this._nodes.clear();
     for (const rawNode of data.nodes) {
-      const node = migrateNodeComponents({ ...rawNode }, prefabIdToPath);
+      const node = migrateNodeComponents({ ...rawNode });
       this._nodes.set(node.id, node);
     }
     this.events.emit('sceneReplaced');

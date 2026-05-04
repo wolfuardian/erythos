@@ -6,7 +6,6 @@ import { useEditor } from '../../app/EditorContext';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
-import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { ContextMenu } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
@@ -108,14 +107,6 @@ const SceneTreePanel: Component = () => {
       editor.execute(new MultiCmdsCommand(editor, cmds));
     }
     editor.selection.select(null);
-  };
-
-  const handleSaveAsPrefab = () => {
-    const selected = bridge.selectedUUIDs();
-    const uuid = selected[0];
-    const node = editor.sceneDocument.getNode(uuid);
-    if (!node) return;
-    editor.execute(new SaveAsPrefabCommand(editor, uuid, node.name));
   };
 
   const handleCopy = () => {
@@ -347,7 +338,6 @@ const SceneTreePanel: Component = () => {
               onCreateEmpty: handleCreateEmpty,
               onCreatePrimitive: createPrimitive,
               onDelete: handleDelete,
-              onSaveAsPrefab: handleSaveAsPrefab,
               onCopy: handleCopy,
               onCut: handleCut,
               onPaste: handlePaste,

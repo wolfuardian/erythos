@@ -54,9 +54,7 @@ export class ResourceCache {
    * 解析 ArrayBuffer 並以 url 為快取鍵存入快取。
    * 若同一 url 已快取，會以新結果覆寫。
    *
-   * Kept public in P1b: PrefabPanel and useThumbnails still call it directly.
-   * P1c will remove those consumers, after which this can be made private or
-   * collapsed into loadFromURL.
+   * Kept public: external callers may pass a pre-fetched ArrayBuffer.
    */
   async loadFromBuffer(url: string, buffer: ArrayBuffer): Promise<Group> {
     const parser = getParser();

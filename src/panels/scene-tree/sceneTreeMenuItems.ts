@@ -11,8 +11,6 @@ export interface SceneTreeMenuCtx {
   onCreatePrimitive: (type: string, name: string) => void;
   /** Delete all currently selected nodes (handles multi-select de-duplication). */
   onDelete: () => void;
-  /** Save the single selected node as a prefab. */
-  onSaveAsPrefab: () => void;
   /** Copy the selected nodes (top-level only, with subtrees) to clipboard. */
   onCopy: () => void;
   /** Cut the selected nodes (top-level only, with subtrees) from scene. */
@@ -48,11 +46,6 @@ export function buildSceneTreeMenuItems(ctx: SceneTreeMenuCtx): MenuItem[] {
       label: 'Delete',
       disabled: selected.length === 0,
       action: () => ctx.onDelete(),
-    },
-    {
-      label: 'Save as Prefab',
-      disabled: selected.length !== 1,
-      action: () => ctx.onSaveAsPrefab(),
     },
     {
       label: 'Copy',

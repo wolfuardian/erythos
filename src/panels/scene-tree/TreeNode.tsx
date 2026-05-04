@@ -96,6 +96,11 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     e.stopPropagation();
     props.setDraggedId(props.node.id);
     e.dataTransfer!.effectAllowed = 'move';
+    // Scene-subtree drag protocol: also set MIME payload so Workshop can recognize this drag.
+    e.dataTransfer!.setData(
+      'application/erythos-scene-subtree',
+      JSON.stringify({ rootUUID: props.node.id }),
+    );
   };
 
   const onDragOver = (e: DragEvent) => {

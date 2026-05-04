@@ -64,7 +64,7 @@ export function createDebugPreset(): Workspace {
     editorTypes: {
       'viewport': 'viewport',
       'environment': 'environment',
-      'prefab': 'prefab',
+      'prefab': 'workshop',
     },
     viewportState: {},
     panelStates: {},
@@ -153,10 +153,27 @@ export function loadStore(): WorkspaceStore {
           }
           return { ...w, editorTypes: newEditorTypes };
         });
+        // Migration: prefab → workshop (P4: PrefabPanel decommissioned, replaced by WorkshopPanel)
+        const prefabToWorkspaceMigratedWorkspaces = leafToPrefabMigratedWorkspaces.map(w => {
+          // A. Debug preset workspace: force-rebuild if editorTypes still references 'prefab' editorType
+          if (w.id === 'debug-preset') {
+            const hasPrefabEditorType = Object.values(w.editorTypes).includes('prefab');
+            if (hasPrefabEditorType) {
+              return createDebugPreset();
+            }
+            return w;
+          }
+          // B. Other workspaces: rename editorTypes value 'prefab' → 'workshop'
+          const newEditorTypes: Record<string, string> = {};
+          for (const [areaId, editorType] of Object.entries(w.editorTypes)) {
+            newEditorTypes[areaId] = editorType === 'prefab' ? 'workshop' : editorType;
+          }
+          return { ...w, editorTypes: newEditorTypes };
+        });
         // Migration: drop orphan selectedAssetPaths key.
         // ProjectPanel switched from useAreaState to createSignal (transient selection),
         // leaving stale entries in panelStates that can't be reached or updated.
-        const orphanKeyDroppedWorkspaces = leafToPrefabMigratedWorkspaces.map(w => {
+        const orphanKeyDroppedWorkspaces = prefabToWorkspaceMigratedWorkspaces.map(w => {
           if (!w.panelStates) return w;
           const cleaned: Record<string, Record<string, Record<string, unknown>>> = {};
           for (const [areaId, perEditor] of Object.entries(w.panelStates)) {
