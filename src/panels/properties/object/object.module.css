@@ -1,0 +1,94 @@
+/** Properties panel — object section shared styles (CSS Modules migration, PR #728) */
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  padding: 3px 0;
+  padding-left: 14px;
+  column-gap: 6px;
+}
+
+.fieldRow:hover {
+  background: var(--bg-hover);
+}
+
+.subFieldRow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  padding: 3px 0;
+  padding-left: 28px;
+  column-gap: 6px;
+}
+
+.fieldLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.textInput {
+  flex: 1;
+  background: var(--bg-input);
+  border: none;
+  border-bottom: 1px solid var(--border-medium);
+  border-radius: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  padding: 2px 4px;
+  height: 20px;
+  outline: none;
+  width: 100%;
+}
+
+.textInput:focus {
+  border-bottom: 2px solid var(--accent-blue);
+  padding-bottom: 1px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent);
+}
+
+.xyzRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.groupLabelRow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  column-gap: 6px;
+  padding: 3px 0;
+  padding-left: 14px;
+}
+
+.subGroupLabelRow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  column-gap: 6px;
+  padding: 3px 0;
+  padding-left: 28px;
+}
+
+.typeDisplay {
+  flex: 1;
+  height: 22px;
+  border-radius: 3px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: default;
+  background: transparent;
+}
+
+.nameSpan {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}

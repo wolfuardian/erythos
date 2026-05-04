@@ -4,13 +4,13 @@ import { useEditor } from '../../../app/EditorContext';
 import type { SceneNode } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
 import { XYZCellReadonly } from '../components/XYZCell';
-import { fieldRow, fieldLabel, xyzRow, groupLabelRow } from '../components/fieldStyles';
+import styles from './object.module.css';
 
 interface MultiSelectDrawProps {
   uuids: string[];
 }
 
-const MIXED = '\u2014'; // em dash
+const MIXED = '—'; // em dash
 
 function commonStr(nodes: SceneNode[], get: (n: SceneNode) => string): string {
   const v = get(nodes[0]);
@@ -69,13 +69,12 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
 
       {/* OBJECT section — 共用 sectionKey，折疊狀態與單選同步 */}
       <FoldableSection sectionKey="object" label="OBJECT">
-        <div style={fieldRow}>
-          <label style={fieldLabel}>Name</label>
-          <span style={{
-            'font-size': 'var(--font-size-sm)',
-            'font-weight': '500',
-            color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)',
-          }}>
+        <div class={styles.fieldRow}>
+          <label class={styles.fieldLabel}>Name</label>
+          <span
+            class={styles.nameSpan}
+            style={{ color: info()?.name === MIXED ? 'var(--text-muted)' : 'var(--text-primary)' }}
+          >
             {info()?.name ?? MIXED}
           </span>
         </div>
@@ -83,27 +82,27 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
 
       {/* TRANSFORM section — 共用 sectionKey */}
       <FoldableSection sectionKey="transform" label="TRANSFORM">
-        <div style={groupLabelRow}>
-          <span style={fieldLabel}>Position</span>
-          <div style={xyzRow}>
+        <div class={styles.groupLabelRow}>
+          <span class={styles.fieldLabel}>Position</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value={info()?.px ?? MIXED} />
             <XYZCellReadonly axis="y" value={info()?.py ?? MIXED} />
             <XYZCellReadonly axis="z" value={info()?.pz ?? MIXED} />
           </div>
         </div>
 
-        <div style={groupLabelRow}>
-          <span style={fieldLabel}>Rotation</span>
-          <div style={xyzRow}>
+        <div class={styles.groupLabelRow}>
+          <span class={styles.fieldLabel}>Rotation</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value={info()?.rx ?? MIXED} />
             <XYZCellReadonly axis="y" value={info()?.ry ?? MIXED} />
             <XYZCellReadonly axis="z" value={info()?.rz ?? MIXED} />
           </div>
         </div>
 
-        <div style={groupLabelRow}>
-          <span style={fieldLabel}>Scale</span>
-          <div style={xyzRow}>
+        <div class={styles.groupLabelRow}>
+          <span class={styles.fieldLabel}>Scale</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value={info()?.sx ?? MIXED} />
             <XYZCellReadonly axis="y" value={info()?.sy ?? MIXED} />
             <XYZCellReadonly axis="z" value={info()?.sz ?? MIXED} />

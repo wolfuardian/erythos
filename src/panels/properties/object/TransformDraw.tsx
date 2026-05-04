@@ -6,7 +6,7 @@ import type { Vec3 } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
 import { XYZCellReadonly } from '../components/XYZCell';
 import { VectorDrag } from '../../../components/VectorDrag';
-import { fieldLabel, xyzRow, groupLabelRow, subGroupLabelRow } from '../components/fieldStyles';
+import styles from './object.module.css';
 
 interface TransformDrawProps {
   uuid: string;
@@ -59,8 +59,8 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
     <div data-testid="transform-draw">
     <FoldableSection sectionKey="transform" label="TRANSFORM">
       {/* Position */}
-      <div style={groupLabelRow}>
-        <span style={fieldLabel}>Position</span>
+      <div class={styles.groupLabelRow}>
+        <span class={styles.fieldLabel}>Position</span>
         <VectorDrag
           values={[pos().x, pos().y, pos().z]}
           onChange={(i, v) => setPosition((['x', 'y', 'z'] as const)[i], v)}
@@ -71,8 +71,8 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       </div>
 
       {/* Rotation */}
-      <div style={groupLabelRow}>
-        <span style={fieldLabel}>Rotation</span>
+      <div class={styles.groupLabelRow}>
+        <span class={styles.fieldLabel}>Rotation</span>
         <VectorDrag
           values={[rot().x, rot().y, rot().z]}
           onChange={(i, v) => setRotation((['x', 'y', 'z'] as const)[i], v)}
@@ -83,8 +83,8 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       </div>
 
       {/* Scale */}
-      <div style={groupLabelRow}>
-        <span style={fieldLabel}>Scale</span>
+      <div class={styles.groupLabelRow}>
+        <span class={styles.fieldLabel}>Scale</span>
         <VectorDrag
           values={[scale().x, scale().y, scale().z]}
           onChange={(i, v) => applyScale((['x', 'y', 'z'] as const)[i], v)}
@@ -98,9 +98,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
       {/* Delta Transform 子 section（hardcoded 0，驗證 deep tint 視覺，階段 2 替換） */}
       <FoldableSection label="DELTA TRANSFORM" variant="subsection" sectionKey="propertiesDeltaTransform">
         {/* Position */}
-        <div style={subGroupLabelRow}>
-          <span style={fieldLabel}>Position</span>
-          <div style={xyzRow}>
+        <div class={styles.subGroupLabelRow}>
+          <span class={styles.fieldLabel}>Position</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value="0" />
             <XYZCellReadonly axis="y" value="0" />
             <XYZCellReadonly axis="z" value="0" />
@@ -108,9 +108,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
         </div>
 
         {/* Rotation */}
-        <div style={subGroupLabelRow}>
-          <span style={fieldLabel}>Rotation</span>
-          <div style={xyzRow}>
+        <div class={styles.subGroupLabelRow}>
+          <span class={styles.fieldLabel}>Rotation</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value="0" />
             <XYZCellReadonly axis="y" value="0" />
             <XYZCellReadonly axis="z" value="0" />
@@ -118,9 +118,9 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
         </div>
 
         {/* Scale */}
-        <div style={subGroupLabelRow}>
-          <span style={fieldLabel}>Scale</span>
-          <div style={xyzRow}>
+        <div class={styles.subGroupLabelRow}>
+          <span class={styles.fieldLabel}>Scale</span>
+          <div class={styles.xyzRow}>
             <XYZCellReadonly axis="x" value="0" />
             <XYZCellReadonly axis="y" value="0" />
             <XYZCellReadonly axis="z" value="0" />
