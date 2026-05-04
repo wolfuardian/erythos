@@ -1,12 +1,12 @@
 # role-pr-qc rules/
 
-結構化規則，role-pr-qc skill 在 Phase 3 會跑：
+結構化規則，role-pr-qc skill 在 Phase 0 機器閘門跑：
 
 ```bash
 sg scan -r .claude/skills/role-pr-qc/rules/
 ```
 
-命中即 `QC FAIL`（error）或 flag 給 LLM 補判（warning）。
+命中即 `QC FAIL`（error）或 flag 給 LLM 補判（warning）。`sg` 未裝 → review-blocked，非 QC FAIL（細節見 SKILL.md Phase 0）。
 
 ## 現有規則
 
@@ -18,9 +18,9 @@ sg scan -r .claude/skills/role-pr-qc/rules/
 
 ## 新增規則的時機
 
-跑 QC 時 LLM 抓到一個新違規模式 → **立刻記下來**，當天或次日把它寫成規則。原則：
+跑 QC 時 LLM 抓到一個新違規模式 → 在 PR comment 標記「可加 rule:<簡述>」。**Rule 落檔（寫 yml）是 AH 後續工作** — QC subagent 沒 Edit/Write tool，無法自寫 rule。原則：
 
-- 結構可表達 → 寫規則
+- 結構可表達 → AH 寫規則
 - 需跨檔語意或型別推理 → 先 TODO，累積到數量夠再一次解
 - 只出現一次的特例 → 不寫，當 one-off
 

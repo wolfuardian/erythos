@@ -3,7 +3,7 @@ name: role-mock-preview
 description: When AH has N fully-specified UI design options (before any issue is opened) and needs them rendered as side-by-side HTML mockup for commander to pick, produce a single static HTML at `.claude/previews/<topic>.html` that renders all options with real colors/layout from theme.css. Use before opening a UI-related issue, after AH aligned options with commander.
 model: claude-sonnet-4-6
 effort: medium
-allowed-tools: Bash, Read, Grep, Write
+allowed-tools: Read, Glob, Grep, Write
 ---
 
 # Mock-Preview — UI 方案並排視覺化
@@ -36,7 +36,8 @@ AH 提供：
 
 - 路徑：`.claude/previews/<topic>.html`
 - 格式：單檔靜態 HTML，內嵌 CSS，**無 JS 互動**
-- 覆蓋策略：同 topic 重跑覆蓋舊檔（無狀態）
+- 開啟方式：指揮家以瀏覽器直接 `file://` 開啟，故所有資源（CSS、字型 fallback、icon SVG）必須內嵌；不得引用相對 / 外部資源
+- 覆蓋策略：同 topic 重跑一律覆蓋舊檔（無狀態，MP 不讀目錄、不自動 bump 版本）。**AH 想保留舊版作對照 → 自行指定新 topic 名（如 `<原 topic>-v2`）**；版本管理由 AH 負責，不是 MP
 
 ## 回報（≤ 100 字，作為 Agent return text 給 AH，不開 PR / 不留 comment）
 
@@ -67,6 +68,7 @@ AH 提供：
 | 條件 | 動作 |
 |------|------|
 | 方案描述歧義 | 回報請 AH 補充，不腦補 |
+| 方案間互相矛盾（A 有 X、B 無 X） | 各自照原描述畫，不調和；回報指出對比點 |
 | 指定檔不足 | 回報請 AH 補充 |
 | 方案 > 4 | 改用 2x2 grid 排版 |
 
@@ -83,3 +85,4 @@ mockup 必須像「真的那個 UI」，不是抽象框框。配色對應真實 
 - HTML 背景深色配合專案風格（`#1e1e1e` 或 `rgba(20,20,20,0.95)`）
 - 面板標籤用等寬字（`monospace`），方案名簡短
 - 多面板排列用 flex / grid，單頁不捲動為佳
+- 若 topic 涉及既有 panel，先 `Glob .claude/previews/<topic 關鍵字>*.html` 找同主題前作（不存在則跳過）作為風格校準基準 — 既有 39 檔免費 anchor，避免重新發明風格
