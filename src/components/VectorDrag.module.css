@@ -1,0 +1,32 @@
+.wrapper {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.axisCell {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+}
+
+.badge {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--badge-bg, #666);
+  border-radius: 2px 0 0 2px;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.inputWrap {
+  flex: 1;
+  border-radius: 0 3px 3px 0;
+  overflow: hidden;
+  display: flex;
+}

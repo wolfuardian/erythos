@@ -1,0 +1,78 @@
+.menu {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-popup);
+  min-width: 160px;
+  padding: var(--space-xs) 0;
+  user-select: none;
+}
+
+.menuFixed {
+  position: fixed;
+  z-index: 1000;
+}
+
+.subMenu {
+  position: absolute;
+  z-index: 1001;
+}
+
+.subMenuRight {
+  left: 100%;
+  right: auto;
+  top: 0;
+}
+
+.subMenuLeft {
+  left: auto;
+  right: 100%;
+  top: 0;
+}
+
+.itemWrapper {
+  position: relative;
+}
+
+.item {
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item:hover {
+  background: var(--bg-hover);
+}
+
+.item.disabled {
+  cursor: default;
+  color: var(--text-muted);
+}
+
+.item.disabled:hover {
+  background: transparent;
+}
+
+.itemLabel {
+  color: var(--text-primary);
+}
+
+.item.disabled .itemLabel {
+  color: var(--text-muted);
+}
+
+.submenuArrow {
+  margin-left: var(--space-md);
+  opacity: 0.6;
+  font-size: 0.75em;
+}
+
+.separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}

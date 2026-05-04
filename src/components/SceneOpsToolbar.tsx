@@ -4,6 +4,7 @@ import { loadGLTFFromFile } from '../utils/gltfLoader';
 import { useEditor } from '../app/EditorContext';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import type { TransformMode } from '../core/EventEmitter';
+import styles from './SceneOpsToolbar.module.css';
 
 export const SceneOpsToolbar: Component<{
   orientation: 'horizontal' | 'vertical';
@@ -114,43 +115,19 @@ export const SceneOpsToolbar: Component<{
     }
   };
 
-  const transformBtn = (mode: TransformMode, label: string, hotkey: string) => (
-    <button
-      onClick={() => editor.setTransformMode(mode)}
-      title={`${label} (${hotkey})`}
-      style={{
-        padding: '2px 8px',
-        height: '24px',
-        background: bridge.transformMode() === mode ? 'var(--accent-blue)' : 'var(--bg-section)',
-        color: bridge.transformMode() === mode ? '#fff' : 'var(--text-secondary)',
-        border: '1px solid var(--border-subtle)',
-        'border-radius': 'var(--radius-sm)',
-        'font-size': 'var(--font-size-sm)',
-        cursor: 'pointer',
-        transition: 'background var(--transition-fast)',
-      }}
-    >
-      {label}
-    </button>
-  );
-
   const isHorizontal = () => props.orientation === 'horizontal';
 
   const Divider = () => (
-    <div style={isHorizontal()
-      ? { width: '1px', height: '18px', background: 'var(--border-medium)', margin: '0 var(--space-xs)' }
-      : { width: '18px', height: '1px', background: 'var(--border-medium)', margin: 'var(--space-xs) 0' }
-    } />
+    <div class={isHorizontal() ? styles.dividerH : styles.dividerV} />
   );
 
   return (
     <div
       data-testid="scene-ops-toolbar"
-      style={{
-        display: 'flex',
-        'flex-direction': isHorizontal() ? 'row' : 'column',
-        'align-items': 'center',
-        gap: 'var(--space-sm)',
+      class={styles.toolbar}
+      classList={{
+        [styles.toolbarHorizontal]: isHorizontal(),
+        [styles.toolbarVertical]: !isHorizontal(),
       }}
     >
       {/* History group: Undo / Redo */}
@@ -179,9 +156,9 @@ export const SceneOpsToolbar: Component<{
       <Divider />
 
       {/* Transform group */}
-      {transformBtn('translate', 'Move', 'W')}
-      {transformBtn('rotate', 'Rotate', 'E')}
-      {transformBtn('scale', 'Scale', 'R')}
+      <TransformBtn mode="translate" label="Move" hotkey="W" currentMode={bridge.transformMode} onSelect={(m) => editor.setTransformMode(m)} />
+      <TransformBtn mode="rotate" label="Rotate" hotkey="E" currentMode={bridge.transformMode} onSelect={(m) => editor.setTransformMode(m)} />
+      <TransformBtn mode="scale" label="Scale" hotkey="R" currentMode={bridge.transformMode} onSelect={(m) => editor.setTransformMode(m)} />
 
       <ErrorDialog
         open={!!errorMsg()}
@@ -205,17 +182,24 @@ const ToolbarBtn: Component<{
     onClick={props.onClick}
     disabled={props.disabled}
     title={props.title}
-    style={{
-      padding: '2px 8px',
-      height: '24px',
-      background: 'var(--bg-section)',
-      color: props.disabled ? 'var(--text-disabled)' : 'var(--text-secondary)',
-      border: '1px solid var(--border-subtle)',
-      'border-radius': 'var(--radius-sm)',
-      'font-size': 'var(--font-size-sm)',
-      cursor: props.disabled ? 'default' : 'pointer',
-      transition: 'background var(--transition-fast)',
-    }}
+    class={styles.toolbarBtn}
+  >
+    {props.label}
+  </button>
+);
+
+const TransformBtn: Component<{
+  mode: TransformMode;
+  label: string;
+  hotkey: string;
+  currentMode: () => TransformMode;
+  onSelect: (m: TransformMode) => void;
+}> = (props) => (
+  <button
+    onClick={() => props.onSelect(props.mode)}
+    title={`${props.label} (${props.hotkey})`}
+    class={styles.transformBtn}
+    classList={{ [styles.active]: props.currentMode() === props.mode }}
   >
     {props.label}
   </button>

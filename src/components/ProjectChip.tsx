@@ -3,6 +3,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { RecentProjectsDropdown } from './RecentProjectsDropdown';
 import { buildChipConfirmDialog, type ConfirmIntent } from './projectChipDialog';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
+import styles from './ProjectChip.module.css';
 
 interface Props {
   projectName: string;
@@ -14,15 +15,8 @@ interface Props {
   onOpenProject: (id: string) => Promise<void>;
 }
 
-function autosaveDotColor(status: 'idle' | 'pending' | 'saved' | 'error'): string {
-  if (status === 'error') return 'var(--accent-red)';
-  if (status === 'pending') return 'var(--accent-gold)';
-  return 'var(--accent-green)'; // 'saved' | 'idle'
-}
-
 const ProjectChip: Component<Props> = (props) => {
   const [open, setOpen] = createSignal(false);
-  const [hovered, setHovered] = createSignal(false);
   const [confirmOpen, setConfirmOpen] = createSignal(false);
   const [confirmIntent, setConfirmIntent] = createSignal<ConfirmIntent>({ kind: 'close' });
   const [expanded, setExpanded] = createSignal(false);
@@ -99,17 +93,6 @@ const ProjectChip: Component<Props> = (props) => {
     }
   };
 
-  const chipBg = () => {
-    if (open()) return 'var(--bg-hover)';
-    if (hovered()) return 'var(--bg-hover)';
-    return 'var(--bg-section)';
-  };
-
-  const chipBorder = () =>
-    open()
-      ? '1px solid var(--accent-blue)'
-      : '1px solid var(--border-subtle)';
-
   const dialog = () => buildChipConfirmDialog(confirmIntent(), props.autosaveStatus);
 
   return (
@@ -118,44 +101,24 @@ const ProjectChip: Component<Props> = (props) => {
         data-testid="project-chip"
         ref={chipRef}
         onClick={handleChipClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         title={`Autosave: ${props.autosaveStatus}`}
-        style={{
-          display: 'inline-flex',
-          'align-items': 'center',
-          gap: '6px',
-          padding: '2px 8px',
-          height: '24px',
-          background: chipBg(),
-          color: 'var(--text-secondary)',
-          border: chipBorder(),
-          'border-radius': 'var(--radius-sm)',
-          'font-size': 'var(--font-size-sm)',
-          cursor: 'pointer',
-          transition: 'background var(--transition-fast), border-color var(--transition-fast)',
-          'white-space': 'nowrap',
-          'min-width': '100px',
-          'max-width': '180px',
-          overflow: 'hidden',
-          'text-overflow': 'ellipsis',
-        }}
+        class={styles.chip}
+        classList={{ [styles.open]: open() }}
       >
         <span
           data-testid="project-chip-autosave-dot"
-          style={{
-            display: 'inline-block',
-            width: '5px',
-            height: '5px',
-            'border-radius': '50%',
-            background: autosaveDotColor(props.autosaveStatus),
-            'flex-shrink': '0',
+          class={styles.dot}
+          classList={{
+            [styles.dotIdle]: props.autosaveStatus === 'idle',
+            [styles.dotSaved]: props.autosaveStatus === 'saved',
+            [styles.dotPending]: props.autosaveStatus === 'pending',
+            [styles.dotError]: props.autosaveStatus === 'error',
           }}
         />
-        <span style={{ flex: '1', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>
+        <span class={styles.name}>
           {props.projectName}
         </span>
-        <span style={{ 'flex-shrink': '0' }}>▾</span>
+        <span class={styles.caret}>▾</span>
       </button>
 
       <RecentProjectsDropdown

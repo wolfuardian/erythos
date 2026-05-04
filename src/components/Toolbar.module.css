@@ -1,0 +1,89 @@
+.toolbar {
+  height: 30px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  padding: 0 7px;
+  flex-shrink: 0;
+}
+
+.spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspaceTabs {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.addWorkspaceButton {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-left: 2px;
+  flex-shrink: 0;
+  line-height: 1;
+  background: transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.addWorkspaceButton:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-medium);
+  margin: 0 5px;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.resetLayoutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.resetLayoutButton:hover {
+  color: var(--text-secondary);
+}

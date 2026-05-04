@@ -1,5 +1,6 @@
 import { type Component, Show, createSignal, createEffect, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import styles from './BrandMark.module.css';
 
 interface Props {
   /** App version string without leading "v", e.g. "0.1.15a-016eb9cf". */
@@ -8,7 +9,6 @@ interface Props {
 
 const BrandMark: Component<Props> = (props) => {
   const [open, setOpen] = createSignal(false);
-  const [hovered, setHovered] = createSignal(false);
   const [popoverPos, setPopoverPos] = createSignal<{ top: number; left: number }>({ top: 0, left: 0 });
 
   let buttonRef: HTMLButtonElement | undefined;
@@ -54,31 +54,9 @@ const BrandMark: Component<Props> = (props) => {
         ref={buttonRef}
         type="button"
         onClick={handleClick}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         title={`Erythos v${props.appVersion}`}
-        style={{
-          width: '18px',
-          height: '18px',
-          background: 'linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%)',
-          'border-radius': 'var(--radius-sm)',
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-          color: 'var(--text-primary)',
-          'font-family': 'var(--font-family)',
-          'font-weight': '700',
-          'font-size': '11px',
-          'line-height': '1',
-          padding: '0',
-          border: 'none',
-          cursor: 'pointer',
-          'flex-shrink': '0',
-          outline: open() ? '1px solid var(--accent-gold)' : 'none',
-          'outline-offset': '-1px',
-          filter: hovered() && !open() ? 'brightness(1.12)' : 'none',
-          transition: 'filter var(--transition-fast)',
-        }}
+        class={styles.button}
+        classList={{ [styles.open]: open() }}
       >
         E
       </button>
@@ -88,41 +66,19 @@ const BrandMark: Component<Props> = (props) => {
           <div
             data-testid="brand-mark-about"
             ref={popoverRef}
-            style={{
-              position: 'fixed',
-              top: `${popoverPos().top}px`,
-              left: `${popoverPos().left}px`,
-              'z-index': '900',
-              width: '280px',
-              background: 'var(--bg-panel)',
-              border: '1px solid var(--border-medium)',
-              'border-radius': 'var(--radius-md)',
-              'box-shadow': 'var(--shadow-popup)',
-              padding: '12px 14px',
-              display: 'flex',
-              'flex-direction': 'column',
-              gap: '4px',
-            }}
+            class={styles.popover}
+            // inline-allowed: computed offset from getBoundingClientRect
+            style={{ top: `${popoverPos().top}px`, left: `${popoverPos().left}px` }}
           >
             <div
               data-testid="brand-mark-about-name"
-              style={{
-                'font-family': 'var(--font-family)',
-                'font-size': '13px',
-                color: 'var(--text-primary)',
-                'line-height': '1',
-              }}
+              class={styles.name}
             >
               Erythos
             </div>
             <div
               data-testid="brand-mark-about-version"
-              style={{
-                'font-family': 'var(--font-mono)',
-                'font-size': '11px',
-                color: 'var(--text-muted)',
-                'line-height': '1',
-              }}
+              class={styles.version}
             >
               v{props.appVersion}
             </div>

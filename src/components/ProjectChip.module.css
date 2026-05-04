@@ -1,0 +1,62 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  height: 24px;
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+  min-width: 100px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip:hover {
+  background: var(--bg-hover);
+}
+
+.chip.open {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+}
+
+.dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotIdle {
+  background: var(--accent-green);
+}
+
+.dotSaved {
+  background: var(--accent-green);
+}
+
+.dotPending {
+  background: var(--accent-gold);
+}
+
+.dotError {
+  background: var(--accent-red);
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caret {
+  flex-shrink: 0;
+}
