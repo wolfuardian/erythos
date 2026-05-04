@@ -185,6 +185,7 @@
   flex-shrink: 0;
   stroke: var(--text-muted);
   stroke-width: 1.5;
+  color: var(--type-color);
 }
 
 .filterBtn:hover .filterIcon,
@@ -239,6 +240,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--type-color);
 }
 
 .gridItem.assetSelected .gridThumb {
@@ -253,6 +255,8 @@
   font-weight: bold;
   padding: 1px 3px;
   border-radius: 2px;
+  color: var(--type-color);
+  background: color-mix(in srgb, var(--type-color) 20%, transparent);
 }
 
 .gridName {
@@ -298,6 +302,8 @@
   justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+  color: var(--type-color);
+  background: color-mix(in srgb, var(--type-color) 20%, transparent);
 }
 
 .listName {

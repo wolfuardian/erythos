@@ -347,8 +347,8 @@ const ProjectPanel: Component = () => {
                         width="16" height="16" viewBox="0 0 16 16"
                         fill="none" stroke-linecap="round" stroke-linejoin="round"
                         class={styles.filterIcon}
-                        // inline-allowed: CSS variable injection — color driven by type-specific accent token
-                        style={{ color: meta.color }}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
                       >
                         <ProjectTypeIcon type={t} />
                       </svg>
@@ -383,8 +383,8 @@ const ProjectPanel: Component = () => {
                       {/* Thumbnail placeholder */}
                       <div
                         class={styles.gridThumb}
-                        // inline-allowed: CSS variable injection — color driven by type-specific accent token
-                        style={{ color: meta.color }}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
                       >
                         <svg width="24" height="24" viewBox="0 0 16 16" fill="none"
                           stroke="currentColor" stroke-width="1.5"
@@ -395,8 +395,8 @@ const ProjectPanel: Component = () => {
                       {/* Type pill, floating bottom-right */}
                       <span
                         class={styles.gridPill}
-                        // inline-allowed: CSS variable injection — color driven by type-specific accent token
-                        style={{ background: meta.color + '33', color: meta.color }}
+                        // inline-allowed: CSS variable injection — type-specific accent token
+                        style={{ '--type-color': meta.color }}
                       >{meta.pill}</span>
                       {/* Filename */}
                       <span class={styles.gridName}>{f.name}</span>
@@ -445,8 +445,8 @@ const ProjectPanel: Component = () => {
                     {/* Type pill */}
                     <span
                       class={styles.listPill}
-                      // inline-allowed: CSS variable injection — color driven by type-specific accent token
-                      style={{ background: meta.color + '33', color: meta.color }}
+                      // inline-allowed: CSS variable injection — type-specific accent token
+                      style={{ '--type-color': meta.color }}
                     >{meta.pill}</span>
                     {/* Filename */}
                     <span class={styles.listName}>{f.name}</span>
