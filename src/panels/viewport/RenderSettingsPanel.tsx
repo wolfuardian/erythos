@@ -3,6 +3,7 @@ import type { LookdevPreset, ShadingMode } from '../../viewport/ShadingManager';
 import type { RenderSettings } from '../../viewport/RenderSettings';
 import type { QualityLevel } from '../../viewport/PostProcessing';
 import { NumberDrag } from '../../components/NumberDrag';
+import styles from './RenderSettingsPanel.module.css';
 
 interface RenderSettingsPanelProps {
   // Rendering panel
@@ -33,64 +34,35 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
     <>
       {/* Rendering 懸浮面板 */}
       <Show when={props.renderMode() === 'rendering'}>
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '220px',
-          'max-height': 'calc(100% - 56px)',
-          'overflow-y': 'auto',
-          background: 'var(--bg-app)',
-          'border-radius': '6px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          'z-index': '6',
-          'font-size': '11px',
-          color: 'var(--text-secondary, #aaa)',
-          'user-select': 'none',
-        }}>
+        <div class={styles.panel}>
           {/* 面板 Header（可摺疊整個面板） */}
           <div
+            class={styles.panelHeader}
+            classList={{ [styles.expanded]: props.panelExpanded() }}
             onClick={() => props.setPanelExpanded(v => !v)}
-            style={{
-              padding: '8px 10px',
-              display: 'flex',
-              'align-items': 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              'border-bottom': props.panelExpanded() ? '1px solid rgba(255,255,255,0.1)' : 'none',
-            }}
           >
-            <span style={{ 'font-size': '9px', width: '10px' }}>{props.panelExpanded() ? '▾' : '▸'}</span>
-            <span style={{ color: 'var(--text-primary, #fff)', 'font-weight': '600' }}>Render Effects</span>
+            <span class={styles.caret}>{props.panelExpanded() ? '▾' : '▸'}</span>
+            <span class={styles.panelTitle}>Render Effects</span>
           </div>
 
           <Show when={props.panelExpanded()}>
             {/* ── Quality 群組 ── */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+            <div class={styles.section}>
               <div
+                class={styles.groupHeader}
                 onClick={() => props.toggleGroup('quality')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
               >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('quality') ? '▾' : '▸'}</span>
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Quality</span>
+                <span class={styles.caret}>{props.isGroupOpen('quality') ? '▾' : '▸'}</span>
+                <span class={styles.groupName}>Quality</span>
               </div>
               <Show when={props.isGroupOpen('quality')}>
-                <div style={{ padding: '4px 10px 8px', 'padding-left': '26px', display: 'flex', gap: '4px' }}>
+                <div class={styles.qualityRow}>
                   <For each={(['low', 'normal', 'high'] as QualityLevel[])}>
                     {(q) => (
                       <button
+                        class={styles.qualityBtn}
+                        classList={{ [styles.active]: props.quality() === q }}
                         onClick={() => props.setQuality(q)}
-                        style={{
-                          flex: 1,
-                          background: props.quality() === q ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          color: props.quality() === q ? 'var(--text-primary, #fff)' : 'var(--text-muted, #666)',
-                          padding: '3px 0',
-                          cursor: 'pointer',
-                          'border-radius': '3px',
-                          'font-size': '10px',
-                          'text-transform': 'capitalize',
-                        }}
                       >
                         {q}
                       </button>
@@ -101,48 +73,40 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
             </div>
 
             {/* ── Effects 群組（包裹所有效果子群組） ── */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+            <div class={styles.section}>
               <div
+                class={styles.groupHeader}
                 onClick={() => props.toggleGroup('effects')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
               >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('effects') ? '▾' : '▸'}</span>
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Effects</span>
+                <span class={styles.caret}>{props.isGroupOpen('effects') ? '▾' : '▸'}</span>
+                <span class={styles.groupName}>Effects</span>
               </div>
               <Show when={props.isGroupOpen('effects')}>
-                <div style={{ 'padding-left': '10px' }}>
+                <div class={styles.effectsBody}>
 
                   {/* Tone Mapping */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                  <div class={styles.section}>
                     <div
+                      class={styles.groupHeader}
                       onClick={() => props.toggleGroup('toneMapping')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
                     >
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('toneMapping') ? '▾' : '▸'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                      <span class={styles.caret}>{props.isGroupOpen('toneMapping') ? '▾' : '▸'}</span>
+                      <label class={styles.groupHeaderLabel} onClick={(e: MouseEvent) => e.stopPropagation()}>
                         <input type="checkbox" checked={props.renderSettings().toneMapping.enabled}
                           onChange={e => props.updateSetting('toneMapping', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Tone Mapping</span>
+                        <span class={styles.groupName}>Tone Mapping</span>
                       </label>
                     </div>
                     <Show when={props.isGroupOpen('toneMapping') && props.renderSettings().toneMapping.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
+                      <div class={styles.groupBody}>
                         <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
+                          <div class={styles.subLabel}>
                             <span>Mode</span>
                           </div>
                           <select
+                            class={styles.selectSm}
                             value={props.renderSettings().toneMapping.mode}
                             onChange={e => props.updateSetting('toneMapping', { mode: e.target.value as 'aces' | 'agx' | 'neutral' | 'reinhard' | 'cineon' })}
-                            style={{
-                              width: '100%',
-                              background: 'rgba(255,255,255,0.08)',
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              color: 'var(--text-primary, #fff)',
-                              padding: '2px 4px',
-                              'border-radius': '3px',
-                              'font-size': '10px',
-                            }}
                           >
                             <option value="aces">ACES</option>
                             <option value="agx">AgX</option>
@@ -151,40 +115,38 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             <option value="cineon">Cineon</option>
                           </select>
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                            <span style={{ 'white-space': 'nowrap' }}>Exposure</span>
-                            <NumberDrag
-                              value={props.renderSettings().toneMapping.exposure}
-                              onChange={v => props.updateSetting('toneMapping', { exposure: v })}
-                              min={0.1}
-                              max={3}
-                              step={0.05}
-                              precision={2}
-                            />
-                          </div>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Exposure</span>
+                          <NumberDrag
+                            value={props.renderSettings().toneMapping.exposure}
+                            onChange={v => props.updateSetting('toneMapping', { exposure: v })}
+                            min={0.1}
+                            max={3}
+                            step={0.05}
+                            precision={2}
+                          />
                         </div>
                       </div>
                     </Show>
                   </div>
 
                   {/* Bloom */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
+                  <div class={styles.section}>
                     <div
+                      class={styles.groupHeader}
                       onClick={() => props.toggleGroup('bloom')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
                     >
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('bloom') ? '▾' : '▸'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                      <span class={styles.caret}>{props.isGroupOpen('bloom') ? '▾' : '▸'}</span>
+                      <label class={styles.groupHeaderLabel} onClick={(e: MouseEvent) => e.stopPropagation()}>
                         <input type="checkbox" checked={props.renderSettings().bloom.enabled}
                           onChange={e => props.updateSetting('bloom', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Bloom</span>
+                        <span class={styles.groupName}>Bloom</span>
                       </label>
                     </div>
                     <Show when={props.isGroupOpen('bloom') && props.renderSettings().bloom.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>strength</span>
+                      <div class={styles.groupBody}>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabelCapitalize}>strength</span>
                           <NumberDrag
                             value={props.renderSettings().bloom.strength}
                             onChange={v => props.updateSetting('bloom', { strength: v })}
@@ -194,8 +156,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             precision={2}
                           />
                         </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>radius</span>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabelCapitalize}>radius</span>
                           <NumberDrag
                             value={props.renderSettings().bloom.radius}
                             onChange={v => props.updateSetting('bloom', { radius: v })}
@@ -205,8 +167,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             precision={2}
                           />
                         </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>threshold</span>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabelCapitalize}>threshold</span>
                           <NumberDrag
                             value={props.renderSettings().bloom.threshold}
                             onChange={v => props.updateSetting('bloom', { threshold: v })}
@@ -221,20 +183,22 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                   </div>
 
                   {/* AO */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div onClick={() => props.toggleGroup('ao')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('ao') ? '▾' : '▸'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                  <div class={styles.section}>
+                    <div
+                      class={styles.groupHeader}
+                      onClick={() => props.toggleGroup('ao')}
+                    >
+                      <span class={styles.caret}>{props.isGroupOpen('ao') ? '▾' : '▸'}</span>
+                      <label class={styles.groupHeaderLabel} onClick={(e: MouseEvent) => e.stopPropagation()}>
                         <input type="checkbox" checked={props.renderSettings().ao.enabled}
                           onChange={e => props.updateSetting('ao', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Ambient Occlusion</span>
+                        <span class={styles.groupName}>Ambient Occlusion</span>
                       </label>
                     </div>
                     <Show when={props.isGroupOpen('ao') && props.renderSettings().ao.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Radius</span>
+                      <div class={styles.groupBody}>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Radius</span>
                           <NumberDrag
                             value={props.renderSettings().ao.radius}
                             onChange={v => props.updateSetting('ao', { radius: v })}
@@ -244,8 +208,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             precision={3}
                           />
                         </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Intensity</span>
                           <NumberDrag
                             value={props.renderSettings().ao.intensity}
                             onChange={v => props.updateSetting('ao', { intensity: v })}
@@ -260,20 +224,22 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                   </div>
 
                   {/* DOF */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div onClick={() => props.toggleGroup('dof')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('dof') ? '▾' : '▸'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                  <div class={styles.section}>
+                    <div
+                      class={styles.groupHeader}
+                      onClick={() => props.toggleGroup('dof')}
+                    >
+                      <span class={styles.caret}>{props.isGroupOpen('dof') ? '▾' : '▸'}</span>
+                      <label class={styles.groupHeaderLabel} onClick={(e: MouseEvent) => e.stopPropagation()}>
                         <input type="checkbox" checked={props.renderSettings().dof.enabled}
                           onChange={e => props.updateSetting('dof', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Depth of Field</span>
+                        <span class={styles.groupName}>Depth of Field</span>
                       </label>
                     </div>
                     <Show when={props.isGroupOpen('dof') && props.renderSettings().dof.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Focus</span>
+                      <div class={styles.groupBody}>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Focus</span>
                           <NumberDrag
                             value={props.renderSettings().dof.focus}
                             onChange={v => props.updateSetting('dof', { focus: v })}
@@ -283,8 +249,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             precision={1}
                           />
                         </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Aperture</span>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Aperture</span>
                           <NumberDrag
                             value={props.renderSettings().dof.aperture}
                             onChange={v => props.updateSetting('dof', { aperture: v })}
@@ -294,8 +260,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                             precision={3}
                           />
                         </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Max Blur</span>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Max Blur</span>
                           <NumberDrag
                             value={props.renderSettings().dof.maxBlur}
                             onChange={v => props.updateSetting('dof', { maxBlur: v })}
@@ -309,21 +275,23 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
                     </Show>
                   </div>
 
-                  {/* Motion Blur */}
+                  {/* Motion Blur — last child, no section border */}
                   <div>
-                    <div onClick={() => props.toggleGroup('motionBlur')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{props.isGroupOpen('motionBlur') ? '▾' : '▸'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+                    <div
+                      class={styles.groupHeader}
+                      onClick={() => props.toggleGroup('motionBlur')}
+                    >
+                      <span class={styles.caret}>{props.isGroupOpen('motionBlur') ? '▾' : '▸'}</span>
+                      <label class={styles.groupHeaderLabel} onClick={(e: MouseEvent) => e.stopPropagation()}>
                         <input type="checkbox" checked={props.renderSettings().motionBlur.enabled}
                           onChange={e => props.updateSetting('motionBlur', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Motion Blur</span>
+                        <span class={styles.groupName}>Motion Blur</span>
                       </label>
                     </div>
                     <Show when={props.isGroupOpen('motionBlur') && props.renderSettings().motionBlur.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Strength</span>
+                      <div class={styles.groupBody}>
+                        <div class={styles.field}>
+                          <span class={styles.fieldLabel}>Strength</span>
                           <NumberDrag
                             value={props.renderSettings().motionBlur.strength}
                             onChange={v => props.updateSetting('motionBlur', { strength: v })}
@@ -343,65 +311,38 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
           </Show>
         </div>
       </Show>
+
       {/* Shading 懸浮面板 */}
       <Show when={props.renderMode() === 'shading'}>
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '220px',
-          'max-height': 'calc(100% - 56px)',
-          'overflow-y': 'auto',
-          background: 'var(--bg-app)',
-          'border-radius': '6px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          'z-index': '6',
-          'font-size': '11px',
-          color: 'var(--text-secondary, #aaa)',
-          'user-select': 'none',
-        }}>
+        <div class={styles.panel}>
           {/* 面板 Header */}
           <div
+            class={styles.panelHeader}
+            classList={{ [styles.expanded]: props.shadingExpanded() }}
             onClick={() => props.setShadingExpanded(v => !v)}
-            style={{
-              padding: '8px 10px',
-              display: 'flex',
-              'align-items': 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              'border-bottom': props.shadingExpanded() ? '1px solid rgba(255,255,255,0.1)' : 'none',
-            }}
           >
-            <span style={{ 'font-size': '9px', width: '10px' }}>{props.shadingExpanded() ? '▾' : '▸'}</span>
-            <span style={{ color: 'var(--text-primary, #fff)', 'font-weight': '600' }}>Shading Controls</span>
+            <span class={styles.caret}>{props.shadingExpanded() ? '▾' : '▸'}</span>
+            <span class={styles.panelTitle}>Shading Controls</span>
           </div>
 
           <Show when={props.shadingExpanded()}>
             {/* Scene Lights */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <label style={{ display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
+            <div class={styles.settingRow} classList={{ [styles.bordered]: true }}>
+              <label class={styles.settingLabel}>
                 <input type="checkbox" checked={props.sceneLightsOn()}
                   disabled={props.renderMode() !== 'shading'}
                   onChange={e => props.onSceneLightsChange(e.target.checked)} />
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Scene Lights</span>
+                <span class={styles.primaryText}>Scene Lights</span>
               </label>
             </div>
 
             {/* HDR Preset */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ 'margin-bottom': '6px', color: 'var(--text-primary, #fff)' }}>HDR Preset</div>
+            <div class={styles.settingRow} classList={{ [styles.bordered]: true }}>
+              <div class={styles.settingGroupLabel}>HDR Preset</div>
               <select
+                class={styles.selectMd}
                 value={props.lookdevPreset()}
                 onChange={e => props.setLookdevPreset(e.target.value as LookdevPreset)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'var(--text-primary, #fff)',
-                  padding: '3px 6px',
-                  'border-radius': '3px',
-                  'font-size': '11px',
-                }}
               >
                 <option value="none">None</option>
                 <option value="room">Room</option>
@@ -410,9 +351,9 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
             </div>
 
             {/* HDR Intensity */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
+            <div class={styles.settingRow} classList={{ [styles.bordered]: true }}>
+              <div class={styles.field}>
+                <span class={styles.fieldLabel}>Intensity</span>
                 <NumberDrag
                   value={props.hdrIntensity()}
                   onChange={v => props.setHdrIntensity(v)}
@@ -424,10 +365,10 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
               </div>
             </div>
 
-            {/* HDR Rotation */}
-            <div style={{ padding: '8px 10px' }}>
-              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                <span style={{ 'white-space': 'nowrap' }}>Rotation</span>
+            {/* HDR Rotation — last row, no border */}
+            <div class={styles.settingRow}>
+              <div class={styles.field}>
+                <span class={styles.fieldLabel}>Rotation</span>
                 <NumberDrag
                   value={props.hdrRotation()}
                   onChange={v => props.setHdrRotation(Math.round(v))}

@@ -1,0 +1,188 @@
+/** RenderSettingsPanel — CSS Modules migration (refs #740) */
+
+/* ── Floating Panel ──────────────────────────────────────────────────────── */
+
+.panel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 220px;
+  max-height: calc(100% - 56px);
+  overflow-y: auto;
+  background: var(--bg-app);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 6;
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+  user-select: none;
+}
+
+/* ── Panel Header ──────────────────────────────────────────────────────────── */
+
+.panelHeader {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border-bottom: none;
+}
+
+.panelHeader.expanded {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panelTitle {
+  color: var(--text-primary, #fff);
+  font-weight: 600;
+}
+
+/* ── Caret ─────────────────────────────────────────────────────────────────── */
+
+.caret {
+  font-size: 9px;
+  width: 10px;
+}
+
+/* ── Sections ──────────────────────────────────────────────────────────────── */
+
+.section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Group Header (clickable collapse toggle row) ─────────────────────────── */
+
+.groupHeader {
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.groupHeaderLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.groupName {
+  color: var(--text-primary, #fff);
+}
+
+/* ── Group Body (vertical stack of fields) ────────────────────────────────── */
+
+.groupBody {
+  padding: 2px 10px 8px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Quality row is horizontal, not a flex-column stack */
+.qualityRow {
+  padding: 4px 10px 8px 26px;
+  display: flex;
+  gap: 4px;
+}
+
+/* ── Effects sub-group indent ──────────────────────────────────────────────── */
+
+.effectsBody {
+  padding-left: 10px;
+}
+
+/* ── Field row (label + NumberDrag) ────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fieldLabel {
+  white-space: nowrap;
+}
+
+.fieldLabelCapitalize {
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+/* ── Sub-section label (e.g. "Mode" above select) ─────────────────────────── */
+
+.subLabel {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+/* ── Select inputs ─────────────────────────────────────────────────────────── */
+
+/* Tone Mapping select — compact */
+.selectSm {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #fff);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+/* HDR Preset select — standard */
+.selectMd {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #fff);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* ── Quality Buttons ───────────────────────────────────────────────────────── */
+
+.qualityBtn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: var(--text-muted, #666);
+  padding: 3px 0;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.qualityBtn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #fff);
+}
+
+/* ── Shading Panel specific ────────────────────────────────────────────────── */
+
+.settingRow {
+  padding: 8px 10px;
+}
+
+.settingRow.bordered {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settingLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.settingGroupLabel {
+  margin-bottom: 6px;
+  color: var(--text-primary, #fff);
+}
+
+.primaryText {
+  color: var(--text-primary, #fff);
+}
