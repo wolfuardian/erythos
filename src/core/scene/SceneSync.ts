@@ -12,6 +12,7 @@ import type { ResourceCache } from './ResourceCache';
 import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
 import { deserializeFromPrefab } from './PrefabSerializer';
+import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -41,6 +42,9 @@ export class SceneSync {
 
   /** Bound prefabChanged handler for off() symmetry */
   private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
+  /** Reference to PrefabInstanceWatcher for self-write skip check (optional) */
+  private _instanceWatcher: PrefabInstanceWatcher | null = null;
+
   /** Reference to attached PrefabRegistry (for dispose) */
   private _prefabRegistry: PrefabRegistry | null = null;
 
@@ -140,6 +144,19 @@ export class SceneSync {
   }
 
   /**
+   * Attach a PrefabInstanceWatcher so SceneSync can query the self-write registry
+   * before rebuilding individual instances.
+   *
+   * Call once from Editor.init after creating the watcher.
+   * Pass null to detach (called automatically by Editor.dispose order).
+   *
+   * @param watcher - The PrefabInstanceWatcher instance, or null to detach.
+   */
+  attachInstanceWatcher(watcher: PrefabInstanceWatcher | null): void {
+    this._instanceWatcher = watcher;
+  }
+
+  /**
    * Rebuild all scene-graph instance subtrees whose `components.prefab.path`
    * matches the given path (stable across URL rotation).
    *
@@ -153,6 +170,13 @@ export class SceneSync {
     });
 
     for (const instanceRoot of instances) {
+      // Self-write skip: if the PrefabInstanceWatcher wrote this path and this
+      // instance was the originator, skip the rebuild to avoid overwriting the
+      // user's in-progress edit with its own round-trip echo.
+      if (this._instanceWatcher?.hasRecentSelfWrite(path, instanceRoot.id)) {
+        continue;
+      }
+
       // Step 1: Remove existing children (recursive) from SceneDocument
       this._removeDescendants(instanceRoot.id);
 
