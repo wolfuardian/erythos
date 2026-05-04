@@ -12,6 +12,7 @@ import { useEditor } from '../../app/EditorContext';
 import { useAreaState } from '../../app/areaState';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useThumbnails } from './useThumbnails';
+import { prefabPathForName } from '../../utils/prefabPath';
 import styles from './PrefabPanel.module.css';
 
 const PrefabPanel: Component = () => {
@@ -194,8 +195,7 @@ const PrefabPanel: Component = () => {
           >
             <For each={bridge.prefabAssets()}>
               {(asset) => {
-                // Derive path from asset name — must match sanitizeName in Editor.ts
-                const path = `prefabs/${asset.name.replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, '_').trim() || 'prefab'}.prefab`;
+                const path = prefabPathForName(asset.name);
                 const isActive = () => activePath() === path;
                 return (
                   <div

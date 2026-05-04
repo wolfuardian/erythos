@@ -15,17 +15,7 @@ import type { SceneNode, SceneFile } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
 import * as PrefabStore from './scene/PrefabStore';
 import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
-
-/**
- * Sanitise a prefab name to a safe filename stem.
- * Strips path separators and characters invalid in filenames.
- */
-function sanitizeName(name: string): string {
-  return name
-    .replace(/[/\\?%*:|"<>]/g, '-')
-    .replace(/\s+/g, '_')
-    .trim() || 'prefab';
-}
+import { prefabPathForName } from '../utils/prefabPath';
 
 export class Editor {
   readonly scene: Scene;
@@ -83,8 +73,7 @@ export class Editor {
       if (legacyAssets.length > 0) {
         const idToPath: Record<string, string> = {};
         for (const asset of legacyAssets) {
-          const safeName = sanitizeName(asset.name);
-          const path = `prefabs/${safeName}.prefab`;
+          const path = prefabPathForName(asset.name);
           idToPath[asset.id] = path;
 
           // Idempotency: skip if file already exists (don't clobber)
@@ -157,8 +146,7 @@ export class Editor {
    * SaveAsPrefabCommand can store it in the scene node immediately.
    */
   registerPrefab(asset: PrefabAsset): string {
-    const safeName = sanitizeName(asset.name);
-    const path = `prefabs/${safeName}.prefab`;
+    const path = prefabPathForName(asset.name);
 
     // Write to project async (fire-and-forget)
     void (async () => {
