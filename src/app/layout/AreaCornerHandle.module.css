@@ -1,0 +1,28 @@
+.handle {
+  position: absolute;
+  width: 12px; /* HIT_SIZE(16) - EDGE_RESERVE(4) */
+  height: 12px;
+  z-index: 9;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.handle[data-corner="tl"] {
+  left: 4px; /* EDGE_RESERVE */
+  top: 4px;
+}
+
+.handle[data-corner="tr"] {
+  right: 4px;
+  top: 4px;
+}
+
+.handle[data-corner="bl"] {
+  left: 4px;
+  bottom: 4px;
+}
+
+.handle[data-corner="br"] {
+  right: 4px;
+  bottom: 4px;
+}

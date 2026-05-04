@@ -2,6 +2,7 @@
 import { type Component } from 'solid-js';
 import { mutate, updateCurrentWorkspace } from '../workspaceStore';
 import { resizeEdge, type AreaTree, type ScreenEdge } from '../areaTree';
+import styles from './AreaSplitter.module.css';
 
 interface AreaSplitterProps {
   edge: ScreenEdge;
@@ -74,16 +75,14 @@ export const AreaSplitter: Component<AreaSplitterProps> = (props) => {
   return (
     <div
       onPointerDown={handlePointerDown}
+      class={styles.splitter}
+      classList={{ [styles.vertical]: props.edge.orientation === 'v' }}
+      // inline-allowed: per-frame drag coordinates updated on pointermove
       style={{
-        position: 'absolute',
         left: `${rect().left}px`,
         top: `${rect().top}px`,
         width: `${rect().width}px`,
         height: `${rect().height}px`,
-        cursor: props.edge.orientation === 'v' ? 'ew-resize' : 'ns-resize',
-        'touch-action': 'none',
-        'user-select': 'none',
-        'z-index': 10,
       }}
     />
   );

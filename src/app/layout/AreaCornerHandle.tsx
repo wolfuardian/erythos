@@ -12,9 +12,8 @@ import {
   type Corner,
   type AreaTree,
 } from '../areaTree';
+import styles from './AreaCornerHandle.module.css';
 
-const HIT_SIZE = 16;        // px — 可點擊區域總大小
-const EDGE_RESERVE = 4;     // px — 內側避開 AreaSplitter 4px 中段
 const DRAG_THRESHOLD = 5;   // px
 
 interface AreaCornerHandleProps {
@@ -26,23 +25,6 @@ interface AreaCornerHandleProps {
 }
 
 export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
-  const hitStyle = () => {
-    const base = {
-      position: 'absolute' as const,
-      width: `${HIT_SIZE - EDGE_RESERVE}px`,
-      height: `${HIT_SIZE - EDGE_RESERVE}px`,
-      'z-index': 9,
-      'touch-action': 'none' as const,
-      cursor: 'crosshair',
-    };
-    switch (props.corner) {
-      case 'tl': return { ...base, left: `${EDGE_RESERVE}px`, top: `${EDGE_RESERVE}px` };
-      case 'tr': return { ...base, right: `${EDGE_RESERVE}px`, top: `${EDGE_RESERVE}px` };
-      case 'bl': return { ...base, left: `${EDGE_RESERVE}px`, bottom: `${EDGE_RESERVE}px` };
-      case 'br': return { ...base, right: `${EDGE_RESERVE}px`, bottom: `${EDGE_RESERVE}px` };
-    }
-  };
-
   const handlePointerDown = (e: PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -190,5 +172,11 @@ export const AreaCornerHandle: Component<AreaCornerHandleProps> = (props) => {
     window.addEventListener('pointercancel', onCancel);
   };
 
-  return <div style={hitStyle()} onPointerDown={handlePointerDown} />;
+  return (
+    <div
+      class={styles.handle}
+      data-corner={props.corner}
+      onPointerDown={handlePointerDown}
+    />
+  );
 };

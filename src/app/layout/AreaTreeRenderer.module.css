@@ -1,0 +1,48 @@
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.area {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* DragOverlay */
+.dragCursor {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  cursor: default;
+}
+
+.dragCursor.split.vertical {
+  cursor: ew-resize;
+}
+
+.dragCursor.split.horizontal {
+  cursor: ns-resize;
+}
+
+.dragCursor.merge {
+  cursor: move;
+}
+
+.dragCursor.invalid {
+  cursor: not-allowed;
+}
+
+.dragBadge {
+  position: fixed;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 11px;
+  z-index: 21;
+  pointer-events: none;
+  user-select: none;
+}

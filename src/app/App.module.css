@@ -1,0 +1,60 @@
+.root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+}
+
+.contentArea {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* StatusBar */
+.statusBar {
+  height: var(--statusbar-height);
+  background: var(--bg-header);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-md);
+}
+
+.statusReady {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.statusSpacer {
+  flex: 1;
+}
+
+.statusSaveText {
+  font-size: var(--font-size-sm);
+  margin-right: var(--space-md);
+}
+
+.statusSaveText.pending {
+  color: var(--text-muted);
+}
+
+.statusSaveText.saved {
+  color: var(--accent-green);
+}
+
+.statusSaveText.error {
+  color: var(--accent-red);
+  margin-right: var(--space-sm);
+}
+
+.retryButton {
+  font-size: var(--font-size-sm);
+  color: var(--text-default);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  margin-right: var(--space-md);
+}

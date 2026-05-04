@@ -1,7 +1,9 @@
-import { type Component, createSignal, onMount, Show, For } from 'solid-js';
+import { type Component, onMount, Show, For } from 'solid-js';
 import { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { NewProjectModal } from './NewProjectModal';
+import { createSignal } from 'solid-js';
+import styles from './Welcome.module.css';
 
 interface Props {
   projectManager: ProjectManager;
@@ -46,18 +48,7 @@ const PlusIcon = () => (
 
 // Thumbnail placeholder — 32x32 dark geometric hint
 const ThumbnailPlaceholder = () => (
-  <div style={{
-    width: '32px',
-    height: '32px',
-    'min-width': '32px',
-    background: 'var(--bg-section)',
-    border: '1px solid var(--border-subtle)',
-    'border-radius': 'var(--radius-sm)',
-    display: 'flex',
-    'align-items': 'center',
-    'justify-content': 'center',
-    overflow: 'hidden',
-  }}>
+  <div class={styles.thumbnail}>
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <polygon points="10,3 17,14 3,14" fill="none" stroke="var(--border-medium)" stroke-width="1" opacity="0.6"/>
       <rect x="6" y="8" width="8" height="7" fill="none" stroke="var(--border-subtle)" stroke-width="0.8" opacity="0.4"/>
@@ -69,11 +60,6 @@ export const Welcome: Component<Props> = (props) => {
   const [recentProjects, setRecentProjects] = createSignal<ProjectEntry[]>([]);
   const [showModal, setShowModal] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
-
-  // Hover states
-  const [newProjHover, setNewProjHover] = createSignal(false);
-  const [openFolderHover, setOpenFolderHover] = createSignal(false);
-  const [hoveredRecentId, setHoveredRecentId] = createSignal<string | null>(null);
 
   const refresh = async () => setRecentProjects(await props.projectManager.getRecentProjects());
 
@@ -98,263 +84,87 @@ export const Welcome: Component<Props> = (props) => {
     }
   };
 
-  const subHeaderStyle = {
-    'font-size': 'var(--font-size-xs)',
-    'font-weight': '600',
-    color: 'var(--text-muted)',
-    'text-transform': 'uppercase' as const,
-    'letter-spacing': '0.8px',
-    'margin-bottom': 'var(--space-md)',
-  };
-
-  const tileBaseStyle = (hovered: boolean, accent?: boolean) => ({
-    display: 'flex',
-    'align-items': 'flex-start',
-    gap: 'var(--space-md)',
-    padding: 'var(--space-lg) var(--space-xl)',
-    background: hovered ? 'var(--bg-hover)' : 'var(--bg-section)',
-    border: accent
-      ? `1px solid ${hovered ? 'var(--accent-blue)' : 'rgba(82,127,200,0.35)'}`
-      : '1px solid var(--border-subtle)',
-    'border-radius': 'var(--radius-md)',
-    cursor: 'pointer',
-    transition: 'background 0.1s, border-color 0.1s',
-    'text-align': 'left' as const,
-    width: '100%',
-  });
-
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      'align-items': 'center',
-      'justify-content': 'center',
-      background: 'var(--bg-app)',
-    }}>
+    <div class={styles.page}>
       {/* Main card */}
-      <div style={{
-        width: '640px',
-        height: '420px',
-        background: 'var(--bg-panel)',
-        'border-radius': 'var(--radius-lg)',
-        'box-shadow': 'var(--shadow-well-outer)',
-        border: '1px solid var(--border-subtle)',
-        display: 'flex',
-        overflow: 'hidden',
-      }}>
+      <div class={styles.card}>
         {/* Left column ~38% */}
-        <div style={{
-          width: '38%',
-          'min-width': '38%',
-          background: 'var(--bg-section)',
-          'border-right': '1px solid var(--border-subtle)',
-          display: 'flex',
-          'flex-direction': 'column',
-          padding: 'var(--space-2xl) var(--space-xl)',
-          'box-sizing': 'border-box',
-        }}>
+        <div class={styles.leftCol}>
           {/* Logo + Title */}
-          <div style={{ 'margin-bottom': 'var(--space-2xl)' }}>
-            <div style={{
-              'font-size': '18px',
-              'font-weight': '700',
-              color: 'var(--text-primary)',
-              'letter-spacing': '-0.3px',
-              'line-height': '1.2',
-            }}>
-              Erythos
-            </div>
-            <div style={{
-              'font-size': 'var(--font-size-xs)',
-              color: 'var(--text-muted)',
-              'margin-top': '2px',
-            }}>
-              3D Editor
-            </div>
+          <div class={styles.logoArea}>
+            <div class={styles.appName}>Erythos</div>
+            <div class={styles.appSubtitle}>3D Editor</div>
           </div>
 
           {/* Quick Start sub-header */}
-          <div style={subHeaderStyle}>Quick Start</div>
+          <div class={styles.subHeader}>Quick Start</div>
 
           {/* Tiles */}
-          <div style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--space-md)', 'flex': '1' }}>
+          <div class={styles.tileList}>
             {/* New Project tile */}
             <button
-              style={tileBaseStyle(newProjHover(), true)}
-              onMouseEnter={() => setNewProjHover(true)}
-              onMouseLeave={() => setNewProjHover(false)}
+              class={styles.tile}
+              classList={{ [styles.accent]: true }}
               onClick={() => setShowModal(true)}
             >
-              <div style={{ 'margin-top': '2px', 'flex-shrink': '0' }}>
+              <div class={styles.tileIcon}>
                 <PlusIcon />
               </div>
               <div>
-                <div style={{
-                  'font-size': 'var(--font-size-md)',
-                  'font-weight': '600',
-                  color: 'var(--text-primary)',
-                  'margin-bottom': '2px',
-                }}>
-                  New Project
-                </div>
-                <div style={{
-                  'font-size': 'var(--font-size-xs)',
-                  color: 'var(--text-muted)',
-                  'line-height': '1.4',
-                }}>
-                  Create a new 3D scene workspace
-                </div>
+                <div class={styles.tileTitle}>New Project</div>
+                <div class={styles.tileDesc}>Create a new 3D scene workspace</div>
               </div>
             </button>
 
             {/* Open Folder tile */}
             <button
-              style={tileBaseStyle(openFolderHover(), false)}
-              onMouseEnter={() => setOpenFolderHover(true)}
-              onMouseLeave={() => setOpenFolderHover(false)}
+              class={styles.tile}
               onClick={() => void handleAdd()}
             >
-              <div style={{ 'margin-top': '2px', 'flex-shrink': '0' }}>
+              <div class={styles.tileIcon}>
                 <FolderIcon />
               </div>
               <div>
-                <div style={{
-                  'font-size': 'var(--font-size-md)',
-                  'font-weight': '600',
-                  color: 'var(--text-primary)',
-                  'margin-bottom': '2px',
-                }}>
-                  Open Folder…
-                </div>
-                <div style={{
-                  'font-size': 'var(--font-size-xs)',
-                  color: 'var(--text-muted)',
-                  'line-height': '1.4',
-                }}>
-                  Open an existing project folder
-                </div>
+                <div class={styles.tileTitle}>Open Folder…</div>
+                <div class={styles.tileDesc}>Open an existing project folder</div>
               </div>
             </button>
           </div>
 
           {/* Footer */}
-          <div style={{ 'margin-top': 'var(--space-xl)' }}>
-            <div style={{
-              'font-size': 'var(--font-size-xs)',
-              color: 'var(--text-muted)',
-              'line-height': '1.6',
-            }}>
-              v0.1 — Erythos 3D Editor
-            </div>
+          <div class={styles.footer}>
+            <div class={styles.footerText}>v0.1 — Erythos 3D Editor</div>
           </div>
         </div>
 
         {/* Right column ~62% */}
-        <div style={{
-          flex: '1',
-          display: 'flex',
-          'flex-direction': 'column',
-          padding: 'var(--space-2xl) var(--space-xl)',
-          'box-sizing': 'border-box',
-          overflow: 'hidden',
-        }}>
+        <div class={styles.rightCol}>
           {/* Recent Projects header */}
-          <div style={{
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'space-between',
-            'margin-bottom': 'var(--space-md)',
-          }}>
-            <div style={subHeaderStyle}>Recent Projects</div>
+          <div class={styles.recentHeader}>
+            <div class={styles.subHeader}>Recent Projects</div>
             <Show when={recentProjects().length > 0}>
-              <div style={{
-                'font-size': 'var(--font-size-xs)',
-                color: 'var(--text-muted)',
-                'margin-bottom': 'var(--space-md)',
-              }}>
-                {recentProjects().length}
-              </div>
+              <div class={styles.recentCount}>{recentProjects().length}</div>
             </Show>
           </div>
 
           {/* Project list */}
-          <div style={{
-            flex: '1',
-            'overflow-y': 'auto',
-            display: 'flex',
-            'flex-direction': 'column',
-            gap: '1px',
-          }}>
+          <div class={styles.projectList}>
             <For each={recentProjects()} fallback={
-              <div style={{
-                flex: '1',
-                display: 'flex',
-                'align-items': 'center',
-                'justify-content': 'center',
-                border: '1px dashed var(--border-subtle)',
-                'border-radius': 'var(--radius-md)',
-                'min-height': '80px',
-              }}>
-                <span style={{
-                  'font-size': 'var(--font-size-xs)',
-                  color: 'var(--text-muted)',
-                }}>
-                  No recent projects
-                </span>
+              <div class={styles.emptyState}>
+                <span class={styles.emptyText}>No recent projects</span>
               </div>
             }>
               {(entry) => (
                 <div
-                  style={{
-                    display: 'grid',
-                    'grid-template-columns': '32px 1fr 80px',
-                    'align-items': 'center',
-                    gap: 'var(--space-md)',
-                    padding: 'var(--space-md) var(--space-sm)',
-                    cursor: 'pointer',
-                    'border-radius': 'var(--radius-sm)',
-                    background: hoveredRecentId() === entry.id ? 'var(--bg-hover)' : 'transparent',
-                    transition: 'background 0.1s',
-                  }}
-                  onMouseEnter={() => setHoveredRecentId(entry.id)}
-                  onMouseLeave={() => setHoveredRecentId(null)}
+                  class={styles.projectRow}
                   onClick={() => void handleOpenRecent(entry.id)}
                 >
                   <ThumbnailPlaceholder />
-                  <div style={{
-                    overflow: 'hidden',
-                    'min-width': '0',
-                  }}>
-                    <div style={{
-                      'font-size': 'var(--font-size-md)',
-                      'font-weight': '500',
-                      color: 'var(--text-primary)',
-                      overflow: 'hidden',
-                      'text-overflow': 'ellipsis',
-                      'white-space': 'nowrap',
-                    }}>
-                      {entry.name}
-                    </div>
-                    <div style={{
-                      'font-size': 'var(--font-size-xs)',
-                      color: 'var(--text-muted)',
-                      'font-family': 'var(--font-mono)',
-                      overflow: 'hidden',
-                      'text-overflow': 'ellipsis',
-                      'white-space': 'nowrap',
-                    }}>
-                      {entry.id}
-                    </div>
+                  <div class={styles.projectMeta}>
+                    <div class={styles.projectName}>{entry.name}</div>
+                    <div class={styles.projectId}>{entry.id}</div>
                   </div>
-                  <div style={{
-                    'font-size': 'var(--font-size-xs)',
-                    color: 'var(--text-muted)',
-                    'white-space': 'nowrap',
-                    'text-align': 'right',
-                  }}>
-                    {formatLastOpened(entry.lastOpened)}
-                  </div>
+                  <div class={styles.projectDate}>{formatLastOpened(entry.lastOpened)}</div>
                 </div>
               )}
             </For>
@@ -362,13 +172,7 @@ export const Welcome: Component<Props> = (props) => {
 
           {/* Error message */}
           <Show when={errorMsg()}>
-            <div style={{
-              'font-size': 'var(--font-size-xs)',
-              color: 'var(--accent-red)',
-              'margin-top': 'var(--space-sm)',
-            }}>
-              {errorMsg()}
-            </div>
+            <div class={styles.errorMsg}>{errorMsg()}</div>
           </Show>
         </div>
       </div>

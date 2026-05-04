@@ -7,6 +7,7 @@ import { AreaSplitter } from './AreaSplitter';
 import { AreaCornerHandle } from './AreaCornerHandle';
 import type { Corner } from '../areaTree';
 import { cornerDragStore } from '../cornerDragStore';
+import styles from './AreaTreeRenderer.module.css';
 
 const CORNERS: Corner[] = ['tl', 'tr', 'bl', 'br'];
 
@@ -19,13 +20,6 @@ const DragOverlay: Component<{ store: Accessor<CornerDragPhase> }> = (props) => 
            st.mode === 'merge' ? 'Merge →' :
            "Can't do";
   };
-  const cursor = () => {
-    const st = s();
-    if (st.phase !== 'active') return 'default';
-    return st.mode === 'split' ? (st.axis === 'v' ? 'ew-resize' : 'ns-resize') :
-           st.mode === 'merge' ? 'move' :
-           'not-allowed';
-  };
   const badgeLeft = () => {
     const st = s();
     return st.phase === 'active' ? `${st.cursorClientX + 12}px` : '-9999px';
@@ -34,25 +28,36 @@ const DragOverlay: Component<{ store: Accessor<CornerDragPhase> }> = (props) => 
     const st = s();
     return st.phase === 'active' ? `${st.cursorClientY + 16}px` : '-9999px';
   };
+  const mode = () => {
+    const st = s();
+    if (st.phase !== 'active') return '';
+    return st.mode ?? '';
+  };
+  const isVertical = () => {
+    const st = s();
+    return st.phase === 'active' && st.mode === 'split' && st.axis === 'v';
+  };
+  const isHorizontal = () => {
+    const st = s();
+    return st.phase === 'active' && st.mode === 'split' && st.axis === 'h';
+  };
   return (
     <>
-      <div style={{
-        position: 'fixed', inset: '0', 'z-index': 20,
-        cursor: cursor(), 'pointer-events': 'none',
-      }} />
-      <div style={{
-        position: 'fixed',
-        left: badgeLeft(),
-        top: badgeTop(),
-        padding: '4px 8px',
-        'border-radius': '2px',
-        background: 'rgba(0,0,0,0.85)',
-        color: '#fff',
-        'font-size': '11px',
-        'z-index': 21,
-        'pointer-events': 'none',
-        'user-select': 'none',
-      }}>{label()}</div>
+      <div
+        class={styles.dragCursor}
+        classList={{
+          [styles.split]: mode() === 'split',
+          [styles.vertical]: isVertical(),
+          [styles.horizontal]: isHorizontal(),
+          [styles.merge]: mode() === 'merge',
+          [styles.invalid]: mode() === 'invalid',
+        }}
+      />
+      <div
+        class={styles.dragBadge}
+        // inline-allowed: per-frame drag coordinates updated on pointermove
+        style={{ left: badgeLeft(), top: badgeTop() }}
+      >{label()}</div>
     </>
   );
 };
@@ -91,20 +96,20 @@ export const AreaTreeRenderer: Component = () => {
   return (
     <div
       ref={containerRef}
-      style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
+      class={styles.container}
     >
       <For each={tree().areas}>
         {(area) => {
           const rect = () => computeAreaRect(tree(), area.id, containerSize().w, containerSize().h);
           return (
             <div
+              class={styles.area}
+              // inline-allowed: per-frame drag coordinates updated on pointermove
               style={{
-                position: 'absolute',
                 left: `${rect()?.left ?? 0}px`,
                 top: `${rect()?.top ?? 0}px`,
                 width: `${rect()?.width ?? 0}px`,
                 height: `${rect()?.height ?? 0}px`,
-                overflow: 'hidden',
               }}
             >
               <AreaShell areaId={area.id} />

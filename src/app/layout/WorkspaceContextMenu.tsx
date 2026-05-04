@@ -7,6 +7,7 @@ import {
   resetWorkspaceToPreset,
   isPresetId,
 } from '../workspaceStore';
+import styles from './WorkspaceContextMenu.module.css';
 
 interface Props {
   workspaceId: string;
@@ -32,18 +33,9 @@ export const WorkspaceContextMenu: Component<Props> = (props) => {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: `${props.y}px`,
-        left: `${props.x}px`,
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border-subtle)',
-        'box-shadow': '0 4px 12px rgba(0,0,0,0.3)',
-        'z-index': '1000',
-        'min-width': '160px',
-        'border-radius': '4px',
-        overflow: 'hidden',
-      }}
+      class={styles.menu}
+      // inline-allowed: offset derived from mouse event clientX/Y at runtime
+      style={{ top: `${props.y}px`, left: `${props.x}px` }}
     >
       <MenuItem
         label="Duplicate"
@@ -77,21 +69,8 @@ const MenuItem: Component<{
 }> = (p) => (
   <div
     onClick={() => !p.disabled && p.onClick()}
-    style={{
-      padding: 'var(--space-sm) var(--space-md)',
-      cursor: p.disabled ? 'default' : 'pointer',
-      color: p.disabled ? 'var(--text-disabled)' : 'var(--text-primary)',
-      'user-select': 'none',
-    }}
-    onMouseEnter={(e) => {
-      if (!p.disabled) {
-        (e.currentTarget as HTMLDivElement).style.background =
-          'var(--bg-hover, rgba(255,255,255,0.06))';
-      }
-    }}
-    onMouseLeave={(e) => {
-      (e.currentTarget as HTMLDivElement).style.background = '';
-    }}
+    class={styles.menuItem}
+    classList={{ [styles.disabled]: !!p.disabled }}
   >
     {p.label}
   </div>
