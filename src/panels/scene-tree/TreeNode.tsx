@@ -8,6 +8,7 @@ import {
   EyeOnIcon, EyeOffIcon, CursorOnIcon, CursorOffIcon,
   nodeTypeToIcon, nodeTypeColor,
 } from './icons';
+import styles from './TreeNode.module.css';
 
 export interface DropIndicator {
   targetId: string;
@@ -42,6 +43,8 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   const { editor } = bridge;
 
   const isSelected = () => bridge.selectedUUIDs().includes(props.node.id);
+  // isHovered reads bridge state — viewport also sets this via editor.selection.hover(),
+  // so we cannot reduce to CSS :hover alone; keep the signal and reflect via classList.
   const isHovered = () => bridge.hoveredUUID() === props.node.id;
 
   const isEyeOff = () => props.eyeOffMap()[props.node.id] ?? false;
@@ -160,15 +163,6 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     props.setDropIndicator(null);
   };
 
-  const rowBackground = () => {
-    if (isDropTarget() && indicator()?.position === 'inside') {
-      return 'var(--bg-drop-target, rgba(74, 158, 255, 0.15))';
-    }
-    if (isSelected()) return 'var(--bg-selected)';
-    if (isHovered()) return 'var(--bg-hover)';
-    return 'transparent';
-  };
-
   // Content-edge offset: where the name/icon area begins (for drop indicators)
   const contentLeft = () => ROW_PADDING_LEFT + props.depth * INDENT_W;
 
@@ -197,51 +191,29 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onDragEnd={onDragEnd}
-        style={{
-          position: 'relative',
-          display: 'flex',
-          'align-items': 'center',
-          height: 'var(--row-height)',
-          'padding-left': `${contentLeft()}px`,
-          cursor: 'pointer',
-          background: rowBackground(),
-          'border-radius': 'var(--radius-sm)',
-          margin: '0 4px',
-          opacity: props.draggedId() === props.node.id ? 0.4 : 1,
-          'user-select': 'none',
+        class={styles.row}
+        classList={{
+          [styles.selected]: isSelected(),
+          [styles.hovered]: isHovered(),
+          [styles.dropTargetInside]: isDropTarget() && indicator()?.position === 'inside',
+          [styles.dragging]: props.draggedId() === props.node.id,
         }}
+        // inline-allowed: CSS variable injection — depth-based padding-left consumed by CSS
+        style={{ '--depth': props.depth, '--row-padding-left': `${ROW_PADDING_LEFT}px`, '--indent-w': `${INDENT_W}px` }}
       >
         {/* Selected: left 2px accent bar */}
         <Show when={isSelected()}>
-          <div
-            style={{
-              position: 'absolute',
-              left: '0',
-              top: '4px',
-              bottom: '4px',
-              width: '2px',
-              background: 'var(--accent-blue)',
-              'border-radius': '1px',
-              'pointer-events': 'none',
-            }}
-          />
+          <div class={styles.selectedBar} />
         </Show>
 
         {/* Indent guide lines */}
         <For each={props.lineageHasMoreSiblings}>
           {(hasMore, i) => (
             <Show when={hasMore}>
+              {/* inline-allowed: CSS variable injection — guide position derived from ancestor index */}
               <div
-                style={{
-                  position: 'absolute',
-                  left: `${ROW_PADDING_LEFT + i() * INDENT_W + 6}px`,
-                  top: '0',
-                  bottom: '0',
-                  width: '1px',
-                  background: 'var(--border-subtle)',
-                  opacity: '0.5',
-                  'pointer-events': 'none',
-                }}
+                class={styles.indentGuide}
+                style={{ '--guide-left': `${ROW_PADDING_LEFT + i() * INDENT_W + 6}px` }}
               />
             </Show>
           )}
@@ -249,28 +221,20 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
 
         {/* Drop indicator: before */}
         <Show when={isDropTarget() && indicator()?.position === 'before'}>
-          <div style={{
-            position: 'absolute',
-            top: '0',
-            left: `${contentLeft()}px`,
-            right: '0',
-            height: '2px',
-            background: 'var(--accent-blue)',
-            'pointer-events': 'none',
-          }} />
+          {/* inline-allowed: CSS variable injection — content-edge offset consumed by CSS */}
+          <div
+            class={styles.dropBefore}
+            style={{ '--content-left': `${contentLeft()}px` }}
+          />
         </Show>
 
         {/* Drop indicator: after */}
         <Show when={isDropTarget() && indicator()?.position === 'after'}>
-          <div style={{
-            position: 'absolute',
-            bottom: '0',
-            left: `${contentLeft()}px`,
-            right: '0',
-            height: '2px',
-            background: 'var(--accent-blue)',
-            'pointer-events': 'none',
-          }} />
+          {/* inline-allowed: CSS variable injection — content-edge offset consumed by CSS */}
+          <div
+            class={styles.dropAfter}
+            style={{ '--content-left': `${contentLeft()}px` }}
+          />
         </Show>
 
         {/* Expand toggle */}
@@ -278,38 +242,22 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
           <span
             data-testid="scene-tree-row-expand"
             onClick={(e) => { e.stopPropagation(); props.toggleExpanded(props.node.id); }}
-            style={{
-              width: '14px',
-              'font-size': '7px',
-              color: 'var(--text-muted)',
-              'text-align': 'center',
-              'flex-shrink': 0,
-              'user-select': 'none',
-              display: 'flex',
-              'align-items': 'center',
-              'justify-content': 'center',
-              opacity: '0.6',
-            }}
+            class={styles.expandToggle}
           >
             {props.isExpanded(props.node.id) ? '▼' : '▶'}
           </span>
         </Show>
         <Show when={!hasChildren()}>
-          <span style={{ width: '14px', 'flex-shrink': 0 }} />
+          <span class={styles.expandPlaceholder} />
         </Show>
 
         {/* Type icon (SVG) — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span
           data-testid="scene-tree-row-icon"
-          style={{
-            width: '13px',
-            height: '13px',
-            'flex-shrink': 0,
-            'margin-right': '5px',
-            display: 'inline-flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
+          class={styles.nodeIcon}
+          classList={{
+            [styles.eyeOff]: isEyeOff(),
+            [styles.cursorOff]: isCursorOff() && !isEyeOff(),
           }}
         >
           <Dynamic component={nodeTypeToIcon(nodeType())} color={iconColor()} size={13} />
@@ -318,30 +266,18 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
         {/* Name — dims when eye-off (0.38) or cursor-off (0.45) */}
         <span
           data-testid="scene-tree-row-name"
-          style={{
-            'font-size': 'var(--font-size-sm)',
-            color: isSelected() ? 'var(--text-primary)' : 'var(--text-secondary)',
-            overflow: 'hidden',
-            'text-overflow': 'ellipsis',
-            'white-space': 'nowrap',
-            flex: '1',
-            'min-width': '0',
-            opacity: isEyeOff() ? 0.38 : isCursorOff() ? 0.45 : 1,
+          class={styles.nodeName}
+          classList={{
+            [styles.selected]: isSelected(),
+            [styles.eyeOff]: isEyeOff(),
+            [styles.cursorOff]: isCursorOff() && !isEyeOff(),
           }}
         >
           {props.node.name}
         </span>
 
         {/* Toggle column: eye + cursor — always visible */}
-        <div
-          style={{
-            display: 'flex',
-            'align-items': 'center',
-            gap: '2px',
-            'flex-shrink': 0,
-            'padding-right': '6px',
-          }}
-        >
+        <div class={styles.toggleColumn}>
           {/* Eye toggle */}
           <span
             data-testid="scene-tree-row-eye"
@@ -351,18 +287,8 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
               props.setEyeOffMap(prev => ({ ...prev, [props.node.id]: !prev[props.node.id] }));
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            style={{
-              width: '18px',
-              height: '18px',
-              display: 'flex',
-              'align-items': 'center',
-              'justify-content': 'center',
-              'border-radius': 'var(--radius-sm)',
-              'flex-shrink': 0,
-              cursor: 'pointer',
-              color: isEyeOff() ? 'var(--text-disabled)' : 'var(--text-muted)',
-              opacity: isEyeOff() ? 0.45 : 0.9,
-            }}
+            class={styles.iconBtn}
+            classList={{ [styles.eyeOff]: isEyeOff() }}
           >
             <Show when={isEyeOff()} fallback={<EyeOnIcon />}>
               <EyeOffIcon />
@@ -378,18 +304,8 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
               props.setCursorOffMap(prev => ({ ...prev, [props.node.id]: !prev[props.node.id] }));
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            style={{
-              width: '18px',
-              height: '18px',
-              display: 'flex',
-              'align-items': 'center',
-              'justify-content': 'center',
-              'border-radius': 'var(--radius-sm)',
-              'flex-shrink': 0,
-              cursor: 'pointer',
-              color: isCursorOff() ? 'var(--text-disabled)' : 'var(--text-muted)',
-              opacity: isCursorOff() ? 0.45 : 0.9,
-            }}
+            class={styles.iconBtn}
+            classList={{ [styles.cursorOff]: isCursorOff() }}
           >
             <Show when={isCursorOff()} fallback={<CursorOnIcon />}>
               <CursorOffIcon />

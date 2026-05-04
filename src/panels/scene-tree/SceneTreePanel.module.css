@@ -1,0 +1,44 @@
+/** SceneTreePanel — CSS Modules migration (refs #733) */
+
+.panel {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-well-outer);
+  border-radius: var(--radius-lg);
+  margin: 3px;
+  box-sizing: border-box;
+}
+
+.scrollArea {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-xs) 0;
+  outline: none;
+}
+
+.emptyHint {
+  padding: var(--space-xl);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.fileDragOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(100, 149, 237, 0.15);
+  border: 2px dashed rgba(100, 149, 237, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 4px;
+}
