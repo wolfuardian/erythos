@@ -1,5 +1,6 @@
 import { type Component, type JSX } from 'solid-js';
 import { useAreaState } from '../../../app/areaState';
+import styles from './FoldableSection.module.css';
 
 interface FoldableSectionProps {
   sectionKey: string;
@@ -21,57 +22,33 @@ const FoldableSection: Component<FoldableSectionProps> = (props) => {
   const isSubsection = () => props.variant === 'subsection';
 
   return (
-    <div data-testid="foldable-section" style={{ 'margin-top': '4px' }}>
+    <div data-testid="foldable-section" class={styles.wrapper}>
       {/* 分組標題（點擊折疊） */}
       <div
         onClick={toggle}
-        style={{
-          display: 'flex',
-          'align-items': 'center',
-          gap: '6px',
-          padding: isSubsection() ? '5px 0 5px 14px' : '5px 0 5px 2px',
-          background: 'transparent',
-          'font-size': 'var(--font-size-sm)',
-          color: 'var(--text-secondary)',
-          'text-transform': 'uppercase',
-          'letter-spacing': '0.5px',
-          'font-weight': '600',
-          cursor: 'pointer',
-          'user-select': 'none',
-          'margin-bottom': '4px',
-        }}
+        class={styles.header}
+        classList={{ [styles.subsection]: isSubsection() }}
       >
         {/* 折疊三角：展開=▼ 折疊=▶ */}
-        <span style={{
-          display: 'inline-block',
-          'font-size': '8px',
-          color: 'var(--text-muted)',
-          transform: expanded() ? 'none' : 'rotate(-90deg)',
-          transition: 'transform 0.15s',
-        }}>
+        <span
+          class={styles.arrow}
+          classList={{ [styles.expanded]: expanded() }}
+        >
           &#9660;
         </span>
         {props.label}
       </div>
 
       {/* 分組 body — grid-template-rows 動畫容器，children 保持 mounted */}
-      <div style={{
-        display: 'grid',
-        'grid-template-rows': expanded() ? '1fr' : '0fr',
-        opacity: expanded() ? '1' : '0',
-        transition: 'grid-template-rows 0.1s ease, opacity 0.1s ease',
-        overflow: 'hidden',
-      }}>
-        <div style={{ 'min-height': '0', overflow: 'hidden' }}>
-          <div style={{
-            background: isSubsection()
-              ? 'color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%)'
-              : 'var(--bg-section)',
-            padding: '6px 10px',
-            'margin-bottom': isSubsection() ? '0' : '6px',
-            'border-radius': 'var(--radius-sm)',
-            'box-shadow': isSubsection() ? 'none' : 'var(--shadow-well-inner)',
-          }}>
+      <div
+        class={styles.bodyGrid}
+        classList={{ [styles.expanded]: expanded() }}
+      >
+        <div class={styles.bodyInner}>
+          <div
+            class={styles.content}
+            classList={{ [styles.subsection]: isSubsection() }}
+          >
             {props.children}
           </div>
         </div>

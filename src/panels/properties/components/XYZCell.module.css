@@ -1,0 +1,43 @@
+/** XYZCell — CSS Modules (refs #732) */
+
+.cell {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-medium);
+  height: 20px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.badge {
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #ffffff;
+  border-radius: var(--radius-sm) 0 0 0;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+/* Per-axis badge background colours — set via inline-allowed CSS variable injection */
+.badge.x { background: #c04040; }
+.badge.y { background: #3a9060; }
+.badge.z { background: #527fc8; }
+
+.valueText {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

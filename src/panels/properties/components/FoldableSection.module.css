@@ -1,0 +1,74 @@
+/** FoldableSection — CSS Modules (refs #732) */
+
+.wrapper {
+  margin-top: 4px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0 5px 2px;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 4px;
+}
+
+/* subsection variant: deeper left indent */
+.header.subsection {
+  padding-left: 14px;
+}
+
+.arrow {
+  display: inline-block;
+  font-size: 8px;
+  color: var(--text-muted);
+  /* collapsed: rotated -90deg */
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+
+/* expanded state: arrow points down */
+.arrow.expanded {
+  transform: none;
+}
+
+/* grid-template-rows animation container */
+.bodyGrid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.1s ease, opacity 0.1s ease;
+  overflow: hidden;
+}
+
+.bodyGrid.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.bodyInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content {
+  background: var(--bg-section);
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-well-inner);
+}
+
+/* subsection variant: deeper tint, no shadow, no bottom margin */
+.content.subsection {
+  background: color-mix(in srgb, var(--bg-section) 70%, var(--bg-app) 30%);
+  margin-bottom: 0;
+  box-shadow: none;
+}
