@@ -149,9 +149,12 @@ export function createEditorBridge(
   const onClipboardChanged = () => setHasClipboard(editor.clipboard.hasContent);
   editor.clipboard.on('clipboardChanged', onClipboardChanged);
 
-  // Subscribe to PrefabStore events
+  // Subscribe to PrefabStore events (fired by Editor.registerPrefab / unregisterPrefab / init)
+  // Also subscribe directly to PrefabRegistry.on('changed') for immediate updates
+  // (registry may update before editor emits the high-level event)
   const onPrefabStoreChanged = () => setPrefabAssets(editor.getAllPrefabAssets());
   editor.events.on('prefabStoreChanged', onPrefabStoreChanged);
+  editor.prefabRegistry.on('changed', onPrefabStoreChanged);
 
   // Subscribe to EnvironmentSettings events
   const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
@@ -180,6 +183,7 @@ export function createEditorBridge(
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('prefabStoreChanged', onPrefabStoreChanged);
+    editor.prefabRegistry.off('changed', onPrefabStoreChanged);
     editor.events.off('environmentChanged', onEnvChanged);
     unsubProject();
   };

@@ -66,6 +66,16 @@ export async function remove(id: string): Promise<void> {
   });
 }
 
+export async function clear(): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const req = tx.objectStore(STORE_NAME).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function keys(): Promise<string[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {

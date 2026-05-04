@@ -1,19 +1,61 @@
 import type { SceneNode, SceneFile } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
 
-// Migration helper: upgrade old scene files that stored prefab component under 'leaf' key
-// and/or mesh component in legacy { source } format.
-function migrateNodeComponents(node: SceneNode): SceneNode {
+/**
+ * Migration helper: upgrade old scene files.
+ *
+ * @param node        The raw node from the serialised scene file.
+ * @param prefabIdToPath  Optional map from legacy prefab uuid → project-relative path,
+ *                    built once at Editor.init from the IndexedDB PrefabStore migration.
+ *                    When provided, prefab.id refs are resolved to prefab.path.
+ *
+ * Migrations applied (in order):
+ *   1. 'leaf' → 'prefab'               (very old format)
+ *   2. prefab.id → prefab.path         (P1c: UUID → path-based refs)
+ *   3. mesh.source → mesh.{path,nodePath?}  (P1b legacy format)
+ */
+function migrateNodeComponents(
+  node: SceneNode,
+  prefabIdToPath?: Record<string, string>,
+): SceneNode {
   const comp = node.components as Record<string, unknown>;
-  let updated = { ...comp };
+  let mutated = false;
+  let updated = comp;
 
   // Migration 1: 'leaf' → 'prefab'
   if ('leaf' in updated && !('prefab' in updated)) {
     const { leaf, ...rest } = updated;
     updated = { ...rest, prefab: leaf };
+    mutated = true;
   }
 
-  // Migration 2: mesh.source (legacy) → mesh.{ path, nodePath? }
+  // Migration 2: prefab.id (UUID) → prefab.{ path }
+  //
+  // Legacy format: prefab: { id: "<asset-uuid>" }
+  // New format:    prefab: { path: "prefabs/<name>.prefab" }
+  //
+  // Resolution strategy: look up uuid in prefabIdToPath map (built from IDB migration).
+  // If not found (orphan ref): strip prefab component with warning.
+  if ('prefab' in updated) {
+    const prefab = updated['prefab'] as Record<string, unknown>;
+    if (typeof prefab['id'] === 'string' && !prefab['path']) {
+      const uuid = prefab['id'] as string;
+      const path = prefabIdToPath?.[uuid];
+      if (path) {
+        updated = { ...updated, prefab: { path } };
+      } else {
+        // Orphan ref: strip with warning (mirrors mesh soft-fail)
+        console.warn(
+          `[SceneDocument] migrateNodeComponents: prefab.id "${uuid}" has no known path — stripping prefab component`,
+        );
+        const { prefab: _pf, ...rest } = updated;
+        updated = rest;
+      }
+      mutated = true;
+    }
+  }
+
+  // Migration 3: mesh.source (legacy) → mesh.{ path, nodePath? }
   //
   // Legacy formats:
   //   mesh: { source: "model.glb" }              — filename only
@@ -35,27 +77,46 @@ function migrateNodeComponents(node: SceneNode): SceneNode {
       // If filenameRaw already contains '/', treat it as a project-relative path
       const path = filenameRaw.includes('/') ? filenameRaw : `models/${filenameRaw}`;
       const { source: _src, ...meshRest } = mesh;
-      updated['mesh'] = {
-        ...meshRest,
-        path,
-        ...(nodePath !== undefined ? { nodePath } : {}),
+      updated = {
+        ...updated,
+        mesh: {
+          ...meshRest,
+          path,
+          ...(nodePath !== undefined ? { nodePath } : {}),
+        },
       };
+      mutated = true;
     }
   }
 
-  if (updated === comp) return node;
+  if (!mutated) return node;
   return { ...node, components: updated };
 }
 
 // Strip runtime-only fields from components before serialization.
-// `mesh.url` is a session-scoped blob URL; persisting it would create stale references
-// on next reload. URL is always recomputed via projectManager.urlFor(path) at hydrate time.
+// `mesh.url` and `prefab.url` are session-scoped blob URLs; persisting them would create
+// stale references on next reload. URLs are always recomputed via projectManager.urlFor(path)
+// at hydrate time.
 function stripRuntimeFields(components: Record<string, unknown>): Record<string, unknown> {
-  if (!('mesh' in components)) return components;
-  const mesh = components['mesh'] as Record<string, unknown>;
-  if (!('url' in mesh)) return components;
-  const { url: _url, ...meshRest } = mesh;
-  return { ...components, mesh: meshRest };
+  let result = components;
+
+  if ('mesh' in result) {
+    const mesh = result['mesh'] as Record<string, unknown>;
+    if ('url' in mesh) {
+      const { url: _url, ...meshRest } = mesh;
+      result = { ...result, mesh: meshRest };
+    }
+  }
+
+  if ('prefab' in result) {
+    const prefab = result['prefab'] as Record<string, unknown>;
+    if ('url' in prefab) {
+      const { url: _url, ...prefabRest } = prefab;
+      result = { ...result, prefab: prefabRest };
+    }
+  }
+
+  return result;
 }
 
 // ── Internal generic emitter ──────────────────────────────────────────────────
@@ -197,10 +258,16 @@ export class SceneDocument {
     };
   }
 
-  deserialize(data: SceneFile): void {
+  /**
+   * @param data           Parsed SceneFile (may be legacy format — migration runs here).
+   * @param prefabIdToPath Optional map from legacy prefab UUID → project-relative path.
+   *                       Provided by Editor.loadScene after running the IDB→file migration.
+   *                       When present, `prefab.id` refs are resolved to `prefab.{ path }`.
+   */
+  deserialize(data: SceneFile, prefabIdToPath?: Record<string, string>): void {
     this._nodes.clear();
     for (const rawNode of data.nodes) {
-      const node = migrateNodeComponents({ ...rawNode });
+      const node = migrateNodeComponents({ ...rawNode }, prefabIdToPath);
       this._nodes.set(node.id, node);
     }
     this.events.emit('sceneReplaced');

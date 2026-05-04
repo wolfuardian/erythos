@@ -210,6 +210,68 @@ describe('SceneDocument', () => {
 
   // ── migrateNodeComponents ───────────────────────────────────────────────────
 
+  // ── prefab migration (legacy id → { path }) ─────────────────────────────
+
+  describe('prefab migration (legacy id → { path })', () => {
+    it('migrates prefab.id to prefab.path using provided map', () => {
+      const doc = new SceneDocument();
+      const idToPath = { 'uuid-pfb-1': 'prefabs/chair.prefab' };
+      doc.deserialize(
+        {
+          version: 1,
+          nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-pfb-1' } } })],
+        },
+        idToPath,
+      );
+      const node = doc.getNode('n')!;
+      const prefab = node.components['prefab'] as Record<string, unknown>;
+      expect(prefab['path']).toBe('prefabs/chair.prefab');
+      expect(prefab['id']).toBeUndefined();
+    });
+
+    it('strips orphan prefab.id (no mapping found) with no throw', () => {
+      const doc = new SceneDocument();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      doc.deserialize(
+        {
+          version: 1,
+          nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-orphan' } } })],
+        },
+        {}, // empty map — no mapping for this uuid
+      );
+      const node = doc.getNode('n')!;
+      expect('prefab' in node.components).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('uuid-orphan'),
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it('does not touch prefab that already has { path } (no id)', () => {
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { prefab: { path: 'prefabs/table.prefab' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const prefab = node.components['prefab'] as Record<string, unknown>;
+      expect(prefab['path']).toBe('prefabs/table.prefab');
+      expect(prefab['id']).toBeUndefined();
+    });
+
+    it('strips prefab.url from serialized output', () => {
+      const doc = new SceneDocument();
+      doc.addNode(makeNode({
+        id: 'pf',
+        components: { prefab: { url: 'blob:http://localhost/abc', path: 'prefabs/chair.prefab' } },
+      }));
+      const file = doc.serialize();
+      const prefab = file.nodes[0].components.prefab as Record<string, unknown>;
+      expect(prefab.url).toBeUndefined();
+      expect(prefab.path).toBe('prefabs/chair.prefab');
+    });
+  });
+
   describe('mesh migration (legacy source → { path, nodePath? })', () => {
     it('migrates legacy mesh.source (filename only) to { path }', () => {
       const doc = new SceneDocument();
@@ -261,18 +323,39 @@ describe('SceneDocument', () => {
       expect(mesh['nodePath']).toBe('Legs');
     });
 
-    it('still migrates leaf → prefab alongside mesh migration', () => {
+    it('still migrates leaf → prefab alongside mesh migration (with id→path map)', () => {
       const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
-      });
+      // Provide a map so prefab.id resolves to a path (rather than being stripped)
+      doc.deserialize(
+        {
+          version: 1,
+          nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
+        },
+        { 'pf-1': 'prefabs/asset.prefab' },
+      );
       const node = doc.getNode('n')!;
       const comp = node.components as Record<string, unknown>;
       expect('prefab' in comp).toBe(true);
       expect('leaf' in comp).toBe(false);
+      const prefab = comp['prefab'] as Record<string, unknown>;
+      expect(prefab['path']).toBe('prefabs/asset.prefab');
       const mesh = comp['mesh'] as Record<string, unknown>;
       expect(mesh['path']).toBe('models/a.glb');
+    });
+
+    it('strips prefab when leaf migration results in unknown id (no map)', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const doc = new SceneDocument();
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' } } })],
+      });
+      const node = doc.getNode('n')!;
+      const comp = node.components as Record<string, unknown>;
+      // Orphan: prefab was stripped since no map provided
+      expect('prefab' in comp).toBe(false);
+      expect('leaf' in comp).toBe(false);
+      consoleSpy.mockRestore();
     });
   });
 
