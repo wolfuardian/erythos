@@ -1,7 +1,7 @@
 import type { Component, JSX } from 'solid-js';
 import { useArea } from '../app/AreaContext';
+import { useEditorsRegistry } from '../app/EditorContext';
 import { EditorSwitcher } from './EditorSwitcher';
-import { editors } from '../app/editors';
 
 export interface PanelHeaderProps {
   title: string;
@@ -10,6 +10,7 @@ export interface PanelHeaderProps {
 
 const PanelHeader: Component<PanelHeaderProps> = (props) => {
   const area = useArea();
+  const editors = useEditorsRegistry();
 
   return (
     <div

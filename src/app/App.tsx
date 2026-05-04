@@ -4,6 +4,7 @@ import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge, type EditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
+import { editors } from './editors';
 import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { GridHelpers } from '../viewport/GridHelpers';
@@ -176,7 +177,7 @@ const App: Component = () => {
     <Show when={projectOpen() && editor() && bridge()} fallback={
       <Welcome projectManager={projectManager} onOpenProject={openProject} />
     }>
-      <EditorProvider bridge={bridge()!}>
+      <EditorProvider bridge={bridge()!} editors={editors}>
         <div style={{
           width: '100%', height: '100%',
           display: 'flex', 'flex-direction': 'column',
