@@ -10,9 +10,8 @@ export interface LadderOverlayProps {
   currentValue: string;            // 已格式化好的值字串（呼叫方負責 toFixed 等）
 }
 
-const TIER_HEIGHT = 28;            // 每行高度 px
+const TIER_HEIGHT = 28;            // 每行高度 px (must match LadderOverlay.module.css .preview height)
 const LADDER_WIDTH = 60;           // popup 寬度 px
-const PREVIEW_HEIGHT = 36;         // 預覽區塊高度 px
 
 export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
   const tierStackHeight = () => props.steps.length * TIER_HEIGHT;
