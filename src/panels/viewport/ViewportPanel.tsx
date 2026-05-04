@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createEffect, createSignal, Show, For, type Component } from 'solid-js';
+import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
 import type { Object3D } from 'three';
@@ -15,11 +15,12 @@ import * as PrefabStore from '../../core/scene/PrefabStore';
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
-import { NumberDrag } from '../../components/NumberDrag';
 import { SceneOpsToolbar } from '../../components/SceneOpsToolbar';
 import { useArea } from '../../app/AreaContext';
 import { getPanelState, setPanelState } from '../../app/viewportState';
 import { currentWorkspace } from '../../app/workspaceStore';
+import { ShadingToolbar } from './ShadingToolbar';
+import { RenderSettingsPanel } from './RenderSettingsPanel';
 
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
@@ -550,42 +551,12 @@ const ViewportPanel: Component = () => {
       }}
     >
       <PanelHeader title="Viewport" actions={
-        <div style={{
-          display: 'flex',
-          'align-items': 'center',
-          gap: '2px',
-          'user-select': 'none',
-        }}>
-          <For each={(['wireframe', 'solid', 'shading', 'rendering'] as ShadingMode[])}>
-            {(mode) => (
-              <button
-                onClick={() => setRenderMode(mode)}
-                onMouseEnter={() => setHoveredShading(mode)}
-                onMouseLeave={() => setHoveredShading(null)}
-                style={{
-                  background: renderMode() === mode
-                    ? 'var(--bg-active)'
-                    : hoveredShading() === mode
-                      ? 'var(--bg-hover)'
-                      : 'transparent',
-                  border: 'none',
-                  color: renderMode() === mode ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  padding: '2px 6px',
-                  cursor: 'pointer',
-                  'border-radius': '3px',
-                  'font-size': '10px',
-                  'font-weight': renderMode() === mode ? '600' : '400',
-                  height: '18px',
-                  transition: 'background 0.1s',
-                }}
-              >
-                {mode === 'wireframe' ? 'Wire' :
-                 mode === 'solid' ? 'Solid' :
-                 mode === 'shading' ? 'Shading' : 'Render'}
-              </button>
-            )}
-          </For>
-        </div>
+        <ShadingToolbar
+          renderMode={renderMode}
+          setRenderMode={setRenderMode}
+          hoveredShading={hoveredShading}
+          setHoveredShading={setHoveredShading}
+        />
       } />
       <div
         ref={canvasRef}
@@ -631,422 +602,33 @@ const ViewportPanel: Component = () => {
           放開以導入模型
         </div>
       </Show>
-      {/* Rendering 懸浮面板 */}
-      <Show when={renderMode() === 'rendering'}>
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '220px',
-          'max-height': 'calc(100% - 56px)',
-          'overflow-y': 'auto',
-          background: 'var(--bg-app)',
-          'border-radius': '6px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          'z-index': '6',
-          'font-size': '11px',
-          color: 'var(--text-secondary, #aaa)',
-          'user-select': 'none',
-        }}>
-          {/* 面板 Header（可摺疊整個面板） */}
-          <div
-            onClick={() => setPanelExpanded(v => !v)}
-            style={{
-              padding: '8px 10px',
-              display: 'flex',
-              'align-items': 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              'border-bottom': panelExpanded() ? '1px solid rgba(255,255,255,0.1)' : 'none',
-            }}
-          >
-            <span style={{ 'font-size': '9px', width: '10px' }}>{panelExpanded() ? '\u25BE' : '\u25B8'}</span>
-            <span style={{ color: 'var(--text-primary, #fff)', 'font-weight': '600' }}>Render Effects</span>
-          </div>
-
-          <Show when={panelExpanded()}>
-            {/* ── Quality 群組 ── */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div
-                onClick={() => toggleGroup('quality')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
-              >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('quality') ? '\u25BE' : '\u25B8'}</span>
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Quality</span>
-              </div>
-              <Show when={isGroupOpen('quality')}>
-                <div style={{ padding: '4px 10px 8px', 'padding-left': '26px', display: 'flex', gap: '4px' }}>
-                  <For each={(['low', 'normal', 'high'] as QualityLevel[])}>
-                    {(q) => (
-                      <button
-                        onClick={() => setQuality(q)}
-                        style={{
-                          flex: 1,
-                          background: quality() === q ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          color: quality() === q ? 'var(--text-primary, #fff)' : 'var(--text-muted, #666)',
-                          padding: '3px 0',
-                          cursor: 'pointer',
-                          'border-radius': '3px',
-                          'font-size': '10px',
-                          'text-transform': 'capitalize',
-                        }}
-                      >
-                        {q}
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </div>
-
-            {/* ── Effects 群組（包裹所有效果子群組） ── */}
-            <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div
-                onClick={() => toggleGroup('effects')}
-                style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
-              >
-                <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('effects') ? '\u25BE' : '\u25B8'}</span>
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Effects</span>
-              </div>
-              <Show when={isGroupOpen('effects')}>
-                <div style={{ 'padding-left': '10px' }}>
-
-                  {/* Tone Mapping */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div
-                      onClick={() => toggleGroup('toneMapping')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
-                    >
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('toneMapping') ? '\u25BE' : '\u25B8'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().toneMapping.enabled}
-                          onChange={e => updateSetting('toneMapping', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Tone Mapping</span>
-                      </label>
-                    </div>
-                    <Show when={isGroupOpen('toneMapping') && renderSettings().toneMapping.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div>
-                          <div style={{ display: 'flex', 'justify-content': 'space-between', 'margin-bottom': '2px' }}>
-                            <span>Mode</span>
-                          </div>
-                          <select
-                            value={renderSettings().toneMapping.mode}
-                            onChange={e => updateSetting('toneMapping', { mode: e.target.value as 'aces' | 'agx' | 'neutral' | 'reinhard' | 'cineon' })}
-                            style={{
-                              width: '100%',
-                              background: 'rgba(255,255,255,0.08)',
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              color: 'var(--text-primary, #fff)',
-                              padding: '2px 4px',
-                              'border-radius': '3px',
-                              'font-size': '10px',
-                            }}
-                          >
-                            <option value="aces">ACES</option>
-                            <option value="agx">AgX</option>
-                            <option value="neutral">Neutral</option>
-                            <option value="reinhard">Reinhard</option>
-                            <option value="cineon">Cineon</option>
-                          </select>
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                            <span style={{ 'white-space': 'nowrap' }}>Exposure</span>
-                            <NumberDrag
-                              value={renderSettings().toneMapping.exposure}
-                              onChange={v => updateSetting('toneMapping', { exposure: v })}
-                              min={0.1}
-                              max={3}
-                              step={0.05}
-                              precision={2}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                  {/* Bloom */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div
-                      onClick={() => toggleGroup('bloom')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}
-                    >
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('bloom') ? '\u25BE' : '\u25B8'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().bloom.enabled}
-                          onChange={e => updateSetting('bloom', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Bloom</span>
-                      </label>
-                    </div>
-                    <Show when={isGroupOpen('bloom') && renderSettings().bloom.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>strength</span>
-                          <NumberDrag
-                            value={renderSettings().bloom.strength}
-                            onChange={v => updateSetting('bloom', { strength: v })}
-                            min={0}
-                            max={3}
-                            step={0.01}
-                            precision={2}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>radius</span>
-                          <NumberDrag
-                            value={renderSettings().bloom.radius}
-                            onChange={v => updateSetting('bloom', { radius: v })}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            precision={2}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap', 'text-transform': 'capitalize' }}>threshold</span>
-                          <NumberDrag
-                            value={renderSettings().bloom.threshold}
-                            onChange={v => updateSetting('bloom', { threshold: v })}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            precision={2}
-                          />
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                  {/* AO */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div onClick={() => toggleGroup('ao')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('ao') ? '\u25BE' : '\u25B8'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().ao.enabled}
-                          onChange={e => updateSetting('ao', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Ambient Occlusion</span>
-                      </label>
-                    </div>
-                    <Show when={isGroupOpen('ao') && renderSettings().ao.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Radius</span>
-                          <NumberDrag
-                            value={renderSettings().ao.radius}
-                            onChange={v => updateSetting('ao', { radius: v })}
-                            min={0.01}
-                            max={0.5}
-                            step={0.005}
-                            precision={3}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
-                          <NumberDrag
-                            value={renderSettings().ao.intensity}
-                            onChange={v => updateSetting('ao', { intensity: v })}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            precision={2}
-                          />
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                  {/* DOF */}
-                  <div style={{ 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-                    <div onClick={() => toggleGroup('dof')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('dof') ? '\u25BE' : '\u25B8'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().dof.enabled}
-                          onChange={e => updateSetting('dof', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Depth of Field</span>
-                      </label>
-                    </div>
-                    <Show when={isGroupOpen('dof') && renderSettings().dof.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px', display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Focus</span>
-                          <NumberDrag
-                            value={renderSettings().dof.focus}
-                            onChange={v => updateSetting('dof', { focus: v })}
-                            min={0.1}
-                            max={100}
-                            step={0.1}
-                            precision={1}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Aperture</span>
-                          <NumberDrag
-                            value={renderSettings().dof.aperture}
-                            onChange={v => updateSetting('dof', { aperture: v })}
-                            min={0.001}
-                            max={0.1}
-                            step={0.001}
-                            precision={3}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Max Blur</span>
-                          <NumberDrag
-                            value={renderSettings().dof.maxBlur}
-                            onChange={v => updateSetting('dof', { maxBlur: v })}
-                            min={0.001}
-                            max={0.05}
-                            step={0.001}
-                            precision={3}
-                          />
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                  {/* Motion Blur */}
-                  <div>
-                    <div onClick={() => toggleGroup('motionBlur')}
-                      style={{ padding: '6px 10px', display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                      <span style={{ 'font-size': '9px', width: '10px' }}>{isGroupOpen('motionBlur') ? '\u25BE' : '\u25B8'}</span>
-                      <label style={{ display: 'flex', 'align-items': 'center', gap: '6px' }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-                        <input type="checkbox" checked={renderSettings().motionBlur.enabled}
-                          onChange={e => updateSetting('motionBlur', { enabled: e.target.checked })} />
-                        <span style={{ color: 'var(--text-primary, #fff)' }}>Motion Blur</span>
-                      </label>
-                    </div>
-                    <Show when={isGroupOpen('motionBlur') && renderSettings().motionBlur.enabled}>
-                      <div style={{ padding: '2px 10px 8px', 'padding-left': '26px' }}>
-                        <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                          <span style={{ 'white-space': 'nowrap' }}>Strength</span>
-                          <NumberDrag
-                            value={renderSettings().motionBlur.strength}
-                            onChange={v => updateSetting('motionBlur', { strength: v })}
-                            min={0}
-                            max={1}
-                            step={0.01}
-                            precision={2}
-                          />
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                </div>
-              </Show>
-            </div>
-          </Show>
-        </div>
-      </Show>
-      {/* Shading 懸浮面板 */}
-      <Show when={renderMode() === 'shading'}>
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '220px',
-          'max-height': 'calc(100% - 56px)',
-          'overflow-y': 'auto',
-          background: 'var(--bg-app)',
-          'border-radius': '6px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          'z-index': '6',
-          'font-size': '11px',
-          color: 'var(--text-secondary, #aaa)',
-          'user-select': 'none',
-        }}>
-          {/* 面板 Header */}
-          <div
-            onClick={() => setShadingExpanded(v => !v)}
-            style={{
-              padding: '8px 10px',
-              display: 'flex',
-              'align-items': 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              'border-bottom': shadingExpanded() ? '1px solid rgba(255,255,255,0.1)' : 'none',
-            }}
-          >
-            <span style={{ 'font-size': '9px', width: '10px' }}>{shadingExpanded() ? '\u25BE' : '\u25B8'}</span>
-            <span style={{ color: 'var(--text-primary, #fff)', 'font-weight': '600' }}>Shading Controls</span>
-          </div>
-
-          <Show when={shadingExpanded()}>
-            {/* Scene Lights */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <label style={{ display: 'flex', 'align-items': 'center', gap: '6px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={sceneLightsOn()}
-                  disabled={renderMode() !== 'shading'}
-                  onChange={e => {
-                    const checked = e.target.checked;
-                    setSceneLightsOn(checked);
-                    setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
-                    viewport?.shading.setSceneLightsEnabled(checked);
-                    viewport?.requestRender();
-                  }} />
-                <span style={{ color: 'var(--text-primary, #fff)' }}>Scene Lights</span>
-              </label>
-            </div>
-
-            {/* HDR Preset */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ 'margin-bottom': '6px', color: 'var(--text-primary, #fff)' }}>HDR Preset</div>
-              <select
-                value={lookdevPreset()}
-                onChange={e => setLookdevPreset(e.target.value as import('../../viewport/ShadingManager').LookdevPreset)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'var(--text-primary, #fff)',
-                  padding: '3px 6px',
-                  'border-radius': '3px',
-                  'font-size': '11px',
-                }}
-              >
-                <option value="none">None</option>
-                <option value="room">Room</option>
-                <option value="factory" disabled>Factory (WIP)</option>
-              </select>
-            </div>
-
-            {/* HDR Intensity */}
-            <div style={{ padding: '8px 10px', 'border-bottom': '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                <span style={{ 'white-space': 'nowrap' }}>Intensity</span>
-                <NumberDrag
-                  value={hdrIntensity()}
-                  onChange={v => setHdrIntensity(v)}
-                  min={0}
-                  max={3}
-                  step={0.05}
-                  precision={2}
-                />
-              </div>
-            </div>
-
-            {/* HDR Rotation */}
-            <div style={{ padding: '8px 10px' }}>
-              <div style={{ display: 'flex', 'align-items': 'center', gap: '6px' }}>
-                <span style={{ 'white-space': 'nowrap' }}>Rotation</span>
-                <NumberDrag
-                  value={hdrRotation()}
-                  onChange={v => setHdrRotation(Math.round(v))}
-                  min={0}
-                  max={360}
-                  step={1}
-                  precision={0}
-                />
-              </div>
-            </div>
-          </Show>
-        </div>
-      </Show>
+      {/* Rendering + Shading 懸浮面板 */}
+      <RenderSettingsPanel
+        panelExpanded={panelExpanded}
+        setPanelExpanded={setPanelExpanded}
+        renderSettings={renderSettings}
+        updateSetting={updateSetting}
+        quality={quality}
+        setQuality={setQuality}
+        isGroupOpen={isGroupOpen}
+        toggleGroup={toggleGroup}
+        renderMode={renderMode}
+        shadingExpanded={shadingExpanded}
+        setShadingExpanded={setShadingExpanded}
+        sceneLightsOn={sceneLightsOn}
+        onSceneLightsChange={(checked) => {
+          setSceneLightsOn(checked);
+          setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
+          viewport?.shading.setSceneLightsEnabled(checked);
+          viewport?.requestRender();
+        }}
+        hdrIntensity={hdrIntensity}
+        setHdrIntensity={setHdrIntensity}
+        hdrRotation={hdrRotation}
+        setHdrRotation={setHdrRotation}
+        lookdevPreset={lookdevPreset}
+        setLookdevPreset={setLookdevPreset}
+      />
       <ErrorDialog
         open={errorMessage() !== null}
         title="導入失敗"
