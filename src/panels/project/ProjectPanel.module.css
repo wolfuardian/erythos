@@ -1,0 +1,343 @@
+.panel {
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-well-outer);
+  border-radius: var(--radius-lg);
+  margin: 3px;
+  box-sizing: border-box;
+}
+
+/* ── Close-project button ── */
+.closeBtn {
+  background: var(--bg-section);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Toolbar row ── */
+.toolbar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-input-inset);
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--accent-gold);
+}
+
+.viewToggleBtn {
+  width: 24px;
+  height: 24px;
+  background: var(--bg-section);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.viewToggleBtn:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Breadcrumb row ── */
+.breadcrumb {
+  height: var(--statusbar-height);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.breadcrumbRoot {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.breadcrumbRoot.active {
+  color: var(--accent-blue);
+}
+
+.breadcrumbSub {
+  color: var(--text-secondary);
+}
+
+/* ── Body row ── */
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Folder sidebar ── */
+.sidebar {
+  width: 140px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.folderItem {
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folderItem:hover {
+  background: var(--bg-hover);
+}
+
+.folderItem.folderActive {
+  color: var(--text-primary);
+  background: var(--bg-selected);
+}
+
+/* ── Asset area ── */
+.assetArea {
+  flex: 1;
+  overflow: auto;
+  border: 2px solid transparent;
+  box-sizing: border-box;
+  transition: border-color 100ms, background 100ms;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.assetArea.dragOver {
+  border: 2px dashed var(--accent-blue);
+  background: rgba(70, 130, 220, 0.08);
+}
+
+/* ── Filter pill bar ── */
+.filterBar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.filterBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0.4;
+}
+
+.filterBtn:hover {
+  background: var(--bg-hover);
+  opacity: 1;
+}
+
+.filterBtn.filterActive {
+  background: var(--bg-section);
+  border-color: var(--border-subtle);
+  opacity: 1;
+}
+
+.filterIcon {
+  flex-shrink: 0;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.filterBtn:hover .filterIcon,
+.filterBtn.filterActive .filterIcon {
+  stroke: var(--accent-blue);
+}
+
+.filterBtn:hover .filterIcon {
+  stroke: var(--text-primary);
+}
+
+.filterLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ── Grid view ── */
+.gridArea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+}
+
+.gridItem {
+  position: relative;
+  width: 72px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-md);
+}
+
+.gridItem:hover {
+  background: var(--bg-hover);
+  outline: 1px solid var(--border-medium);
+  outline-offset: -1px;
+}
+
+.gridItem.assetSelected {
+  background: var(--bg-selected);
+}
+
+.gridThumb {
+  width: 64px;
+  height: 64px;
+  background: var(--bg-section);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gridItem.assetSelected .gridThumb {
+  border-color: var(--accent-blue);
+}
+
+.gridPill {
+  position: absolute;
+  bottom: 20px;
+  right: 0;
+  font-size: 7px;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.gridName {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ── List view ── */
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.listItem:hover {
+  padding: 5px 6px;
+  margin: 0 4px;
+  background: var(--bg-hover);
+  outline: 1px solid var(--border-medium);
+  outline-offset: -1px;
+  border-radius: var(--radius-sm);
+}
+
+.listItem.assetSelected {
+  background: var(--bg-selected);
+}
+
+.listPill {
+  width: 16px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.listName {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* ── Empty state ── */
+.emptyState {
+  padding: 16px 12px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── Status bar ── */
+.statusBar {
+  height: var(--statusbar-height);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.statusPath {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusCount {
+  margin-left: auto;
+}
