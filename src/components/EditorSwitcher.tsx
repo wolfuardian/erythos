@@ -41,7 +41,7 @@ function EditorIcon(props: { id: string }) {
           <line x1="6.5" y1="4.2" x2="10.5" y2="7.8" stroke="currentColor" stroke-width="0.8"/>
         </svg>
       );
-    case 'prefab':
+    case 'workshop':
       return (
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
           <ellipse cx="6.5" cy="7" rx="4" ry="3.5" stroke="currentColor" stroke-width="1" fill="none"/>
@@ -96,7 +96,7 @@ function EditorIcon(props: { id: string }) {
 
 const SHORTCUT_MAP: Record<string, string> = {
   'scene-tree': 'Shift F1',
-  'prefab': 'Shift F2',
+  'workshop': 'Shift F2',
   'environment': 'Shift F3',
   'properties': 'Shift F4',
   'viewport': 'Shift F5',
