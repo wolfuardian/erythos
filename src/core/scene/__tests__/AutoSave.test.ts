@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AutoSave } from '../AutoSave';
+import { createAutoSave } from '../AutoSave';
 
 // mock editor
 function makeEditor(scenePath = 'scenes/scene.erythos') {
@@ -32,7 +32,7 @@ describe('AutoSave', () => {
 
   it('schedules writeFile after debounce', async () => {
     const editor = makeEditor();
-    const autosave = new AutoSave(editor);
+    const autosave = createAutoSave(editor);
     editor.sceneDocument.events.emit('nodeAdded');
     vi.advanceTimersByTime(2000);
     await vi.runAllTimersAsync();
@@ -46,7 +46,7 @@ describe('AutoSave', () => {
   it('flushNow writes to currentScenePath, not a hardcoded path', async () => {
     const customPath = 'scenes/my-level.erythos';
     const editor = makeEditor(customPath);
-    const autosave = new AutoSave(editor);
+    const autosave = createAutoSave(editor);
     await autosave.flushNow();
     expect(editor.projectManager.writeFile).toHaveBeenCalledWith(
       customPath,
@@ -57,7 +57,7 @@ describe('AutoSave', () => {
 
   it('flushNow writes immediately without waiting for debounce', async () => {
     const editor = makeEditor();
-    const autosave = new AutoSave(editor);
+    const autosave = createAutoSave(editor);
     await autosave.flushNow();
     expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
     autosave.dispose();
@@ -66,7 +66,7 @@ describe('AutoSave', () => {
   it('emits error status when writeFile throws', async () => {
     const editor = makeEditor();
     editor.projectManager.writeFile = vi.fn().mockRejectedValue(new Error('disk full'));
-    const autosave = new AutoSave(editor);
+    const autosave = createAutoSave(editor);
     await autosave.flushNow();
     expect(editor.events.emit).toHaveBeenCalledWith('autosaveStatusChanged', 'error');
     autosave.dispose();
@@ -74,7 +74,7 @@ describe('AutoSave', () => {
 
   it('dispose clears timer and removes listeners', () => {
     const editor = makeEditor();
-    const autosave = new AutoSave(editor);
+    const autosave = createAutoSave(editor);
     editor.sceneDocument.events.emit('nodeAdded');
     autosave.dispose();
     vi.advanceTimersByTime(2000);

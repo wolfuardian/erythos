@@ -6,7 +6,6 @@ import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import { Clipboard } from './Clipboard';
 import type { Command } from './Command';
-import { AutoSave } from './scene/AutoSave';
 import { ProjectManager } from './project/ProjectManager';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
@@ -26,8 +25,6 @@ export class Editor {
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
-  autosave!: AutoSave;
-
   private _transformMode: TransformMode = 'translate';
   private _prefabAssets = new Map<string, PrefabAsset>();
   private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
@@ -59,10 +56,7 @@ export class Editor {
     // 1. Restore GLB buffers from IndexedDB so SceneSync can rebuild meshes.
     await this.resourceCache.hydrate();
 
-    // 4. Start autosave listener
-    this.autosave = new AutoSave(this);
-
-    // 5. Notify bridge signals
+    // Notify bridge signals
     this.events.emit('prefabStoreChanged');
   }
 
@@ -145,7 +139,6 @@ export class Editor {
   }
 
   dispose(): void {
-    this.autosave?.dispose();
     this.sceneSync.dispose();
     this.keybindings.dispose();
     this.events.removeAllListeners();
