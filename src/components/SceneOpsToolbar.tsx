@@ -37,7 +37,7 @@ export const SceneOpsToolbar: Component<{
 
   const handleSave = async () => {
     try {
-      await editor.autosave.flushNow();
+      await bridge.autosaveFlush();
     } catch (e: any) {
       setErrorTitle('Save Failed');
       setErrorMsg(e.message || String(e));

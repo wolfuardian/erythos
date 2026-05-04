@@ -1,5 +1,6 @@
 import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { Editor } from '../core/Editor';
+import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge, type EditorBridge } from './bridge';
@@ -26,6 +27,7 @@ const App: Component = () => {
   const [bridge, setBridge] = createSignal<EditorBridge | null>(null);
   const [projectOpen, setProjectOpen] = createSignal(false);
   let sharedGrid: GridHelpers | null = null;
+  let autosaveHandle: AutoSaveHandle | null = null;
 
   // 地雷 2：保存 listener ref 以便 closeProject 時 off
   let onSceneReplaced: (() => void) | null = null;
@@ -33,6 +35,7 @@ const App: Component = () => {
   const openProject = async (handle: FileSystemDirectoryHandle) => {
     const e = new Editor(projectManager);
     await e.init();
+    autosaveHandle = createAutoSave(e);
     await projectManager.openHandle(handle);
 
     // Resolve scene path: persisted per-project value, fall back to default.
@@ -84,7 +87,12 @@ const App: Component = () => {
     };
     e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
-    const b = createEditorBridge(e, sharedGridObjects, { closeProject, projectManager, openProjectById });
+    const b = createEditorBridge(e, sharedGridObjects, {
+      closeProject,
+      projectManager,
+      openProjectById,
+      autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
+    });
 
     e.keybindings.registerMany([
       { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
@@ -118,7 +126,9 @@ const App: Component = () => {
     setProjectOpen(false);
 
     // flush pending autosave before teardown
-    await e.autosave?.flushNow();
+    await autosaveHandle?.flushNow();
+    autosaveHandle?.dispose();
+    autosaveHandle = null;
 
     // 地雷 2：確實 off sceneReplaced
     if (onSceneReplaced) {
@@ -226,7 +236,7 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
         </span>
         <Show when={props.bridge.autosaveStatus() === 'error'}>
           <button
-            onClick={() => void props.bridge.editor.autosave.flushNow()}
+            onClick={() => void props.bridge.autosaveFlush()}
             style={{
               'font-size': 'var(--font-size-sm)',
               color: 'var(--text-default)',

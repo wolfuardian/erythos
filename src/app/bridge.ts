@@ -33,6 +33,7 @@ export interface EditorBridge {
   canUndo: Accessor<boolean>;
   canRedo: Accessor<boolean>;
   autosaveStatus: Accessor<'idle' | 'pending' | 'saved' | 'error'>;
+  autosaveFlush: () => Promise<void>;
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   prefabAssets: Accessor<PrefabAsset[]>;
@@ -70,6 +71,7 @@ export interface EditorBridgeDeps {
   closeProject: () => void;
   projectManager: ProjectManager;
   openProjectById: (id: string) => Promise<void>;
+  autosaveFlush: () => Promise<void>;
 }
 
 export function createEditorBridge(
@@ -201,6 +203,7 @@ export function createEditorBridge(
     canUndo,
     canRedo,
     autosaveStatus,
+    autosaveFlush: deps?.autosaveFlush ?? (() => Promise.resolve()),
     confirmBeforeLoad,
     hasClipboard,
     prefabAssets,
