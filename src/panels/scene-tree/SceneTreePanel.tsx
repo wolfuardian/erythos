@@ -11,6 +11,7 @@ import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
 import { TreeNode, type DropIndicator } from './TreeNode';
 import { buildSceneTreeMenuItems } from './sceneTreeMenuItems';
+import styles from './SceneTreePanel.module.css';
 
 const SceneTreePanel: Component = () => {
   const bridge = useEditor();
@@ -236,18 +237,8 @@ const SceneTreePanel: Component = () => {
   return (
     <div
       data-testid="scene-tree-panel"
-      style={{
-        width: 'calc(100% - 6px)',
-        height: 'calc(100% - 6px)',
-        display: 'flex',
-        'flex-direction': 'column',
-        overflow: 'hidden',
-        background: 'var(--bg-panel)',
-        'box-shadow': 'var(--shadow-well-outer)',
-        'border-radius': 'var(--radius-lg)',
-        margin: '3px',
-        'box-sizing': 'border-box',
-      }}>
+      class={styles.panel}
+    >
       {/* Header */}
       <PanelHeader title="Scene" />
 
@@ -315,13 +306,7 @@ const SceneTreePanel: Component = () => {
           }
           setContextMenu({ x: e.clientX, y: e.clientY });
         }}
-        style={{
-          position: 'relative',
-          flex: 1,
-          overflow: 'auto',
-          padding: 'var(--space-xs) 0',
-          outline: 'none',
-        }}
+        class={styles.scrollArea}
       >
         <For each={rootNodes()}>
           {(node) => (
@@ -343,12 +328,7 @@ const SceneTreePanel: Component = () => {
           )}
         </For>
         <Show when={rootNodes().length === 0}>
-          <div style={{
-            padding: 'var(--space-xl)',
-            color: 'var(--text-muted)',
-            'font-size': 'var(--font-size-sm)',
-            'text-align': 'center',
-          }}>
+          <div class={styles.emptyHint}>
             Empty scene
           </div>
         </Show>
@@ -371,20 +351,7 @@ const SceneTreePanel: Component = () => {
           />
         </Show>
         <Show when={isFileDragging()}>
-          <div style={{
-            position: 'absolute',
-            inset: '0',
-            background: 'rgba(100, 149, 237, 0.15)',
-            border: '2px dashed rgba(100, 149, 237, 0.6)',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            color: 'var(--text-secondary, #aaa)',
-            'font-size': '13px',
-            'pointer-events': 'none',
-            'z-index': '10',
-            'border-radius': '4px',
-          }}>
+          <div class={styles.fileDragOverlay}>
             Drop GLB to import
           </div>
         </Show>

@@ -1,0 +1,188 @@
+/** TreeNode — CSS Modules migration (refs #733) */
+
+/* ── Row ──────────────────────────────────────────────────────────────────── */
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--row-height);
+  /* padding-left set via --depth CSS variable (inline-allowed: CSS variable injection) */
+  padding-left: calc(var(--row-padding-left) + var(--depth, 0) * var(--indent-w));
+  cursor: pointer;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  margin: 0 4px;
+  opacity: 1;
+  user-select: none;
+}
+
+/* Bridge-driven hover (viewport can also set this via editor.selection.hover) */
+.row.hovered {
+  background: var(--bg-hover);
+}
+
+.row.selected {
+  background: var(--bg-selected);
+}
+
+/* drop-target-inside wins over selected/hovered */
+.row.dropTargetInside {
+  background: var(--bg-drop-target, rgba(74, 158, 255, 0.15));
+}
+
+.row.dragging {
+  opacity: 0.4;
+}
+
+/* ── Selected accent bar ──────────────────────────────────────────────────── */
+
+.selectedBar {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent-blue);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* ── Indent guide line ────────────────────────────────────────────────────── */
+
+.indentGuide {
+  position: absolute;
+  /* left set via --guide-left CSS variable (inline-allowed: CSS variable injection) */
+  left: var(--guide-left);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Drop indicators ──────────────────────────────────────────────────────── */
+
+.dropBefore {
+  position: absolute;
+  top: 0;
+  /* left set via --content-left CSS variable (inline-allowed: CSS variable injection) */
+  left: var(--content-left);
+  right: 0;
+  height: 2px;
+  background: var(--accent-blue);
+  pointer-events: none;
+}
+
+.dropAfter {
+  position: absolute;
+  bottom: 0;
+  /* left set via --content-left CSS variable (inline-allowed: CSS variable injection) */
+  left: var(--content-left);
+  right: 0;
+  height: 2px;
+  background: var(--accent-blue);
+  pointer-events: none;
+}
+
+/* ── Expand toggle ────────────────────────────────────────────────────────── */
+
+.expandToggle {
+  width: 14px;
+  font-size: 7px;
+  color: var(--text-muted);
+  text-align: center;
+  flex-shrink: 0;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.expandPlaceholder {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Type icon ────────────────────────────────────────────────────────────── */
+
+.nodeIcon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  margin-right: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+}
+
+/* eye-off wins over cursor-off (source order) */
+.nodeIcon.cursorOff {
+  opacity: 0.45;
+}
+
+.nodeIcon.eyeOff {
+  opacity: 0.38;
+}
+
+/* ── Node name ────────────────────────────────────────────────────────────── */
+
+.nodeName {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  opacity: 1;
+}
+
+.nodeName.selected {
+  color: var(--text-primary);
+}
+
+/* eye-off wins over cursor-off (source order) */
+.nodeName.cursorOff {
+  opacity: 0.45;
+}
+
+.nodeName.eyeOff {
+  opacity: 0.38;
+}
+
+/* ── Toggle column (eye + cursor) ─────────────────────────────────────────── */
+
+.toggleColumn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-right: 6px;
+}
+
+.iconBtn {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+
+.iconBtn.eyeOff {
+  color: var(--text-disabled);
+  opacity: 0.45;
+}
+
+.iconBtn.cursorOff {
+  color: var(--text-disabled);
+  opacity: 0.45;
+}
