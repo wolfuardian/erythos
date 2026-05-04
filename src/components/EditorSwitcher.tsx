@@ -1,6 +1,7 @@
 import { type Component, createSignal, createEffect, onCleanup, For } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { EditorDef } from '../app/types';
+import styles from './EditorSwitcher.module.css';
 
 export interface EditorSwitcherProps {
   editors: readonly EditorDef[];
@@ -89,7 +90,7 @@ function EditorIcon(props: { id: string }) {
         </svg>
       );
     default:
-      return <span style={{ 'font-size': '10px' }}>□</span>;
+      return <span class={styles.defaultIcon}>□</span>;
   }
 }
 
@@ -189,31 +190,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
         data-testid="editor-switcher"
         ref={btnRef}
         onClick={toggleOpen}
-        style={{
-          display: 'flex',
-          'align-items': 'center',
-          gap: '2px',
-          height: '18px',
-          padding: '0 4px',
-          color: 'var(--text-muted)',
-          cursor: 'pointer',
-          'border-radius': 'var(--radius-sm)',
-          border: '1px solid transparent',
-          'flex-shrink': '0',
-          transition: 'color 100ms ease',
-        }}
-        onMouseEnter={e => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.color = 'var(--text-secondary)';
-          el.style.background = 'var(--bg-hover)';
-          el.style.borderColor = 'var(--border-medium)';
-        }}
-        onMouseLeave={e => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.color = 'var(--text-muted)';
-          el.style.background = '';
-          el.style.borderColor = 'transparent';
-        }}
+        class={styles.trigger}
       >
         {/* 2×2 grid icon */}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -235,22 +212,12 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
             ref={dropdownRef}
             data-testid="editor-switcher-dropdown"
             data-editor-switcher-dropdown
+            class={styles.dropdown}
+            // inline-allowed: computed offset from getBoundingClientRect + visibility toggle for measurement
             style={{
-              position: 'fixed',
               top: dropdownPos().top !== undefined ? `${dropdownPos().top}px` : undefined,
               left: dropdownPos().left !== undefined ? `${dropdownPos().left}px` : undefined,
               visibility: dropdownPos().visibility,
-              width: '480px',
-              background: 'var(--bg-subsection)',
-              border: '1px solid var(--border-medium)',
-              'border-radius': 'var(--radius-md)',
-              'box-shadow': '0 8px 24px rgba(0,0,0,0.6)',
-              'z-index': '9999',
-              padding: '8px',
-              'font-size': '11px',
-              display: 'grid',
-              'grid-template-columns': 'repeat(3, 1fr)',
-              gap: '0 8px',
             }}
           >
             <For each={CATEGORY_ORDER}>
@@ -259,16 +226,7 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
                 return (
                   <div>
                     {/* Category header */}
-                    <div style={{
-                      padding: '4px 6px 2px',
-                      'font-size': '9px',
-                      'text-transform': 'uppercase',
-                      'letter-spacing': '0.5px',
-                      color: 'var(--text-muted)',
-                      'font-weight': '600',
-                      'border-bottom': '1px solid var(--border-subtle)',
-                      'margin-bottom': '2px',
-                    }}>
+                    <div class={styles.categoryHeader}>
                       {cat}
                     </div>
                     {/* Items */}
@@ -278,55 +236,25 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
                         return (
                           <div
                             onClick={() => handleSelect(editor.id)}
-                            style={{
-                              display: 'flex',
-                              'align-items': 'center',
-                              gap: '7px',
-                              padding: '4px 6px',
-                              color: isActive() ? 'var(--text-primary)' : 'var(--text-secondary)',
-                              cursor: 'pointer',
-                              'border-radius': 'var(--radius-sm)',
-                              background: isActive() ? 'var(--bg-selected)' : 'transparent',
-                              position: 'relative',
-                            }}
-                            onMouseEnter={e => {
-                              const el = e.currentTarget as HTMLElement;
-                              if (!isActive()) {
-                                el.style.background = 'var(--bg-hover)';
-                                el.style.color = 'var(--text-primary)';
-                              } else {
-                                el.style.background = 'var(--bg-selected-hover)';
-                              }
-                            }}
-                            onMouseLeave={e => {
-                              const el = e.currentTarget as HTMLElement;
-                              el.style.background = isActive() ? 'var(--bg-selected)' : 'transparent';
-                              el.style.color = isActive() ? 'var(--text-primary)' : 'var(--text-secondary)';
-                            }}
+                            class={styles.editorItem}
+                            classList={{ [styles.active]: isActive() }}
                           >
                             {/* Icon */}
-                            <span style={{
-                              width: '15px',
-                              height: '15px',
-                              display: 'flex',
-                              'align-items': 'center',
-                              'justify-content': 'center',
-                              'flex-shrink': '0',
-                              color: isActive() ? 'var(--accent-blue-hover)' : 'var(--accent-blue)',
-                            }}>
+                            <span
+                              class={styles.editorIcon}
+                              classList={{ [styles.activeIcon]: isActive() }}
+                            >
                               <EditorIcon id={editor.id} />
                             </span>
                             {/* Label */}
-                            <span style={{ flex: '1', 'font-size': '11px' }}>
+                            <span class={styles.editorLabel}>
                               {editor.label}
                             </span>
                             {/* Shortcut */}
-                            <span style={{
-                              'font-family': "'Cascadia Code', monospace",
-                              'font-size': '9px',
-                              color: isActive() ? 'var(--text-muted)' : 'var(--text-disabled)',
-                              'white-space': 'nowrap',
-                            }}>
+                            <span
+                              class={styles.editorShortcut}
+                              classList={{ [styles.activeShortcut]: isActive() }}
+                            >
                               {SHORTCUT_MAP[editor.id] ?? ''}
                             </span>
                           </div>

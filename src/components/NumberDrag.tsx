@@ -1,5 +1,6 @@
 import { createSignal, createEffect, onCleanup, type Component } from 'solid-js';
 import { LadderOverlay, TIER_HEIGHT, LADDER_WIDTH } from './LadderOverlay';
+import styles from './NumberDrag.module.css';
 
 const STEPS = [100, 10, 1, 0.1, 0.01, 0.001, 0.0001] as const;
 const DRAG_SENSITIVITY = 0.3;
@@ -24,6 +25,8 @@ function applyClamp(v: number, min?: number, max?: number): number {
 export const NumberDrag: Component<NumberDragProps> = (props) => {
   const precision = () => props.precision ?? 2;
 
+  // hovered, focused, isDragging are read by JS logic (showArrows = hovered() && !focused() && !isDragging())
+  // Keep as signals, reflect into classList
   const [focused, setFocused] = createSignal(false);
   const [hovered, setHovered] = createSignal(false);
   const [isDragging, setIsDragging] = createSignal(false);
@@ -45,7 +48,6 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
   onCleanup(() => {
     cleanupListeners?.();
-    document.body.style.cursor = '';
   });
 
   const pct = () => {
@@ -159,59 +161,28 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
     }
   };
 
+  // hovered() is read by JS logic: showArrows = hovered() && !focused() && !isDragging()
   const showArrows = () => hovered() && !focused() && !isDragging();
-
-  const cellBg = () => {
-    if (focused()) return 'var(--bg-input-focus)';
-    if (hovered()) return '#333648';
-    return 'var(--bg-subsection)';
-  };
 
   return (
     <>
-      <style>{`
-        .number-drag-input::-webkit-inner-spin-button,
-        .number-drag-input::-webkit-outer-spin-button {
-          display: none;
-        }
-        .number-drag-input {
-          -moz-appearance: textfield;
-        }
-      `}</style>
       <div
         data-testid="number-drag"
         onMouseDown={handleMouseDown}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        style={{
-          position: 'relative',
-          display: 'flex',
-          'align-items': 'center',
-          height: '22px',
-          'border-radius': '2px',
-          overflow: 'hidden',
-          cursor: isDragging() ? 'ew-resize' : 'ew-resize',
-          background: cellBg(),
-          flex: '1',
-          outline: focused() ? '1px solid var(--border-focus)' : 'none',
-          'outline-offset': '-1px',
-          transition: 'background 100ms ease',
+        class={styles.wrapper}
+        classList={{
+          [styles.hovered]: hovered() && !focused(),
+          [styles.focused]: focused(),
         }}
       >
         {/* Fill bar — independent absolutely-positioned div */}
         {pct() !== null && (
           <div
-            style={{
-              position: 'absolute',
-              left: '0',
-              top: '0',
-              bottom: '0',
-              width: `${pct()}%`,
-              background: 'var(--accent-teal)',
-              opacity: '0.85',
-              'border-radius': '2px 0 0 2px',
-              'pointer-events': 'none',
-            }}
+            class={styles.fillBar}
+            // inline-allowed: per-frame drag coordinates — width updated on pointermove
+            style={{ width: `${pct()}%` }}
           />
         )}
 
@@ -222,23 +193,10 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
             e.stopPropagation();
             props.onChange(applyClamp(props.value - (props.step ?? 0.1), props.min, props.max));
           }}
-          style={{
-            position: 'absolute',
-            left: '0',
-            top: '0',
-            bottom: '0',
-            width: '14px',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            'font-size': '10px',
-            'font-weight': '600',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            'z-index': '2',
-            opacity: showArrows() ? '1' : '0',
-            'pointer-events': showArrows() ? 'auto' : 'none',
-            transition: 'opacity 100ms ease',
+          class={styles.arrow}
+          classList={{
+            [styles.arrowLeft]: true,
+            [styles.visible]: showArrows(),
           }}
         >
           ‹
@@ -246,31 +204,14 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
 
         <input
           ref={inputRef}
-          class="number-drag-input"
+          class={styles.input}
+          classList={{ [styles.focused]: focused() }}
           type="number"
           value={inputText()}
           onInput={(e) => setInputText(e.currentTarget.value)}
           onFocus={() => { setFocused(true); inputRef?.select(); }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          style={{
-            flex: '1',
-            width: '0',
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: 'var(--text-primary)',
-            'font-size': 'var(--font-size-sm)',
-            'font-family': 'var(--font-mono)',
-            'font-variant-numeric': 'tabular-nums',
-            'text-align': 'center',
-            padding: '0 16px',
-            cursor: isDragging() ? 'ew-resize' : (focused() ? 'text' : 'ew-resize'),
-            '-webkit-appearance': 'none',
-            '-moz-appearance': 'textfield',
-            position: 'relative',
-            'z-index': '1',
-          }}
         />
 
         {/* Right arrow › */}
@@ -280,23 +221,10 @@ export const NumberDrag: Component<NumberDragProps> = (props) => {
             e.stopPropagation();
             props.onChange(applyClamp(props.value + (props.step ?? 0.1), props.min, props.max));
           }}
-          style={{
-            position: 'absolute',
-            right: '0',
-            top: '0',
-            bottom: '0',
-            width: '14px',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            'font-size': '10px',
-            'font-weight': '600',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            'z-index': '2',
-            opacity: showArrows() ? '1' : '0',
-            'pointer-events': showArrows() ? 'auto' : 'none',
-            transition: 'opacity 100ms ease',
+          class={styles.arrow}
+          classList={{
+            [styles.arrowRight]: true,
+            [styles.visible]: showArrows(),
           }}
         >
           ›

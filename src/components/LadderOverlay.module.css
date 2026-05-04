@@ -1,0 +1,51 @@
+.popup {
+  position: fixed;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+  z-index: 9999;
+  pointer-events: none; /* popup 不攔截 mouse；NumberDrag 的 document listener 處理 */
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+}
+
+.tier {
+  height: 28px; /* matches TIER_HEIGHT constant exported to NumberDrag JS logic */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 400;
+  transition: background 80ms ease, color 80ms ease;
+}
+
+.tier.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tier.adjacent {
+  color: var(--text-secondary);
+}
+
+.separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0 6px;
+}
+
+.preview {
+  height: 36px; /* matches PREVIEW_HEIGHT constant */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--accent-gold);
+}

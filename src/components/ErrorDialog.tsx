@@ -1,5 +1,6 @@
 import { type Component, Show, createEffect, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import styles from './ErrorDialog.module.css';
 
 export interface ErrorDialogProps {
   open: boolean;
@@ -23,54 +24,24 @@ const ErrorDialog: Component<ErrorDialogProps> = (props) => {
       <Portal>
       <div
         data-testid="error-dialog"
+        class={styles.overlay}
         onClick={props.onClose}
-        style={{
-          position: 'fixed',
-          inset: '0',
-          background: 'rgba(0,0,0,0.5)',
-          'z-index': '1000',
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-        }}
       >
         <div
+          class={styles.dialog}
           onClick={(e) => e.stopPropagation()}
-          style={{
-            background: 'var(--bg-panel)',
-            color: 'var(--text-primary)',
-            'max-width': '400px',
-            width: '90%',
-            padding: 'var(--space-lg)',
-            'border-radius': 'var(--radius-lg)',
-            'box-shadow': 'var(--shadow-well-outer)',
-          }}
         >
-          <h3 data-testid="error-dialog-title" style={{ margin: '0 0 var(--space-sm) 0', 'font-size': 'var(--font-size-lg)' }}>
+          <h3 data-testid="error-dialog-title" class={styles.title}>
             {props.title}
           </h3>
-          <p data-testid="error-dialog-message" style={{
-            margin: '0 0 var(--space-md) 0',
-            color: 'var(--text-secondary)',
-            'font-size': 'var(--font-size-sm)',
-            'word-break': 'break-word',
-          }}>
+          <p data-testid="error-dialog-message" class={styles.message}>
             {props.message}
           </p>
-          <div data-testid="error-dialog-actions" style={{ 'text-align': 'right' }}>
+          <div data-testid="error-dialog-actions" class={styles.actions}>
             <button
               data-testid="error-dialog-close"
+              class={styles.closeButton}
               onClick={props.onClose}
-              style={{
-                padding: '4px 16px',
-                height: '28px',
-                background: 'var(--bg-section)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-                'border-radius': 'var(--radius-sm)',
-                'font-size': 'var(--font-size-sm)',
-                cursor: 'pointer',
-              }}
             >
               Close
             </button>

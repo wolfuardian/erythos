@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createSignal, onCleanup, onMount, type Component } from 'solid-js';
+import styles from './ContextMenu.module.css';
 
 export interface MenuItem {
   label: string;
@@ -16,17 +17,6 @@ export interface ContextMenuProps {
     xPercent: number;
   };
 }
-
-// Shared submenu container style — mirrors the root menu's appearance.
-const subMenuStyle = {
-  background: 'var(--bg-panel)',
-  border: '1px solid var(--border-subtle)',
-  'border-radius': 'var(--radius-sm)',
-  'box-shadow': 'var(--shadow-popup)',
-  'min-width': '160px',
-  padding: 'var(--space-xs) 0',
-  'user-select': 'none',
-} as const;
 
 // MenuItemRow renders a single item and, if it has children, its submenu.
 // It is not exported — it is an internal implementation detail of ContextMenu.
@@ -50,7 +40,7 @@ const MenuItemRow: Component<{ item: MenuItem; onClose: () => void }> = (props) 
     <div
       ref={rowRef}
       data-menu-item="true"
-      style={{ position: 'relative' }}
+      class={styles.itemWrapper}
       onMouseEnter={() => { if (hasChildren()) setShowSub(true); }}
       onMouseLeave={() => setShowSub(false)}
     >
@@ -60,41 +50,18 @@ const MenuItemRow: Component<{ item: MenuItem; onClose: () => void }> = (props) 
           props.item.action?.();
           props.onClose();
         }}
-        style={{
-          padding: 'var(--space-xs) var(--space-md)',
-          cursor: props.item.disabled ? 'default' : 'pointer',
-          color: props.item.disabled ? 'var(--text-muted)' : 'var(--text-primary)',
-          'font-size': 'var(--font-size-sm)',
-          'white-space': 'nowrap',
-          display: 'flex',
-          'justify-content': 'space-between',
-          'align-items': 'center',
-        }}
-        onMouseEnter={(e) => {
-          if (!props.item.disabled) {
-            (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = 'transparent';
-        }}
+        class={styles.item}
+        classList={{ [styles.disabled]: !!props.item.disabled }}
       >
-        <span>{props.item.label}</span>
+        <span class={styles.itemLabel}>{props.item.label}</span>
         <Show when={hasChildren()}>
-          <span style={{ 'margin-left': 'var(--space-md)', opacity: '0.6', 'font-size': '0.75em' }}>▶</span>
+          <span class={styles.submenuArrow}>▶</span>
         </Show>
       </div>
 
       <Show when={showSub()}>
         <div
-          style={{
-            position: 'absolute',
-            left: shouldFlip() ? 'auto' : '100%',
-            right: shouldFlip() ? '100%' : 'auto',
-            top: '0',
-            'z-index': '1001',
-            ...subMenuStyle,
-          }}
+          class={`${styles.menu} ${styles.subMenu} ${shouldFlip() ? styles.subMenuLeft : styles.subMenuRight}`}
         >
           <For each={props.item.children}>
             {(child) => <MenuItemRow item={child} onClose={props.onClose} />}
@@ -166,17 +133,16 @@ const ContextMenu: Component<ContextMenuProps> = (props) => {
     <div
       data-testid="context-menu"
       ref={menuRef}
+      class={`${styles.menu} ${styles.menuFixed}`}
+      // inline-allowed: computed offset from getBoundingClientRect alignment calculation
       style={{
-        position: 'fixed',
         left: `${adjustedPosition().x}px`,
         top: `${adjustedPosition().y}px`,
-        'z-index': '1000',
-        ...subMenuStyle,
       }}
     >
       <For each={props.items}>
         {(item) => item.label === '---'
-          ? <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
+          ? <div class={styles.separator} />
           : <MenuItemRow item={item} onClose={props.onClose} />
         }
       </For>

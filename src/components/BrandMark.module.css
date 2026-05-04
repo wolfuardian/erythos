@@ -1,0 +1,58 @@
+.button {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  outline: none;
+  outline-offset: -1px;
+  transition: filter var(--transition-fast);
+}
+
+.button:hover {
+  filter: brightness(1.12);
+}
+
+.button.open {
+  outline: 1px solid var(--accent-gold);
+  filter: none;
+}
+
+.popover {
+  position: fixed;
+  z-index: 900;
+  width: 280px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popup);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
+}

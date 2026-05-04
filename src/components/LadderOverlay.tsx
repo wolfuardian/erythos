@@ -1,5 +1,6 @@
 import { For, type Component } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import styles from './LadderOverlay.module.css';
 
 export interface LadderOverlayProps {
   x: number;                       // popup 正中心的 viewport X
@@ -20,22 +21,13 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
     <Portal mount={document.body}>
       <div
         data-testid="ladder-overlay"
+        class={styles.popup}
+        // inline-allowed: position computed from drag-start coordinates; transform offset derived from measured tier stack height at runtime
         style={{
-          position: 'fixed',
           left: `${props.x}px`,
           top: `${props.y}px`,
           transform: `translate(-50%, -${tierStackHeight() / 2}px)`,
           width: `${LADDER_WIDTH}px`,
-          background: 'var(--bg-panel)',
-          border: '1px solid var(--border-subtle)',
-          'border-radius': 'var(--radius-md)',
-          'box-shadow': 'var(--shadow-popup)',
-          'z-index': '9999',
-          'pointer-events': 'none',  // popup 不攔截 mouse；NumberDrag 的 document listener 處理
-          'font-family': 'var(--font-mono)',
-          'font-variant-numeric': 'tabular-nums',
-          display: 'flex',
-          'flex-direction': 'column',
         }}
       >
         <For each={props.steps}>
@@ -44,20 +36,10 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
             const adjacent = () => Math.abs(idx() - props.activeIndex) === 1;
             return (
               <div
-                style={{
-                  height: `${TIER_HEIGHT}px`,
-                  display: 'flex',
-                  'align-items': 'center',
-                  'justify-content': 'center',
-                  'font-size': 'var(--font-size-md)',
-                  background: active() ? 'var(--bg-active)' : 'transparent',
-                  color: active()
-                    ? 'var(--text-primary)'
-                    : adjacent()
-                      ? 'var(--text-secondary)'
-                      : 'var(--text-muted)',
-                  'font-weight': active() ? '600' : '400',
-                  transition: 'background 80ms ease, color 80ms ease',
+                class={styles.tier}
+                classList={{
+                  [styles.active]: active(),
+                  [styles.adjacent]: adjacent() && !active(),
                 }}
               >
                 {step}
@@ -67,22 +49,10 @@ export const LadderOverlay: Component<LadderOverlayProps> = (props) => {
         </For>
 
         {/* 分隔線 */}
-        <div style={{
-          height: '1px',
-          background: 'var(--border-subtle)',
-          margin: '0 6px',
-        }} />
+        <div class={styles.separator} />
 
         {/* 值預覽區塊 */}
-        <div style={{
-          height: `${PREVIEW_HEIGHT}px`,
-          display: 'flex',
-          'align-items': 'center',
-          'justify-content': 'center',
-          'font-size': 'var(--font-size-lg)',
-          'font-weight': '600',
-          color: 'var(--accent-gold)',
-        }}>
+        <div class={styles.preview}>
           {props.currentValue}
         </div>
       </div>
