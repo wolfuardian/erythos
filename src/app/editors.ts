@@ -7,6 +7,7 @@ import { editorDef as environmentDef } from '../panels/environment';
 import { editorDef as projectDef } from '../panels/project';
 import { editorDef as contextDef } from '../panels/context';
 import { editorDef as settingsDef } from '../panels/settings';
+import { editorDef as workshopDef } from '../panels/workshop';
 
 export const editors: readonly EditorDef[] = [
   viewportDef,
@@ -17,4 +18,5 @@ export const editors: readonly EditorDef[] = [
   projectDef,
   contextDef,
   settingsDef,
+  workshopDef,
 ];
