@@ -22,22 +22,36 @@ import type { PrefabAsset } from '../PrefabFormat';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeAsset(name: string, nodeNames: string[] = []): PrefabAsset {
+function makeAsset(name: string, childNames: string[] = []): PrefabAsset {
+  // Realistic shape: localId 0 is the prefab root; childNames are its direct
+  // descendants. Mirrors PrefabLiveSync.test.ts helper.
   return {
     version: 1,
     id: `asset-${name}`,
     name,
     modified: new Date().toISOString(),
-    nodes: nodeNames.map((n, i) => ({
-      localId: i,
-      parentLocalId: null,
-      name: n,
-      order: i,
-      position: [0, 0, 0],
-      rotation: [0, 0, 0],
-      scale: [1, 1, 1],
-      components: {},
-    })),
+    nodes: [
+      {
+        localId: 0,
+        parentLocalId: null,
+        name,
+        order: 0,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+        components: {},
+      },
+      ...childNames.map((n, i) => ({
+        localId: i + 1,
+        parentLocalId: 0,
+        name: n,
+        order: i,
+        position: [0, 0, 0] as [number, number, number],
+        rotation: [0, 0, 0] as [number, number, number],
+        scale: [1, 1, 1] as [number, number, number],
+        components: {},
+      })),
+    ],
   };
 }
 

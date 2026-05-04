@@ -195,9 +195,18 @@ export class SceneSync {
           },
         });
 
-        // Step 3: Deserialize new prefab content as children of this instance root
-        const childNodes = deserializeFromPrefab(newAsset, instanceRoot.id);
-        for (const node of childNodes) {
+        // Step 3: Deserialize new prefab content. The asset's first node is the
+        // prefab root, which corresponds to the existing instance root — we keep
+        // instanceRoot intact (per-instance transform/name/parent per design)
+        // and graft only the prefab root's descendants under it. Without this
+        // skip, every save would nest a fresh prefab-root layer below the
+        // instance root, deepening by one level per write cycle.
+        const deserialized = deserializeFromPrefab(newAsset, null);
+        const prefabRoot = deserialized[0];
+        for (const node of deserialized.slice(1)) {
+          if (node.parent === prefabRoot.id) {
+            node.parent = instanceRoot.id;
+          }
           this.document.addNode(node);
         }
       };
