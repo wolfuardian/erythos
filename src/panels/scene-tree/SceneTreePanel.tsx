@@ -1,6 +1,7 @@
 import { createSignal, For, Show, onMount, onCleanup, type Component } from 'solid-js';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
+import { isPrefabDescendant } from '../../core/scene/PrefabInstance';
 import { useEditor } from '../../app/EditorContext';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
@@ -255,14 +256,20 @@ const SceneTreePanel: Component = () => {
 
           if (e.key === 'ArrowDown') {
             e.preventDefault();
-            const next = flat[currentIdx + 1];
-            if (next) editor.selection.select(next.id);
-            else if (currentIdx === -1 && flat.length > 0) editor.selection.select(flat[0].id);
+            const allNodes = bridge.nodes();
+            const candidates = flat.slice(currentIdx + 1).filter(n => !isPrefabDescendant(n.id, allNodes));
+            if (candidates.length > 0) editor.selection.select(candidates[0].id);
+            else if (currentIdx === -1) {
+              const first = flat.find(n => !isPrefabDescendant(n.id, allNodes));
+              if (first) editor.selection.select(first.id);
+            }
           }
 
           if (e.key === 'ArrowUp') {
             e.preventDefault();
-            if (currentIdx > 0) editor.selection.select(flat[currentIdx - 1].id);
+            const allNodes = bridge.nodes();
+            const candidates = flat.slice(0, currentIdx > 0 ? currentIdx : 0).filter(n => !isPrefabDescendant(n.id, allNodes));
+            if (candidates.length > 0) editor.selection.select(candidates[candidates.length - 1].id);
           }
 
           if (e.key === 'ArrowLeft') {
