@@ -9,6 +9,8 @@ import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 import { ProjectTypeIcon } from './ProjectTypeIcon';
 import { buildProjectMenuItems } from './projectMenuItems';
+import { useNewSceneFlow } from './useNewSceneFlow';
+import { useDeleteFlow } from './useDeleteFlow';
 
 // ── Type meta ──
 const TYPE_META: Record<ProjectFile['type'], { pill: string; label: string; color: string }> = {
@@ -54,12 +56,9 @@ const ProjectPanel: Component = () => {
   // ── Context menu state ──
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number; file: ProjectFile | null } | null>(null);
 
-  // ── New Scene dialog state ──
-  const [showNewScenePrompt, setShowNewScenePrompt] = createSignal(false);
-
-  // ── Delete confirm state: unified for single and batch ──
-  const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
-  const [pendingDeletePaths, setPendingDeletePaths] = createSignal<string[]>([]);
+  // ── New Scene + Delete flow hooks ──
+  const newScene = useNewSceneFlow({ editor, bridge, setError: (t, m) => { setErrorTitle(t); setErrorMsg(m); } });
+  const deleteFlow = useDeleteFlow({ editor, setSelectedAssetPaths, setError: (t, m) => { setErrorTitle(t); setErrorMsg(m); } });
 
   const handleClose = () => editor.projectManager.close();
 
@@ -183,57 +182,6 @@ const ProjectPanel: Component = () => {
     }
   };
 
-  // ── New Scene flow ──
-  const handleNewScene = async (name: string) => {
-    setShowNewScenePrompt(false);
-    try {
-      const path = await bridge.createScene(name);
-      bridge.setCurrentScenePath(path);
-      editor.loadScene({ version: 1, nodes: [] });
-    } catch (e: any) {
-      setErrorTitle('Create Scene Failed');
-      setErrorMsg(e.message || String(e));
-    }
-  };
-
-  // ── Delete flow (unified single + batch) ──
-  const handleDeleteConfirmed = async () => {
-    const paths = pendingDeletePaths();
-    setShowDeleteConfirm(false);
-    setPendingDeletePaths([]);
-    if (paths.length === 0) return;
-
-    const errors: string[] = [];
-    for (const path of paths) {
-      try {
-        await editor.projectManager.deleteFile(path);
-      } catch (e: any) {
-        errors.push(`${path}: ${e.message ?? String(e)}`);
-      }
-    }
-
-    // Clear selection for successfully processed paths
-    setSelectedAssetPaths([]);
-
-    if (errors.length > 0) {
-      setErrorTitle('Delete Failed');
-      setErrorMsg(errors.join('\n'));
-    }
-  };
-
-  // ── Build delete confirm message ──
-  const buildDeleteMessage = (paths: string[]): string => {
-    const MAX_SHOWN = 10;
-    const shown = paths.slice(0, MAX_SHOWN);
-    const remaining = paths.length - MAX_SHOWN;
-    let msg = shown.join('\n');
-    if (remaining > 0) {
-      msg += `\n... and ${remaining} more`;
-    }
-    msg += '\n\nThis action cannot be undone.';
-    return msg;
-  };
-
   // ── Context menu: shared handler for both grid and list ──
   const handleAssetContextMenu = (e: MouseEvent, f: ProjectFile) => {
     e.preventDefault();
@@ -257,26 +205,9 @@ const ProjectPanel: Component = () => {
       file: contextMenu()?.file ?? null,
       selectedPaths: selectedAssetPaths(),
       onLoadScene: handleLoadScene,
-      onRequestDelete: (paths) => {
-        setPendingDeletePaths(paths);
-        setShowDeleteConfirm(true);
-      },
-      onRequestNewScene: () => setShowNewScenePrompt(true),
+      onRequestDelete: deleteFlow.open,
+      onRequestNewScene: newScene.open,
     });
-
-  // ── Delete confirm dialog props (derived) ──
-  const deleteConfirmTitle = () => {
-    const paths = pendingDeletePaths();
-    return paths.length > 1 ? `Delete ${paths.length} items?` : 'Delete file?';
-  };
-
-  const deleteConfirmMessage = () => {
-    const paths = pendingDeletePaths();
-    if (paths.length === 1) {
-      return `"${paths[0]}" will be permanently deleted.\n\nThis action cannot be undone.`;
-    }
-    return buildDeleteMessage(paths);
-  };
 
   // ── Selection helper ──
   const isSelected = (path: string) => selectedAssetPaths().includes(path);
@@ -736,23 +667,23 @@ const ProjectPanel: Component = () => {
         onCancel={() => { setShowLoadConfirm(false); setPendingLoadPath(null); }}
       />
       <ConfirmDialog
-        open={showDeleteConfirm()}
-        title={deleteConfirmTitle()}
-        message={deleteConfirmMessage()}
+        open={deleteFlow.show()}
+        title={deleteFlow.title()}
+        message={deleteFlow.message()}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="danger"
-        onConfirm={() => void handleDeleteConfirmed()}
-        onCancel={() => { setShowDeleteConfirm(false); setPendingDeletePaths([]); }}
+        onConfirm={deleteFlow.onConfirm}
+        onCancel={deleteFlow.onCancel}
       />
       <PromptDialog
-        open={showNewScenePrompt()}
+        open={newScene.show()}
         title="New Scene"
         message="Enter a name for the new scene."
         placeholder="scene-name"
         confirmLabel="Create"
-        onConfirm={(name) => void handleNewScene(name)}
-        onCancel={() => setShowNewScenePrompt(false)}
+        onConfirm={newScene.onConfirm}
+        onCancel={newScene.onCancel}
       />
     </div>
   );
