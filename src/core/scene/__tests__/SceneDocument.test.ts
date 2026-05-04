@@ -194,6 +194,18 @@ describe('SceneDocument', () => {
       doc.deserialize({ version: 1, nodes: [] });
       expect(doc.getAllNodes()).toHaveLength(0);
     });
+
+    it('strips runtime mesh.url from serialized output (blob URLs must not persist)', () => {
+      const doc = new SceneDocument();
+      doc.addNode(makeNode({
+        id: 'm',
+        components: { mesh: { url: 'blob:http://localhost/abc', path: 'models/foo.glb' } },
+      }));
+      const file = doc.serialize();
+      const mesh = file.nodes[0].components.mesh as Record<string, unknown>;
+      expect(mesh.url).toBeUndefined();
+      expect(mesh.path).toBe('models/foo.glb');
+    });
   });
 
   // ── migrateNodeComponents ───────────────────────────────────────────────────

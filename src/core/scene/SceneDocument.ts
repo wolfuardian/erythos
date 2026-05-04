@@ -47,6 +47,17 @@ function migrateNodeComponents(node: SceneNode): SceneNode {
   return { ...node, components: updated };
 }
 
+// Strip runtime-only fields from components before serialization.
+// `mesh.url` is a session-scoped blob URL; persisting it would create stale references
+// on next reload. URL is always recomputed via projectManager.urlFor(path) at hydrate time.
+function stripRuntimeFields(components: Record<string, unknown>): Record<string, unknown> {
+  if (!('mesh' in components)) return components;
+  const mesh = components['mesh'] as Record<string, unknown>;
+  if (!('url' in mesh)) return components;
+  const { url: _url, ...meshRest } = mesh;
+  return { ...components, mesh: meshRest };
+}
+
 // ── Internal generic emitter ──────────────────────────────────────────────────
 
 type Listener<T extends unknown[]> = (...args: T) => void;
@@ -179,7 +190,10 @@ export class SceneDocument {
   serialize(): SceneFile {
     return {
       version: 1,
-      nodes: Array.from(this._nodes.values()).map(n => ({ ...n })),
+      nodes: Array.from(this._nodes.values()).map(n => ({
+        ...n,
+        components: stripRuntimeFields(n.components),
+      })),
     };
   }
 
