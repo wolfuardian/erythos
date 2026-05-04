@@ -3,7 +3,6 @@ import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
-import type { PrefabAsset } from '../core/scene/PrefabFormat';
 import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
@@ -35,7 +34,6 @@ export interface EditorBridge {
   autosaveFlush: () => Promise<void>;
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
-  prefabAssets: Accessor<PrefabAsset[]>;
   environmentSettings: Accessor<EnvironmentSettings>;
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
@@ -88,7 +86,6 @@ export function createEditorBridge(
   const [canRedo, setCanRedo] = createSignal(false);
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
-  const [prefabAssets, setPrefabAssets] = createSignal<PrefabAsset[]>(editor.getAllPrefabAssets());
   const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
   const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
   const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
@@ -149,13 +146,6 @@ export function createEditorBridge(
   const onClipboardChanged = () => setHasClipboard(editor.clipboard.hasContent);
   editor.clipboard.on('clipboardChanged', onClipboardChanged);
 
-  // Subscribe to PrefabStore events (fired by Editor.registerPrefab / unregisterPrefab / init)
-  // Also subscribe directly to PrefabRegistry.on('changed') for immediate updates
-  // (registry may update before editor emits the high-level event)
-  const onPrefabStoreChanged = () => setPrefabAssets(editor.getAllPrefabAssets());
-  editor.events.on('prefabStoreChanged', onPrefabStoreChanged);
-  editor.prefabRegistry.on('changed', onPrefabStoreChanged);
-
   // Subscribe to EnvironmentSettings events
   const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
     editor.getEnvironmentSettings()
@@ -182,8 +172,6 @@ export function createEditorBridge(
     editor.sceneDocument.events.off('nodeChanged', onNodeChanged);
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
-    editor.events.off('prefabStoreChanged', onPrefabStoreChanged);
-    editor.prefabRegistry.off('changed', onPrefabStoreChanged);
     editor.events.off('environmentChanged', onEnvChanged);
     unsubProject();
   };
@@ -204,7 +192,6 @@ export function createEditorBridge(
     autosaveFlush: deps?.autosaveFlush ?? (() => Promise.resolve()),
     confirmBeforeLoad,
     hasClipboard,
-    prefabAssets,
     environmentSettings,
     projectOpen,
     projectName,

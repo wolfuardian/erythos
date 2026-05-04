@@ -210,35 +210,35 @@ describe('SceneDocument', () => {
 
   // ── migrateNodeComponents ───────────────────────────────────────────────────
 
-  // ── prefab migration (legacy id → { path }) ─────────────────────────────
+  // ── prefab migration (legacy id → stripped in P4) ───────────────────────
+  //
+  // P4 removes the IDB→file migration that produced the prefabIdToPath map.
+  // Any node still carrying prefab.id (UUID) has no resolvable path and is stripped.
 
-  describe('prefab migration (legacy id → { path })', () => {
-    it('migrates prefab.id to prefab.path using provided map', () => {
-      const doc = new SceneDocument();
-      const idToPath = { 'uuid-pfb-1': 'prefabs/chair.prefab' };
-      doc.deserialize(
-        {
-          version: 1,
-          nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-pfb-1' } } })],
-        },
-        idToPath,
-      );
-      const node = doc.getNode('n')!;
-      const prefab = node.components['prefab'] as Record<string, unknown>;
-      expect(prefab['path']).toBe('prefabs/chair.prefab');
-      expect(prefab['id']).toBeUndefined();
-    });
-
-    it('strips orphan prefab.id (no mapping found) with no throw', () => {
+  describe('prefab migration (legacy id → stripped in P4)', () => {
+    it('strips prefab.id (P4: IDB migration removed, no map to resolve)', () => {
       const doc = new SceneDocument();
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      doc.deserialize(
-        {
-          version: 1,
-          nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-orphan' } } })],
-        },
-        {}, // empty map — no mapping for this uuid
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-pfb-1' } } })],
+      });
+      const node = doc.getNode('n')!;
+      // prefab component is stripped (id-only ref is unresolvable post-P4)
+      expect('prefab' in node.components).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('uuid-pfb-1'),
       );
+      consoleSpy.mockRestore();
+    });
+
+    it('strips prefab.id with no throw (soft-fail)', () => {
+      const doc = new SceneDocument();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-orphan' } } })],
+      });
       const node = doc.getNode('n')!;
       expect('prefab' in node.components).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -323,27 +323,27 @@ describe('SceneDocument', () => {
       expect(mesh['nodePath']).toBe('Legs');
     });
 
-    it('still migrates leaf → prefab alongside mesh migration (with id→path map)', () => {
+    it('leaf → prefab migration + mesh migration work together (id stripped post-P4)', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const doc = new SceneDocument();
-      // Provide a map so prefab.id resolves to a path (rather than being stripped)
-      doc.deserialize(
-        {
-          version: 1,
-          nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
-        },
-        { 'pf-1': 'prefabs/asset.prefab' },
-      );
+      // P4: prefab.id is stripped regardless (no map). Leaf migration still renames 'leaf' → 'prefab'
+      // but the result is immediately stripped by the id-strip check.
+      doc.deserialize({
+        version: 1,
+        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
+      });
       const node = doc.getNode('n')!;
       const comp = node.components as Record<string, unknown>;
-      expect('prefab' in comp).toBe(true);
+      // prefab component stripped (id-only ref unresolvable)
+      expect('prefab' in comp).toBe(false);
       expect('leaf' in comp).toBe(false);
-      const prefab = comp['prefab'] as Record<string, unknown>;
-      expect(prefab['path']).toBe('prefabs/asset.prefab');
+      // mesh migration still applied
       const mesh = comp['mesh'] as Record<string, unknown>;
       expect(mesh['path']).toBe('models/a.glb');
+      consoleSpy.mockRestore();
     });
 
-    it('strips prefab when leaf migration results in unknown id (no map)', () => {
+    it('strips prefab when leaf migration results in unknown id', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const doc = new SceneDocument();
       doc.deserialize({
@@ -352,7 +352,7 @@ describe('SceneDocument', () => {
       });
       const node = doc.getNode('n')!;
       const comp = node.components as Record<string, unknown>;
-      // Orphan: prefab was stripped since no map provided
+      // Orphan: prefab was stripped since id is unresolvable
       expect('prefab' in comp).toBe(false);
       expect('leaf' in comp).toBe(false);
       consoleSpy.mockRestore();

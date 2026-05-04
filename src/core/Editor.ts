@@ -13,7 +13,6 @@ import { ResourceCache } from './scene/ResourceCache';
 import { PrefabRegistry } from './scene/PrefabRegistry';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
-import * as PrefabStore from './scene/PrefabStore';
 import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
 import { prefabPathForName } from '../utils/prefabPath';
 
@@ -31,16 +30,6 @@ export class Editor {
   private _transformMode: TransformMode = 'translate';
   private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
 
-  /**
-   * Map from legacy prefab UUID → project-relative path.
-   * Built once in init() during the IDB→file migration and kept for the
-   * lifetime of the editor session. Used by loadScene to resolve legacy
-   * `prefab.id` refs during deserialization.
-   *
-   * Assumption: single project per origin — Editor is re-constructed on project switch
-   * (App.tsx closes + reopens), so the map is always fresh for each project session.
-   */
-  private _prefabIdToPath: Record<string, string> = {};
 
   constructor(public readonly projectManager: ProjectManager) {
     this.scene = new Scene();
@@ -58,54 +47,21 @@ export class Editor {
 
   /**
    * Non-blocking init:
-   *   1. Run one-time IDB→file migration for legacy PrefabStore assets.
-   *   2. Hydrate PrefabRegistry from project files.
+   *   1. Hydrate PrefabRegistry from project files.
+   *   2. Wire live-sync event chain.
    *   3. Notify bridge signals.
    *
    * GLB hydration has moved to loadScene (P1b) — no GlbStore restore needed.
+   * IDB→file migration (was step 1 pre-P4) has been removed — PrefabStore is
+   * decommissioned. Users who haven't run the app since P1c will not be
+   * auto-migrated; this is an accepted one-way step (see P4 PR body).
    * App layer must await this before making the editor available externally.
    */
   async init(): Promise<void> {
-    // ── Step 1: one-time IDB → file migration ──────────────────────────────
-    // Guard: only run if a project is open (init called before project open is a no-op)
-    if (this.projectManager.isOpen) {
-      const legacyAssets = await PrefabStore.getAll();
-      if (legacyAssets.length > 0) {
-        const idToPath: Record<string, string> = {};
-        for (const asset of legacyAssets) {
-          const path = prefabPathForName(asset.name);
-          idToPath[asset.id] = path;
-
-          // Idempotency: skip if file already exists (don't clobber)
-          const alreadyExists = this.projectManager
-            .getFiles()
-            .some(f => f.path === path);
-          if (!alreadyExists) {
-            try {
-              await this.projectManager.writeFile(path, JSON.stringify(asset));
-            } catch (err) {
-              console.warn(`[Editor] init: could not migrate prefab "${asset.name}" → ${path}:`, err);
-            }
-          }
-        }
-        this._prefabIdToPath = idToPath;
-
-        // Rescan so getFiles() includes the newly written prefab files
-        await this.projectManager.rescan();
-
-        // Clear legacy IDB store after successful migration
-        try {
-          await PrefabStore.clear();
-        } catch (err) {
-          console.warn('[Editor] init: could not clear legacy PrefabStore after migration:', err);
-        }
-      }
-    }
-
-    // ── Step 2: hydrate PrefabRegistry from project files ──────────────────
+    // ── Step 1: hydrate PrefabRegistry from project files ──────────────────
     await this._hydratePrefabRegistry();
 
-    // ── Step 3: wire live-sync event chain ─────────────────────────────────
+    // ── Step 2: wire live-sync event chain ─────────────────────────────────
     // PrefabRegistry listens to projectManager.fileChanged → refetches → emits prefabChanged.
     // Main SceneSync subscribes to prefabChanged → rebuilds instance subtrees.
     // Sandbox SceneSyncs (Workshop) deliberately do NOT subscribe — they must not
@@ -113,7 +69,7 @@ export class Editor {
     this.prefabRegistry.attach(this.projectManager);
     this.sceneSync.attachPrefabRegistry(this.prefabRegistry);
 
-    // ── Step 4: notify bridge ───────────────────────────────────────────────
+    // ── Step 3: notify bridge ───────────────────────────────────────────────
     this.events.emit('prefabStoreChanged');
   }
 
@@ -149,9 +105,8 @@ export class Editor {
 
   /**
    * Register a new prefab: write to project file, update PrefabRegistry, emit event.
-   * Write is fire-and-forget (matches legacy PrefabStore.put pattern).
-   * The derived path (`prefabs/<safeName>.prefab`) is returned synchronously so
-   * SaveAsPrefabCommand can store it in the scene node immediately.
+   * Write is fire-and-forget (path returned synchronously so SaveAsPrefabCommand
+   * can store it in the scene node immediately).
    */
   registerPrefab(asset: PrefabAsset): string {
     const path = prefabPathForName(asset.name);
@@ -253,8 +208,8 @@ export class Editor {
     this.history.clear();
     if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
 
-    // Deserialize with prefab migration map — resolves legacy prefab.id → path
-    this.sceneDocument.deserialize(data, this._prefabIdToPath);
+    // Deserialize scene data (migration of legacy formats runs inside deserialize)
+    this.sceneDocument.deserialize(data);
 
     // Hydrate mesh + prefab URLs
     for (const node of this.sceneDocument.getAllNodes()) {

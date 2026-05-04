@@ -143,6 +143,53 @@ it('reset 自建 id → 回原 store', () => {
   expect(resetWorkspaceToPreset(s0, customId)).toBe(s0);
 });
 
+it('migration prefab→workshop: debug-preset 強制重建 (editorType=prefab → workshop)', () => {
+  const debugStore: WorkspaceStore = {
+    version: 1,
+    currentWorkspaceId: DEBUG_PRESET_ID,
+    workspaces: [
+      {
+        id: DEBUG_PRESET_ID,
+        name: 'Debug',
+        grid: { version: 2, verts: [], edges: [], areas: [] },
+        editorTypes: { viewport: 'viewport', environment: 'environment', prefab: 'prefab' },
+        viewportState: {},
+        panelStates: {},
+      },
+    ],
+  };
+  storage[STORAGE_KEY] = JSON.stringify(debugStore);
+  const s = loadStore();
+  const debug = s.workspaces.find(w => w.id === DEBUG_PRESET_ID);
+  expect(debug).toBeDefined();
+  expect(Object.values(debug!.editorTypes)).not.toContain('prefab');
+  expect(Object.values(debug!.editorTypes)).toContain('workshop');
+});
+
+it('migration prefab→workshop: 非 debug-preset workspace，editorType prefab → workshop', () => {
+  const customStore: WorkspaceStore = {
+    version: 1,
+    currentWorkspaceId: LAYOUT_PRESET_ID,
+    workspaces: [
+      {
+        id: LAYOUT_PRESET_ID,
+        name: 'Layout',
+        grid: { version: 2, verts: [], edges: [], areas: [] },
+        editorTypes: { 'viewport': 'viewport', 'panel1': 'prefab', 'panel2': 'workshop' },
+        viewportState: {},
+        panelStates: {},
+      },
+    ],
+  };
+  storage[STORAGE_KEY] = JSON.stringify(customStore);
+  const s = loadStore();
+  const layout = s.workspaces.find(w => w.id === LAYOUT_PRESET_ID);
+  expect(layout).toBeDefined();
+  expect(layout!.editorTypes['panel1']).toBe('workshop');
+  expect(layout!.editorTypes['panel2']).toBe('workshop');
+  expect(layout!.editorTypes['viewport']).toBe('viewport');
+});
+
 it('nextDuplicateName: Layout → Layout.001', () => {
   expect(nextDuplicateName(['Layout'], 'Layout')).toBe('Layout.001');
 });

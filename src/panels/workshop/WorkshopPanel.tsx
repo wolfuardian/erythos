@@ -16,6 +16,7 @@ import { EventEmitter } from '../../core/EventEmitter';
 import { SceneSync } from '../../core/scene/SceneSync';
 import { deserializeFromPrefab, serializeToPrefab } from '../../core/scene/PrefabSerializer';
 import { prefabPathForName } from '../../utils/prefabPath';
+import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { generateUUID } from '../../utils/uuid';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 import type { SceneNode } from '../../core/scene/SceneFormat';
@@ -114,12 +115,26 @@ const WorkshopPanel: Component = () => {
     renderer?.domElement.remove();
   });
 
-  // ── GLB drop handler ─────────────────────────────────────────────────────
+  // ── Drop handler helpers ──────────────────────────────────────────────────
+
+  /** Derive a deduped prefab name: if 'foo.prefab' already exists, try 'foo (copy)', 'foo (copy 2)', etc. */
+  const nextAvailablePrefabName = (baseName: string): string => {
+    const existingPaths = editor.projectManager.getFiles().map(f => f.path);
+    if (!existingPaths.includes(prefabPathForName(baseName))) return baseName;
+    let candidate = `${baseName} (copy)`;
+    if (!existingPaths.includes(prefabPathForName(candidate))) return candidate;
+    let n = 2;
+    while (existingPaths.includes(prefabPathForName(`${baseName} (copy ${n})`))) n++;
+    return `${baseName} (copy ${n})`;
+  };
+
+  // ── Drop handler ──────────────────────────────────────────────────────────
 
   const handleDragOver = (e: DragEvent) => {
-    if (!e.dataTransfer?.types.includes('application/erythos-asset')) return;
+    const types = e.dataTransfer?.types ?? [];
+    if (!types.includes('application/erythos-asset') && !types.includes('application/erythos-scene-subtree')) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    e.dataTransfer!.dropEffect = 'copy';
     setIsDragOver(true);
   };
 
@@ -131,6 +146,63 @@ const WorkshopPanel: Component = () => {
     e.preventDefault();
     setIsDragOver(false);
 
+    // ── Scene-subtree drop: create prefab from main scene node ────────────
+    const subtreeRaw = e.dataTransfer?.getData('application/erythos-scene-subtree');
+    if (subtreeRaw) {
+      let subtreePayload: { rootUUID: string };
+      try {
+        subtreePayload = JSON.parse(subtreeRaw) as { rootUUID: string };
+      } catch {
+        return;
+      }
+
+      const { rootUUID } = subtreePayload;
+      const rootNode = editor.sceneDocument.getNode(rootUUID);
+      if (!rootNode) {
+        console.warn(`[Workshop] scene-subtree drop: node ${rootUUID} not found`);
+        return;
+      }
+
+      const derivedName = nextAvailablePrefabName(rootNode.name);
+      const targetPath = prefabPathForName(derivedName);
+
+      setStatusText(`Creating prefab "${derivedName}"…`);
+
+      // Execute SaveAsPrefabCommand on the main editor. This:
+      //   1. Serializes the subtree → PrefabAsset
+      //   2. Writes .prefab file (async, fire-and-forget via registerPrefab)
+      //   3. Tags root node with components.prefab = { path }
+      // Live-sync: fileChanged → PrefabRegistry.refetch → prefabChanged →
+      //   SceneSync._rebuildPrefabInstances removes existing children and
+      //   re-adds from the new prefab content.
+      editor.execute(new SaveAsPrefabCommand(editor, rootUUID, derivedName));
+
+      // Wait for the file to be written + registry updated (prefabStoreChanged fires after rescan).
+      await new Promise<void>((resolve) => {
+        const onReady = () => {
+          editor.events.off('prefabStoreChanged', onReady);
+          resolve();
+        };
+        editor.events.on('prefabStoreChanged', onReady);
+        // Safety timeout: if the event never fires (e.g. project closed), resolve after 3s.
+        setTimeout(() => {
+          editor.events.off('prefabStoreChanged', onReady);
+          resolve();
+        }, 3000);
+      });
+
+      // Open the newly created prefab in Workshop
+      const prefabFile = editor.projectManager.getFiles().find(f => f.path === targetPath);
+      if (prefabFile) {
+        await handleOpenPrefab(prefabFile);
+      } else {
+        // File write may have failed — just reflect status
+        setStatusText(`Prefab "${derivedName}" created (not found in project files)`);
+      }
+      return;
+    }
+
+    // ── Asset (GLB) drop: add mesh node to sandbox ────────────────────────
     const raw = e.dataTransfer?.getData('application/erythos-asset');
     if (!raw) return;
 
@@ -384,7 +456,7 @@ const WorkshopPanel: Component = () => {
         >
           <div ref={viewportRef} class={styles.canvas} />
           {isDragOver() && (
-            <div class={styles.dropOverlay}>Drop .glb here</div>
+            <div class={styles.dropOverlay}>Drop .glb or scene node here</div>
           )}
         </div>
       </div>
