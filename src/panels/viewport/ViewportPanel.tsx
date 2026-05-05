@@ -2,10 +2,11 @@ import { onMount, onCleanup, createEffect, createSignal, Show, type Component } 
 import styles from './ViewportPanel.module.css';
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
-import type { Object3D } from 'three';
+import type { Object3D, Vector3, Euler } from 'three';
 
 import { Viewport } from '../../viewport/Viewport';
 import { useEditor } from '../../app/EditorContext';
+import type { Editor } from '../../core/Editor';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
@@ -22,6 +23,45 @@ import { currentWorkspace } from '../../app/workspaceStore';
 import { ShadingToolbar } from './ShadingToolbar';
 import { RenderSettingsPanel } from './RenderSettingsPanel';
 
+async function importGlbAndApplyDropPosition(
+  file: File,
+  dropPosition: Vec3,
+  editor: Editor,
+): Promise<void> {
+  const groupUUID = await loadGLTFFromFile(file, editor);
+  if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
+    editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, [0, 0, 0]));
+  }
+}
+
+function defaultSceneLightsFor(mode: ShadingMode): boolean {
+  return mode === 'solid' || mode === 'rendering';
+}
+
+function emitTransformCommands(
+  obj: Object3D,
+  start: { pos: Vector3; rot: Euler; scale: Vector3 },
+  editor: Editor,
+): void {
+  const uuid = editor.sceneSync.getUUID(obj);
+  if (!uuid) return;
+  if (!obj.position.equals(start.pos)) {
+    const newPos: Vec3 = [obj.position.x, obj.position.y, obj.position.z];
+    const oldPos: Vec3 = [start.pos.x, start.pos.y, start.pos.z];
+    editor.execute(new SetTransformCommand(editor, uuid, 'position', newPos, oldPos));
+  }
+  if (!obj.rotation.equals(start.rot)) {
+    const newRot: Vec3 = [obj.rotation.x, obj.rotation.y, obj.rotation.z];
+    const oldRot: Vec3 = [start.rot.x, start.rot.y, start.rot.z];
+    editor.execute(new SetTransformCommand(editor, uuid, 'rotation', newRot, oldRot));
+  }
+  if (!obj.scale.equals(start.scale)) {
+    const newScale: Vec3 = [obj.scale.x, obj.scale.y, obj.scale.z];
+    const oldScale: Vec3 = [start.scale.x, start.scale.y, start.scale.z];
+    editor.execute(new SetTransformCommand(editor, uuid, 'scale', newScale, oldScale));
+  }
+}
+
 const ViewportPanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
@@ -33,7 +73,6 @@ const ViewportPanel: Component = () => {
   const [isDragging, setIsDragging] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [renderMode, setRenderMode] = createSignal<ShadingMode>('solid');
-  const [sceneLightsOn, setSceneLightsOn] = createSignal(true);
   const [quality, setQuality] = createSignal<QualityLevel>('normal');
   const [renderSettings, setRenderSettings] = createSignal<RenderSettings>(DEFAULT_RENDER_SETTINGS);
   const [shadingExpanded, setShadingExpanded] = createSignal(true);
@@ -48,6 +87,9 @@ const ViewportPanel: Component = () => {
   // Per-mode scene lights override map
   // key = ShadingMode，value = override（undefined 代表使用 mode default）
   const [sceneLightsOverrides, setSceneLightsOverrides] = createSignal<Partial<Record<ShadingMode, boolean>>>({});
+
+  const sceneLightsOn = (): boolean =>
+    sceneLightsOverrides()[renderMode()] ?? defaultSceneLightsFor(renderMode());
 
   const updateSetting = <K extends keyof RenderSettings>(
     key: K,
@@ -87,20 +129,13 @@ const ViewportPanel: Component = () => {
       e.preventDefault();
       setIsDragging(false);
 
-      // 路徑 1：OS 檔案拖放（現有邏輯）
+      // 路徑 1：OS 檔案拖放
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
       if (gltfFile) {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
-
         try {
-          const groupUUID = await loadGLTFFromFile(gltfFile, editor);
-
-          // 只有 hit 到 y=0 平面時才設定位置（fallback 原點不需 command）
-          if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
-            const oldPos: Vec3 = [0, 0, 0]; // 新導入節點始終從原點開始
-            editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
-          }
+          await importGlbAndApplyDropPosition(gltfFile, dropPosition, editor);
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));
         }
@@ -116,10 +151,7 @@ const ViewportPanel: Component = () => {
         for (const p of paths) {
           try {
             const file = await editor.projectManager.readFile(p);
-            const groupUUID = await loadGLTFFromFile(file, editor);
-            if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
-              editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, [0, 0, 0]));
-            }
+            await importGlbAndApplyDropPosition(file, dropPosition, editor);
           } catch (err) {
             errors.push(err instanceof Error ? err.message : String(err));
           }
@@ -132,14 +164,9 @@ const ViewportPanel: Component = () => {
       const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
       if (internalGlb) {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
-
         try {
           const file = await editor.projectManager.readFile(internalGlb);
-          const groupUUID = await loadGLTFFromFile(file, editor);
-          if (dropPosition[0] !== 0 || dropPosition[2] !== 0) {
-            const oldPos: Vec3 = [0, 0, 0];
-            editor.execute(new SetTransformCommand(editor, groupUUID, 'position', dropPosition, oldPos));
-          }
+          await importGlbAndApplyDropPosition(file, dropPosition, editor);
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));
         }
@@ -265,45 +292,11 @@ const ViewportPanel: Component = () => {
       },
       onMultiTransformEnd: (objects, startTransforms) => {
         for (let i = 0; i < objects.length; i++) {
-          const obj = objects[i];
-          const start = startTransforms[i];
-          const uuid = editor.sceneSync.getUUID(obj);
-          if (!uuid) continue;
-          if (!obj.position.equals(start.pos)) {
-            const newPos: Vec3 = [obj.position.x, obj.position.y, obj.position.z];
-            const oldPos: Vec3 = [start.pos.x, start.pos.y, start.pos.z];
-            editor.execute(new SetTransformCommand(editor, uuid, 'position', newPos, oldPos));
-          }
-          if (!obj.rotation.equals(start.rot)) {
-            const newRot: Vec3 = [obj.rotation.x, obj.rotation.y, obj.rotation.z];
-            const oldRot: Vec3 = [start.rot.x, start.rot.y, start.rot.z];
-            editor.execute(new SetTransformCommand(editor, uuid, 'rotation', newRot, oldRot));
-          }
-          if (!obj.scale.equals(start.scale)) {
-            const newScale: Vec3 = [obj.scale.x, obj.scale.y, obj.scale.z];
-            const oldScale: Vec3 = [start.scale.x, start.scale.y, start.scale.z];
-            editor.execute(new SetTransformCommand(editor, uuid, 'scale', newScale, oldScale));
-          }
+          emitTransformCommands(objects[i], startTransforms[i], editor);
         }
       },
       onTransformEnd: (obj, startPos, startRot, startScale) => {
-        const uuid = editor.sceneSync.getUUID(obj);
-        if (!uuid) return;
-        if (!obj.position.equals(startPos)) {
-          const newPos: Vec3 = [obj.position.x, obj.position.y, obj.position.z];
-          const oldPos: Vec3 = [startPos.x, startPos.y, startPos.z];
-          editor.execute(new SetTransformCommand(editor, uuid, 'position', newPos, oldPos));
-        }
-        if (!obj.rotation.equals(startRot)) {
-          const newRot: Vec3 = [obj.rotation.x, obj.rotation.y, obj.rotation.z];
-          const oldRot: Vec3 = [startRot.x, startRot.y, startRot.z];
-          editor.execute(new SetTransformCommand(editor, uuid, 'rotation', newRot, oldRot));
-        }
-        if (!obj.scale.equals(startScale)) {
-          const newScale: Vec3 = [obj.scale.x, obj.scale.y, obj.scale.z];
-          const oldScale: Vec3 = [startScale.x, startScale.y, startScale.z];
-          editor.execute(new SetTransformCommand(editor, uuid, 'scale', newScale, oldScale));
-        }
+        emitTransformCommands(obj, { pos: startPos, rot: startRot, scale: startScale }, editor);
       },
     });
 
@@ -364,13 +357,8 @@ const ViewportPanel: Component = () => {
         viewport.cameraCtrl.controls.update();
       }
       if (panelState?.sceneLightsOverrides) {
+        // shading effect 會接手 viewport.shading 副作用
         setSceneLightsOverrides(panelState.sceneLightsOverrides);
-        // 套用當前 mode 的 override（如有）
-        const currentOverride = panelState.sceneLightsOverrides[renderMode()];
-        if (currentOverride !== undefined) {
-          setSceneLightsOn(currentOverride);
-          viewport.shading.setSceneLightsEnabled(currentOverride);
-        }
       }
       if (panelState?.lookdevPreset !== undefined) {
         setLookdevPreset(panelState.lookdevPreset);
@@ -437,16 +425,11 @@ const ViewportPanel: Component = () => {
   createEffect(() => {
     const mode = renderMode();
     viewport?.setShadingMode(mode);
-    // 套用當前 mode 的 sceneLightsOverride（沒有 override 時 clear，讓 mode default 生效）
     const override = sceneLightsOverrides()[mode];
     if (override !== undefined) {
-      setSceneLightsOn(override);
       viewport?.shading.setSceneLightsEnabled(override);
     } else {
-      // 沒有 override，用 mode default（切完 mode 後 ShadingManager.applyMode 已更新 layers）
-      // 同步 sceneLightsOn UI 到 mode default
-      const modeDefault = mode === 'solid' || mode === 'rendering';
-      setSceneLightsOn(modeDefault);
+      // 沒 override → mode default 生效（applyMode 已更新 layers）
       viewport?.shading.clearSceneLightsOverride();
     }
     viewport?.requestRender();
@@ -575,10 +558,8 @@ const ViewportPanel: Component = () => {
         setShadingExpanded={setShadingExpanded}
         sceneLightsOn={sceneLightsOn}
         onSceneLightsChange={(checked) => {
-          setSceneLightsOn(checked);
+          // 寫 override → shading effect 接手 viewport.shading + render
           setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
-          viewport?.shading.setSceneLightsEnabled(checked);
-          viewport?.requestRender();
         }}
         hdrIntensity={hdrIntensity}
         setHdrIntensity={setHdrIntensity}
