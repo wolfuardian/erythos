@@ -17,6 +17,8 @@ import { Scene } from 'three';
 import { PrefabRegistry } from '../PrefabRegistry';
 import { SceneSync } from '../SceneSync';
 import { SceneDocument } from '../SceneDocument';
+import { Selection } from '../../Selection';
+import { EventEmitter } from '../../EventEmitter';
 import type { PrefabAsset } from '../PrefabFormat';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -333,6 +335,190 @@ describe('SceneSync.attachPrefabRegistry — rebuild instance subtrees on prefab
     const node = doc.getNode(instanceRoot.id);
     const prefabComp = node?.components['prefab'] as { url?: string } | undefined;
     expect(prefabComp?.url).toBe('blob:original');
+  });
+});
+
+// ── Helpers for selection tests ───────────────────────────────────────────────
+
+/**
+ * Build a minimal scene with one instance root and given child names,
+ * then wire Selection into a fresh SceneSync + PrefabRegistry.
+ *
+ * Returns objects needed to trigger rebuilds and assert selection state.
+ */
+function makeSelectionTestBed(childNames: string[]) {
+  const events = new EventEmitter();
+  const selection = new Selection(events);
+  const doc = new SceneDocument();
+  const scene = new Scene();
+  const sync = new SceneSync(doc, scene);
+  const registry = new PrefabRegistry();
+
+  // Instance root
+  const instanceRoot = doc.createNode('Widget-Instance');
+  instanceRoot.components = { prefab: { path: 'prefabs/widget.prefab', url: 'blob:v1' } };
+  doc.addNode(instanceRoot);
+
+  // Initial children
+  const childNodes = childNames.map((name, i) => {
+    const child = doc.createNode(name);
+    child.parent = instanceRoot.id;
+    child.order = i;
+    doc.addNode(child);
+    return child;
+  });
+
+  sync.attachPrefabRegistry(registry);
+  sync.attachSelection(selection);
+
+  /**
+   * Fire prefabChanged with a new asset that has the given child names.
+   * Returns the children under instanceRoot after rebuild.
+   */
+  const triggerRebuild = (newChildNames: string[]) => {
+    const newAsset = makeAsset('Widget', newChildNames);
+    (registry as any)._emitPrefabChanged('blob:v2', newAsset, 'prefabs/widget.prefab');
+    return doc.getChildren(instanceRoot.id);
+  };
+
+  return { doc, sync, registry, selection, instanceRoot, childNodes, triggerRebuild };
+}
+
+// ── Selection snapshot/restore tests ─────────────────────────────────────────
+
+describe('SceneSync — selection preserve across prefab live-sync rebuild', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('single instance: selected child UUID is updated to new UUID after rebuild', async () => {
+    const { doc, instanceRoot, childNodes, triggerRebuild, selection } = makeSelectionTestBed(['Seat', 'Back']);
+    const [seatNode] = childNodes;
+
+    // Select "Seat" (index 0)
+    selection.select(seatNode.id);
+    expect(selection.all).toContain(seatNode.id);
+
+    // Trigger prefab rebuild (same children)
+    const newChildren = triggerRebuild(['Seat', 'Back']);
+    await Promise.resolve();
+
+    // Old UUID is gone
+    expect(doc.getNode(seatNode.id)).toBeNull();
+
+    // Selection should now contain the new "Seat" UUID
+    const newSeat = newChildren.find(c => c.name === 'Seat');
+    expect(newSeat).toBeDefined();
+    expect(selection.all).toContain(newSeat!.id);
+    // Old UUID should no longer be in selection
+    expect(selection.all).not.toContain(seatNode.id);
+  });
+
+  it('multi-select: instance-internal UUIDs swapped, external UUID unchanged', async () => {
+    const events = new EventEmitter();
+    const selection = new Selection(events);
+    const doc = new SceneDocument();
+    const scene = new Scene();
+    const sync = new SceneSync(doc, scene);
+    const registry = new PrefabRegistry();
+
+    // Instance root with one child
+    const instanceRoot = doc.createNode('Widget-Instance');
+    instanceRoot.components = { prefab: { path: 'prefabs/widget.prefab', url: 'blob:v1' } };
+    doc.addNode(instanceRoot);
+
+    const internalChild = doc.createNode('InternalNode');
+    internalChild.parent = instanceRoot.id;
+    internalChild.order = 0;
+    doc.addNode(internalChild);
+
+    // External node (NOT under the instance)
+    const externalNode = doc.createNode('ExternalNode');
+    externalNode.parent = null;
+    doc.addNode(externalNode);
+
+    sync.attachPrefabRegistry(registry);
+    sync.attachSelection(selection);
+
+    // Select both
+    selection.select(internalChild.id);
+    selection.add(externalNode.id);
+    expect(selection.all).toHaveLength(2);
+
+    // Trigger rebuild
+    const newAsset = makeAsset('Widget', ['InternalNode']);
+    (registry as any)._emitPrefabChanged('blob:v2', newAsset, 'prefabs/widget.prefab');
+    await Promise.resolve();
+
+    const newChildren = doc.getChildren(instanceRoot.id);
+    const newInternal = newChildren.find(c => c.name === 'InternalNode');
+    expect(newInternal).toBeDefined();
+
+    // External UUID unchanged
+    expect(selection.all).toContain(externalNode.id);
+    // Internal UUID swapped to new
+    expect(selection.all).toContain(newInternal!.id);
+    // Old internal UUID gone
+    expect(selection.all).not.toContain(internalChild.id);
+    expect(selection.all).toHaveLength(2);
+
+    sync.dispose();
+    registry.detach();
+  });
+
+  it('same-name siblings × N: order distinguishes them — selects order=2 and restores order=2', async () => {
+    // Three "Wheel" siblings at order 0, 1, 2
+    const { doc, instanceRoot, childNodes, triggerRebuild, selection } = makeSelectionTestBed([
+      'Wheel', 'Wheel', 'Wheel',
+    ]);
+
+    // Select the middle-order Wheel (order = 1) specifically
+    const wheelOrder1 = childNodes[1];
+    expect(wheelOrder1.order).toBe(1);
+    selection.select(wheelOrder1.id);
+
+    // Trigger rebuild — same three Wheel children
+    const newChildren = triggerRebuild(['Wheel', 'Wheel', 'Wheel']);
+    await Promise.resolve();
+
+    // Find the new Wheel with order=1
+    const newWheelOrder1 = newChildren.find(c => c.name === 'Wheel' && c.order === 1);
+    expect(newWheelOrder1).toBeDefined();
+
+    // Selection points to the correct order=1 wheel, not order=0 or order=2
+    expect(selection.all).toContain(newWheelOrder1!.id);
+    expect(selection.all).not.toContain(wheelOrder1.id);
+
+    // Should NOT select wheel at order=0 or order=2
+    const newWheelOrder0 = newChildren.find(c => c.name === 'Wheel' && c.order === 0);
+    const newWheelOrder2 = newChildren.find(c => c.name === 'Wheel' && c.order === 2);
+    expect(selection.all).not.toContain(newWheelOrder0!.id);
+    expect(selection.all).not.toContain(newWheelOrder2!.id);
+  });
+
+  it('selected child removed in new prefab: UUID dropped from selection, no exception', async () => {
+    const { doc, instanceRoot, childNodes, triggerRebuild, selection } = makeSelectionTestBed([
+      'Seat', 'Backrest',
+    ]);
+    const [seatNode, backrestNode] = childNodes;
+
+    // Select both
+    selection.select(seatNode.id);
+    selection.add(backrestNode.id);
+    expect(selection.all).toHaveLength(2);
+
+    // Rebuild WITHOUT Backrest — it's deleted
+    const newChildren = triggerRebuild(['Seat']);
+    await Promise.resolve();
+
+    // Seat still in selection (new UUID)
+    const newSeat = newChildren.find(c => c.name === 'Seat');
+    expect(newSeat).toBeDefined();
+    expect(selection.all).toContain(newSeat!.id);
+
+    // Backrest was deleted → removed from selection, no error thrown
+    expect(selection.all).not.toContain(backrestNode.id);
+    expect(selection.all).toHaveLength(1);
   });
 });
 

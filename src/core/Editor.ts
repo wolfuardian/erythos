@@ -77,6 +77,9 @@ export class Editor {
     // Wire PrefabInstanceWatcher into SceneSync so it can query the self-write
     // registry before rebuilding the originating instance.
     this.sceneSync.attachInstanceWatcher(this.prefabInstanceWatcher);
+    // Wire Selection into SceneSync so it can snapshot/restore selection state
+    // across prefab live-sync rebuilds (fresh UUIDs are swapped in place).
+    this.sceneSync.attachSelection(this.selection);
 
     // ── Step 3: notify bridge ───────────────────────────────────────────────
     this.events.emit('prefabStoreChanged');
@@ -263,6 +266,7 @@ export class Editor {
     //   watcher → sceneSync → prefabRegistry
     this.prefabInstanceWatcher.dispose();
     this.sceneSync.attachInstanceWatcher(null);
+    this.sceneSync.attachSelection(null);
     this.prefabRegistry.detach();
     this.sceneSync.dispose();
     this.keybindings.dispose();
