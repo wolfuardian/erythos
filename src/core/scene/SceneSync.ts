@@ -324,7 +324,7 @@ export class SceneSync {
       // Find a child matching both name and order
       const match = children.find(c => c.name === step.name && c.order === step.order);
       if (!match) return null;
-      currentParentId = match.id as NodeUUID;
+      currentParentId = match.id;
     }
     return currentParentId === instanceRootId && path.length > 0 ? null : currentParentId;
   }
