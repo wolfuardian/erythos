@@ -13,6 +13,7 @@ import { ResourceCache } from './scene/ResourceCache';
 import { PrefabRegistry } from './scene/PrefabRegistry';
 import { PrefabInstanceWatcher } from './scene/PrefabInstanceWatcher';
 import type { SceneNode, SceneFile } from './scene/SceneFormat';
+import type { BlobURL } from '../utils/branded';
 import type { PrefabAsset } from './scene/PrefabFormat';
 import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
 import { prefabPathForName } from '../utils/prefabPath';
@@ -226,7 +227,7 @@ export class Editor {
     // Hydrate mesh + prefab URLs
     for (const node of this.sceneDocument.getAllNodes()) {
       // Mesh hydration (P1b)
-      const mesh = node.components['mesh'] as { path?: string; nodePath?: string; url?: string } | undefined;
+      const mesh = node.components['mesh'] as { path?: string; nodePath?: string; url?: BlobURL } | undefined;
       if (mesh?.path && !mesh.url) {
         try {
           const url = await this.projectManager.urlFor(mesh.path);
@@ -240,7 +241,7 @@ export class Editor {
       }
 
       // Prefab hydration (P1c)
-      const prefab = node.components['prefab'] as { path?: string; url?: string } | undefined;
+      const prefab = node.components['prefab'] as { path?: string; url?: BlobURL } | undefined;
       if (prefab?.path && !prefab.url) {
         try {
           const url = await this.projectManager.urlFor(prefab.path);

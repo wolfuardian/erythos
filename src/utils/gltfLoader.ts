@@ -1,6 +1,7 @@
 import { ImportGLTFCommand } from '../core/commands/ImportGLTFCommand';
 import { convertGLTFToNodes } from './gltfConverter';
 import type { Editor } from '../core/Editor';
+import type { BlobURL } from './branded';
 
 export async function loadGLTFFromFile(file: File, editor: Editor): Promise<string> {
   // 1. Import the file into the project's models/ folder
@@ -21,7 +22,7 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<stri
 
   // Attach url to all mesh nodes so SceneSync can render them immediately
   for (const node of childNodes) {
-    const mesh = node.components['mesh'] as { path: string; nodePath?: string; url?: string } | undefined;
+    const mesh = node.components['mesh'] as { path: string; nodePath?: string; url?: BlobURL } | undefined;
     if (mesh) {
       mesh.url = url;
     }

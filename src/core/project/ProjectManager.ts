@@ -7,6 +7,8 @@ declare global {
 }
 
 import { createSignal, type Accessor } from 'solid-js';
+import type { BlobURL } from '../../utils/branded';
+import { asBlobURL } from '../../utils/branded';
 import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
@@ -14,14 +16,14 @@ import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 import { generateUUID } from '../../utils/uuid';
 
 type Listener = () => void;
-type FileChangedListener = (path: string, newURL: string) => void;
+type FileChangedListener = (path: string, newURL: BlobURL) => void;
 
 export class ProjectManager {
   private _handle: FileSystemDirectoryHandle | null = null;
   private _files: ProjectFile[] = [];
   private _listeners = new Set<Listener>();
   private _fileChangedListeners = new Set<FileChangedListener>();
-  private _urlCache = new Map<string, string>();
+  private _urlCache = new Map<string, BlobURL>();
   private _currentId: string | null = null;
 
   private readonly _currentScenePath: Accessor<string>;
@@ -195,7 +197,7 @@ export class ProjectManager {
       URL.revokeObjectURL(oldURL);
       this._urlCache.delete(path);
       const file = await this.readFile(path);
-      const newURL = URL.createObjectURL(file);
+      const newURL = asBlobURL(URL.createObjectURL(file));
       this._urlCache.set(path, newURL);
       this._emitFileChanged(path, newURL);
     }
@@ -298,12 +300,12 @@ export class ProjectManager {
    * Throws if no project is open or the file doesn't exist.
    * All cached URLs are revoked when the project is closed.
    */
-  async urlFor(path: string): Promise<string> {
+  async urlFor(path: string): Promise<BlobURL> {
     if (!this._handle) throw new Error('No project open');
     const cached = this._urlCache.get(path);
     if (cached !== undefined) return cached;
     const file = await this.readFile(path);
-    const url = URL.createObjectURL(file);
+    const url = asBlobURL(URL.createObjectURL(file));
     this._urlCache.set(path, url);
     return url;
   }
@@ -365,7 +367,7 @@ export class ProjectManager {
     for (const fn of this._listeners) fn();
   }
 
-  private _emitFileChanged(path: string, newURL: string): void {
+  private _emitFileChanged(path: string, newURL: BlobURL): void {
     for (const fn of this._fileChangedListeners) fn(path, newURL);
   }
 

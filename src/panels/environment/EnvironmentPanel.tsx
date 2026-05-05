@@ -3,6 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../core/commands';
+import { asBlobURL } from '../../utils/branded';
 import styles from './EnvironmentPanel.module.css';
 
 const EnvironmentPanel: Component = () => {
@@ -21,7 +22,7 @@ const EnvironmentPanel: Component = () => {
     if (!path) return;
     const file = await editor.projectManager.readFile(path);
     const blob = new Blob([await file.arrayBuffer()], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
+    const url = asBlobURL(URL.createObjectURL(blob));
     editor.setEnvironmentSettings({ hdrUrl: url });
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
