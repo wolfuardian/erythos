@@ -3,7 +3,7 @@ import { useEditor } from '../../app/EditorContext';
 import { PanelHeader } from '../../components/PanelHeader';
 import { NumberDrag } from '../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../core/commands';
-import { asBlobURL } from '../../utils/branded';
+import { asAssetPath, asBlobURL } from '../../utils/branded';
 import styles from './EnvironmentPanel.module.css';
 
 const EnvironmentPanel: Component = () => {
@@ -20,7 +20,8 @@ const EnvironmentPanel: Component = () => {
 
   const handleSelectFromProject = async (path: string) => {
     if (!path) return;
-    const file = await editor.projectManager.readFile(path);
+    // Mint at the UI-input boundary: e.target.value returns plain string
+    const file = await editor.projectManager.readFile(asAssetPath(path));
     const blob = new Blob([await file.arrayBuffer()], { type: 'application/octet-stream' });
     const url = asBlobURL(URL.createObjectURL(blob));
     editor.setEnvironmentSettings({ hdrUrl: url });

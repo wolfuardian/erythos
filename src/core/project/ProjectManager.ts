@@ -7,8 +7,8 @@ declare global {
 }
 
 import { createSignal, type Accessor } from 'solid-js';
-import type { BlobURL } from '../../utils/branded';
-import { asBlobURL } from '../../utils/branded';
+import type { AssetPath, BlobURL } from '../../utils/branded';
+import { asAssetPath, asBlobURL } from '../../utils/branded';
 import type { ProjectFile } from './ProjectFile';
 import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
@@ -16,32 +16,34 @@ import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 import { generateUUID } from '../../utils/uuid';
 
 type Listener = () => void;
-type FileChangedListener = (path: string, newURL: BlobURL) => void;
+type FileChangedListener = (path: AssetPath, newURL: BlobURL) => void;
 
 export class ProjectManager {
   private _handle: FileSystemDirectoryHandle | null = null;
   private _files: ProjectFile[] = [];
   private _listeners = new Set<Listener>();
   private _fileChangedListeners = new Set<FileChangedListener>();
-  private _urlCache = new Map<string, BlobURL>();
+  private _urlCache = new Map<AssetPath, BlobURL>();
   private _currentId: string | null = null;
 
-  private readonly _currentScenePath: Accessor<string>;
-  private readonly _setCurrentScenePath: (path: string) => void;
+  private readonly _currentScenePath: Accessor<AssetPath>;
+  private readonly _setCurrentScenePath: (path: AssetPath) => void;
 
   constructor() {
-    const [currentScenePath, setCurrentScenePath] = createSignal<string>('scenes/scene.erythos');
+    const [currentScenePath, setCurrentScenePath] = createSignal<AssetPath>(
+      asAssetPath('scenes/scene.erythos'),
+    );
     this._currentScenePath = currentScenePath;
     this._setCurrentScenePath = setCurrentScenePath;
   }
 
   /** Reactive accessor for the currently active scene path */
-  get currentScenePath(): Accessor<string> {
+  get currentScenePath(): Accessor<AssetPath> {
     return this._currentScenePath;
   }
 
   /** Update the currently active scene path */
-  setCurrentScenePath(path: string): void {
+  setCurrentScenePath(path: AssetPath): void {
     this._setCurrentScenePath(path);
   }
 
@@ -167,7 +169,7 @@ export class ProjectManager {
   }
 
   /** Read a file within the project */
-  async readFile(path: string): Promise<File> {
+  async readFile(path: AssetPath): Promise<File> {
     if (!this._handle) throw new Error('No project open');
     const parts = path.split('/');
     let dir = this._handle;
@@ -179,7 +181,7 @@ export class ProjectManager {
   }
 
   /** Write a file within the project (auto-creates subdirectories) */
-  async writeFile(path: string, data: string | ArrayBuffer): Promise<void> {
+  async writeFile(path: AssetPath, data: string | ArrayBuffer): Promise<void> {
     if (!this._handle) throw new Error('No project open');
     const parts = path.split('/');
     let dir = this._handle;
@@ -204,11 +206,11 @@ export class ProjectManager {
   }
 
   /** Copy an external File into the project's correct folder, auto-suffixing on name clash */
-  async importAsset(file: File): Promise<string> {
+  async importAsset(file: File): Promise<AssetPath> {
     const type = inferFileType(file.name);
     const folder = this.folderForType(type);
     const finalName = await this.findFreeName(folder, file.name);
-    const path = `${folder}/${finalName}`;
+    const path = asAssetPath(`${folder}/${finalName}`);
     const buffer = await file.arrayBuffer();
     await this.writeFile(path, buffer);
     await this.rescan();
@@ -256,7 +258,7 @@ export class ProjectManager {
    * Throws if a file with that name already exists.
    * Returns the path on success.
    */
-  async createScene(name: string): Promise<string> {
+  async createScene(name: string): Promise<AssetPath> {
     if (!this._handle) throw new Error('No project open');
     const filename = `${name}.erythos`;
     const scenesDir = await this._handle.getDirectoryHandle('scenes', { create: true });
@@ -276,14 +278,14 @@ export class ProjectManager {
     await writable.close();
 
     await this.rescan();
-    return `scenes/${filename}`;
+    return asAssetPath(`scenes/${filename}`);
   }
 
   /**
    * Delete a file within the project by path.
    * Rescans after deletion.
    */
-  async deleteFile(path: string): Promise<void> {
+  async deleteFile(path: AssetPath): Promise<void> {
     if (!this._handle) throw new Error('No project open');
     const parts = path.split('/');
     let dir = this._handle;
@@ -300,7 +302,7 @@ export class ProjectManager {
    * Throws if no project is open or the file doesn't exist.
    * All cached URLs are revoked when the project is closed.
    */
-  async urlFor(path: string): Promise<BlobURL> {
+  async urlFor(path: AssetPath): Promise<BlobURL> {
     if (!this._handle) throw new Error('No project open');
     const cached = this._urlCache.get(path);
     if (cached !== undefined) return cached;
@@ -332,11 +334,12 @@ export class ProjectManager {
 
   private async scanDir(dir: FileSystemDirectoryHandle, prefix: string, files: ProjectFile[]): Promise<void> {
     for await (const [name, handle] of (dir as any).entries()) {
-      const path = prefix ? `${prefix}/${name}` : name;
+      const rawPath = prefix ? `${prefix}/${name}` : name;
       if (handle.kind === 'directory') {
-        await this.scanDir(handle as FileSystemDirectoryHandle, path, files);
+        await this.scanDir(handle as FileSystemDirectoryHandle, rawPath, files);
       } else {
-        files.push({ path, name, type: inferFileType(name) });
+        // Mint at the FS read boundary: rawPath is a plain string assembled from dir entry names
+        files.push({ path: asAssetPath(rawPath), name, type: inferFileType(name) });
       }
     }
   }
@@ -367,7 +370,7 @@ export class ProjectManager {
     for (const fn of this._listeners) fn();
   }
 
-  private _emitFileChanged(path: string, newURL: BlobURL): void {
+  private _emitFileChanged(path: AssetPath, newURL: BlobURL): void {
     for (const fn of this._fileChangedListeners) fn(path, newURL);
   }
 

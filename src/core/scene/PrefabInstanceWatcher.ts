@@ -3,7 +3,7 @@ import type { SceneDocument } from './SceneDocument';
 import type { ProjectManager } from '../project/ProjectManager';
 import { serializeToPrefab } from './PrefabSerializer';
 import { findPrefabInstanceRoot } from './PrefabInstance';
-import type { NodeUUID } from '../../utils/branded';
+import type { AssetPath, NodeUUID } from '../../utils/branded';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -72,10 +72,10 @@ export class PrefabInstanceWatcher {
   private readonly _projectManager: ProjectManager;
 
   /** path → pending debounce state */
-  private readonly _pending = new Map<string, PendingWrite>();
+  private readonly _pending = new Map<AssetPath, PendingWrite>();
 
   /** path → self-write grace window entry */
-  private readonly _selfWrites = new Map<string, SelfWriteEntry>();
+  private readonly _selfWrites = new Map<AssetPath, SelfWriteEntry>();
 
   /**
    * Re-entrant suppress counter. While > 0, ALL nodeAdded/nodeRemoved/nodeChanged
@@ -122,7 +122,7 @@ export class PrefabInstanceWatcher {
    * avoid overwriting the user's in-progress edit with a round-trip echo.
    * Other instances (different instanceRootId) always return false and rebuild normally.
    */
-  hasRecentSelfWrite(path: string, instanceRootId: NodeUUID): boolean {
+  hasRecentSelfWrite(path: AssetPath, instanceRootId: NodeUUID): boolean {
     const entry = this._selfWrites.get(path);
     if (!entry) return false;
     if (Date.now() > entry.until) {
@@ -195,7 +195,7 @@ export class PrefabInstanceWatcher {
 
     // If parent is a prefab instance root, the removal is directly inside it
     if (parent.components['prefab']) {
-      const prefabComp = parent.components['prefab'] as { path?: string } | undefined;
+      const prefabComp = parent.components['prefab'] as { path?: AssetPath } | undefined;
       const prefabPath = prefabComp?.path;
       if (prefabPath) this._scheduleWrite(prefabPath, parent.id);
       return;
@@ -208,7 +208,7 @@ export class PrefabInstanceWatcher {
     const instanceRoot = this._document.getNode(instanceRootId);
     if (!instanceRoot) return;
 
-    const prefabComp = instanceRoot.components['prefab'] as { path?: string } | undefined;
+    const prefabComp = instanceRoot.components['prefab'] as { path?: AssetPath } | undefined;
     const prefabPath = prefabComp?.path;
     if (prefabPath) this._scheduleWrite(prefabPath, instanceRootId);
   }
@@ -231,7 +231,7 @@ export class PrefabInstanceWatcher {
     const instanceRoot = this._document.getNode(instanceRootId);
     if (!instanceRoot) return;
 
-    const prefabComp = instanceRoot.components['prefab'] as { path?: string } | undefined;
+    const prefabComp = instanceRoot.components['prefab'] as { path?: AssetPath } | undefined;
     const prefabPath = prefabComp?.path;
     if (!prefabPath) return;
 
@@ -251,7 +251,7 @@ export class PrefabInstanceWatcher {
    * against rebuild-echo is the `suppress()` wrap around InstantiatePrefabCommand and
    * SceneSync._rebuildPrefabInstances.
    */
-  private _scheduleWrite(prefabPath: string, instanceRootId: NodeUUID): void {
+  private _scheduleWrite(prefabPath: AssetPath, instanceRootId: NodeUUID): void {
     // Primary guard: if suppress() is active, completely ignore this mutation.
     if (this._suppressDepth > 0) return;
 
@@ -272,13 +272,13 @@ export class PrefabInstanceWatcher {
     this._pending.set(prefabPath, { originatingInstanceRootId: instanceRootId, timeoutHandle });
   }
 
-  private _flushWrite(prefabPath: string, instanceRootId: NodeUUID): void {
+  private _flushWrite(prefabPath: AssetPath, instanceRootId: NodeUUID): void {
     this._pending.delete(prefabPath);
 
     // Re-read instance root to make sure it still exists and has the same prefab path
     const instanceRoot = this._document.getNode(instanceRootId);
     if (!instanceRoot) return;
-    const prefabComp = instanceRoot.components['prefab'] as { path?: string } | undefined;
+    const prefabComp = instanceRoot.components['prefab'] as { path?: AssetPath } | undefined;
     if (prefabComp?.path !== prefabPath) return;
 
     // Serialize the entire subtree rooted at instanceRootId (children only)

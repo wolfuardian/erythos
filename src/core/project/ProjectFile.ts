@@ -1,5 +1,7 @@
+import type { AssetPath } from '../../utils/branded';
+
 export interface ProjectFile {
-  path: string; // e.g. 'prefabs/chair.prefab'
+  path: AssetPath; // e.g. 'prefabs/chair.prefab'
   name: string; // e.g. 'chair.prefab'
   type: 'glb' | 'prefab' | 'hdr' | 'scene' | 'texture' | 'other';
 }

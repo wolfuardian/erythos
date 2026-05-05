@@ -1,7 +1,7 @@
 import type { SceneNode } from './SceneFormat';
 import type { PrefabAsset, PrefabNode } from './PrefabFormat';
 import { generateUUID } from '../../utils/uuid';
-import { asNodeUUID, asPrefabId } from '../../utils/branded';
+import { asNodeUUID, asPrefabId, asAssetPath } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
 /**
@@ -68,19 +68,36 @@ export function deserializeFromPrefab(
   const localIdToUUID = new Map<number, NodeUUID>();
   prefab.nodes.forEach(n => localIdToUUID.set(n.localId, asNodeUUID(generateUUID())));
 
-  return prefab.nodes.map(prefabNode => ({
-    id: localIdToUUID.get(prefabNode.localId)!,
-    name: prefabNode.name,
-    parent: prefabNode.parentLocalId === null
-      ? parentUUID
-      : (localIdToUUID.get(prefabNode.parentLocalId) ?? null),
-    order: prefabNode.order,
-    position: [...prefabNode.position] as [number, number, number],
-    rotation: [...prefabNode.rotation] as [number, number, number],
-    scale: [...prefabNode.scale] as [number, number, number],
-    components: { ...(prefabNode.components as Record<string, unknown>) },
-    userData: {},
-  }));
+  return prefab.nodes.map(prefabNode => {
+    const components = { ...(prefabNode.components as Record<string, unknown>) };
+    // Mint AssetPath for mesh.path / prefab.path at the deserialise boundary —
+    // PrefabAsset originates from JSON.parse (PrefabRegistry.loadFromURL); paths arrive as plain strings.
+    if (components['mesh'] && typeof components['mesh'] === 'object') {
+      const mesh = components['mesh'] as Record<string, unknown>;
+      if (typeof mesh['path'] === 'string') {
+        mesh['path'] = asAssetPath(mesh['path'] as string);
+      }
+    }
+    if (components['prefab'] && typeof components['prefab'] === 'object') {
+      const prefabComp = components['prefab'] as Record<string, unknown>;
+      if (typeof prefabComp['path'] === 'string') {
+        prefabComp['path'] = asAssetPath(prefabComp['path'] as string);
+      }
+    }
+    return {
+      id: localIdToUUID.get(prefabNode.localId)!,
+      name: prefabNode.name,
+      parent: prefabNode.parentLocalId === null
+        ? parentUUID
+        : (localIdToUUID.get(prefabNode.parentLocalId) ?? null),
+      order: prefabNode.order,
+      position: [...prefabNode.position] as [number, number, number],
+      rotation: [...prefabNode.rotation] as [number, number, number],
+      scale: [...prefabNode.scale] as [number, number, number],
+      components,
+      userData: {},
+    };
+  });
 }
 
 /** BFS 收集 root + 所有後代，按廣度優先順序排列（root 永遠是第一個） */

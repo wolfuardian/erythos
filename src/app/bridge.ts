@@ -7,7 +7,7 @@ import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
-import type { NodeUUID } from '../utils/branded';
+import type { AssetPath, NodeUUID } from '../utils/branded';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -56,11 +56,11 @@ export interface EditorBridge {
   /** Shared grid/axes Object3D refs from App layer — pass to Viewport.mount() for addIgnore */
   sharedGridObjects: Object3D[];
   /** Reactive accessor for the currently active scene path */
-  currentScenePath: Accessor<string>;
+  currentScenePath: Accessor<AssetPath>;
   /** Update the active scene path (kept in sync with autosave) */
-  setCurrentScenePath: (path: string) => void;
+  setCurrentScenePath: (path: AssetPath) => void;
   /** Create a new empty scene file; throws if name already exists */
-  createScene: (name: string) => Promise<string>;
+  createScene: (name: string) => Promise<AssetPath>;
   dispose: () => void;
 }
 
@@ -209,7 +209,7 @@ export function createEditorBridge(
     openProjectById: deps?.openProjectById ?? ((_id: string) => Promise.resolve()),
     sharedGridObjects,
     currentScenePath: editor.projectManager.currentScenePath,
-    setCurrentScenePath: (path: string) => editor.projectManager.setCurrentScenePath(path),
+    setCurrentScenePath: (path: AssetPath) => editor.projectManager.setCurrentScenePath(path),
     createScene: (name: string) => editor.projectManager.createScene(name),
     dispose,
   };

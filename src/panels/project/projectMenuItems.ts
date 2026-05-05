@@ -1,15 +1,16 @@
 import type { MenuItem } from '../../components/ContextMenu';
 import type { ProjectFile } from '../../core/project/ProjectFile';
+import type { AssetPath } from '../../utils/branded';
 
 export interface ProjectMenuCtx {
   /** The file that was right-clicked; null when right-clicking empty area. */
   file: ProjectFile | null;
   /** All currently selected asset paths. */
-  selectedPaths: string[];
+  selectedPaths: AssetPath[];
   /** Load/open a scene file. */
-  onLoadScene: (path: string) => void;
+  onLoadScene: (path: AssetPath) => void;
   /** Trigger the delete confirm dialog for the given paths. */
-  onRequestDelete: (paths: string[]) => void;
+  onRequestDelete: (paths: AssetPath[]) => void;
   /** Trigger the new scene prompt dialog. */
   onRequestNewScene: () => void;
 }

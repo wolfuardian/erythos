@@ -7,6 +7,7 @@ import { PromptDialog } from '../../components/PromptDialog';
 import { ContextMenu } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
+import type { AssetPath } from '../../utils/branded';
 import { ProjectTypeIcon } from './ProjectTypeIcon';
 import { buildProjectMenuItems } from './projectMenuItems';
 import { useNewSceneFlow } from './useNewSceneFlow';
@@ -42,12 +43,12 @@ const ProjectPanel: Component = () => {
   const [errorTitle, setErrorTitle] = createSignal('');
   const [showCloseConfirm, setShowCloseConfirm] = createSignal(false);
   const [showLoadConfirm, setShowLoadConfirm] = createSignal(false);
-  const [pendingLoadPath, setPendingLoadPath] = createSignal<string | null>(null);
+  const [pendingLoadPath, setPendingLoadPath] = createSignal<AssetPath | null>(null);
 
   // ── Multi-select state ──
   // selection is transient — fresh on reload (IDE convention; persisted selection masks hover feedback)
-  const [selectedAssetPaths, setSelectedAssetPaths] = createSignal<string[]>([]);
-  const [lastClickedAssetPath, setLastClickedAssetPath] = createSignal<string | null>(null);
+  const [selectedAssetPaths, setSelectedAssetPaths] = createSignal<AssetPath[]>([]);
+  const [lastClickedAssetPath, setLastClickedAssetPath] = createSignal<AssetPath | null>(null);
 
   // ── New IDE state ──
   const [viewMode, setViewMode] = useAreaState<'grid' | 'list'>('viewMode', 'list');
@@ -113,7 +114,7 @@ const ProjectPanel: Component = () => {
   });
 
   // ── Load scene: also syncs currentScenePath ──
-  const doLoadScene = async (path: string) => {
+  const doLoadScene = async (path: AssetPath) => {
     try {
       const file = await editor.projectManager.readFile(path);
       const parsed = JSON.parse(await file.text());
@@ -125,7 +126,7 @@ const ProjectPanel: Component = () => {
     }
   };
 
-  const handleLoadScene = (path: string) => {
+  const handleLoadScene = (path: AssetPath) => {
     if (bridge.confirmBeforeLoad()) {
       setPendingLoadPath(path);
       setShowLoadConfirm(true);
@@ -135,7 +136,7 @@ const ProjectPanel: Component = () => {
   };
 
   // ── Multi-select click handler (all types) ──
-  const handleAssetClick = (e: MouseEvent, path: string) => {
+  const handleAssetClick = (e: MouseEvent, path: AssetPath) => {
     const assets = displayedAssets();
     if (e.shiftKey) {
       const last = lastClickedAssetPath();
@@ -208,7 +209,7 @@ const ProjectPanel: Component = () => {
     });
 
   // ── Selection helper ──
-  const isSelected = (path: string) => selectedAssetPaths().includes(path);
+  const isSelected = (path: AssetPath) => selectedAssetPaths().includes(path);
 
   return (
     <div

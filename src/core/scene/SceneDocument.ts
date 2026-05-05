@@ -1,6 +1,6 @@
 import type { SceneNode, SceneFile } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
-import { asNodeUUID } from '../../utils/branded';
+import { asAssetPath, asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
 /**
@@ -261,6 +261,21 @@ export class SceneDocument {
         parent: rawNode.parent !== null ? asNodeUUID(rawNode.parent) : null,
       };
       const node = migrateNodeComponents(branded);
+      // Mint AssetPath for mesh.path and prefab.path at the deserialise boundary.
+      // JSON gives plain strings; migration may have constructed paths as plain strings too.
+      const comps = node.components as Record<string, unknown>;
+      if (comps['mesh'] && typeof comps['mesh'] === 'object') {
+        const mesh = comps['mesh'] as Record<string, unknown>;
+        if (typeof mesh['path'] === 'string') {
+          mesh['path'] = asAssetPath(mesh['path'] as string);
+        }
+      }
+      if (comps['prefab'] && typeof comps['prefab'] === 'object') {
+        const prefab = comps['prefab'] as Record<string, unknown>;
+        if (typeof prefab['path'] === 'string') {
+          prefab['path'] = asAssetPath(prefab['path'] as string);
+        }
+      }
       this._nodes.set(node.id, node);
     }
     this.events.emit('sceneReplaced');

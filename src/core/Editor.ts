@@ -1,7 +1,7 @@
 import { Scene } from 'three';
 import { EventEmitter } from './EventEmitter';
 import type { TransformMode } from './EventEmitter';
-import type { NodeUUID } from '../utils/branded';
+import type { AssetPath, NodeUUID } from '../utils/branded';
 import { History } from './History';
 import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
@@ -122,7 +122,7 @@ export class Editor {
    * Write is fire-and-forget (path returned synchronously so SaveAsPrefabCommand
    * can store it in the scene node immediately).
    */
-  registerPrefab(asset: PrefabAsset): string {
+  registerPrefab(asset: PrefabAsset): AssetPath {
     const path = prefabPathForName(asset.name);
 
     // Write to project async (fire-and-forget)
@@ -145,7 +145,7 @@ export class Editor {
    * Unregister a prefab by its project-relative path.
    * Evicts from PrefabRegistry and deletes the file.
    */
-  unregisterPrefab(path: string): void {
+  unregisterPrefab(path: AssetPath): void {
     this.prefabRegistry.evictByPath(path);
 
     void (async () => {
@@ -228,7 +228,7 @@ export class Editor {
     // Hydrate mesh + prefab URLs
     for (const node of this.sceneDocument.getAllNodes()) {
       // Mesh hydration (P1b)
-      const mesh = node.components['mesh'] as { path?: string; nodePath?: string; url?: BlobURL } | undefined;
+      const mesh = node.components['mesh'] as { path?: AssetPath; nodePath?: string; url?: BlobURL } | undefined;
       if (mesh?.path && !mesh.url) {
         try {
           const url = await this.projectManager.urlFor(mesh.path);
@@ -242,7 +242,7 @@ export class Editor {
       }
 
       // Prefab hydration (P1c)
-      const prefab = node.components['prefab'] as { path?: string; url?: BlobURL } | undefined;
+      const prefab = node.components['prefab'] as { path?: AssetPath; url?: BlobURL } | undefined;
       if (prefab?.path && !prefab.url) {
         try {
           const url = await this.projectManager.urlFor(prefab.path);

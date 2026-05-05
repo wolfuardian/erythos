@@ -1,4 +1,5 @@
 import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { ProjectManager } from '../core/project/ProjectManager';
@@ -48,7 +49,7 @@ const App: Component = () => {
     }
     projectManager.setCurrentScenePath(scenePath);
 
-    const tryLoadScene = async (path: string): Promise<'ok' | 'notFound' | 'failed'> => {
+    const tryLoadScene = async (path: AssetPath): Promise<'ok' | 'notFound' | 'failed'> => {
       try {
         const sceneFile = await projectManager.readFile(path);
         const text = await sceneFile.text();

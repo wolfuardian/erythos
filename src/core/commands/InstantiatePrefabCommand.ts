@@ -2,12 +2,13 @@ import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import { deserializeFromPrefab } from '../scene/PrefabSerializer';
 import type { PrefabAsset } from '../scene/PrefabFormat';
+import type { AssetPath } from '../../utils/branded';
 import type { SceneNode, Vec3 } from '../scene/SceneFormat';
 
 export class InstantiatePrefabCommand extends Command {
   readonly type = 'InstantiateLeaf';  // ← type 字串是持久化（undo/redo history），PR 1 不改
   private readonly asset: PrefabAsset;
-  private readonly path: string;
+  private readonly path: AssetPath;
   private readonly position: Vec3 | null;
   private instantiatedNodes: SceneNode[] = [];
 
@@ -16,7 +17,7 @@ export class InstantiatePrefabCommand extends Command {
    * @param path    Project-relative path of the prefab file (e.g. "prefabs/chair.prefab")
    * @param position  可選的世界座標，設定 root 節點的初始位置
    */
-  constructor(editor: Editor, asset: PrefabAsset, path: string, position: Vec3 | null = null) {
+  constructor(editor: Editor, asset: PrefabAsset, path: AssetPath, position: Vec3 | null = null) {
     super(editor);
     this.asset = asset;
     this.path = path;
