@@ -13,6 +13,7 @@ import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
 import { deserializeFromPrefab } from './PrefabSerializer';
 import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
+import type { Selection } from '../Selection';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -44,6 +45,8 @@ export class SceneSync {
   private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
   /** Reference to PrefabInstanceWatcher for self-write skip check (optional) */
   private _instanceWatcher: PrefabInstanceWatcher | null = null;
+  /** Reference to Selection for snapshot/restore during rebuild (optional) */
+  private _selection: Selection | null = null;
 
   /** Reference to attached PrefabRegistry (for dispose) */
   private _prefabRegistry: PrefabRegistry | null = null;
@@ -157,6 +160,17 @@ export class SceneSync {
   }
 
   /**
+   * Attach a Selection instance so SceneSync can snapshot/restore selection
+   * state across prefab live-sync rebuilds.
+   *
+   * Call once from Editor.init after creating the selection.
+   * Pass null to detach.
+   */
+  attachSelection(selection: Selection | null): void {
+    this._selection = selection;
+  }
+
+  /**
    * Rebuild all scene-graph instance subtrees whose `components.prefab.path`
    * matches the given path (stable across URL rotation).
    *
@@ -176,6 +190,22 @@ export class SceneSync {
       if (this._instanceWatcher?.hasRecentSelfWrite(path, instanceRoot.id)) {
         continue;
       }
+
+      // ── Selection snapshot (before rebuild) ──────────────────────────────
+      // Capture which selected UUIDs belong strictly to this instance's subtree,
+      // so we can restore them after the rebuild assigns fresh UUIDs.
+      const selectionSnapshot = this._selection
+        ? this._snapshotSubtreeSelection(instanceRoot.id)
+        : null;
+
+      // Hover snapshot: is the hovered node inside this subtree?
+      const hoveredInSubtree =
+        this._selection?.hovered !== null && this._selection?.hovered !== undefined
+          ? this._isDescendantOf(this._selection.hovered, instanceRoot.id)
+          : false;
+      const hoveredPathSnapshot = hoveredInSubtree && this._selection!.hovered
+        ? this._computeRelativePath(this._selection!.hovered, instanceRoot.id)
+        : null;
 
       // Wrap each instance's rebuild in suppress() so the nodeAdded/nodeRemoved
       // events fired during _removeDescendants + addNode do NOT arm a new debounce
@@ -216,6 +246,20 @@ export class SceneSync {
       } else {
         doRebuild();
       }
+
+      // ── Selection restore (after rebuild) ───────────────────────────────
+      if (this._selection && selectionSnapshot) {
+        this._restoreSubtreeSelection(instanceRoot.id, selectionSnapshot);
+      }
+
+      // Hover restore
+      if (this._selection && hoveredPathSnapshot) {
+        const newHoveredNode = this._walkRelativePath(instanceRoot.id, hoveredPathSnapshot);
+        this._selection.hover(newHoveredNode ?? null);
+      } else if (this._selection && hoveredInSubtree) {
+        // Was hovering a node that no longer exists → clear hover
+        this._selection.hover(null);
+      }
     }
   }
 
@@ -229,6 +273,103 @@ export class SceneSync {
       this._removeDescendants(child.id);
       this.document.removeNode(child.id);
     }
+  }
+
+  // ── Selection snapshot/restore helpers ──────────────────────────────────────
+
+  /**
+   * Returns true if `uuid` is a strict descendant of `ancestorId`
+   * (i.e. instanceRoot itself is NOT considered a descendant of itself).
+   */
+  private _isDescendantOf(uuid: string, ancestorId: string): boolean {
+    let node = this.document.getNode(uuid);
+    while (node?.parent !== null) {
+      if (node!.parent === ancestorId) return true;
+      node = this.document.getNode(node!.parent!);
+    }
+    return false;
+  }
+
+  /**
+   * A path step: { name, order } uniquely identifies a child among siblings
+   * when duplicate names exist (using sibling order as tiebreaker).
+   */
+  private _computeRelativePath(
+    uuid: string,
+    instanceRootId: string,
+  ): Array<{ name: string; order: number }> {
+    const steps: Array<{ name: string; order: number }> = [];
+    let node = this.document.getNode(uuid);
+    while (node && node.id !== instanceRootId) {
+      steps.unshift({ name: node.name, order: node.order });
+      if (!node.parent) break;
+      node = this.document.getNode(node.parent);
+    }
+    return steps;
+  }
+
+  /**
+   * Walk the subtree rooted at `instanceRootId` following the relative path
+   * (name + sibling-order match at each level). Returns the matched node's
+   * UUID, or null if any step fails to find a match.
+   */
+  private _walkRelativePath(
+    instanceRootId: string,
+    path: Array<{ name: string; order: number }>,
+  ): string | null {
+    let currentParentId = instanceRootId;
+    for (const step of path) {
+      const children = this.document.getChildren(currentParentId); // sorted by order
+      // Find a child matching both name and order
+      const match = children.find(c => c.name === step.name && c.order === step.order);
+      if (!match) return null;
+      currentParentId = match.id;
+    }
+    return currentParentId === instanceRootId && path.length > 0 ? null : currentParentId;
+  }
+
+  /**
+   * Snapshot which currently-selected UUIDs are strict descendants of
+   * `instanceRootId`, storing their relative path for later restore.
+   *
+   * Returns a Map<oldUUID, relativePath>.
+   */
+  private _snapshotSubtreeSelection(
+    instanceRootId: string,
+  ): Map<string, Array<{ name: string; order: number }>> {
+    const snapshot = new Map<string, Array<{ name: string; order: number }>>();
+    if (!this._selection) return snapshot;
+    for (const uuid of this._selection.all) {
+      if (this._isDescendantOf(uuid, instanceRootId)) {
+        snapshot.set(uuid, this._computeRelativePath(uuid, instanceRootId));
+      }
+    }
+    return snapshot;
+  }
+
+  /**
+   * After a rebuild, resolve each snapshotted path to its new UUID and
+   * call `Selection.replaceMany` to swap old → new (dropping deleted ones).
+   */
+  private _restoreSubtreeSelection(
+    instanceRootId: string,
+    snapshot: Map<string, Array<{ name: string; order: number }>>,
+  ): void {
+    if (!this._selection || snapshot.size === 0) return;
+
+    const replacements = new Map<string, string>();
+    const removals = new Set<string>();
+
+    for (const [oldUUID, path] of snapshot) {
+      const newUUID = this._walkRelativePath(instanceRootId, path);
+      if (newUUID !== null) {
+        replacements.set(oldUUID, newUUID);
+      } else {
+        removals.add(oldUUID);
+      }
+    }
+
+    this._selection.replaceMany(replacements, removals);
   }
 
   // ── Event handlers (private) ───────────────────────────────────────────────
