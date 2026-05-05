@@ -1,8 +1,9 @@
 import type { EventEmitter, InteractionMode } from './EventEmitter';
+import type { NodeUUID } from '../utils/branded';
 
 export class Selection {
-  private _selected: Set<string> = new Set();
-  private _hovered: string | null = null;
+  private _selected: Set<NodeUUID> = new Set();
+  private _hovered: NodeUUID | null = null;
   private _mode: InteractionMode = 'object';
   private events: EventEmitter;
 
@@ -12,24 +13,24 @@ export class Selection {
 
   // ── Multi-select API ─────────────────────────────────
 
-  get all(): readonly string[] { return [...this._selected]; }
+  get all(): readonly NodeUUID[] { return [...this._selected]; }
   get count(): number { return this._selected.size; }
 
   /** Last added UUID — gizmo attaches to this */
-  get primary(): string | null {
+  get primary(): NodeUUID | null {
     if (this._selected.size === 0) return null;
-    let last: string | null = null;
+    let last: NodeUUID | null = null;
     for (const uuid of this._selected) last = uuid;
     return last;
   }
 
-  get hovered(): string | null { return this._hovered; }
+  get hovered(): NodeUUID | null { return this._hovered; }
   get mode(): InteractionMode { return this._mode; }
 
   // ── Selection methods ────────────────────────────────
 
   /** Replace selection (plain click). select(null) = clear(). */
-  select(uuid: string | null): void {
+  select(uuid: NodeUUID | null): void {
     if (uuid === null) {
       this.clear();
       return;
@@ -41,21 +42,21 @@ export class Selection {
   }
 
   /** Append to selection (Ctrl+Click) */
-  add(uuid: string): void {
+  add(uuid: NodeUUID): void {
     if (this._selected.has(uuid)) return;
     this._selected.add(uuid);
     this.events.emit('selectionChanged', [...this._selected]);
   }
 
   /** Remove one UUID from selection */
-  remove(uuid: string): void {
+  remove(uuid: NodeUUID): void {
     if (!this._selected.has(uuid)) return;
     this._selected.delete(uuid);
     this.events.emit('selectionChanged', [...this._selected]);
   }
 
   /** Toggle membership (Ctrl+Click shorthand) */
-  toggle(uuid: string): void {
+  toggle(uuid: NodeUUID): void {
     if (this._selected.has(uuid)) {
       this._selected.delete(uuid);
     } else {
@@ -64,7 +65,7 @@ export class Selection {
     this.events.emit('selectionChanged', [...this._selected]);
   }
 
-  has(uuid: string): boolean {
+  has(uuid: NodeUUID): boolean {
     return this._selected.has(uuid);
   }
 
@@ -90,8 +91,8 @@ export class Selection {
    * Usage: SceneSync._rebuildPrefabInstances calls this after each instance
    * rebuild to swap old subtree UUIDs for the freshly-generated ones.
    */
-  replaceMany(replacements: ReadonlyMap<string, string>, removals: ReadonlySet<string>): void {
-    const next = new Set<string>();
+  replaceMany(replacements: ReadonlyMap<NodeUUID, NodeUUID>, removals: ReadonlySet<NodeUUID>): void {
+    const next = new Set<NodeUUID>();
     for (const uuid of this._selected) {
       if (replacements.has(uuid)) {
         next.add(replacements.get(uuid)!);
@@ -106,7 +107,7 @@ export class Selection {
 
   // ── Hover ────────────────────────────────────────────
 
-  hover(uuid: string | null): void {
+  hover(uuid: NodeUUID | null): void {
     if (this._hovered === uuid) return;
     this._hovered = uuid;
     this.events.emit('hoverChanged', uuid);

@@ -5,9 +5,10 @@ import type { SceneNode } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
 import { XYZCellReadonly } from '../components/XYZCell';
 import styles from './object.module.css';
+import type { NodeUUID } from '../../../utils/branded';
 
 interface MultiSelectDrawProps {
-  uuids: string[];
+  uuids: NodeUUID[];
 }
 
 const MIXED = '—'; // em dash

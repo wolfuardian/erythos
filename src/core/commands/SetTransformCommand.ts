@@ -2,19 +2,20 @@ import type { Vec3 } from '../scene/SceneFormat';
 import type { SceneNode } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
+import type { NodeUUID } from '../../utils/branded';
 
 export class SetTransformCommand extends Command {
   readonly type = 'SetTransform';
   updatable = true;
 
-  private uuid: string;
+  private uuid: NodeUUID;
   private property: 'position' | 'rotation' | 'scale';
   private oldValue: Vec3;
   private newValue: Vec3;
 
   constructor(
     editor: Editor,
-    uuid: string,
+    uuid: NodeUUID,
     property: 'position' | 'rotation' | 'scale',
     newValue: Vec3,
     oldValue: Vec3,

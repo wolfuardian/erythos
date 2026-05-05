@@ -1,14 +1,15 @@
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import type { SceneNode } from '../scene/SceneFormat';
+import type { NodeUUID } from '../../utils/branded';
 
 export class RemoveNodeCommand extends Command {
   readonly type = 'RemoveNode';
-  private uuid: string;
+  private uuid: NodeUUID;
   private snapshot: SceneNode;
   private childSnapshots: SceneNode[];
 
-  constructor(editor: Editor, uuid: string) {
+  constructor(editor: Editor, uuid: NodeUUID) {
     super(editor);
     this.uuid = uuid;
 

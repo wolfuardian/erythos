@@ -2,19 +2,21 @@ import { generateUUID } from './uuid';
 import type { Group, Object3D } from 'three';
 import { Mesh } from 'three';
 import type { SceneNode, Vec3 } from '../core/scene/SceneFormat';
+import { asNodeUUID } from './branded';
+import type { NodeUUID } from './branded';
 
 // Recursively convert one Object3D and its descendants to SceneNodes.
 // Parent is always pushed before children so SceneDocument.addNode
 // can resolve parent references immediately.
 function buildNodes(
   obj: Object3D,
-  parentId: string,
+  parentId: NodeUUID,
   filePath: string,
   nodePath: string,
   order: number,
   result: SceneNode[],
 ): void {
-  const id = generateUUID();
+  const id = asNodeUUID(generateUUID());
 
   // Emit mesh: { path, nodePath } — no 'url' here.
   // url is populated at hydrate time (projectManager.urlFor(path)) or at import
@@ -50,7 +52,7 @@ function buildNodes(
  */
 export function convertGLTFToNodes(
   gltfScene: Group,
-  parentUuid: string,
+  parentUuid: NodeUUID,
   filePath: string,
 ): SceneNode[] {
   const result: SceneNode[] = [];

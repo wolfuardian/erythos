@@ -1,16 +1,17 @@
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
+import type { NodeUUID } from '../../utils/branded';
 
 export class MoveNodeCommand extends Command {
   readonly type = 'MoveNode';
 
-  private oldParentId: string | null;
+  private oldParentId: NodeUUID | null;
   private oldOrder: number;
 
   constructor(
     editor: Editor,
-    private nodeId: string,
-    private newParentId: string | null,
+    private nodeId: NodeUUID,
+    private newParentId: NodeUUID | null,
     private insertIndex: number,
   ) {
     super(editor);
@@ -24,7 +25,7 @@ export class MoveNodeCommand extends Command {
   execute(): void {
     // Cycle check: newParent must not be the node itself or any of its descendants.
     if (this.newParentId !== null) {
-      let cursor: string | null = this.newParentId;
+      let cursor: NodeUUID | null = this.newParentId;
       while (cursor !== null) {
         if (cursor === this.nodeId) {
           throw new Error('Cannot move node into its own descendant');

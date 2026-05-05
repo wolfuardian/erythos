@@ -1,6 +1,8 @@
 import type { SceneNode } from './SceneFormat';
 import type { PrefabAsset, PrefabNode } from './PrefabFormat';
 import { generateUUID } from '../../utils/uuid';
+import { asNodeUUID, asPrefabId } from '../../utils/branded';
+import type { NodeUUID } from '../../utils/branded';
 
 /**
  * 將 SceneNode 子樹序列化為 PrefabAsset。
@@ -9,13 +11,13 @@ import { generateUUID } from '../../utils/uuid';
  * - 剝除 root node 的 components.prefab（避免 prefab 自我引用）
  */
 export function serializeToPrefab(
-  rootUUID: string,
+  rootUUID: NodeUUID,
   allNodes: SceneNode[],
   name: string,
 ): PrefabAsset {
   const subtree = collectSubtree(rootUUID, allNodes);
 
-  const uuidToLocalId = new Map<string, number>();
+  const uuidToLocalId = new Map<NodeUUID, number>();
   subtree.forEach((node, i) => uuidToLocalId.set(node.id, i));
 
   const prefabNodes: PrefabNode[] = subtree.map((node, localId) => {
@@ -46,7 +48,7 @@ export function serializeToPrefab(
 
   return {
     version: 1,
-    id: generateUUID(),
+    id: asPrefabId(generateUUID()),
     name,
     modified: new Date().toISOString(),
     nodes: prefabNodes,
@@ -61,10 +63,10 @@ export function serializeToPrefab(
  */
 export function deserializeFromPrefab(
   prefab: PrefabAsset,
-  parentUUID: string | null = null,
+  parentUUID: NodeUUID | null = null,
 ): SceneNode[] {
-  const localIdToUUID = new Map<number, string>();
-  prefab.nodes.forEach(n => localIdToUUID.set(n.localId, generateUUID()));
+  const localIdToUUID = new Map<number, NodeUUID>();
+  prefab.nodes.forEach(n => localIdToUUID.set(n.localId, asNodeUUID(generateUUID())));
 
   return prefab.nodes.map(prefabNode => ({
     id: localIdToUUID.get(prefabNode.localId)!,
@@ -82,10 +84,10 @@ export function deserializeFromPrefab(
 }
 
 /** BFS 收集 root + 所有後代，按廣度優先順序排列（root 永遠是第一個） */
-function collectSubtree(rootUUID: string, allNodes: SceneNode[]): SceneNode[] {
+function collectSubtree(rootUUID: NodeUUID, allNodes: SceneNode[]): SceneNode[] {
   const nodeMap = new Map(allNodes.map(n => [n.id, n]));
   const result: SceneNode[] = [];
-  const queue = [rootUUID];
+  const queue: NodeUUID[] = [rootUUID];
 
   while (queue.length > 0) {
     const uuid = queue.shift()!;

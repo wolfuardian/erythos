@@ -7,9 +7,10 @@ import FoldableSection from '../components/FoldableSection';
 import { XYZCellReadonly } from '../components/XYZCell';
 import { VectorDrag } from '../../../components/VectorDrag';
 import styles from './object.module.css';
+import type { NodeUUID } from '../../../utils/branded';
 
 interface TransformDrawProps {
-  uuid: string;
+  uuid: NodeUUID;
 }
 
 const axisToIndex = { x: 0, y: 1, z: 2 } as const;

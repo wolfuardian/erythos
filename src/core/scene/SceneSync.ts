@@ -14,6 +14,7 @@ import type { PrefabAsset } from './PrefabFormat';
 import { deserializeFromPrefab } from './PrefabSerializer';
 import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
 import type { Selection } from '../Selection';
+import type { NodeUUID } from '../../utils/branded';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -35,11 +36,11 @@ export class SceneSync {
   private readonly threeScene: Scene;
   private readonly resourceCache: ResourceCache | null;
 
-  private readonly uuidToObj = new Map<string, Object3D>();
-  private readonly objToUuid = new Map<Object3D, string>();
+  private readonly uuidToObj = new Map<NodeUUID, Object3D>();
+  private readonly objToUuid = new Map<Object3D, NodeUUID>();
 
   // Orphan tracking: child UUID → set of Object3D waiting for this parent
-  private readonly pendingChildren = new Map<string, Set<Object3D>>();
+  private readonly pendingChildren = new Map<NodeUUID, Set<Object3D>>();
 
   /** Bound prefabChanged handler for off() symmetry */
   private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
@@ -70,11 +71,11 @@ export class SceneSync {
 
   // ── Query API ──────────────────────────────────────────────────────────────
 
-  getObject3D(uuid: string): Object3D | null {
+  getObject3D(uuid: NodeUUID): Object3D | null {
     return this.uuidToObj.get(uuid) ?? null;
   }
 
-  getUUID(object3d: Object3D): string | null {
+  getUUID(object3d: Object3D): NodeUUID | null {
     return this.objToUuid.get(object3d) ?? null;
   }
 
@@ -267,7 +268,7 @@ export class SceneSync {
    * Recursively remove all descendants of the given node from SceneDocument.
    * Children are removed depth-first (leaf → root order) to avoid dangling refs.
    */
-  private _removeDescendants(parentId: string): void {
+  private _removeDescendants(parentId: NodeUUID): void {
     const children = this.document.getChildren(parentId);
     for (const child of children) {
       this._removeDescendants(child.id);
@@ -281,7 +282,7 @@ export class SceneSync {
    * Returns true if `uuid` is a strict descendant of `ancestorId`
    * (i.e. instanceRoot itself is NOT considered a descendant of itself).
    */
-  private _isDescendantOf(uuid: string, ancestorId: string): boolean {
+  private _isDescendantOf(uuid: NodeUUID, ancestorId: NodeUUID): boolean {
     let node = this.document.getNode(uuid);
     while (node?.parent !== null) {
       if (node!.parent === ancestorId) return true;
@@ -295,8 +296,8 @@ export class SceneSync {
    * when duplicate names exist (using sibling order as tiebreaker).
    */
   private _computeRelativePath(
-    uuid: string,
-    instanceRootId: string,
+    uuid: NodeUUID,
+    instanceRootId: NodeUUID,
   ): Array<{ name: string; order: number }> {
     const steps: Array<{ name: string; order: number }> = [];
     let node = this.document.getNode(uuid);
@@ -314,16 +315,16 @@ export class SceneSync {
    * UUID, or null if any step fails to find a match.
    */
   private _walkRelativePath(
-    instanceRootId: string,
+    instanceRootId: NodeUUID,
     path: Array<{ name: string; order: number }>,
-  ): string | null {
-    let currentParentId = instanceRootId;
+  ): NodeUUID | null {
+    let currentParentId: NodeUUID = instanceRootId;
     for (const step of path) {
       const children = this.document.getChildren(currentParentId); // sorted by order
       // Find a child matching both name and order
       const match = children.find(c => c.name === step.name && c.order === step.order);
       if (!match) return null;
-      currentParentId = match.id;
+      currentParentId = match.id as NodeUUID;
     }
     return currentParentId === instanceRootId && path.length > 0 ? null : currentParentId;
   }
@@ -335,9 +336,9 @@ export class SceneSync {
    * Returns a Map<oldUUID, relativePath>.
    */
   private _snapshotSubtreeSelection(
-    instanceRootId: string,
-  ): Map<string, Array<{ name: string; order: number }>> {
-    const snapshot = new Map<string, Array<{ name: string; order: number }>>();
+    instanceRootId: NodeUUID,
+  ): Map<NodeUUID, Array<{ name: string; order: number }>> {
+    const snapshot = new Map<NodeUUID, Array<{ name: string; order: number }>>();
     if (!this._selection) return snapshot;
     for (const uuid of this._selection.all) {
       if (this._isDescendantOf(uuid, instanceRootId)) {
@@ -352,13 +353,13 @@ export class SceneSync {
    * call `Selection.replaceMany` to swap old → new (dropping deleted ones).
    */
   private _restoreSubtreeSelection(
-    instanceRootId: string,
-    snapshot: Map<string, Array<{ name: string; order: number }>>,
+    instanceRootId: NodeUUID,
+    snapshot: Map<NodeUUID, Array<{ name: string; order: number }>>,
   ): void {
     if (!this._selection || snapshot.size === 0) return;
 
-    const replacements = new Map<string, string>();
-    const removals = new Set<string>();
+    const replacements = new Map<NodeUUID, NodeUUID>();
+    const removals = new Set<NodeUUID>();
 
     for (const [oldUUID, path] of snapshot) {
       const newUUID = this._walkRelativePath(instanceRootId, path);
@@ -462,7 +463,7 @@ export class SceneSync {
     this.objToUuid.delete(obj);
   }
 
-  private onNodeChanged(uuid: string, changed: Partial<SceneNode>): void {
+  private onNodeChanged(uuid: NodeUUID, changed: Partial<SceneNode>): void {
     const obj = this.uuidToObj.get(uuid);
     if (!obj) return;
 
