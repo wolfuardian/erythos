@@ -1,0 +1,21 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  width: 24px;
+  height: 20px;
+  border: 1px solid var(--border-medium);
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.hexLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: monospace;
+}

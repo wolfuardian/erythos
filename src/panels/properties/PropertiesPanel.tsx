@@ -2,6 +2,7 @@ import { Switch, Match, createMemo, type Component } from 'solid-js';
 import { useEditor } from '../../app/EditorContext';
 import ObjectDraw from './object/ObjectDraw';
 import TransformDraw from './object/TransformDraw';
+import MaterialDraw from './object/MaterialDraw';
 import MultiSelectDraw from './object/MultiSelectDraw';
 import { PanelHeader } from '../../components/PanelHeader';
 import styles from './PropertiesPanel.module.css';
@@ -26,6 +27,7 @@ const PropertiesPanel: Component = () => {
           <Match when={selectedUUIDs().length === 1}>
             <ObjectDraw uuid={selectedUUIDs()[0]!} />
             <TransformDraw uuid={selectedUUIDs()[0]!} />
+            <MaterialDraw uuid={selectedUUIDs()[0]!} />
           </Match>
           <Match when={selectedUUIDs().length > 1}>
             <MultiSelectDraw uuids={selectedUUIDs()} />

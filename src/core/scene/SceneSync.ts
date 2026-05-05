@@ -1,5 +1,5 @@
 import {
-  Scene, Object3D, Mesh, MeshStandardMaterial,
+  Scene, Object3D, Mesh, MeshStandardMaterial, Color,
   BoxGeometry, SphereGeometry, PlaneGeometry, CylinderGeometry,
   DirectionalLight, AmbientLight, PerspectiveCamera,
 } from 'three';
@@ -384,7 +384,15 @@ export class SceneSync {
     if (node.components.geometry && node.components.material) {
       const geoComp = node.components.geometry as GeometryComponent;
       const matComp = node.components.material as MaterialComponent;
-      obj.add(new Mesh(createGeometry(geoComp.type), new MeshStandardMaterial({ color: matComp.color })));
+      obj.add(new Mesh(createGeometry(geoComp.type), new MeshStandardMaterial({
+        color:       matComp.color,
+        roughness:   matComp.roughness   ?? 1,
+        metalness:   matComp.metalness   ?? 0,
+        emissive:    new Color(matComp.emissive ?? 0x000000),
+        opacity:     matComp.opacity     ?? 1,
+        transparent: matComp.transparent ?? false,
+        wireframe:   matComp.wireframe   ?? false,
+      })));
     } else if (node.components.light) {
       const lightComp = node.components.light as LightComponent;
       const light = lightComp.type === 'directional'
@@ -481,6 +489,26 @@ export class SceneSync {
 
     if (changed.scale !== undefined) {
       obj.scale.set(...changed.scale);
+    }
+
+    // Handle material component changes
+    const matComp = (changed as { components?: { material?: unknown } }).components?.material;
+    if (matComp !== undefined) {
+      const meshChild = obj.children.find((c): c is Mesh => c instanceof Mesh);
+      if (meshChild && meshChild.material instanceof MeshStandardMaterial) {
+        const mat = meshChild.material;
+        const m = matComp as MaterialComponent;
+        if (m.color     !== undefined) mat.color.setHex(m.color);
+        if (m.emissive  !== undefined) mat.emissive.setHex(m.emissive);
+        if (m.roughness !== undefined) mat.roughness  = m.roughness;
+        if (m.metalness !== undefined) mat.metalness  = m.metalness;
+        if (m.opacity   !== undefined) mat.opacity    = m.opacity;
+        if (m.wireframe !== undefined) mat.wireframe  = m.wireframe;
+        if (m.transparent !== undefined && mat.transparent !== m.transparent) {
+          mat.transparent = m.transparent;
+          mat.needsUpdate = true;
+        }
+      }
     }
 
     // Parent change → re-attach
