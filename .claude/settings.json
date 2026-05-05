@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "ignorePatterns": [
+    ".claude/scratch/**",
+    "**/audit-*.md",
+    "**/report-*.md",
+    "**/analysis-*.md",
+    "**/review-*.md"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-write-guard.cjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-write-guard.cjs"
+          }
+        ]
+      }
+    ]
+  }
+}
