@@ -1,9 +1,9 @@
 import { ImportGLTFCommand } from '../core/commands/ImportGLTFCommand';
 import { convertGLTFToNodes } from './gltfConverter';
 import type { Editor } from '../core/Editor';
-import type { BlobURL } from './branded';
+import type { BlobURL, NodeUUID } from './branded';
 
-export async function loadGLTFFromFile(file: File, editor: Editor): Promise<string> {
+export async function loadGLTFFromFile(file: File, editor: Editor): Promise<NodeUUID> {
   // 1. Import the file into the project's models/ folder
   const path = await editor.projectManager.importAsset(file);
 

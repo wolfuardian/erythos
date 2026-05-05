@@ -1,8 +1,9 @@
 // .prefab 資產格式（純資料型別，不含驗證）
+import type { PrefabId } from '../../utils/branded';
 
 export interface PrefabAsset {
   version: 1;
-  id: string;        // prefab 資產識別 ID（非場景節點 UUID）
+  id: PrefabId;      // prefab 資產識別 ID（非場景節點 UUID）
   name: string;
   modified: string;  // ISO 8601 timestamp
   nodes: PrefabNode[];

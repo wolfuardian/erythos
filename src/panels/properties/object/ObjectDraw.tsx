@@ -4,9 +4,10 @@ import { SetNodePropertyCommand } from '../../../core/commands/SetNodePropertyCo
 import { inferNodeType } from '../../../core/scene/inferNodeType';
 import FoldableSection from '../components/FoldableSection';
 import styles from './object.module.css';
+import type { NodeUUID } from '../../../utils/branded';
 
 interface ObjectDrawProps {
-  uuid: string;
+  uuid: NodeUUID;
 }
 
 const ObjectDraw: Component<ObjectDrawProps> = (props) => {

@@ -1,5 +1,7 @@
 import type { SceneNode, SceneFile } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
+import { asNodeUUID } from '../../utils/branded';
+import type { NodeUUID } from '../../utils/branded';
 
 /**
  * Migration helper: upgrade old scene files.
@@ -151,14 +153,14 @@ class MiniEmitter<M> {
 export interface SceneDocumentEventMap {
   nodeAdded:     [node: SceneNode];
   nodeRemoved:   [node: SceneNode];
-  nodeChanged:   [uuid: string, changed: Partial<SceneNode>];
+  nodeChanged:   [uuid: NodeUUID, changed: Partial<SceneNode>];
   sceneReplaced: [];
 }
 
 // ── SceneDocument ─────────────────────────────────────────────────────────────
 
 export class SceneDocument {
-  private _nodes = new Map<string, SceneNode>();
+  private _nodes = new Map<NodeUUID, SceneNode>();
   readonly events = new MiniEmitter<SceneDocumentEventMap>();
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
@@ -168,14 +170,14 @@ export class SceneDocument {
     this.events.emit('nodeAdded', node);
   }
 
-  removeNode(uuid: string): void {
+  removeNode(uuid: NodeUUID): void {
     const node = this._nodes.get(uuid);
     if (!node) return;
     this._nodes.delete(uuid);
     this.events.emit('nodeRemoved', node);
   }
 
-  updateNode(uuid: string, patch: Partial<SceneNode>): void {
+  updateNode(uuid: NodeUUID, patch: Partial<SceneNode>): void {
     const node = this._nodes.get(uuid);
     if (!node) return;
     Object.assign(node, patch);
@@ -184,11 +186,11 @@ export class SceneDocument {
 
   // ── Query ─────────────────────────────────────────────────────────────────
 
-  getNode(uuid: string): SceneNode | null {
+  getNode(uuid: NodeUUID): SceneNode | null {
     return this._nodes.get(uuid) ?? null;
   }
 
-  getChildren(parentUuid: string): SceneNode[] {
+  getChildren(parentUuid: NodeUUID): SceneNode[] {
     const result: SceneNode[] = [];
     for (const node of this._nodes.values()) {
       if (node.parent === parentUuid) result.push(node);
@@ -210,7 +212,7 @@ export class SceneDocument {
 
   // ── Path API ──────────────────────────────────────────────────────────────
 
-  getPath(uuid: string): string {
+  getPath(uuid: NodeUUID): string {
     const parts: string[] = [];
     let current = this._nodes.get(uuid);
     while (current) {
@@ -252,7 +254,13 @@ export class SceneDocument {
   deserialize(data: SceneFile): void {
     this._nodes.clear();
     for (const rawNode of data.nodes) {
-      const node = migrateNodeComponents({ ...rawNode });
+      // Mint branded types at the JSON-parse boundary: id and parent come in as plain strings.
+      const branded = {
+        ...rawNode,
+        id: asNodeUUID(rawNode.id),
+        parent: rawNode.parent !== null ? asNodeUUID(rawNode.parent) : null,
+      };
+      const node = migrateNodeComponents(branded);
       this._nodes.set(node.id, node);
     }
     this.events.emit('sceneReplaced');
@@ -260,9 +268,9 @@ export class SceneDocument {
 
   // ── Utils ─────────────────────────────────────────────────────────────────
 
-  createNode(name: string, parent?: string): SceneNode {
+  createNode(name: string, parent?: NodeUUID): SceneNode {
     return {
-      id: generateUUID(),
+      id: asNodeUUID(generateUUID()),
       name,
       parent: parent ?? null,
       order: 0,
@@ -274,7 +282,7 @@ export class SceneDocument {
     };
   }
 
-  hasNode(uuid: string): boolean {
+  hasNode(uuid: NodeUUID): boolean {
     return this._nodes.has(uuid);
   }
 }

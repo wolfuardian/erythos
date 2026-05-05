@@ -7,6 +7,7 @@ import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
+import type { NodeUUID } from '../utils/branded';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -20,10 +21,10 @@ export function setConfirmBeforeLoad(value: boolean): void {
 
 export interface EditorBridge {
   editor: Editor;
-  selectedUUIDs: Accessor<string[]>;
-  hoveredUUID: Accessor<string | null>;
+  selectedUUIDs: Accessor<NodeUUID[]>;
+  hoveredUUID: Accessor<NodeUUID | null>;
   nodes: Accessor<SceneNode[]>;
-  getNode: (uuid: string) => SceneNode | null;
+  getNode: (uuid: NodeUUID) => SceneNode | null;
   interactionMode: Accessor<InteractionMode>;
   transformMode: Accessor<TransformMode>;
   sceneVersion: Accessor<number>;
@@ -75,8 +76,8 @@ export function createEditorBridge(
   sharedGridObjects: Object3D[] = [],
   deps?: EditorBridgeDeps,
 ): EditorBridge {
-  const [selectedUUIDs, setSelectedUUIDs] = createSignal<string[]>([]);
-  const [hoveredUUID, setHoveredUUID] = createSignal<string | null>(null);
+  const [selectedUUIDs, setSelectedUUIDs] = createSignal<NodeUUID[]>([]);
+  const [hoveredUUID, setHoveredUUID] = createSignal<NodeUUID | null>(null);
   const [nodes, setNodes] = createSignal<SceneNode[]>(editor.sceneDocument.getAllNodes());
   const [interactionMode, setMode] = createSignal<InteractionMode>('object');
   const [transformMode, setTransformMode] = createSignal<TransformMode>('translate');
@@ -105,8 +106,8 @@ export function createEditorBridge(
 
   // Editor UI-state event handlers
   const editorHandlers = {
-    selectionChanged: (uuids: string[]) => setSelectedUUIDs(uuids),
-    hoverChanged: (uuid: string | null) => setHoveredUUID(uuid),
+    selectionChanged: (uuids: NodeUUID[]) => setSelectedUUIDs(uuids),
+    hoverChanged: (uuid: NodeUUID | null) => setHoveredUUID(uuid),
     interactionModeChanged: (mode: InteractionMode) => setMode(mode),
     transformModeChanged: (mode: TransformMode) => setTransformMode(mode),
     historyChanged: () => {

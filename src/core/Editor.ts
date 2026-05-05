@@ -1,6 +1,7 @@
 import { Scene } from 'three';
 import { EventEmitter } from './EventEmitter';
 import type { TransformMode } from './EventEmitter';
+import type { NodeUUID } from '../utils/branded';
 import { History } from './History';
 import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
@@ -196,7 +197,7 @@ export class Editor {
     this.events.emit('nodeAdded', node.id);
   }
 
-  removeNode(uuid: string): void {
+  removeNode(uuid: NodeUUID): void {
     this.sceneDocument.removeNode(uuid);
     this.events.emit('nodeRemoved', uuid);
   }

@@ -2,6 +2,7 @@
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
 export type InteractionMode = 'object' | 'edit';
+import type { NodeUUID } from '../utils/branded';
 
 // ── Event map ──────────────────────────────────────────
 
@@ -18,12 +19,12 @@ export type InteractionMode = 'object' | 'edit';
  */
 export interface EditorEventMap {
   // ── New UUID-based events (Phase V2-1) ──────────────
-  nodeAdded:              [uuid: string];
-  nodeRemoved:            [uuid: string];
-  hoverChanged:           [uuid: string | null];
+  nodeAdded:              [uuid: NodeUUID];
+  nodeRemoved:            [uuid: NodeUUID];
+  hoverChanged:           [uuid: NodeUUID | null];
 
   // ── Stable events (no change) ───────────────────────
-  selectionChanged:       [uuids: string[]];
+  selectionChanged:       [uuids: NodeUUID[]];
   historyChanged:         [];
   interactionModeChanged: [mode: InteractionMode];
   transformModeChanged:   [mode: TransformMode];

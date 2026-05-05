@@ -3,6 +3,7 @@ import type { SceneDocument } from './SceneDocument';
 import type { ProjectManager } from '../project/ProjectManager';
 import { serializeToPrefab } from './PrefabSerializer';
 import { findPrefabInstanceRoot } from './PrefabInstance';
+import type { NodeUUID } from '../../utils/branded';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -34,14 +35,14 @@ export const SELF_WRITE_WINDOW_MS = 50;
 
 interface PendingWrite {
   /** The instance root UUID that originated the most-recent mutation before debounce settled. */
-  originatingInstanceRootId: string;
+  originatingInstanceRootId: NodeUUID;
   /** setTimeout handle; cleared when another mutation extends the debounce. */
   timeoutHandle: ReturnType<typeof setTimeout>;
 }
 
 interface SelfWriteEntry {
   /** Instance root UUID at the time writeFile fired (used by SceneSync skip check). */
-  instanceRootId: string;
+  instanceRootId: NodeUUID;
   /** Absolute timestamp after which this entry should no longer suppress writes. */
   until: number;
 }
@@ -87,7 +88,7 @@ export class PrefabInstanceWatcher {
   // Bound handlers so we can pass the same reference to off()
   private readonly _onNodeAdded: (node: SceneNode) => void;
   private readonly _onNodeRemoved: (node: SceneNode) => void;
-  private readonly _onNodeChanged: (uuid: string) => void;
+  private readonly _onNodeChanged: (uuid: NodeUUID) => void;
 
   constructor(
     sceneDocument: SceneDocument,
@@ -121,7 +122,7 @@ export class PrefabInstanceWatcher {
    * avoid overwriting the user's in-progress edit with a round-trip echo.
    * Other instances (different instanceRootId) always return false and rebuild normally.
    */
-  hasRecentSelfWrite(path: string, instanceRootId: string): boolean {
+  hasRecentSelfWrite(path: string, instanceRootId: NodeUUID): boolean {
     const entry = this._selfWrites.get(path);
     if (!entry) return false;
     if (Date.now() > entry.until) {
@@ -212,7 +213,7 @@ export class PrefabInstanceWatcher {
     if (prefabPath) this._scheduleWrite(prefabPath, instanceRootId);
   }
 
-  private _handleMutation(nodeId: string): void {
+  private _handleMutation(nodeId: NodeUUID): void {
     const allNodes = this._document.getAllNodes();
 
     // Walk ancestry to find the enclosing prefab instance root
@@ -250,7 +251,7 @@ export class PrefabInstanceWatcher {
    * against rebuild-echo is the `suppress()` wrap around InstantiatePrefabCommand and
    * SceneSync._rebuildPrefabInstances.
    */
-  private _scheduleWrite(prefabPath: string, instanceRootId: string): void {
+  private _scheduleWrite(prefabPath: string, instanceRootId: NodeUUID): void {
     // Primary guard: if suppress() is active, completely ignore this mutation.
     if (this._suppressDepth > 0) return;
 
@@ -271,7 +272,7 @@ export class PrefabInstanceWatcher {
     this._pending.set(prefabPath, { originatingInstanceRootId: instanceRootId, timeoutHandle });
   }
 
-  private _flushWrite(prefabPath: string, instanceRootId: string): void {
+  private _flushWrite(prefabPath: string, instanceRootId: NodeUUID): void {
     this._pending.delete(prefabPath);
 
     // Re-read instance root to make sure it still exists and has the same prefab path

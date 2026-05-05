@@ -1,11 +1,11 @@
-import type { BlobURL } from '../../utils/branded';
+import type { BlobURL, NodeUUID } from '../../utils/branded';
 
 export type Vec3 = [number, number, number];
 
 export interface SceneNode {
-  id: string;          // UUID v4
+  id: NodeUUID;        // UUID v4
   name: string;
-  parent: string | null; // parent UUID
+  parent: NodeUUID | null; // parent UUID
   order: number;
   position: Vec3;
   rotation: Vec3;

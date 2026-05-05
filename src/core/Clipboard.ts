@@ -1,5 +1,7 @@
 import type { SceneNode } from './scene/SceneFormat';
 import { generateUUID } from '../utils/uuid';
+import { asNodeUUID } from '../utils/branded';
+import type { NodeUUID } from '../utils/branded';
 
 type Listener = () => void;
 
@@ -28,9 +30,9 @@ export class Clipboard {
     const clones = structuredClone(this._content.nodes);
 
     // 2. Build old→new UUID mapping
-    const idMap = new Map<string, string>();
+    const idMap = new Map<NodeUUID, NodeUUID>();
     for (const node of clones) {
-      const newId = generateUUID();
+      const newId = asNodeUUID(generateUUID());
       idMap.set(node.id, newId);
       node.id = newId;
     }

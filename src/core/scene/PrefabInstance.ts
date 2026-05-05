@@ -1,4 +1,5 @@
 import type { SceneNode } from './SceneFormat';
+import type { NodeUUID } from '../../utils/branded';
 
 /**
  * Returns true if `nodeId` is a descendant of a prefab instance root.
@@ -9,12 +10,12 @@ import type { SceneNode } from './SceneFormat';
  * @param nodeId  - The UUID of the node to test.
  * @param nodes   - Full flat node list (e.g. from bridge.nodes() or SceneDocument.getAllNodes()).
  */
-export function isPrefabDescendant(nodeId: string, nodes: SceneNode[]): boolean {
-  const nodeMap = new Map<string, SceneNode>(nodes.map(n => [n.id, n]));
+export function isPrefabDescendant(nodeId: NodeUUID, nodes: SceneNode[]): boolean {
+  const nodeMap = new Map<NodeUUID, SceneNode>(nodes.map(n => [n.id, n]));
   const node = nodeMap.get(nodeId);
   if (!node) return false;
 
-  let cursor: string | null = node.parent;
+  let cursor: NodeUUID | null = node.parent;
   while (cursor !== null) {
     const ancestor = nodeMap.get(cursor);
     if (!ancestor) break;
@@ -30,12 +31,12 @@ export function isPrefabDescendant(nodeId: string, nodes: SceneNode[]): boolean 
  *
  * Useful for "select instance root instead" behaviour in viewport and scene tree.
  */
-export function findPrefabInstanceRoot(nodeId: string, nodes: SceneNode[]): string | null {
-  const nodeMap = new Map<string, SceneNode>(nodes.map(n => [n.id, n]));
+export function findPrefabInstanceRoot(nodeId: NodeUUID, nodes: SceneNode[]): NodeUUID | null {
+  const nodeMap = new Map<NodeUUID, SceneNode>(nodes.map(n => [n.id, n]));
   const node = nodeMap.get(nodeId);
   if (!node) return null;
 
-  let cursor: string | null = node.parent;
+  let cursor: NodeUUID | null = node.parent;
   while (cursor !== null) {
     const ancestor = nodeMap.get(cursor);
     if (!ancestor) break;

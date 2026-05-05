@@ -2,6 +2,7 @@ import { createSignal, For, Show, onMount, onCleanup, type Component } from 'sol
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import type { SceneNode } from '../../core/scene/SceneFormat';
 import { useEditor } from '../../app/EditorContext';
+import type { NodeUUID } from '../../utils/branded';
 import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
@@ -17,7 +18,7 @@ const SceneTreePanel: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
 
-  const [draggedId, setDraggedId] = createSignal<string | null>(null);
+  const [draggedId, setDraggedId] = createSignal<NodeUUID | null>(null);
   const [dropIndicator, setDropIndicator] = createSignal<DropIndicator | null>(null);
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const [expandedMap, setExpandedMap] = useAreaState<Record<string, boolean>>('expandedMap', {});
@@ -69,10 +70,10 @@ const SceneTreePanel: Component = () => {
     editor.selection.select(node.id);
   };
 
-  const collectSubtree = (rootId: string): SceneNode[] => {
+  const collectSubtree = (rootId: NodeUUID): SceneNode[] => {
     const all = editor.sceneDocument.getAllNodes();
     const result: SceneNode[] = [];
-    const queue = [rootId];
+    const queue: NodeUUID[] = [rootId];
     while (queue.length > 0) {
       const cur = queue.shift()!;
       const node = editor.sceneDocument.getNode(cur);

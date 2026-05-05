@@ -9,9 +9,10 @@ import {
   nodeTypeToIcon, nodeTypeColor,
 } from './icons';
 import styles from './TreeNode.module.css';
+import type { NodeUUID } from '../../utils/branded';
 
 export interface DropIndicator {
-  targetId: string;
+  targetId: NodeUUID;
   position: 'before' | 'inside' | 'after';
 }
 
@@ -21,12 +22,12 @@ export interface TreeNodeProps {
   /** For each ancestor depth 0..depth-1, whether that ancestor still has more siblings after it.
    *  Used to decide which indent guide lines to draw continuously vs stopping. */
   lineageHasMoreSiblings: boolean[];
-  draggedId: () => string | null;
+  draggedId: () => NodeUUID | null;
   dropIndicator: () => DropIndicator | null;
-  setDraggedId: (id: string | null) => void;
+  setDraggedId: (id: NodeUUID | null) => void;
   setDropIndicator: (v: DropIndicator | null) => void;
-  isExpanded: (id: string) => boolean;
-  toggleExpanded: (id: string) => void;
+  isExpanded: (id: NodeUUID) => boolean;
+  toggleExpanded: (id: NodeUUID) => void;
   eyeOffMap: () => Record<string, boolean>;
   setEyeOffMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
   cursorOffMap: () => Record<string, boolean>;
@@ -126,14 +127,14 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
 
     // Cycle check: walk target's ancestors; reject if dragged node is one of them.
     const nodes = bridge.nodes();
-    let cursor: string | null = props.node.id;
+    let cursor: NodeUUID | null = props.node.id;
     while (cursor !== null) {
       if (cursor === dragId) return;
       const n = nodes.find(n => n.id === cursor);
       cursor = n?.parent ?? null;
     }
 
-    let newParentId: string | null;
+    let newParentId: NodeUUID | null;
     let insertIndex: number;
 
     if (ind.position === 'inside') {
