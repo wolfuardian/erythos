@@ -1,0 +1,58 @@
+import type { MaterialComponent } from '../scene/SceneFormat';
+import { Command } from '../Command';
+import type { Editor } from '../Editor';
+import { asNodeUUID } from '../../utils/branded';
+import type { NodeUUID } from '../../utils/branded';
+
+type MatProp = keyof MaterialComponent;
+type MatVal = MaterialComponent[MatProp];
+
+export class SetMaterialPropertyCommand extends Command {
+  readonly type = 'SetMaterialProperty';
+  updatable = true;
+
+  private uuid: NodeUUID;
+  private prop: MatProp;
+  private oldValue: MatVal;
+  private newValue: MatVal;
+
+  constructor(editor: Editor, uuid: string, prop: MatProp, newValue: MatVal, oldValue: MatVal) {
+    super(editor);
+    this.uuid = asNodeUUID(uuid);
+    this.prop = prop;
+    this.newValue = newValue;
+    this.oldValue = oldValue;
+  }
+
+  execute(): void {
+    const node = this.editor.sceneDocument.getNode(this.uuid);
+    if (!node) return;
+    const mat = ((node.components?.material as MaterialComponent | null) ?? { color: 0xffffff }) as MaterialComponent;
+    this.editor.sceneDocument.updateNode(this.uuid, {
+      components: { ...node.components, material: { ...mat, [this.prop]: this.newValue } },
+    });
+  }
+
+  undo(): void {
+    const node = this.editor.sceneDocument.getNode(this.uuid);
+    if (!node) return;
+    const mat = ((node.components?.material as MaterialComponent | null) ?? { color: 0xffffff }) as MaterialComponent;
+    this.editor.sceneDocument.updateNode(this.uuid, {
+      components: { ...node.components, material: { ...mat, [this.prop]: this.oldValue } },
+    });
+  }
+
+  canMerge(cmd: Command): boolean {
+    return (
+      cmd instanceof SetMaterialPropertyCommand &&
+      cmd.uuid === this.uuid &&
+      cmd.prop === this.prop
+    );
+  }
+
+  update(cmd: Command): void {
+    if (cmd instanceof SetMaterialPropertyCommand) {
+      this.newValue = cmd.newValue;
+    }
+  }
+}

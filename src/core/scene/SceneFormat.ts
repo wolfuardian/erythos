@@ -35,7 +35,13 @@ export interface GeometryComponent {
 }
 
 export interface MaterialComponent {
-  color: number;
+  color:        number;
+  roughness?:   number;
+  metalness?:   number;
+  emissive?:    number;
+  opacity?:     number;
+  transparent?: boolean;
+  wireframe?:   boolean;
 }
 
 export interface LightComponent {
