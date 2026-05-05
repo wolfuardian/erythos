@@ -18,13 +18,14 @@
 
 import type { PrefabAsset } from './PrefabFormat';
 import type { ProjectManager } from '../project/ProjectManager';
+import type { AssetPath } from '../../utils/branded';
 
 type Listener = () => void;
-type PrefabChangedListener = (url: string, asset: PrefabAsset, path: string) => void;
+type PrefabChangedListener = (url: string, asset: PrefabAsset, path: AssetPath) => void;
 
 export class PrefabRegistry {
-  private readonly _cache = new Map<string, PrefabAsset>(); // url → asset
-  private readonly _pathToURL = new Map<string, string>();   // project-relative path → url
+  private readonly _cache = new Map<string, PrefabAsset>();       // url → asset
+  private readonly _pathToURL = new Map<AssetPath, string>();     // project-relative path → url
   private readonly _listeners = new Set<Listener>();
   private readonly _prefabChangedListeners = new Set<PrefabChangedListener>();
 
@@ -57,7 +58,7 @@ export class PrefabRegistry {
     for (const fn of this._listeners) fn();
   }
 
-  private _emitPrefabChanged(url: string, asset: PrefabAsset, path: string): void {
+  private _emitPrefabChanged(url: string, asset: PrefabAsset, path: AssetPath): void {
     for (const fn of this._prefabChangedListeners) fn(url, asset, path);
   }
 
@@ -134,7 +135,7 @@ export class PrefabRegistry {
    * @param url   Blob URL for the prefab file.
    * @param path  Optional project-relative path (used to build reverse path→url map).
    */
-  async loadFromURL(url: string, path?: string): Promise<PrefabAsset> {
+  async loadFromURL(url: string, path?: AssetPath): Promise<PrefabAsset> {
     const existing = this._cache.get(url);
     if (existing) return existing;
 
@@ -164,7 +165,7 @@ export class PrefabRegistry {
    * @param asset Parsed PrefabAsset.
    * @param path  Optional project-relative path for the reverse map.
    */
-  set(url: string, asset: PrefabAsset, path?: string): void {
+  set(url: string, asset: PrefabAsset, path?: AssetPath): void {
     this._cache.set(url, asset);
     if (path) this._pathToURL.set(path, url);
     this._emit();
@@ -178,7 +179,7 @@ export class PrefabRegistry {
    * Look up the blob URL for a given project-relative path.
    * Returns null if the path is not in the reverse map.
    */
-  getURLForPath(path: string): string | null {
+  getURLForPath(path: AssetPath): string | null {
     return this._pathToURL.get(path) ?? null;
   }
 
@@ -200,7 +201,7 @@ export class PrefabRegistry {
   }
 
   /** Evict by project-relative path. Returns true if something was evicted. */
-  evictByPath(path: string): boolean {
+  evictByPath(path: AssetPath): boolean {
     const url = this._pathToURL.get(path);
     if (!url) return false;
     this._cache.delete(url);

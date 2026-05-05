@@ -9,6 +9,7 @@ import { useEditor } from '../../app/EditorContext';
 import type { Editor } from '../../core/Editor';
 import { SetTransformCommand } from '../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../core/scene/SceneFormat';
+import { asAssetPath } from '../../utils/branded';
 import { loadGLTFFromFile } from '../../utils/gltfLoader';
 import { loadHDRI } from '../../utils/hdriLoader';
 import { ErrorDialog } from '../../components/ErrorDialog';
@@ -145,7 +146,8 @@ const ViewportPanel: Component = () => {
       // 路徑 2a：內部 GLB multi-list 拖曳（從 Project 面板 multi-select）
       const internalGlbList = e.dataTransfer?.getData('application/erythos-glb-list');
       if (internalGlbList) {
-        const paths: string[] = JSON.parse(internalGlbList);
+        // Mint at the drag-transfer boundary: JSON.parse returns string[]
+        const paths = (JSON.parse(internalGlbList) as string[]).map(asAssetPath);
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
         const errors: string[] = [];
         for (const p of paths) {
@@ -161,8 +163,10 @@ const ViewportPanel: Component = () => {
       }
 
       // 路徑 2b：內部 GLB 拖曳（從 Project 面板）
-      const internalGlb = e.dataTransfer?.getData('application/erythos-glb');
-      if (internalGlb) {
+      const internalGlbRaw = e.dataTransfer?.getData('application/erythos-glb');
+      if (internalGlbRaw) {
+        // Mint at the drag-transfer boundary: getData returns plain string
+        const internalGlb = asAssetPath(internalGlbRaw);
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
         try {
           const file = await editor.projectManager.readFile(internalGlb);
@@ -175,8 +179,10 @@ const ViewportPanel: Component = () => {
 
       // 路徑 3：Prefab 拖曳（從 Prefab Panel）
       // Payload is the project-relative path (e.g. "prefabs/chair.prefab")
-      const prefabPath = e.dataTransfer?.getData('application/erythos-prefab');
-      if (prefabPath) {
+      const prefabPathRaw = e.dataTransfer?.getData('application/erythos-prefab');
+      if (prefabPathRaw) {
+        // Mint at the drag-transfer boundary: getData returns plain string
+        const prefabPath = asAssetPath(prefabPathRaw);
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {

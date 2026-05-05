@@ -2,10 +2,13 @@
 // localStorage by design — survives reload, cleared on explicit user action
 // (Close Project for project id, deletion fallback for scene path).
 
+import type { AssetPath } from '../utils/branded';
+import { asAssetPath } from '../utils/branded';
+
 const LAST_PROJECT_KEY = 'erythos-last-project-id';
 const LAST_SCENE_KEY_PREFIX = 'erythos-last-scene-';
 
-export const DEFAULT_SCENE_PATH = 'scenes/scene.erythos';
+export const DEFAULT_SCENE_PATH: AssetPath = asAssetPath('scenes/scene.erythos');
 
 export function getLastProjectId(): string | null {
   try { return localStorage.getItem(LAST_PROJECT_KEY); }
@@ -22,12 +25,15 @@ export function clearLastProjectId(): void {
   catch { /* ignore */ }
 }
 
-export function getLastScenePath(projectId: string): string | null {
-  try { return localStorage.getItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`); }
+export function getLastScenePath(projectId: string): AssetPath | null {
+  try {
+    const v = localStorage.getItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`);
+    return v !== null ? asAssetPath(v) : null;
+  }
   catch { return null; }
 }
 
-export function setLastScenePath(projectId: string, path: string): void {
+export function setLastScenePath(projectId: string, path: AssetPath): void {
   try { localStorage.setItem(`${LAST_SCENE_KEY_PREFIX}${projectId}`, path); }
   catch { /* localStorage may be disabled */ }
 }

@@ -1,9 +1,10 @@
 import { createSignal } from 'solid-js';
 import type { Editor } from '../../core/Editor';
+import type { AssetPath } from '../../utils/branded';
 
 export interface DeleteFlowProps {
   editor: Editor;
-  setSelectedAssetPaths: (v: string[]) => void;
+  setSelectedAssetPaths: (v: AssetPath[]) => void;
   setError: (title: string, message: string) => void;
 }
 
@@ -19,7 +20,7 @@ export interface DeleteFlow {
   /** Called when the user cancels. Closes dialog and clears pending paths. */
   onCancel: () => void;
   /** Open the delete confirm dialog for the given paths. */
-  open: (paths: string[]) => void;
+  open: (paths: AssetPath[]) => void;
 }
 
 const MAX_SHOWN = 10;
@@ -37,9 +38,9 @@ function buildDeleteMessage(paths: string[]): string {
 
 export function useDeleteFlow(props: DeleteFlowProps): DeleteFlow {
   const [show, setShow] = createSignal(false);
-  const [pendingDeletePaths, setPendingDeletePaths] = createSignal<string[]>([]);
+  const [pendingDeletePaths, setPendingDeletePaths] = createSignal<AssetPath[]>([]);
 
-  const open = (paths: string[]) => {
+  const open = (paths: AssetPath[]) => {
     setPendingDeletePaths(paths);
     setShow(true);
   };

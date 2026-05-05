@@ -1,4 +1,4 @@
-import type { BlobURL, NodeUUID } from '../../utils/branded';
+import type { AssetPath, BlobURL, NodeUUID } from '../../utils/branded';
 
 export type Vec3 = [number, number, number];
 
@@ -25,7 +25,7 @@ export interface MeshComponent {
   /** Blob URL used by ResourceCache.loadFromURL — populated at hydrate time, not persisted */
   url?: BlobURL;
   /** Project-relative path, e.g. "models/chair.glb" — persisted */
-  path: string;
+  path: AssetPath;
   /** Optional sub-tree path within the GLTF, e.g. "Body|Arm" — persisted */
   nodePath?: string;
 }
@@ -64,7 +64,7 @@ export interface PrefabComponent {
   /** Blob URL used by PrefabRegistry.loadFromURL — populated at hydrate time, not persisted */
   url?: BlobURL;
   /** Project-relative path, e.g. "prefabs/chair.prefab" — persisted */
-  path: string;
+  path: AssetPath;
 }
 
 export interface SceneFile {

@@ -14,7 +14,7 @@ import type { PrefabAsset } from './PrefabFormat';
 import { deserializeFromPrefab } from './PrefabSerializer';
 import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
 import type { Selection } from '../Selection';
-import type { NodeUUID } from '../../utils/branded';
+import type { AssetPath, NodeUUID } from '../../utils/branded';
 
 function createGeometry(type: GeometryComponent['type']) {
   switch (type) {
@@ -43,7 +43,7 @@ export class SceneSync {
   private readonly pendingChildren = new Map<NodeUUID, Set<Object3D>>();
 
   /** Bound prefabChanged handler for off() symmetry */
-  private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: string) => void) | null = null;
+  private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: AssetPath) => void) | null = null;
   /** Reference to PrefabInstanceWatcher for self-write skip check (optional) */
   private _instanceWatcher: PrefabInstanceWatcher | null = null;
   /** Reference to Selection for snapshot/restore during rebuild (optional) */
@@ -178,9 +178,9 @@ export class SceneSync {
    * ARCHITECTURAL EXCEPTION: direct SceneDocument mutation outside Command.
    * See attachPrefabRegistry() for rationale.
    */
-  private _rebuildPrefabInstances(newURL: string, newAsset: PrefabAsset, path: string): void {
+  private _rebuildPrefabInstances(newURL: string, newAsset: PrefabAsset, path: AssetPath): void {
     const instances = this.document.getAllNodes().filter((n) => {
-      const prefab = n.components['prefab'] as { path?: string } | undefined;
+      const prefab = n.components['prefab'] as { path?: AssetPath } | undefined;
       return prefab?.path === path;
     });
 

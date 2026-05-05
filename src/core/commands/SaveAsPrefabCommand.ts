@@ -2,14 +2,14 @@ import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import { serializeToPrefab } from '../scene/PrefabSerializer';
 import type { PrefabAsset } from '../scene/PrefabFormat';
-import type { NodeUUID } from '../../utils/branded';
+import type { AssetPath, NodeUUID } from '../../utils/branded';
 
 export class SaveAsPrefabCommand extends Command {
   readonly type = 'SaveAsLeaf';  // ← type 字串是持久化（undo/redo history），PR 1 不改
   private readonly rootUUID: NodeUUID;
   private readonly name: string;
   private savedAsset: PrefabAsset | null = null;
-  private savedPath: string | null = null;
+  private savedPath: AssetPath | null = null;
 
   constructor(editor: Editor, rootUUID: NodeUUID, name: string) {
     super(editor);
