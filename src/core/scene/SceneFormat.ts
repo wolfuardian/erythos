@@ -1,3 +1,5 @@
+import type { BlobURL } from '../../utils/branded';
+
 export type Vec3 = [number, number, number];
 
 export interface SceneNode {
@@ -21,7 +23,7 @@ export interface SceneNode {
  */
 export interface MeshComponent {
   /** Blob URL used by ResourceCache.loadFromURL — populated at hydrate time, not persisted */
-  url?: string;
+  url?: BlobURL;
   /** Project-relative path, e.g. "models/chair.glb" — persisted */
   path: string;
   /** Optional sub-tree path within the GLTF, e.g. "Body|Arm" — persisted */
@@ -60,7 +62,7 @@ export interface CameraComponent {
  */
 export interface PrefabComponent {
   /** Blob URL used by PrefabRegistry.loadFromURL — populated at hydrate time, not persisted */
-  url?: string;
+  url?: BlobURL;
   /** Project-relative path, e.g. "prefabs/chair.prefab" — persisted */
   path: string;
 }
