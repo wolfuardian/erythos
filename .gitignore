@@ -9,9 +9,10 @@ settings.local.json
 .claude/user/
 .claude/previews/
 .claude/worktrees/
-.claude/lessons/
 .claude/codebase-spec/
 .claude/session/
+.claude/scratch/*
+!.claude/scratch/.gitkeep
 .claude/scheduled_tasks.lock
 projects/
 .playwright-mcp/
