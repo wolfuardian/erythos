@@ -23,20 +23,6 @@
   overflow: hidden;
 }
 
-/* ── SceneOps vertical overlay ───────────────────────────────────────────── */
-
-.sceneOpsOverlay {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(40, 40, 40, 0.85);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  padding: 4px;
-  z-index: 10;
-  pointer-events: auto;
-}
-
 /* ── Drag-over drop indicator ────────────────────────────────────────────── */
 
 .dropOverlay {

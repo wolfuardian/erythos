@@ -17,7 +17,6 @@ import { InstantiatePrefabCommand } from '../../core/commands/InstantiatePrefabC
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
-import { SceneOpsToolbar } from '../../components/SceneOpsToolbar';
 import { useArea } from '../../app/AreaContext';
 import { getPanelState, setPanelState } from '../../app/viewportState';
 import { currentWorkspace } from '../../app/workspaceStore';
@@ -537,13 +536,6 @@ const ViewportPanel: Component = () => {
         ref={canvasRef}
         class={styles.canvas}
       >
-      {/* SceneOps vertical overlay — Phase 3 of #688 */}
-      <div
-        data-testid="viewport-scene-ops-overlay"
-        class={styles.sceneOpsOverlay}
-      >
-        <SceneOpsToolbar orientation="vertical" />
-      </div>
       <Show when={isDragging()}>
         <div class={styles.dropOverlay}>
           放開以導入模型
