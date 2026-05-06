@@ -80,6 +80,14 @@ function EditorIcon(props: { id: string }) {
           <path d="M6.5 1.5V3M6.5 10V11.5M1.5 6.5H3M10 6.5H11.5M3 3L4 4M10 3L9 4M3 10L4 9M10 10L9 9" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/>
         </svg>
       );
+    case 'console':
+      return (
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <rect x="1.5" y="2.5" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1" fill="none"/>
+          <path d="M3.5 5.5L5.5 7L3.5 8.5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="7" y1="8.5" x2="9.5" y2="8.5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/>
+        </svg>
+      );
     default:
       return <span class={styles.defaultIcon}>□</span>;
   }
