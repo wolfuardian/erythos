@@ -12,6 +12,7 @@ import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
 import { TreeNode, type DropIndicator } from './TreeNode';
 import { buildSceneTreeMenuItems } from './sceneTreeMenuItems';
+import { HeaderToolBar } from './HeaderToolBar';
 import styles from './SceneTreePanel.module.css';
 
 const SceneTreePanel: Component = () => {
@@ -23,6 +24,7 @@ const SceneTreePanel: Component = () => {
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const [expandedMap, setExpandedMap] = useAreaState<Record<string, boolean>>('expandedMap', {});
   const [isFileDragging, setIsFileDragging] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal('');
 
   // Visual-only toggle state (P2/P3 will connect these to scene model)
   const [eyeOffMap, setEyeOffMap] = createSignal<Record<string, boolean>>({});
@@ -58,7 +60,8 @@ const SceneTreePanel: Component = () => {
   const rootNodes = () =>
     bridge.nodes()
       .filter(n => n.parent === null)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => a.order - b.order)
+      .filter(n => { const q = searchQuery(); return q === '' || n.name.toLowerCase().includes(q.toLowerCase()); });
 
   const createPrimitive = (type: string, name: string) => {
     const node = editor.sceneDocument.createNode(name);
@@ -242,6 +245,7 @@ const SceneTreePanel: Component = () => {
     >
       {/* Header */}
       <PanelHeader title="Scene" />
+      <HeaderToolBar onSearchChange={setSearchQuery} />
 
       <div
         ref={containerRef}
