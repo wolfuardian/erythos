@@ -6,6 +6,7 @@ export class Selection {
   private _anchor: NodeUUID | null = null;
   private _hovered: NodeUUID | null = null;
   private _mode: InteractionMode = 'object';
+  private _isEnvSelected = false;
   private events: EventEmitter;
 
   constructor(events: EventEmitter) {
@@ -31,14 +32,43 @@ export class Selection {
   get hovered(): NodeUUID | null { return this._hovered; }
   get mode(): InteractionMode { return this._mode; }
 
+  // ── Env selection ────────────────────────────────────
+
+  get isEnvSelected(): boolean { return this._isEnvSelected; }
+
+  /** Internal: clear env selection flag and emit if it was set. Does NOT touch node selection. */
+  private _clearEnvIfSet(): void {
+    if (!this._isEnvSelected) return;
+    this._isEnvSelected = false;
+    this.events.emit('envSelectionChanged', false);
+  }
+
+  /**
+   * Select the Environment entry (mutual exclusion with nodes).
+   * Clears node selection first, then marks env as selected.
+   */
+  selectEnv(): void {
+    // Clear node selection without recursing back into env (call internal clear directly)
+    if (this._selected.size > 0) {
+      this._selected.clear();
+      this._anchor = null;
+      this.events.emit('selectionChanged', []);
+    }
+    if (this._isEnvSelected) return;
+    this._isEnvSelected = true;
+    this.events.emit('envSelectionChanged', true);
+  }
+
   // ── Selection methods ────────────────────────────────
 
-  /** Replace selection (plain click). select(null) = clear(). */
+  /** Replace selection (plain click). select(null) = clear both nodes and env. */
   select(uuid: NodeUUID | null): void {
     if (uuid === null) {
+      this._clearEnvIfSet();
       this.clear();
       return;
     }
+    this._clearEnvIfSet();
     if (this._selected.size === 1 && this._selected.has(uuid)) return;
     this._selected.clear();
     this._selected.add(uuid);
@@ -48,6 +78,7 @@ export class Selection {
 
   /** Append to selection (Ctrl+Click) */
   add(uuid: NodeUUID): void {
+    this._clearEnvIfSet();
     if (this._selected.has(uuid)) return;
     this._selected.add(uuid);
     this.events.emit('selectionChanged', [...this._selected]);
@@ -62,6 +93,7 @@ export class Selection {
 
   /** Toggle membership (Ctrl+Click shorthand) */
   toggle(uuid: NodeUUID): void {
+    this._clearEnvIfSet();
     if (this._selected.has(uuid)) {
       this._selected.delete(uuid);
     } else {
@@ -75,7 +107,7 @@ export class Selection {
     return this._selected.has(uuid);
   }
 
-  /** Clear all selection */
+  /** Clear node selection only. Does NOT clear env selection. */
   clear(): void {
     if (this._selected.size === 0) return;
     this._selected.clear();
@@ -85,6 +117,7 @@ export class Selection {
 
   /** Replace selection with a contiguous range. Anchor is NOT updated. Single emit. */
   selectRange(uuids: NodeUUID[]): void {
+    this._clearEnvIfSet();
     this._selected.clear();
     for (const uuid of uuids) this._selected.add(uuid);
     this.events.emit('selectionChanged', [...this._selected]);

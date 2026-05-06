@@ -41,13 +41,6 @@ function EditorIcon(props: { id: string }) {
           <line x1="6.5" y1="4.2" x2="10.5" y2="7.8" stroke="currentColor" stroke-width="0.8"/>
         </svg>
       );
-    case 'environment':
-      return (
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <circle cx="6.5" cy="6.5" r="3.5" stroke="currentColor" stroke-width="1"/>
-          <path d="M6.5 3L6.5 1M6.5 12L6.5 10M3 6.5H1M12 6.5H10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
-        </svg>
-      );
     case 'properties':
       return (
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -72,7 +65,6 @@ function EditorIcon(props: { id: string }) {
 
 const SHORTCUT_MAP: Record<string, string> = {
   'scene-tree': 'Shift F1',
-  'environment': 'Shift F2',
   'properties': 'Shift F3',
   'viewport': 'Shift F4',
   'project': 'Shift F6',

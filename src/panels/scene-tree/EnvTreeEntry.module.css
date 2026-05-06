@@ -1,0 +1,61 @@
+/** EnvTreeEntry — sticky Environment row above node list */
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--row-height);
+  padding-left: var(--row-padding-left, 4px);
+  cursor: pointer;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  margin: 0 4px;
+  user-select: none;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+
+.row.selected {
+  background: var(--bg-selected);
+}
+
+.row:hover:not(.selected) {
+  background: var(--bg-hover);
+}
+
+/* Selected accent bar */
+.selectedBar {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--accent-blue);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.envIcon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  margin-right: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.envLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.envLabel.labelSelected {
+  color: var(--text-primary);
+}

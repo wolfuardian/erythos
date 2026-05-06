@@ -1,12 +1,11 @@
 import { For, Show, type Component } from 'solid-js';
-import { useEditor } from '../../app/EditorContext';
-import { PanelHeader } from '../../components/PanelHeader';
-import { NumberDrag } from '../../components/NumberDrag';
-import { SetEnvironmentCommand } from '../../core/commands';
-import { asAssetPath, asBlobURL } from '../../utils/branded';
-import styles from './EnvironmentPanel.module.css';
+import { useEditor } from '../../../app/EditorContext';
+import { NumberDrag } from '../../../components/NumberDrag';
+import { SetEnvironmentCommand } from '../../../core/commands';
+import { asAssetPath, asBlobURL } from '../../../utils/branded';
+import styles from './EnvironmentDraw.module.css';
 
-const EnvironmentPanel: Component = () => {
+const EnvironmentDraw: Component = () => {
   const bridge = useEditor();
   const { editor } = bridge;
 
@@ -20,7 +19,6 @@ const EnvironmentPanel: Component = () => {
 
   const handleSelectFromProject = async (path: string) => {
     if (!path) return;
-    // Mint at the UI-input boundary: e.target.value returns plain string
     const file = await editor.projectManager.readFile(asAssetPath(path));
     const blob = new Blob([await file.arrayBuffer()], { type: 'application/octet-stream' });
     const url = asBlobURL(URL.createObjectURL(blob));
@@ -29,26 +27,14 @@ const EnvironmentPanel: Component = () => {
   };
 
   return (
-    <div data-testid="environment-panel" class={styles.panel}>
-      {/* Header */}
-      <PanelHeader title="Environment" />
-
-      {/* Body */}
-      <div class={styles.body}>
-
+    <div>
       {/* HDR Image section */}
       <div class={styles.section}>
         <div class={styles.sectionLabel}>HDR Image</div>
-
         <Show when={env().hdrUrl}>
           <div class={styles.hdrRow}>
-            <span class={styles.hdrUrl}>
-              {env().hdrUrl}
-            </span>
-            <button
-              onClick={handleClear}
-              class={styles.clearBtn}
-            >×</button>
+            <span class={styles.hdrUrl}>{env().hdrUrl}</span>
+            <button onClick={handleClear} class={styles.clearBtn}>×</button>
           </div>
         </Show>
       </div>
@@ -70,9 +56,7 @@ const EnvironmentPanel: Component = () => {
 
       {/* Intensity */}
       <div class={styles.fieldSection}>
-        <div class={styles.fieldLabel}>
-          <span>Intensity</span>
-        </div>
+        <div class={styles.fieldLabel}>Intensity</div>
         <NumberDrag
           value={env().intensity}
           min={0}
@@ -87,10 +71,8 @@ const EnvironmentPanel: Component = () => {
       </div>
 
       {/* Rotation */}
-      <div>
-        <div class={styles.fieldLabel}>
-          <span>Rotation</span>
-        </div>
+      <div class={styles.fieldSection}>
+        <div class={styles.fieldLabel}>Rotation</div>
         <NumberDrag
           value={env().rotation}
           min={0}
@@ -103,9 +85,8 @@ const EnvironmentPanel: Component = () => {
           onDragEnd={() => editor.history.sealLast()}
         />
       </div>
-      </div>
     </div>
   );
 };
 
-export default EnvironmentPanel;
+export { EnvironmentDraw };

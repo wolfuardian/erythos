@@ -11,6 +11,7 @@ import { ContextMenu } from '../../components/ContextMenu';
 import { PanelHeader } from '../../components/PanelHeader';
 import { useAreaState } from '../../app/areaState';
 import { TreeNode, type DropIndicator } from './TreeNode';
+import { EnvTreeEntry } from './EnvTreeEntry';
 import { buildSceneTreeMenuItems } from './sceneTreeMenuItems';
 import { HeaderToolBar } from './HeaderToolBar';
 import styles from './SceneTreePanel.module.css';
@@ -334,6 +335,9 @@ const SceneTreePanel: Component = () => {
         }}
         class={styles.scrollArea}
       >
+        {/* Sticky Environment entry — always first, above scene nodes */}
+        <EnvTreeEntry />
+
         <For each={rootNodes()}>
           {(node) => (
             <TreeNode
