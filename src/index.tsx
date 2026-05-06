@@ -1,6 +1,9 @@
 import { render } from 'solid-js/web';
 import App from './app/App';
 import './styles/theme.css';
+import { installConsoleCapture } from './utils/consoleCapture';
+
+installConsoleCapture();
 
 // 一次性 migration：清掉 toy mode 時代的 autosave key
 // （Epic #613 後 AutoSave 改寫到 project file，這個 key 已無用）
