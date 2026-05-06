@@ -113,6 +113,9 @@
 }
 
 .folderItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 5px 10px;
   cursor: pointer;
   font-size: var(--font-size-sm);
@@ -129,6 +132,17 @@
 .folderItem.folderActive {
   color: var(--text-primary);
   background: var(--bg-selected);
+}
+
+.folderIcon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--accent-gold);
+}
+
+.folderItem.folderActive .folderIcon {
+  color: var(--accent-gold);
 }
 
 /* ── Asset area ── */

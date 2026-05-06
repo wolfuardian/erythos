@@ -9,6 +9,7 @@ import { PanelHeader } from '../../components/PanelHeader';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 import type { AssetPath } from '../../utils/branded';
 import { ProjectTypeIcon } from './ProjectTypeIcon';
+import { FolderIcon } from './FolderIcon';
 import { buildProjectMenuItems } from './projectMenuItems';
 import { useNewSceneFlow } from './useNewSceneFlow';
 import { useDeleteFlow } from './useDeleteFlow';
@@ -296,6 +297,9 @@ const ProjectPanel: Component = () => {
                   class={styles.folderItem}
                   classList={{ [styles.folderActive]: isActive() }}
                 >
+                  <span class={styles.folderIcon}>
+                    <FolderIcon open={isActive()} />
+                  </span>
                   {f.label}
                 </div>
               );
