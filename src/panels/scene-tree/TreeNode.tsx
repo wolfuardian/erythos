@@ -32,6 +32,7 @@ export interface TreeNodeProps {
   setEyeOffMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
   cursorOffMap: () => Record<string, boolean>;
   setCursorOffMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void;
+  onShiftClick: (id: NodeUUID) => void;
 }
 
 // Indent gutter width per depth level (px)
@@ -66,7 +67,9 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
-    if (e.ctrlKey || e.metaKey) {
+    if (e.shiftKey) {
+      props.onShiftClick(props.node.id);
+    } else if (e.ctrlKey || e.metaKey) {
       editor.selection.toggle(props.node.id);
     } else {
       if (isSelected()) {
@@ -345,6 +348,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
                 setEyeOffMap={props.setEyeOffMap}
                 cursorOffMap={props.cursorOffMap}
                 setCursorOffMap={props.setCursorOffMap}
+                onShiftClick={props.onShiftClick}
               />
             );
           }}

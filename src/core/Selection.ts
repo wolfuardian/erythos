@@ -3,6 +3,7 @@ import type { NodeUUID } from '../utils/branded';
 
 export class Selection {
   private _selected: Set<NodeUUID> = new Set();
+  private _anchor: NodeUUID | null = null;
   private _hovered: NodeUUID | null = null;
   private _mode: InteractionMode = 'object';
   private events: EventEmitter;
@@ -24,6 +25,9 @@ export class Selection {
     return last;
   }
 
+  /** Anchor UUID for Shift+click range select — set by plain click and Ctrl+click (add), cleared on clear() */
+  get anchor(): NodeUUID | null { return this._anchor; }
+
   get hovered(): NodeUUID | null { return this._hovered; }
   get mode(): InteractionMode { return this._mode; }
 
@@ -38,6 +42,7 @@ export class Selection {
     if (this._selected.size === 1 && this._selected.has(uuid)) return;
     this._selected.clear();
     this._selected.add(uuid);
+    this._anchor = uuid;
     this.events.emit('selectionChanged', [...this._selected]);
   }
 
@@ -61,6 +66,7 @@ export class Selection {
       this._selected.delete(uuid);
     } else {
       this._selected.add(uuid);
+      this._anchor = uuid;
     }
     this.events.emit('selectionChanged', [...this._selected]);
   }
@@ -73,7 +79,15 @@ export class Selection {
   clear(): void {
     if (this._selected.size === 0) return;
     this._selected.clear();
+    this._anchor = null;
     this.events.emit('selectionChanged', []);
+  }
+
+  /** Replace selection with a contiguous range. Anchor is NOT updated. Single emit. */
+  selectRange(uuids: NodeUUID[]): void {
+    this._selected.clear();
+    for (const uuid of uuids) this._selected.add(uuid);
+    this.events.emit('selectionChanged', [...this._selected]);
   }
 
   /**
