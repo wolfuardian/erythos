@@ -511,6 +511,19 @@ export class SceneSync {
       }
     }
 
+    // Handle light component changes
+    const lightComp = (changed as { components?: { light?: unknown } }).components?.light;
+    if (lightComp !== undefined) {
+      const lightChild = obj.children.find(
+        (c): c is DirectionalLight | AmbientLight => c instanceof DirectionalLight || c instanceof AmbientLight,
+      );
+      if (lightChild) {
+        const l = lightComp as LightComponent;
+        if (l.intensity !== undefined) lightChild.intensity = l.intensity;
+        if (l.color     !== undefined) lightChild.color.setHex(l.color);
+      }
+    }
+
     // Parent change → re-attach
     if ('parent' in changed) {
       obj.removeFromParent();
