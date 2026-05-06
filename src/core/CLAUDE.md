@@ -10,5 +10,4 @@
 - Command 的 undo 中要檢查 selection 狀態並清除
 - import three 模組用 `'three'`；`three/examples/jsm/` 底下的模組必須帶 `.js` 後綴（例如 `'three/examples/jsm/loaders/GLTFLoader.js'`），否則 tsc 會 TS2307
 - AutoSave 寫 project file (`scenes/scene.erythos`)，不寫 localStorage
-- 事件名為 `nodeAdded` / `nodeRemoved` / `nodeChanged` / `sceneReplaced`（`SceneDocument.events` 觸發）；`Editor.events` 同名事件僅 `addNode` / `removeNode` 路徑會 emit 但無訂閱者，新增訂閱請走 `sceneDocument.events`
 - 可用 solid-js reactive primitive（`createSignal` / `createMemo` / `createEffect` / `createRoot`）作 first-class observable；**禁止** import JSX、DOM API、`solid-js/web`、`solid-js/store`（store 是 UI 慣用模式，core 用 signal 即可）

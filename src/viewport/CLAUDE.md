@@ -8,4 +8,4 @@
 - 用 SolidJS 的 onMount/onCleanup 管理 DOM 事件監聽
 - 用 createSignal 管理元件狀態
 - 不要在 Viewport class 內部處理檔案 I/O，拖放邏輯留在 ViewportPanel 元件層
-- 樣式用 CSS Modules（colocated `*.module.css`）+ `var(--bg-*)` token；inline style 僅限每幀計算的座標等動態值或 CSS 變數注入（見 `docs/styles-convention.md`）
+- 樣式用 inline style，配合現有 CSS 變數 var(--bg-*)
