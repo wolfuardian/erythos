@@ -2,13 +2,9 @@
 
 ## 範圍限制
 只能修改 src/panels/environment/ 底下的檔案。
-
-## 當前任務
+不得修改 src/core/、src/viewport/、src/components/、src/app/、src/panels/scene-tree/、src/panels/properties/、src/panels/viewport/、src/panels/context/、src/panels/project/、src/panels/settings/。
 
 ## 慣例
 - 透過 bridge.environmentSettings() 讀取環境設定
 - 透過 editor.setEnvironmentSettings() 修改設定
-- 樣式用 inline style + CSS 變數
-
-## 待修項（由主腦根據 QC issue 填寫）
-## 上報區（供主腦 review）
+- 樣式用 CSS Modules（colocated `*.module.css`）+ `var(--bg-*)` token，遵守 `docs/styles-convention.md`
