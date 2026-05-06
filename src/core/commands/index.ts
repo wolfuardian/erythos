@@ -9,3 +9,4 @@ export { SetEnvironmentCommand } from './SetEnvironmentCommand';
 export { InstantiatePrefabCommand } from './InstantiatePrefabCommand';
 export { SaveAsPrefabCommand } from './SaveAsPrefabCommand';
 export { SetMaterialPropertyCommand } from './SetMaterialPropertyCommand';
+export { SetLightPropertyCommand } from './SetLightPropertyCommand';
