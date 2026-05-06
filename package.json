@@ -40,7 +40,8 @@
     "audit:context": "node scripts/audit/context.mjs",
     "audit:inline-style": "node scripts/audit/inline-style.mjs",
     "check:command-pattern": "node scripts/check-command-pattern.mjs",
-    "check": "npm run check:command-pattern"
+    "check": "npm run check:command-pattern",
+    "lint": "eslint src"
   },
   "dependencies": {
     "solid-js": "^1.9.12",
@@ -49,6 +50,9 @@
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/three": "^0.184.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.2",
+    "@typescript-eslint/parser": "^8.59.2",
+    "eslint": "^10.3.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.59.1",
     "typescript": "~6.0.3",
