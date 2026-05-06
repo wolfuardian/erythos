@@ -57,6 +57,24 @@ const SceneTreePanel: Component = () => {
     return result;
   };
 
+  const handleShiftClick = (clickedId: NodeUUID) => {
+    const anchor = editor.selection.anchor;
+    if (!anchor) {
+      editor.selection.select(clickedId);
+      return;
+    }
+    const flat = flatVisibleNodes();
+    const anchorIdx = flat.findIndex(n => n.id === anchor);
+    const clickedIdx = flat.findIndex(n => n.id === clickedId);
+    if (anchorIdx === -1 || clickedIdx === -1) {
+      editor.selection.select(clickedId);
+      return;
+    }
+    const lo = Math.min(anchorIdx, clickedIdx);
+    const hi = Math.max(anchorIdx, clickedIdx);
+    editor.selection.selectRange(flat.slice(lo, hi + 1).map(n => n.id));
+  };
+
   const rootNodes = () =>
     bridge.nodes()
       .filter(n => n.parent === null)
@@ -332,6 +350,7 @@ const SceneTreePanel: Component = () => {
               setEyeOffMap={setEyeOffMap}
               cursorOffMap={cursorOffMap}
               setCursorOffMap={setCursorOffMap}
+              onShiftClick={handleShiftClick}
             />
           )}
         </For>
