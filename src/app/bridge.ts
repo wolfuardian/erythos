@@ -36,6 +36,7 @@ export interface EditorBridge {
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   environmentSettings: Accessor<EnvironmentSettings>;
+  isEnvSelected: Accessor<boolean>;
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
   projectFiles: Accessor<ProjectFile[]>;
@@ -154,6 +155,11 @@ export function createEditorBridge(
   const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
   editor.events.on('environmentChanged', onEnvChanged);
 
+  // Subscribe to env selection events
+  const [isEnvSelected, setIsEnvSelected] = createSignal<boolean>(false);
+  const onEnvSelectionChanged = (selected: boolean) => setIsEnvSelected(selected);
+  editor.events.on('envSelectionChanged', onEnvSelectionChanged);
+
   // Subscribe to ProjectManager events
   const onProjectChanged = () => {
     setProjectOpen(editor.projectManager.isOpen);
@@ -174,6 +180,7 @@ export function createEditorBridge(
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('environmentChanged', onEnvChanged);
+    editor.events.off('envSelectionChanged', onEnvSelectionChanged);
     unsubProject();
   };
 
@@ -194,6 +201,7 @@ export function createEditorBridge(
     confirmBeforeLoad,
     hasClipboard,
     environmentSettings,
+    isEnvSelected,
     projectOpen,
     projectName,
     projectFiles,

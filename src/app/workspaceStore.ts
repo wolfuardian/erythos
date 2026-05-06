@@ -63,7 +63,7 @@ export function createDebugPreset(): Workspace {
     grid: createDebugPresetTree(),
     editorTypes: {
       'viewport': 'viewport',
-      'environment': 'environment',
+      'environment': 'properties',
     },
     viewportState: {},
     panelStates: {},
@@ -205,7 +205,28 @@ export function loadStore(): WorkspaceStore {
           }
           return { ...w, panelStates: cleaned };
         });
-        return { ...parsed, workspaces: orphanKeyDroppedWorkspaces };
+        // Migration: environment → drop (step2 wave2: EnvironmentPanel decommissioned;
+        // env is now a selectable entry in Scene Tree + Properties).
+        // Debug preset force-rebuild if editorTypes still references 'environment' value.
+        // Other workspaces: drop entries whose value is 'environment' (AreaShell falls back
+        // to 'viewport' for missing editorType keys, so dropping is safe).
+        const envDroppedWorkspaces = orphanKeyDroppedWorkspaces.map(w => {
+          if (w.id === 'debug-preset') {
+            const hasEnvEditorType = Object.values(w.editorTypes).includes('environment');
+            if (hasEnvEditorType) {
+              return createDebugPreset();
+            }
+            return w;
+          }
+          const newEditorTypes: Record<string, string> = {};
+          for (const [areaId, editorType] of Object.entries(w.editorTypes)) {
+            if (editorType !== 'environment') {
+              newEditorTypes[areaId] = editorType;
+            }
+          }
+          return { ...w, editorTypes: newEditorTypes };
+        });
+        return { ...parsed, workspaces: envDroppedWorkspaces };
       }
     }
   } catch { /* fall through */ }

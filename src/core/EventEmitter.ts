@@ -31,6 +31,7 @@ export interface EditorEventMap {
   autosaveStatusChanged:  [status: 'idle' | 'pending' | 'saved' | 'error'];
   prefabStoreChanged:     [];
   environmentChanged:     [];
+  envSelectionChanged:    [selected: boolean];
 
 }
 

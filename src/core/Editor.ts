@@ -217,7 +217,7 @@ export class Editor {
    * @param data - Parsed SceneFile (may be legacy with mesh.source / prefab.id)
    */
   async loadScene(data: SceneFile): Promise<void> {
-    this.selection.clear();
+    this.selection.select(null);
     this.selection.hover(null);
     this.history.clear();
     if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
