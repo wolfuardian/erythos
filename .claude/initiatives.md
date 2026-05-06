@@ -23,8 +23,8 @@
 
 機械化的好處不只省 review,是確立「任何新人寫都會從同樣地方長出來」的不變性。
 
-- [ ] **P0** 模組邊界 — ESLint `no-restricted-imports`(core/ 不 import UI、panels/ 只透過 bridge)
-- [ ] **P0** Command 模式遵守 — grep / AST script,SceneDocument 直改不在 Command 子類內 → fail
+- [x] **P0** 模組邊界 — ESLint `no-restricted-imports`(PR #809;Rule 1 core 不 import UI 全 clean;Rule 2 panels 不 runtime import core 開 `allowTypeImports`,16 violations 留 Step 2 砍 panel + Step 3 bridge 化清完後升嚴)
+- [x] **P0** Command 模式遵守 — `scripts/check-command-pattern.mjs`(PR #810;4 mutator addNode/removeNode/updateNode/deserialize,main 全 PASS)
 - [ ] **P1** CSS Modules + inline 例外清單 — grep `style={{` 排除允許 case(每幀座標、CSS 變數注入)
 - [ ] **P1** data-testid 結構 — horizontal group 內命名 pattern 一致
 - [ ] **P2** `three/examples/jsm/` 後綴 — grep 一行(build 已部分抓,做完防漏)
