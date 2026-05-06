@@ -4,9 +4,6 @@ import { editorDef as sceneTreeDef } from '../panels/scene-tree';
 import { editorDef as propertiesDef } from '../panels/properties';
 import { editorDef as environmentDef } from '../panels/environment';
 import { editorDef as projectDef } from '../panels/project';
-import { editorDef as contextDef } from '../panels/context';
-import { editorDef as settingsDef } from '../panels/settings';
-import { editorDef as consoleDef } from '../panels/console';
 
 export const editors: readonly EditorDef[] = [
   viewportDef,
@@ -14,7 +11,4 @@ export const editors: readonly EditorDef[] = [
   propertiesDef,
   environmentDef,
   projectDef,
-  contextDef,
-  settingsDef,
-  consoleDef,
 ];

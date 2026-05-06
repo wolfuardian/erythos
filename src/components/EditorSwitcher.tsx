@@ -57,35 +57,12 @@ function EditorIcon(props: { id: string }) {
           <line x1="3.5" y1="8.5" x2="7" y2="8.5" stroke="currentColor" stroke-width="0.9"/>
         </svg>
       );
-    case 'context':
-      return (
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <rect x="1.5" y="2.5" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1" fill="none"/>
-          <path d="M4 5L5.5 6.5L4 8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="7" y1="8" x2="9.5" y2="8" stroke="currentColor" stroke-width="0.9"/>
-        </svg>
-      );
     case 'project':
       return (
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
           <rect x="1.5" y="2.5" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1" fill="none"/>
           <path d="M1.5 5.5H11.5" stroke="currentColor" stroke-width="0.9"/>
           <rect x="3" y="7" width="3" height="2.5" rx="0.5" fill="currentColor" opacity="0.5"/>
-        </svg>
-      );
-    case 'settings':
-      return (
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1"/>
-          <path d="M6.5 1.5V3M6.5 10V11.5M1.5 6.5H3M10 6.5H11.5M3 3L4 4M10 3L9 4M3 10L4 9M10 10L9 9" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/>
-        </svg>
-      );
-    case 'console':
-      return (
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-          <rect x="1.5" y="2.5" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1" fill="none"/>
-          <path d="M3.5 5.5L5.5 7L3.5 8.5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="7" y1="8.5" x2="9.5" y2="8.5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/>
         </svg>
       );
     default:
@@ -98,9 +75,7 @@ const SHORTCUT_MAP: Record<string, string> = {
   'environment': 'Shift F2',
   'properties': 'Shift F3',
   'viewport': 'Shift F4',
-  'context': 'Shift F5',
   'project': 'Shift F6',
-  'settings': 'Shift F7',
 };
 
 export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
