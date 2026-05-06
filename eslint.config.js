@@ -9,6 +9,7 @@
 // so the patterns match the literal "../../core/..." strings seen in source.
 
 import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
 
 export default [
   // ── Rule 1: src/core/** must not import UI layers ─────────────────────────
@@ -48,22 +49,26 @@ export default [
     },
   },
 
-  // ── Rule 2: src/panels/** must not import src/core/** directly ────────────
-  // Corresponds to: "panels/ 只透過 bridge 取狀態"
+  // ── Rule 2: src/panels/** must not import src/core/** at runtime ──────────
+  // Corresponds to: "panels/ 只透過 bridge 取狀態" (取狀態 = read, type-only).
   // panels/ may import src/app/bridge.ts (lives in app/, not core/), which is fine.
-  // Any direct relative import that traverses into core/ is forbidden.
+  // `import type` is permitted (erased at compile time → no runtime dependency).
+  // Runtime imports (Command classes, Editor, helpers) must go through bridge.
+  // Bridge migration tracked separately — see initiatives.md § B.
   {
     files: ['src/panels/**/*.{ts,tsx}'],
     languageOptions: { parser: tsParser },
+    plugins: { '@typescript-eslint': tsPlugin },
     rules: {
-      'no-restricted-imports': [
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           patterns: [
             {
               regex: '(\\.\\./)*core/',
               message:
-                '[module-boundary] src/panels must not import from core/ directly — use src/app/bridge.ts instead',
+                '[module-boundary] src/panels must not import from core/ at runtime — use src/app/bridge.ts (type imports are permitted)',
+              allowTypeImports: true,
             },
           ],
         },
