@@ -1,0 +1,67 @@
+/* BrokenRefsBadge -- broken asset reference warning chip */
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chip {
+  padding: 2px 8px;
+  height: 24px;
+  background: color-mix(in srgb, var(--accent-red, #e05252) 15%, transparent);
+  color: var(--accent-red, #e05252);
+  border: 1px solid var(--accent-red, #e05252);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: color-mix(in srgb, var(--accent-red, #e05252) 25%, transparent);
+}
+
+.list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 4px 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 10px;
+  gap: 2px;
+}
+
+.item:not(:last-child) {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.itemName {
+  font-size: var(--font-size-sm);
+  color: var(--accent-red, #e05252);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemAsset {
+  font-size: 10px;
+  color: var(--text-disabled);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
