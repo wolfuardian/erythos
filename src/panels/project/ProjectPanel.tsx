@@ -5,7 +5,12 @@ import { ErrorDialog } from '../../components/ErrorDialog';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
 import { ContextMenu } from '../../components/ContextMenu';
+import { Panel } from '../../components/Panel';
 import { PanelHeader } from '../../components/PanelHeader';
+import { PanelToolbar } from '../../components/PanelToolbar';
+import { PanelContent } from '../../components/PanelContent';
+import { PanelFooter } from '../../components/PanelFooter';
+import { PanelEditorSwitcher } from '../../components/PanelEditorSwitcher';
 import type { ProjectFile } from '../../core/project/ProjectFile';
 import type { AssetPath } from '../../utils/branded';
 import { ProjectTypeIcon } from './ProjectTypeIcon';
@@ -213,75 +218,78 @@ const ProjectPanel: Component = () => {
   const isSelected = (path: AssetPath) => selectedAssetPaths().includes(path);
 
   return (
-    <div
-      data-testid="project-panel"
-      class={styles.panel}
-    >
+    <Panel testid="project-panel">
       {/* ── Panel header ── */}
       <PanelHeader
         title={bridge.projectName() ?? 'Project'}
         actions={
-          <button
-            data-testid="project-panel-close-project"
-            class={styles.closeBtn}
-            onClick={() => setShowCloseConfirm(true)}
-          >
-            Close project
-          </button>
+          <>
+            <button
+              data-testid="project-panel-close-project"
+              class={styles.closeBtn}
+              onClick={() => setShowCloseConfirm(true)}
+            >
+              Close project
+            </button>
+            <PanelEditorSwitcher />
+          </>
         }
       />
 
-      {/* ── Toolbar row ── */}
-      <div class={styles.toolbar}>
-        {/* Search input */}
-        <input
-          data-testid="project-panel-search"
-          type="text"
-          placeholder="Search assets..."
-          value={searchQuery()}
-          onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          class={styles.searchInput}
-        />
+      {/* ── Toolbar (search + view toggle + breadcrumb, flex column) ── */}
+      <PanelToolbar>
+        {/* Row 1: Search input + view toggle */}
+        <div class={styles.toolbar}>
+          {/* Search input */}
+          <input
+            data-testid="project-panel-search"
+            type="text"
+            placeholder="Search assets..."
+            value={searchQuery()}
+            onInput={(e) => setSearchQuery(e.currentTarget.value)}
+            class={styles.searchInput}
+          />
 
-        {/* Grid / List toggle button */}
-        <button
-          data-testid="project-panel-view-toggle"
-          title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
-          onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
-          class={styles.viewToggleBtn}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
-            <Show when={viewMode() === 'list'}>
-              {/* grid icon */}
-              <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
-              <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
-            </Show>
-            <Show when={viewMode() === 'grid'}>
-              {/* list icon */}
-              <line x1="1" y1="3.5" x2="13" y2="3.5"/>
-              <line x1="1" y1="7" x2="13" y2="7"/>
-              <line x1="1" y1="10.5" x2="13" y2="10.5"/>
-            </Show>
-          </svg>
-        </button>
+          {/* Grid / List toggle button */}
+          <button
+            data-testid="project-panel-view-toggle"
+            title={viewMode() === 'grid' ? 'Switch to List' : 'Switch to Grid'}
+            onClick={() => setViewMode(viewMode() === 'grid' ? 'list' : 'grid')}
+            class={styles.viewToggleBtn}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+              <Show when={viewMode() === 'list'}>
+                {/* grid icon */}
+                <rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/>
+                <rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/>
+              </Show>
+              <Show when={viewMode() === 'grid'}>
+                {/* list icon */}
+                <line x1="1" y1="3.5" x2="13" y2="3.5"/>
+                <line x1="1" y1="7" x2="13" y2="7"/>
+                <line x1="1" y1="10.5" x2="13" y2="10.5"/>
+              </Show>
+            </svg>
+          </button>
+        </div>
 
-      </div>
-
-      {/* ── Breadcrumb row ── */}
-      <div class={styles.breadcrumb}>
-        <span
-          class={styles.breadcrumbRoot}
-          classList={{ [styles.active]: selectedFolder() === null }}
-          onClick={() => setSelectedFolder(null)}
-        >Assets</span>
-        <Show when={selectedFolder() !== null}>
-          <span>›</span>
-          <span class={styles.breadcrumbSub}>{selectedFolder()}</span>
-        </Show>
-      </div>
+        {/* Row 2: Breadcrumb */}
+        <div class={styles.breadcrumb}>
+          <span
+            class={styles.breadcrumbRoot}
+            classList={{ [styles.active]: selectedFolder() === null }}
+            onClick={() => setSelectedFolder(null)}
+          >Assets</span>
+          <Show when={selectedFolder() !== null}>
+            <span>›</span>
+            <span class={styles.breadcrumbSub}>{selectedFolder()}</span>
+          </Show>
+        </div>
+      </PanelToolbar>
 
       {/* ── Body row ── */}
-      <div class={styles.body}>
+      <PanelContent>
+        <div class={styles.body}>
 
         {/* ── Left sidebar: folder tree ── */}
         <div class={styles.sidebar}>
@@ -498,22 +506,25 @@ const ProjectPanel: Component = () => {
             />
           </Show>
         </div>
-      </div>
+        </div>
+      </PanelContent>
 
       {/* ── Status bar ── */}
-      <div class={styles.statusBar}>
-        <span>{displayedAssets().length} items</span>
-        <Show when={selectedAssetPaths().length === 1}>
-          <span class={styles.statusPath}>
-            {selectedAssetPaths()[0]}
-          </span>
-        </Show>
-        <Show when={selectedAssetPaths().length > 1}>
-          <span class={styles.statusCount}>
-            {selectedAssetPaths().length} items selected
-          </span>
-        </Show>
-      </div>
+      <PanelFooter>
+        <div class={styles.statusBar}>
+          <span>{displayedAssets().length} items</span>
+          <Show when={selectedAssetPaths().length === 1}>
+            <span class={styles.statusPath}>
+              {selectedAssetPaths()[0]}
+            </span>
+          </Show>
+          <Show when={selectedAssetPaths().length > 1}>
+            <span class={styles.statusCount}>
+              {selectedAssetPaths().length} items selected
+            </span>
+          </Show>
+        </div>
+      </PanelFooter>
 
       <ErrorDialog open={!!errorMsg()} title={errorTitle()} message={errorMsg()} onClose={() => setErrorMsg('')} />
       <ConfirmDialog
@@ -558,7 +569,7 @@ const ProjectPanel: Component = () => {
         onConfirm={newScene.onConfirm}
         onCancel={newScene.onCancel}
       />
-    </div>
+    </Panel>
   );
 };
 

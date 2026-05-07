@@ -17,6 +17,9 @@ import { InstantiatePrefabCommand } from '../../core/commands/InstantiatePrefabC
 import { computeDropPosition } from '../../viewport/dropPosition';
 import { DEFAULT_RENDER_SETTINGS, type RenderSettings } from '../../viewport/RenderSettings';
 import { PanelHeader } from '../../components/PanelHeader';
+import { Panel } from '../../components/Panel';
+import { PanelContent } from '../../components/PanelContent';
+import { PanelEditorSwitcher } from '../../components/PanelEditorSwitcher';
 import { useArea } from '../../app/AreaContext';
 import { getPanelState, setPanelState } from '../../app/viewportState';
 import { currentWorkspace } from '../../app/workspaceStore';
@@ -510,59 +513,66 @@ const ViewportPanel: Component = () => {
 
 
   return (
-    <div
-      data-testid="viewport-panel"
+    <Panel
       ref={containerRef}
-      class={styles.container}
+      testid="viewport-panel"
     >
-      <PanelHeader title="Viewport" actions={
-        <ShadingToolbar
-          renderMode={renderMode}
-          setRenderMode={setRenderMode}
-        />
-      } />
-      <div
-        ref={canvasRef}
-        class={styles.canvas}
-      >
-      <Show when={isDragging()}>
-        <div class={styles.dropOverlay}>
-          放開以導入模型
+      <PanelHeader
+        title="Viewport"
+        actions={
+          <>
+            <ShadingToolbar
+              renderMode={renderMode}
+              setRenderMode={setRenderMode}
+            />
+            <PanelEditorSwitcher />
+          </>
+        }
+      />
+      <PanelContent scrollable={false}>
+        <div
+          ref={canvasRef}
+          class={styles.canvas}
+        >
+          <Show when={isDragging()}>
+            <div class={styles.dropOverlay}>
+              放開以導入模型
+            </div>
+          </Show>
+          {/* Rendering + Shading 懸浮面板 */}
+          <RenderSettingsPanel
+            panelExpanded={panelExpanded}
+            setPanelExpanded={setPanelExpanded}
+            renderSettings={renderSettings}
+            updateSetting={updateSetting}
+            quality={quality}
+            setQuality={setQuality}
+            isGroupOpen={isGroupOpen}
+            toggleGroup={toggleGroup}
+            renderMode={renderMode}
+            shadingExpanded={shadingExpanded}
+            setShadingExpanded={setShadingExpanded}
+            sceneLightsOn={sceneLightsOn}
+            onSceneLightsChange={(checked) => {
+              // 寫 override → shading effect 接手 viewport.shading + render
+              setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
+            }}
+            hdrIntensity={hdrIntensity}
+            setHdrIntensity={setHdrIntensity}
+            hdrRotation={hdrRotation}
+            setHdrRotation={setHdrRotation}
+            lookdevPreset={lookdevPreset}
+            setLookdevPreset={setLookdevPreset}
+          />
+          <ErrorDialog
+            open={errorMessage() !== null}
+            title="導入失敗"
+            message={errorMessage() ?? ''}
+            onClose={() => setErrorMessage(null)}
+          />
         </div>
-      </Show>
-      {/* Rendering + Shading 懸浮面板 */}
-      <RenderSettingsPanel
-        panelExpanded={panelExpanded}
-        setPanelExpanded={setPanelExpanded}
-        renderSettings={renderSettings}
-        updateSetting={updateSetting}
-        quality={quality}
-        setQuality={setQuality}
-        isGroupOpen={isGroupOpen}
-        toggleGroup={toggleGroup}
-        renderMode={renderMode}
-        shadingExpanded={shadingExpanded}
-        setShadingExpanded={setShadingExpanded}
-        sceneLightsOn={sceneLightsOn}
-        onSceneLightsChange={(checked) => {
-          // 寫 override → shading effect 接手 viewport.shading + render
-          setSceneLightsOverrides(prev => ({ ...prev, [renderMode()]: checked }));
-        }}
-        hdrIntensity={hdrIntensity}
-        setHdrIntensity={setHdrIntensity}
-        hdrRotation={hdrRotation}
-        setHdrRotation={setHdrRotation}
-        lookdevPreset={lookdevPreset}
-        setLookdevPreset={setLookdevPreset}
-      />
-      <ErrorDialog
-        open={errorMessage() !== null}
-        title="導入失敗"
-        message={errorMessage() ?? ''}
-        onClose={() => setErrorMessage(null)}
-      />
-      </div>
-    </div>
+      </PanelContent>
+    </Panel>
   );
 };
 

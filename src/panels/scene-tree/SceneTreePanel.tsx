@@ -8,7 +8,11 @@ import { RemoveNodeCommand } from '../../core/commands/RemoveNodeCommand';
 import { MultiCmdsCommand } from '../../core/commands/MultiCmdsCommand';
 import { SaveAsPrefabCommand } from '../../core/commands/SaveAsPrefabCommand';
 import { ContextMenu } from '../../components/ContextMenu';
+import { Panel } from '../../components/Panel';
 import { PanelHeader } from '../../components/PanelHeader';
+import { PanelToolbar } from '../../components/PanelToolbar';
+import { PanelContent } from '../../components/PanelContent';
+import { PanelEditorSwitcher } from '../../components/PanelEditorSwitcher';
 import { useAreaState } from '../../app/areaState';
 import { TreeNode, type DropIndicator } from './TreeNode';
 import { EnvTreeEntry } from './EnvTreeEntry';
@@ -257,15 +261,14 @@ const SceneTreePanel: Component = () => {
   });
 
   return (
-    <div
-      data-testid="scene-tree-panel"
-      class={styles.panel}
-    >
+    <Panel testid="scene-tree-panel">
       {/* Header */}
-      <PanelHeader title="Scene" />
-      <HeaderToolBar onSearchChange={setSearchQuery} />
+      <PanelHeader title="Scene" actions={<PanelEditorSwitcher />} />
+      <PanelToolbar>
+        <HeaderToolBar onSearchChange={setSearchQuery} />
+      </PanelToolbar>
 
-      <div
+      <PanelContent
         ref={containerRef}
         tabIndex={0}
         onKeyDown={(e) => {
@@ -385,8 +388,8 @@ const SceneTreePanel: Component = () => {
             Drop GLB to import
           </div>
         </Show>
-      </div>
-    </div>
+      </PanelContent>
+    </Panel>
   );
 };
 

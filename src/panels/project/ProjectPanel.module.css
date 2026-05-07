@@ -1,15 +1,4 @@
-.panel {
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-well-outer);
-  border-radius: var(--radius-lg);
-  margin: 3px;
-  box-sizing: border-box;
-}
+/* .panel root class removed — replaced by <Panel> anatomy component */
 
 /* ── Close-project button ── */
 .closeBtn {
@@ -26,7 +15,7 @@
   background: var(--bg-hover);
 }
 
-/* ── Toolbar row ── */
+/* ── Toolbar row (row 1 inside PanelToolbar) ── */
 .toolbar {
   height: 36px;
   display: flex;
@@ -34,7 +23,6 @@
   gap: 6px;
   padding: 0 8px;
   border-bottom: 1px solid var(--border-subtle);
-  flex-shrink: 0;
 }
 
 .searchInput {
@@ -80,8 +68,6 @@
   gap: 4px;
   font-size: var(--font-size-sm);
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-subtle);
-  flex-shrink: 0;
 }
 
 .breadcrumbRoot {
@@ -97,7 +83,7 @@
   color: var(--text-secondary);
 }
 
-/* ── Body row ── */
+/* ── Body row (inner flex container for sidebar + assetArea) ── */
 .body {
   flex: 1;
   display: flex;
@@ -347,8 +333,6 @@
   gap: 8px;
   font-size: var(--font-size-xs);
   color: var(--text-muted);
-  border-top: 1px solid var(--border-subtle);
-  flex-shrink: 0;
 }
 
 .statusPath {

@@ -6,7 +6,10 @@ import LightDraw from './object/LightDraw';
 import MaterialDraw from './object/MaterialDraw';
 import MultiSelectDraw from './object/MultiSelectDraw';
 import { EnvironmentDraw } from './env/EnvironmentDraw';
+import { Panel } from '../../components/Panel';
 import { PanelHeader } from '../../components/PanelHeader';
+import { PanelContent } from '../../components/PanelContent';
+import { PanelEditorSwitcher } from '../../components/PanelEditorSwitcher';
 import styles from './PropertiesPanel.module.css';
 
 const PropertiesPanel: Component = () => {
@@ -15,32 +18,34 @@ const PropertiesPanel: Component = () => {
   const selectedUUIDs = createMemo(() => bridge.selectedUUIDs());
 
   return (
-    <div data-testid="properties-panel" class={styles.panel}>
+    <Panel testid="properties-panel">
       {/* Header */}
-      <PanelHeader title="Properties" />
+      <PanelHeader title="Properties" actions={<PanelEditorSwitcher />} />
 
       {/* Body */}
-      <div class={styles.body}>
-        <Switch fallback={
-          <div class={styles.empty}>
-            No object selected
-          </div>
-        }>
-          <Match when={bridge.isEnvSelected()}>
-            <EnvironmentDraw />
-          </Match>
-          <Match when={selectedUUIDs().length === 1}>
-            <ObjectDraw uuid={selectedUUIDs()[0]!} />
-            <TransformDraw uuid={selectedUUIDs()[0]!} />
-            <LightDraw uuid={selectedUUIDs()[0]!} />
-            <MaterialDraw uuid={selectedUUIDs()[0]!} />
-          </Match>
-          <Match when={selectedUUIDs().length > 1}>
-            <MultiSelectDraw uuids={selectedUUIDs()} />
-          </Match>
-        </Switch>
-      </div>
-    </div>
+      <PanelContent>
+        <div class={styles.body}>
+          <Switch fallback={
+            <div class={styles.empty}>
+              No object selected
+            </div>
+          }>
+            <Match when={bridge.isEnvSelected()}>
+              <EnvironmentDraw />
+            </Match>
+            <Match when={selectedUUIDs().length === 1}>
+              <ObjectDraw uuid={selectedUUIDs()[0]!} />
+              <TransformDraw uuid={selectedUUIDs()[0]!} />
+              <LightDraw uuid={selectedUUIDs()[0]!} />
+              <MaterialDraw uuid={selectedUUIDs()[0]!} />
+            </Match>
+            <Match when={selectedUUIDs().length > 1}>
+              <MultiSelectDraw uuids={selectedUUIDs()} />
+            </Match>
+          </Switch>
+        </div>
+      </PanelContent>
+    </Panel>
   );
 };
 
