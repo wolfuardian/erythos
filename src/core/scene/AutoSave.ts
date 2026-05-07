@@ -1,5 +1,6 @@
 import type { Editor } from '../Editor';
 import { validateScene } from './io/SceneInvariants';
+import { ConflictError, NotFoundError } from '../sync/SyncEngine';
 
 const DEBOUNCE_DELAY = 2000;
 
@@ -37,11 +38,39 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
     const path = editor.projectManager.currentScenePath();
     try {
       await editor.projectManager.writeFile(path, json);
-      editor.events.emit('autosaveStatusChanged', 'saved');
     } catch (err) {
       console.warn('[AutoSave] writeFile failed:', err);
       editor.events.emit('autosaveStatusChanged', 'error');
+      return;
     }
+
+    // Sync engine push (parallel to legacy file write — kept for persistence continuity
+    // until LocalSyncEngine lands in step 3).
+    if (editor.syncEngine && editor.syncSceneId !== null && editor.syncBaseVersion !== null) {
+      try {
+        const { version } = await editor.syncEngine.push(
+          editor.syncSceneId,
+          editor.sceneDocument,
+          editor.syncBaseVersion,
+        );
+        editor.syncBaseVersion = version;
+      } catch (err) {
+        if (err instanceof ConflictError) {
+          console.warn(
+            `[AutoSave] SyncEngine conflict on scene "${editor.syncSceneId}" — ` +
+            `remote version ${err.currentVersion}, local base ${editor.syncBaseVersion}. ` +
+            'Conflict UI is a future issue.',
+            err,
+          );
+        } else if (err instanceof NotFoundError) {
+          console.warn(`[AutoSave] SyncEngine scene not found: "${editor.syncSceneId}"`, err);
+        } else {
+          console.warn('[AutoSave] syncEngine.push failed:', err);
+        }
+      }
+    }
+
+    editor.events.emit('autosaveStatusChanged', 'saved');
   };
 
   const dispose = (): void => {

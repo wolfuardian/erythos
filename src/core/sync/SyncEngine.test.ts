@@ -1,3 +1,6 @@
+// TODO(#834): LocalSyncEngine is next (step 3). When it lands, extract the test
+// suite below into a shared `syncEngineConformance(factory)` helper so both
+// InMemorySyncEngine and LocalSyncEngine are verified against the same contract.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SceneDocument } from '../scene/SceneDocument';
 import { InMemorySyncEngine } from './InMemorySyncEngine';

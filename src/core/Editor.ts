@@ -18,6 +18,7 @@ import type { PrefabAsset } from './scene/PrefabFormat';
 import { AssetResolver } from './io/AssetResolver';
 import { PrefabGraph } from './io/PrefabGraph';
 import { prefabPathForName } from '../utils/prefabPath';
+import type { SyncEngine, SceneId } from './sync/SyncEngine';
 
 export class Editor {
   readonly scene: Scene;
@@ -34,6 +35,13 @@ export class Editor {
   readonly prefabGraph: PrefabGraph;
 
   private _transformMode: TransformMode = 'translate';
+
+  /** Optional sync engine injected at app boot. null = sync disabled. */
+  syncEngine: SyncEngine | null = null;
+  /** Scene ID tracked in the sync engine for the currently loaded scene. */
+  syncSceneId: SceneId | null = null;
+  /** Last version returned by syncEngine.create / syncEngine.push for the current scene. */
+  syncBaseVersion: number | null = null;
 
   constructor(public readonly projectManager: ProjectManager) {
     this.scene = new Scene();
@@ -254,6 +262,23 @@ export class Editor {
     // Kick a second rebuild to pick up loaded assets.
     this.sceneSync.rebuild();
     this.events.emit('brokenRefsChanged');
+
+    // Seed the sync engine with the loaded scene so subsequent AutoSave pushes
+    // have a valid id + baseVersion. We always create a fresh entry here because
+    // the file-based load path has no pre-existing sync id (that changes in step 3
+    // when LocalSyncEngine gains persistence).
+    if (this.syncEngine) {
+      const sceneName = this.projectManager.currentScenePath();
+      try {
+        const { id, version } = await this.syncEngine.create(sceneName, this.sceneDocument);
+        this.syncSceneId = id;
+        this.syncBaseVersion = version;
+      } catch (err) {
+        console.warn('[Editor] loadScene: syncEngine.create failed — sync disabled for this session:', err);
+        this.syncSceneId = null;
+        this.syncBaseVersion = null;
+      }
+    }
   }
 
   // ── Scene clear ───────────────────────────────────

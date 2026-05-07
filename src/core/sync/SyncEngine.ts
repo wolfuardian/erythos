@@ -3,6 +3,15 @@ import type { SceneDocument } from '../scene/SceneDocument';
 // v0: plain string; no SceneId branded type found in src/utils/branded.ts
 export type SceneId = string;
 
+/**
+ * Contract for cloud/local sync operations on scene documents.
+ *
+ * **Body reference semantics** (all three methods):
+ * - Implementations MUST NOT mutate the `body` passed by callers.
+ * - Callers MUST NOT mutate a `body` after passing it in (to `push` or `create`)
+ *   or after receiving it from `fetch`. If the caller needs to continue using the
+ *   body, it should work from a serialized snapshot rather than the live object.
+ */
 export interface SyncEngine {
   fetch(id: SceneId): Promise<{ body: SceneDocument; version: number }>;
   push(
