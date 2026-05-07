@@ -52,8 +52,8 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   const isEyeOff = () => props.eyeOffMap()[props.node.id] ?? false;
   const isCursorOff = () => props.cursorOffMap()[props.node.id] ?? false;
 
-  /** True if this node is itself a prefab instance root (has components.prefab). */
-  const isPrefabRoot = () => props.node.components.prefab != null;
+  /** True if this node is itself a prefab instance root (nodeType === 'prefab'). */
+  const isPrefabRoot = () => props.node.nodeType === 'prefab';
 
   const childNodes = () =>
     bridge.nodes()

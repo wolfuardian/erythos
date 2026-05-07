@@ -12,11 +12,10 @@ import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
 import { PrefabRegistry } from './scene/PrefabRegistry';
-import { PrefabInstanceWatcher } from './scene/PrefabInstanceWatcher';
-import type { SceneNode, SceneFile } from './scene/SceneFormat';
-import type { BlobURL } from '../utils/branded';
+import type { SceneNode } from './scene/SceneFormat';
+import type { SceneEnv } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
-import { DEFAULT_ENV_SETTINGS, type EnvironmentSettings } from './scene/EnvironmentSettings';
+import { AssetResolver } from './io/AssetResolver';
 import { prefabPathForName } from '../utils/prefabPath';
 
 export class Editor {
@@ -30,10 +29,9 @@ export class Editor {
   readonly selection: Selection;
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
-  readonly prefabInstanceWatcher: PrefabInstanceWatcher;
-  private _transformMode: TransformMode = 'translate';
-  private _envSettings: EnvironmentSettings = { ...DEFAULT_ENV_SETTINGS };
+  readonly assetResolver: AssetResolver;
 
+  private _transformMode: TransformMode = 'translate';
 
   constructor(public readonly projectManager: ProjectManager) {
     this.scene = new Scene();
@@ -41,16 +39,18 @@ export class Editor {
     this.sceneDocument = new SceneDocument();
     this.resourceCache = new ResourceCache();
     this.prefabRegistry = new PrefabRegistry();
+    this.assetResolver = new AssetResolver(projectManager);
     this.sceneSync = new SceneSync(this.sceneDocument, this.scene, this.resourceCache);
     this.events = new EventEmitter();
     this.history = new History(this.events);
     this.selection = new Selection(this.events);
     this.keybindings = new KeybindingManager();
     this.clipboard = new Clipboard();
-    this.prefabInstanceWatcher = new PrefabInstanceWatcher(
-      this.sceneDocument,
-      projectManager,
-    );
+
+    // Forward SceneDocument env changes to EventEmitter so bridge can react
+    this.sceneDocument.events.on('envChanged', () => {
+      this.events.emit('environmentChanged');
+    });
   }
 
   /**
@@ -58,30 +58,14 @@ export class Editor {
    *   1. Hydrate PrefabRegistry from project files.
    *   2. Wire live-sync event chain.
    *   3. Notify bridge signals.
-   *
-   * GLB hydration has moved to loadScene (P1b) — no GlbStore restore needed.
-   * IDB→file migration (was step 1 pre-P4) has been removed — PrefabStore is
-   * decommissioned. Users who haven't run the app since P1c will not be
-   * auto-migrated; this is an accepted one-way step (see P4 PR body).
-   * App layer must await this before making the editor available externally.
    */
   async init(): Promise<void> {
     // ── Step 1: hydrate PrefabRegistry from project files ──────────────────
     await this._hydratePrefabRegistry();
 
-    // ── Step 2: wire live-sync event chain ─────────────────────────────────
-    // PrefabRegistry listens to projectManager.fileChanged → refetches → emits prefabChanged.
-    // Main SceneSync subscribes to prefabChanged → rebuilds instance subtrees.
-    // Sandbox SceneSyncs (Workshop) deliberately do NOT subscribe — they must not
-    // auto-rebuild while the user is actively editing the same prefab.
+    // ── Step 2: wire prefab live-sync ──────────────────────────────────────
     this.prefabRegistry.attach(this.projectManager);
     this.sceneSync.attachPrefabRegistry(this.prefabRegistry);
-    // Wire PrefabInstanceWatcher into SceneSync so it can query the self-write
-    // registry before rebuilding the originating instance.
-    this.sceneSync.attachInstanceWatcher(this.prefabInstanceWatcher);
-    // Wire Selection into SceneSync so it can snapshot/restore selection state
-    // across prefab live-sync rebuilds (fresh UUIDs are swapped in place).
-    this.sceneSync.attachSelection(this.selection);
 
     // ── Step 3: notify bridge ───────────────────────────────────────────────
     this.events.emit('prefabStoreChanged');
@@ -89,7 +73,7 @@ export class Editor {
 
   /**
    * Walk project files, filter `.prefab`, resolve URLs, load into PrefabRegistry.
-   * Soft-fails per file (missing / malformed prefabs don't crash the editor).
+   * Soft-fails per file.
    */
   private async _hydratePrefabRegistry(): Promise<void> {
     if (!this.projectManager.isOpen) return;
@@ -119,13 +103,10 @@ export class Editor {
 
   /**
    * Register a new prefab: write to project file, update PrefabRegistry, emit event.
-   * Write is fire-and-forget (path returned synchronously so SaveAsPrefabCommand
-   * can store it in the scene node immediately).
    */
   registerPrefab(asset: PrefabAsset): AssetPath {
     const path = prefabPathForName(asset.name);
 
-    // Write to project async (fire-and-forget)
     void (async () => {
       try {
         await this.projectManager.writeFile(path, JSON.stringify(asset));
@@ -143,7 +124,6 @@ export class Editor {
 
   /**
    * Unregister a prefab by its project-relative path.
-   * Evicts from PrefabRegistry and deletes the file.
    */
   unregisterPrefab(path: AssetPath): void {
     this.prefabRegistry.evictByPath(path);
@@ -163,15 +143,15 @@ export class Editor {
     return this.prefabRegistry.getAllAssets();
   }
 
-  // ── Environment settings ──────────────────────────
+  // ── Environment settings (delegated to SceneDocument.env) ────────────────
 
-  getEnvironmentSettings(): EnvironmentSettings {
-    return { ...this._envSettings };
+  getEnvironmentSettings(): SceneEnv {
+    return { ...this.sceneDocument.env };
   }
 
-  setEnvironmentSettings(patch: Partial<EnvironmentSettings>): void {
-    Object.assign(this._envSettings, patch);
-    this.events.emit('environmentChanged');
+  setEnvironmentSettings(patch: Partial<SceneEnv>): void {
+    this.sceneDocument.setEnv(patch);
+    // envChanged → environmentChanged is forwarded via constructor subscription
   }
 
   // ── Command execution ─────────────────────────────
@@ -205,70 +185,77 @@ export class Editor {
   // ── Scene load ────────────────────────────────────
 
   /**
-   * Load a scene: deserialize nodes (with migration), then hydrate mesh + prefab URLs.
+   * Load a scene: deserialize nodes (with v0→v1 migration), then hydrate
+   * mesh URLs via AssetResolver and prefab assets via PrefabRegistry.
    *
-   * Hydrate walk (P1b for mesh, P1c for prefab):
-   *   After deserialize, walk all nodes with mesh.path / prefab.path and populate
-   *   mesh.url / prefab.url via projectManager.urlFor(path).
+   * Hydration walk:
+   *   - mesh nodes with assets:// or blob:// URLs: resolve to blob URL, load into ResourceCache
+   *   - prefab nodes with prefabs:// URLs: resolve path, load PrefabAsset into PrefabRegistry
    *
-   *   Failure mode: soft-fail per node — if urlFor throws (file not found), log
-   *   a warning and leave the url field absent. SceneSync skips the mesh silently.
+   * Soft-fail per node — missing assets log a warning and the node renders as empty.
    *
-   * @param data - Parsed SceneFile (may be legacy with mesh.source / prefab.id)
+   * @param data - Parsed JSON from a .erythos file (any version; migration runs in deserialize)
    */
-  async loadScene(data: SceneFile): Promise<void> {
+  async loadScene(data: unknown): Promise<void> {
     this.selection.select(null);
     this.selection.hover(null);
     this.history.clear();
-    if (data.version !== 1) throw new Error(`Unsupported scene version: ${data.version}`);
 
-    // Deserialize scene data (migration of legacy formats runs inside deserialize)
+    // Deserialize (runs v0_to_v1 migration internally, restores env)
     this.sceneDocument.deserialize(data);
 
-    // Hydrate mesh + prefab URLs
+    // Hydrate mesh and prefab URLs
     for (const node of this.sceneDocument.getAllNodes()) {
-      // Mesh hydration (P1b)
-      const mesh = node.components['mesh'] as { path?: AssetPath; nodePath?: string; url?: BlobURL } | undefined;
-      if (mesh?.path && !mesh.url) {
+      if (node.nodeType === 'mesh' && node.asset) {
+        // Skip primitives — no file loading needed
+        if (node.asset.startsWith('assets://primitives/')) continue;
+
         try {
-          const url = await this.projectManager.urlFor(mesh.path);
-          if (!this.resourceCache.has(url)) {
-            await this.resourceCache.loadFromURL(url);
+          const blobUrl = await this.assetResolver.resolve(node.asset);
+          if (!this.resourceCache.has(blobUrl)) {
+            await this.resourceCache.loadFromURL(blobUrl);
           }
-          mesh.url = url;
+          // Store resolved blob URL back in node.asset for SceneSync lookup
+          node.asset = blobUrl;
         } catch (err) {
-          console.warn(`[Editor] loadScene: could not hydrate mesh "${mesh.path}" — mesh will be invisible:`, err);
+          console.warn(`[Editor] loadScene: could not hydrate mesh asset "${node.asset}" — will render empty:`, err);
         }
       }
 
-      // Prefab hydration (P1c)
-      const prefab = node.components['prefab'] as { path?: AssetPath; url?: BlobURL } | undefined;
-      if (prefab?.path && !prefab.url) {
+      if (node.nodeType === 'prefab' && node.asset) {
         try {
-          const url = await this.projectManager.urlFor(prefab.path);
-          if (!this.prefabRegistry.has(url)) {
-            await this.prefabRegistry.loadFromURL(url, prefab.path);
+          const path = this.assetResolver.pathFor(node.asset);
+          if (path) {
+            const url = await this.projectManager.urlFor(path);
+            if (!this.prefabRegistry.has(url)) {
+              await this.prefabRegistry.loadFromURL(url, path);
+            }
           }
-          prefab.url = url;
         } catch (err) {
-          console.warn(`[Editor] loadScene: could not hydrate prefab "${prefab.path}" — prefab ref will be unresolved:`, err);
+          console.warn(`[Editor] loadScene: could not hydrate prefab "${node.asset}" — will render empty:`, err);
         }
       }
     }
 
     // Trigger SceneSync rebuild now that URLs are populated.
-    // sceneReplaced was already emitted by deserialize, so SceneSync's rebuild ran before hydration.
-    // Kick a second rebuild to pick up the populated urls.
+    // sceneReplaced was emitted by deserialize, but SceneSync ran before hydration.
+    // Kick a second rebuild to pick up loaded assets.
     this.sceneSync.rebuild();
   }
 
+  // ── Scene clear ───────────────────────────────────
+
+  /**
+   * Clear the scene: remove all nodes, reset env, clear selection/history.
+   */
+  clearScene(): void {
+    this.selection.select(null);
+    this.selection.hover(null);
+    this.history.clear();
+    this.sceneDocument.clearScene();
+  }
+
   dispose(): void {
-    // Dispose watcher first: it unsubscribes from SceneDocument events.
-    // sceneSync.dispose() comes after so the detach order is:
-    //   watcher → sceneSync → prefabRegistry
-    this.prefabInstanceWatcher.dispose();
-    this.sceneSync.attachInstanceWatcher(null);
-    this.sceneSync.attachSelection(null);
     this.prefabRegistry.detach();
     this.sceneSync.dispose();
     this.keybindings.dispose();

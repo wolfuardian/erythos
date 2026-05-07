@@ -11,7 +11,7 @@ function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    components: {},
+    nodeType: 'group',
     userData: {},
     ...overrides,
   };
@@ -26,34 +26,26 @@ describe('serializeToPrefab', () => {
     expect(asset.nodes).toHaveLength(1);
   });
 
-  it('strips components.prefab from root node (no self-reference)', () => {
-    const node = makeNode({
-      components: { prefab: { path: 'prefabs/chair.prefab' } },
-    });
+  it('does not include prefab self-reference in serialized PrefabNode', () => {
+    const node = makeNode({ nodeType: 'prefab', asset: 'prefabs://chair' });
     const asset = serializeToPrefab('uuid-root', [node], 'Chair');
     expect(asset.nodes[0].components).not.toHaveProperty('prefab');
   });
 
-  it('strips mesh.url (blob URL) so it is not persisted to disk', () => {
-    const node = makeNode({
-      components: {
-        mesh: { path: 'models/chair.glb', url: 'blob:http://localhost/abc-123' },
-      },
-    });
+  it('converts v1 mesh asset to components.mesh in prefab format', () => {
+    const node = makeNode({ nodeType: 'mesh', asset: 'assets://models/chair.glb' });
     const asset = serializeToPrefab('uuid-root', [node], 'Chair');
     const mesh = asset.nodes[0].components['mesh'] as Record<string, unknown>;
-    expect(mesh).not.toHaveProperty('url');
     expect(mesh['path']).toBe('models/chair.glb');
   });
 
-  it('does not mutate the original node components', () => {
-    const components = {
-      mesh: { path: 'models/chair.glb', url: 'blob:http://localhost/abc-123' },
-    };
-    const node = makeNode({ components });
+  it('does not mutate the original node', () => {
+    const node = makeNode({ nodeType: 'mesh', asset: 'assets://models/chair.glb', mat: { color: 0xff0000 } });
+    const originalAsset = node.asset;
     serializeToPrefab('uuid-root', [node], 'Chair');
-    // Original must be unchanged
-    expect((components.mesh as Record<string, unknown>)['url']).toBe('blob:http://localhost/abc-123');
+    // Original asset field must be unchanged
+    expect(node.asset).toBe(originalAsset);
+    expect(node.mat?.color).toBe(0xff0000);
   });
 
   it('assigns localId 0 to root, sequential ids to children', () => {
@@ -82,12 +74,11 @@ describe('deserializeFromPrefab', () => {
     expect(nodes[0].parent).toBe('parent-scene-uuid');
   });
 
-  it('does not include components.prefab on instantiated nodes', () => {
-    const node = makeNode({ components: { prefab: { path: 'prefabs/chair.prefab' } } });
+  it('instantiated nodes do not have prefab nodeType (InstantiatePrefabCommand sets that)', () => {
+    const node = makeNode({ nodeType: 'prefab', asset: 'prefabs://chair' });
     const asset = serializeToPrefab('uuid-root', [node], 'Chair');
     const nodes = deserializeFromPrefab(asset, null);
-    // prefab component is stripped by serializeToPrefab; deserializeFromPrefab
-    // does not add it back (InstantiatePrefabCommand handles that)
-    expect(nodes[0].components).not.toHaveProperty('prefab');
+    // deserializeFromPrefab does not set nodeType: 'prefab' - InstantiatePrefabCommand handles that
+    expect(nodes[0].nodeType).not.toBe('prefab');
   });
 });

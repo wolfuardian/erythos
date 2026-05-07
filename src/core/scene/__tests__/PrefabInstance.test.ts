@@ -4,32 +4,38 @@ import { isPrefabDescendant, findPrefabInstanceRoot } from '../PrefabInstance';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeNode(id: string, parent: string | null, components: Record<string, unknown> = {}): SceneNode {
+function makeNode(
+  id: string,
+  parent: string | null,
+  nodeType: SceneNode['nodeType'] = 'group',
+  asset?: string,
+): SceneNode {
   return {
     id,
     name: id,
     parent,
     order: 0,
+    nodeType,
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    components,
+    ...(asset !== undefined ? { asset } : {}),
     userData: {},
   };
 }
 
 /**
  * Tree layout:
- *   root (plain)
- *     instance (components.prefab set) ← instance root
- *       child                           ← prefab descendant
- *         grandchild                    ← prefab descendant
- *     sibling (plain)
+ *   root (plain group)
+ *     instance (nodeType: prefab) ← instance root
+ *       child                      ← prefab descendant
+ *         grandchild               ← prefab descendant
+ *     sibling (plain group)
  */
 function makeTree() {
   return [
     makeNode('root', null),
-    makeNode('instance', 'root', { prefab: { path: 'prefabs/foo.prefab' } }),
+    makeNode('instance', 'root', 'prefab', 'prefabs://foo'),
     makeNode('child', 'instance'),
     makeNode('grandchild', 'child'),
     makeNode('sibling', 'root'),
@@ -70,8 +76,8 @@ describe('isPrefabDescendant', () => {
   it('handles nested instances: child of inner instance root is also a descendant', () => {
     // outer-instance → inner-instance (also a prefab) → deep-child
     const nodes = [
-      makeNode('outer-instance', null, { prefab: { path: 'prefabs/outer.prefab' } }),
-      makeNode('inner-instance', 'outer-instance', { prefab: { path: 'prefabs/inner.prefab' } }),
+      makeNode('outer-instance', null, 'prefab', 'prefabs://outer'),
+      makeNode('inner-instance', 'outer-instance', 'prefab', 'prefabs://inner'),
       makeNode('deep-child', 'inner-instance'),
     ];
     // inner-instance is a descendant of outer-instance
@@ -111,8 +117,8 @@ describe('findPrefabInstanceRoot', () => {
   it('returns nearest instance root for nested instances', () => {
     // outer-instance → inner-instance (also prefab) → deep-child
     const nodes = [
-      makeNode('outer-instance', null, { prefab: { path: 'prefabs/outer.prefab' } }),
-      makeNode('inner-instance', 'outer-instance', { prefab: { path: 'prefabs/inner.prefab' } }),
+      makeNode('outer-instance', null, 'prefab', 'prefabs://outer'),
+      makeNode('inner-instance', 'outer-instance', 'prefab', 'prefabs://inner'),
       makeNode('deep-child', 'inner-instance'),
     ];
     // The nearest root for deep-child is inner-instance (walk stops at first ancestor with prefab)

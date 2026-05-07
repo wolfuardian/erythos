@@ -1,11 +1,11 @@
-import type { MaterialComponent } from '../scene/SceneFormat';
+import type { MaterialOverride } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
-type MatProp = keyof MaterialComponent;
-type MatVal = MaterialComponent[MatProp];
+type MatProp = keyof MaterialOverride;
+type MatVal = MaterialOverride[MatProp];
 
 export class SetMaterialPropertyCommand extends Command {
   readonly type = 'SetMaterialProperty';
@@ -27,18 +27,18 @@ export class SetMaterialPropertyCommand extends Command {
   execute(): void {
     const node = this.editor.sceneDocument.getNode(this.uuid);
     if (!node) return;
-    const mat = ((node.components?.material as MaterialComponent | null) ?? { color: 0xffffff }) as MaterialComponent;
+    const mat = node.mat ?? {};
     this.editor.sceneDocument.updateNode(this.uuid, {
-      components: { ...node.components, material: { ...mat, [this.prop]: this.newValue } },
+      mat: { ...mat, [this.prop]: this.newValue },
     });
   }
 
   undo(): void {
     const node = this.editor.sceneDocument.getNode(this.uuid);
     if (!node) return;
-    const mat = ((node.components?.material as MaterialComponent | null) ?? { color: 0xffffff }) as MaterialComponent;
+    const mat = node.mat ?? {};
     this.editor.sceneDocument.updateNode(this.uuid, {
-      components: { ...node.components, material: { ...mat, [this.prop]: this.oldValue } },
+      mat: { ...mat, [this.prop]: this.oldValue },
     });
   }
 

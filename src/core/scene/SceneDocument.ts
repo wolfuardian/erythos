@@ -1,112 +1,79 @@
-import type { SceneNode, SceneFile } from './SceneFormat';
+import type { SceneNode, SceneEnv } from './SceneFormat';
+import type { MaterialOverride, LightProps } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
-import { asAssetPath, asNodeUUID } from '../../utils/branded';
+import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
+import type { ErythosSceneV1 } from './io/types';
+import type { HexColor } from './io/types';
+import { v0_to_v1 } from './io/migrations/v0_to_v1';
 
-/**
- * Migration helper: upgrade old scene files.
- *
- * @param node  The raw node from the serialised scene file.
- *
- * Migrations applied (in order):
- *   1. 'leaf' → 'prefab'               (very old format)
- *   2. mesh.source → mesh.{path,nodePath?}  (P1b legacy format)
- *
- * Note: prefab.id → prefab.path migration (P1c) has been removed in P4.
- *   The IDB→file migration that built the prefabIdToPath map is no longer run.
- *   Scene files with legacy prefab.id refs will have the prefab component stripped
- *   (soft-fail) — any such nodes were written before P1c and are considered stale.
- */
-function migrateNodeComponents(
-  node: SceneNode,
-): SceneNode {
-  const comp = node.components as Record<string, unknown>;
-  let mutated = false;
-  let updated = comp;
+// ── Color conversion ─────────────────────────────────────────────────────────
 
-  // Migration 1: 'leaf' → 'prefab'
-  if ('leaf' in updated && !('prefab' in updated)) {
-    const { leaf, ...rest } = updated;
-    updated = { ...rest, prefab: leaf };
-    mutated = true;
-  }
-
-  // Strip stale prefab.id refs (legacy P1c format no longer resolvable post-P4).
-  // Any node still carrying prefab.id (UUID) has no corresponding file — strip it.
-  if ('prefab' in updated) {
-    const prefab = updated['prefab'] as Record<string, unknown>;
-    if (typeof prefab['id'] === 'string' && !prefab['path']) {
-      console.warn(
-        `[SceneDocument] migrateNodeComponents: prefab.id "${prefab['id']}" has no resolvable path (P4: PrefabStore removed) — stripping prefab component`,
-      );
-      const { prefab: _pf, ...rest } = updated;
-      updated = rest;
-      mutated = true;
-    }
-  }
-
-  // Migration 2: mesh.source (legacy) → mesh.{ path, nodePath? }
-  //
-  // Legacy formats:
-  //   mesh: { source: "model.glb" }              — filename only
-  //   mesh: { source: "character.glb:Torso" }    — filename + nodePath (colon separator)
-  //
-  // Assumption: legacy filename lives in models/<filename>.
-  // Exception: if source already contains '/', treat as a path-like value and preserve it.
-  //
-  // No 'url' field is set here — it is populated at hydrate time via
-  // projectManager.urlFor(path). If hydrate soft-fails (file not found),
-  // mesh.url remains absent and SceneSync skips the mesh silently.
-  if ('mesh' in updated) {
-    const mesh = updated['mesh'] as Record<string, unknown>;
-    if (typeof mesh['source'] === 'string') {
-      const source = mesh['source'] as string;
-      const colonIdx = source.indexOf(':');
-      const filenameRaw = colonIdx === -1 ? source : source.slice(0, colonIdx);
-      const nodePath   = colonIdx === -1 ? undefined : source.slice(colonIdx + 1);
-      // If filenameRaw already contains '/', treat it as a project-relative path
-      const path = filenameRaw.includes('/') ? filenameRaw : `models/${filenameRaw}`;
-      const { source: _src, ...meshRest } = mesh;
-      updated = {
-        ...updated,
-        mesh: {
-          ...meshRest,
-          path,
-          ...(nodePath !== undefined ? { nodePath } : {}),
-        },
-      };
-      mutated = true;
-    }
-  }
-
-  if (!mutated) return node;
-  return { ...node, components: updated };
+/** Converts a hex color string "#rrggbb" to a Three.js-compatible number. */
+function hexToNumber(hex: HexColor): number {
+  return parseInt(hex.replace('#', ''), 16);
 }
 
-// Strip runtime-only fields from components before serialization.
-// `mesh.url` and `prefab.url` are session-scoped blob URLs; persisting them would create
-// stale references on next reload. URLs are always recomputed via projectManager.urlFor(path)
-// at hydrate time.
-function stripRuntimeFields(components: Record<string, unknown>): Record<string, unknown> {
-  let result = components;
+/** Converts a runtime number color (0xffffff) to a hex string "#rrggbb". */
+function numberToHex(n: number): HexColor {
+  return '#' + Math.floor(n).toString(16).padStart(6, '0');
+}
 
-  if ('mesh' in result) {
-    const mesh = result['mesh'] as Record<string, unknown>;
-    if ('url' in mesh) {
-      const { url: _url, ...meshRest } = mesh;
-      result = { ...result, mesh: meshRest };
-    }
-  }
+// ── Runtime conversion ────────────────────────────────────────────────────────
 
-  if ('prefab' in result) {
-    const prefab = result['prefab'] as Record<string, unknown>;
-    if ('url' in prefab) {
-      const { url: _url, ...prefabRest } = prefab;
-      result = { ...result, prefab: prefabRest };
-    }
-  }
-
+/**
+ * Converts a persistence MaterialOverride (HexColor strings) to runtime shape (numbers).
+ */
+function persistMatToRuntime(mat: ErythosSceneV1['nodes'][number]['mat']): MaterialOverride | undefined {
+  if (!mat) return undefined;
+  const result: MaterialOverride = {};
+  if (mat.color     !== undefined) result.color     = hexToNumber(mat.color);
+  if (mat.roughness !== undefined) result.roughness = mat.roughness;
+  if (mat.metalness !== undefined) result.metalness = mat.metalness;
+  if (mat.emissive  !== undefined) result.emissive  = hexToNumber(mat.emissive);
+  if (mat.emissiveIntensity !== undefined) result.emissiveIntensity = mat.emissiveIntensity;
+  if (mat.opacity   !== undefined) result.opacity   = mat.opacity;
+  if (mat.transparent !== undefined) result.transparent = mat.transparent;
+  if (mat.wireframe   !== undefined) result.wireframe   = mat.wireframe;
   return result;
+}
+
+/**
+ * Converts a runtime MaterialOverride (numbers) to persistence shape (HexColor strings).
+ */
+function runtimeMatToPersist(mat: MaterialOverride): ErythosSceneV1['nodes'][number]['mat'] {
+  const result: NonNullable<ErythosSceneV1['nodes'][number]['mat']> = {};
+  if (mat.color     !== undefined) result.color     = numberToHex(mat.color);
+  if (mat.roughness !== undefined) result.roughness = mat.roughness;
+  if (mat.metalness !== undefined) result.metalness = mat.metalness;
+  if (mat.emissive  !== undefined) result.emissive  = numberToHex(mat.emissive);
+  if (mat.emissiveIntensity !== undefined) result.emissiveIntensity = mat.emissiveIntensity;
+  if (mat.opacity   !== undefined) result.opacity   = mat.opacity;
+  if (mat.transparent !== undefined) result.transparent = mat.transparent;
+  if (mat.wireframe   !== undefined) result.wireframe   = mat.wireframe;
+  return result;
+}
+
+/**
+ * Converts a persistence LightProps (HexColor) to runtime shape (number).
+ */
+function persistLightToRuntime(light: NonNullable<ErythosSceneV1['nodes'][number]['light']>): LightProps {
+  return {
+    type: light.type,
+    color: hexToNumber(light.color),
+    intensity: light.intensity,
+  };
+}
+
+/**
+ * Converts a runtime LightProps (number) to persistence shape (HexColor).
+ */
+function runtimeLightToPersist(light: LightProps): NonNullable<ErythosSceneV1['nodes'][number]['light']> {
+  return {
+    type: light.type,
+    color: numberToHex(light.color),
+    intensity: light.intensity,
+  };
 }
 
 // ── Internal generic emitter ──────────────────────────────────────────────────
@@ -155,13 +122,34 @@ export interface SceneDocumentEventMap {
   nodeRemoved:   [node: SceneNode];
   nodeChanged:   [uuid: NodeUUID, changed: Partial<SceneNode>];
   sceneReplaced: [];
+  envChanged:    [];
 }
+
+// ── Default env ────────────────────────────────────────────────────────────────
+
+export const DEFAULT_SCENE_ENV: SceneEnv = {
+  hdri: null,
+  intensity: 1.0,
+  rotation: 0,
+};
 
 // ── SceneDocument ─────────────────────────────────────────────────────────────
 
 export class SceneDocument {
   private _nodes = new Map<NodeUUID, SceneNode>();
+  private _env: SceneEnv = { ...DEFAULT_SCENE_ENV };
   readonly events = new MiniEmitter<SceneDocumentEventMap>();
+
+  // ── Env ───────────────────────────────────────────────────────────────────
+
+  get env(): Readonly<SceneEnv> {
+    return this._env;
+  }
+
+  setEnv(patch: Partial<SceneEnv>): void {
+    Object.assign(this._env, patch);
+    this.events.emit('envChanged');
+  }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
@@ -238,46 +226,87 @@ export class SceneDocument {
 
   // ── Serialization ─────────────────────────────────────────────────────────
 
-  serialize(): SceneFile {
+  /**
+   * Serialize the runtime model to the v1 persistence shape (ErythosSceneV1).
+   * Colors are converted from runtime numbers to hex strings.
+   */
+  serialize(): ErythosSceneV1 {
     return {
       version: 1,
-      nodes: Array.from(this._nodes.values()).map(n => ({
-        ...n,
-        components: stripRuntimeFields(n.components),
-      })),
+      env: {
+        hdri: this._env.hdri,
+        intensity: this._env.intensity,
+        rotation: this._env.rotation,
+      },
+      nodes: Array.from(this._nodes.values()).map(n => {
+        const persisted: ErythosSceneV1['nodes'][number] = {
+          id: n.id,
+          name: n.name,
+          parent: n.parent,
+          order: n.order,
+          nodeType: n.nodeType,
+          position: [...n.position],
+          rotation: [...n.rotation],
+          scale:    [...n.scale],
+          userData: {},
+        };
+        if (n.asset !== undefined)  persisted.asset = n.asset;
+        if (n.mat   !== undefined)  persisted.mat   = runtimeMatToPersist(n.mat);
+        if (n.light !== undefined)  persisted.light = runtimeLightToPersist(n.light);
+        if (n.camera !== undefined) persisted.camera = { ...n.camera };
+        return persisted;
+      }),
     };
   }
 
   /**
-   * @param data  Parsed SceneFile (may be legacy format — migration runs here).
+   * Deserialize raw JSON data into the runtime model.
+   * Accepts both v0 (components-bag) and v1 (nodeType) shapes — v0 is migrated first.
+   * Colors in the v1 persistence shape (hex strings) are converted to runtime numbers.
+   *
+   * @param data  Parsed JSON from a .erythos file (may be any legacy version).
    */
-  deserialize(data: SceneFile): void {
+  deserialize(data: unknown): void {
     this._nodes.clear();
-    for (const rawNode of data.nodes) {
-      // Mint branded types at the JSON-parse boundary: id and parent come in as plain strings.
-      const branded = {
-        ...rawNode,
-        id: asNodeUUID(rawNode.id),
-        parent: rawNode.parent !== null ? asNodeUUID(rawNode.parent) : null,
+
+    // Run v0→v1 migration. This handles:
+    //   - legacy components-bag shape
+    //   - 'leaf' → 'prefab' rename
+    //   - mesh.source → mesh.path
+    //   - prefab.id → stripped (P4: no resolver map)
+    //   - geometry component → mesh nodeType with assets://primitives/
+    //   - inject default env
+    const v1: ErythosSceneV1 = v0_to_v1(data);
+
+    // Restore env
+    this._env = {
+      hdri:      v1.env.hdri,
+      intensity: v1.env.intensity,
+      rotation:  v1.env.rotation,
+    };
+
+    // Convert persistence nodes → runtime nodes
+    for (const pn of v1.nodes) {
+      const node: SceneNode = {
+        id:       asNodeUUID(pn.id),
+        name:     pn.name,
+        parent:   pn.parent !== null ? asNodeUUID(pn.parent) : null,
+        order:    pn.order,
+        nodeType: pn.nodeType,
+        position: [...pn.position],
+        rotation: [...pn.rotation],
+        scale:    [...pn.scale],
+        userData: {},
       };
-      const node = migrateNodeComponents(branded);
-      // Mint AssetPath for mesh.path and prefab.path at the deserialise boundary.
-      // JSON gives plain strings; migration may have constructed paths as plain strings too.
-      const comps = node.components as Record<string, unknown>;
-      if (comps['mesh'] && typeof comps['mesh'] === 'object') {
-        const mesh = comps['mesh'] as Record<string, unknown>;
-        if (typeof mesh['path'] === 'string') {
-          mesh['path'] = asAssetPath(mesh['path'] as string);
-        }
-      }
-      if (comps['prefab'] && typeof comps['prefab'] === 'object') {
-        const prefab = comps['prefab'] as Record<string, unknown>;
-        if (typeof prefab['path'] === 'string') {
-          prefab['path'] = asAssetPath(prefab['path'] as string);
-        }
-      }
+
+      if (pn.asset  !== undefined) node.asset  = pn.asset;
+      if (pn.mat    !== undefined) node.mat    = persistMatToRuntime(pn.mat);
+      if (pn.light  !== undefined) node.light  = persistLightToRuntime(pn.light);
+      if (pn.camera !== undefined) node.camera = { ...pn.camera };
+
       this._nodes.set(node.id, node);
     }
+
     this.events.emit('sceneReplaced');
   }
 
@@ -285,19 +314,25 @@ export class SceneDocument {
 
   createNode(name: string, parent?: NodeUUID): SceneNode {
     return {
-      id: asNodeUUID(generateUUID()),
+      id:       asNodeUUID(generateUUID()),
       name,
-      parent: parent ?? null,
-      order: 0,
+      parent:   parent ?? null,
+      order:    0,
+      nodeType: 'group',
       position: [0, 0, 0],
       rotation: [0, 0, 0],
       scale:    [1, 1, 1],
-      components: {},
-      userData:   {},
+      userData: {},
     };
   }
 
   hasNode(uuid: NodeUUID): boolean {
     return this._nodes.has(uuid);
+  }
+
+  clearScene(): void {
+    this._nodes.clear();
+    this._env = { ...DEFAULT_SCENE_ENV };
+    this.events.emit('sceneReplaced');
   }
 }

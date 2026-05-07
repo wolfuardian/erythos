@@ -1,1 +1,1 @@
-export type { Vec3, SceneNode, MeshComponent, SceneFile } from './SceneFormat';
+export type { Vec3, SceneNode, NodeType, MaterialOverride, LightProps, CameraProps, SceneEnv } from './SceneFormat';

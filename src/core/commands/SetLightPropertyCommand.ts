@@ -1,11 +1,11 @@
-import type { LightComponent } from '../scene/SceneFormat';
+import type { LightProps } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
 import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
-type LightProp = keyof LightComponent;
-type LightVal = LightComponent[LightProp];
+type LightProp = keyof LightProps;
+type LightVal = LightProps[LightProp];
 
 export class SetLightPropertyCommand extends Command {
   readonly type = 'SetLightProperty';
@@ -26,21 +26,17 @@ export class SetLightPropertyCommand extends Command {
 
   execute(): void {
     const node = this.editor.sceneDocument.getNode(this.uuid);
-    if (!node) return;
-    const light = node.components?.light as LightComponent | null;
-    if (!light) return;
+    if (!node || !node.light) return;
     this.editor.sceneDocument.updateNode(this.uuid, {
-      components: { ...node.components, light: { ...light, [this.prop]: this.newValue } },
+      light: { ...node.light, [this.prop]: this.newValue },
     });
   }
 
   undo(): void {
     const node = this.editor.sceneDocument.getNode(this.uuid);
-    if (!node) return;
-    const light = node.components?.light as LightComponent | null;
-    if (!light) return;
+    if (!node || !node.light) return;
     this.editor.sceneDocument.updateNode(this.uuid, {
-      components: { ...node.components, light: { ...light, [this.prop]: this.oldValue } },
+      light: { ...node.light, [this.prop]: this.oldValue },
     });
   }
 

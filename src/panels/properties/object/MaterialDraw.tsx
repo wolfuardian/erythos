@@ -1,7 +1,7 @@
 import { Component, createEffect, createMemo, createSignal, Show } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { SetMaterialPropertyCommand } from '../../../core/commands/SetMaterialPropertyCommand';
-import type { MaterialComponent } from '../../../core/scene/SceneFormat';
+import type { MaterialOverride } from '../../../core/scene/SceneFormat';
 import type { NodeUUID } from '../../../utils/branded';
 import { asNodeUUID } from '../../../utils/branded';
 import FoldableSection from '../components/FoldableSection';
@@ -11,10 +11,16 @@ import styles from './object.module.css';
 
 interface Props { uuid: string; }
 
-const DEFAULTS = {
-  roughness: 1, metalness: 0, emissive: 0x000000,
-  opacity: 1, transparent: false, wireframe: false,
-} as const;
+const DEFAULTS: Required<MaterialOverride> = {
+  color: 0xffffff,
+  roughness: 1,
+  metalness: 0,
+  emissive: 0x000000,
+  emissiveIntensity: 1,
+  opacity: 1,
+  transparent: false,
+  wireframe: false,
+};
 
 const MaterialDraw: Component<Props> = (props) => {
   const bridge = useEditor();
@@ -24,7 +30,8 @@ const MaterialDraw: Component<Props> = (props) => {
 
   const hasMaterial = createMemo(() => {
     bridge.objectVersion();
-    return (bridge.getNode(nodeUUID())?.components?.material as MaterialComponent | null) != null;
+    const node = bridge.getNode(nodeUUID());
+    return node != null && (node.nodeType === 'mesh' || node.nodeType === 'prefab') && node.mat != null;
   });
 
   const [mat, setMat] = createSignal({
@@ -35,10 +42,10 @@ const MaterialDraw: Component<Props> = (props) => {
   createEffect(() => {
     bridge.objectVersion();
     const node = bridge.getNode(nodeUUID());
-    const m = node?.components?.material as MaterialComponent | null;
+    const m = node?.mat;
     if (!m) return;
     setMat({
-      color:       m.color,
+      color:       m.color       ?? DEFAULTS.color,
       roughness:   m.roughness   ?? DEFAULTS.roughness,
       metalness:   m.metalness   ?? DEFAULTS.metalness,
       emissive:    m.emissive    ?? DEFAULTS.emissive,
@@ -48,12 +55,12 @@ const MaterialDraw: Component<Props> = (props) => {
     });
   });
 
-  const getOld = (prop: keyof MaterialComponent): MaterialComponent[keyof MaterialComponent] => {
-    const m = bridge.getNode(nodeUUID())?.components?.material as MaterialComponent | null;
-    return m ? (m[prop] ?? (DEFAULTS as Record<string, number | boolean | undefined>)[prop]) : undefined;
+  const getOld = (prop: keyof MaterialOverride): MaterialOverride[keyof MaterialOverride] => {
+    const m = bridge.getNode(nodeUUID())?.mat;
+    return m ? (m[prop] ?? DEFAULTS[prop as keyof Required<MaterialOverride>]) : undefined;
   };
 
-  const exec = (prop: keyof MaterialComponent, val: MaterialComponent[keyof MaterialComponent]) => {
+  const exec = (prop: keyof MaterialOverride, val: MaterialOverride[keyof MaterialOverride]) => {
     editor.execute(new SetMaterialPropertyCommand(editor, props.uuid, prop, val, getOld(prop)));
   };
 

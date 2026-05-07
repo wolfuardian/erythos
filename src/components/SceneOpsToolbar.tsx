@@ -69,7 +69,9 @@ export const SceneOpsToolbar: Component<{
 
   const addMesh = (name: string, type: 'box' | 'sphere' | 'plane' | 'cylinder') => {
     const node = editor.sceneDocument.createNode(name);
-    node.components = { geometry: { type }, material: { color: 0x808080 } };
+    node.nodeType = 'mesh';
+    node.asset = `assets://primitives/${type}`;
+    node.mat = { color: 0x808080 };
     editor.execute(new AddNodeCommand(editor, node));
   };
 
@@ -89,26 +91,30 @@ export const SceneOpsToolbar: Component<{
         break;
       case 'directional-light': {
         const node = editor.sceneDocument.createNode('Directional Light');
-        node.components = { light: { type: 'directional', color: 0xffffff, intensity: 1 } };
+        node.nodeType = 'light';
+        node.light = { type: 'directional', color: 0xffffff, intensity: 1 };
         node.position = [2, 4, 3];
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'ambient-light': {
         const node = editor.sceneDocument.createNode('Ambient Light');
-        node.components = { light: { type: 'ambient', color: 0xffffff, intensity: 0.4 } };
+        node.nodeType = 'light';
+        node.light = { type: 'ambient', color: 0xffffff, intensity: 0.4 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'camera': {
         const node = editor.sceneDocument.createNode('Camera');
-        node.components = { camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 } };
+        node.nodeType = 'camera';
+        node.camera = { type: 'perspective', fov: 50, near: 0.1, far: 100 };
         node.position = [0, 2, 5];
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'group': {
         const node = editor.sceneDocument.createNode('Group');
+        node.nodeType = 'group';
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }

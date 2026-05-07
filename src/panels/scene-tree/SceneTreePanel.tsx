@@ -84,10 +84,9 @@ const SceneTreePanel: Component = () => {
 
   const createPrimitive = (type: string, name: string) => {
     const node = editor.sceneDocument.createNode(name);
-    node.components = {
-      geometry: { type },
-      material: { color: 0xcccccc },
-    };
+    node.nodeType = 'mesh';
+    node.asset = `assets://primitives/${type}`;
+    node.mat = { color: 0xcccccc };
     editor.execute(new AddNodeCommand(editor, node));
     editor.selection.select(node.id);
   };

@@ -5,7 +5,7 @@ import type { SceneNode, Vec3 } from '../core/scene/SceneFormat';
 import { asNodeUUID } from './branded';
 import type { NodeUUID } from './branded';
 
-// Recursively convert one Object3D and its descendants to SceneNodes.
+// Recursively convert one Object3D and its descendants to SceneNodes (v1 shape).
 // Parent is always pushed before children so SceneDocument.addNode
 // can resolve parent references immediately.
 function buildNodes(
@@ -18,24 +18,25 @@ function buildNodes(
 ): void {
   const id = asNodeUUID(generateUUID());
 
-  // Emit mesh: { path, nodePath } — no 'url' here.
-  // url is populated at hydrate time (projectManager.urlFor(path)) or at import
-  // time by the caller of convertGLTFToNodes.
-  const components = obj instanceof Mesh
-    ? { mesh: { path: filePath, nodePath } }
-    : {};
+  // v1: use nodeType + asset (assets:// scheme) instead of components bag.
+  const nodeType: SceneNode['nodeType'] = obj instanceof Mesh ? 'mesh' : 'group';
+  const asset = obj instanceof Mesh ? `assets://${filePath}` : undefined;
 
-  result.push({
+  const node: SceneNode = {
     id,
     name: obj.name || obj.type,
     parent: parentId,
     order,
+    nodeType,
     position: [...obj.position.toArray()] as Vec3,
     rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z] as Vec3,
-    scale: [...obj.scale.toArray()] as Vec3,
-    components,
+    scale:    [...obj.scale.toArray()] as Vec3,
     userData: {},
-  });
+  };
+
+  if (asset !== undefined) node.asset = asset;
+
+  result.push(node);
 
   obj.children.forEach((child, i) => {
     const childPath = `${nodePath}|${child.name || child.type}`;
@@ -44,7 +45,7 @@ function buildNodes(
 }
 
 /**
- * Convert a parsed GLTF scene into a flat SceneNode array (parent before child).
+ * Convert a parsed GLTF scene into a flat SceneNode array (v1 shape, parent before child).
  *
  * @param gltfScene  - Top-level Group from GLTFLoader (gltf.scene)
  * @param parentUuid - UUID of the SceneNode that will parent the top-level children

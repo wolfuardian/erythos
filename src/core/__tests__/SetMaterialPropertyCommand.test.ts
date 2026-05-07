@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { SetMaterialPropertyCommand } from '../commands/SetMaterialPropertyCommand';
-import type { MaterialComponent } from '../scene/SceneFormat';
+import type { MaterialOverride } from '../scene/SceneFormat';
 import { ProjectManager } from '../project/ProjectManager';
 
 describe('SetMaterialPropertyCommand', () => {
@@ -18,15 +18,17 @@ describe('SetMaterialPropertyCommand', () => {
     vi.useRealTimers();
   });
 
-  function addNodeWithMaterial(name: string, mat: MaterialComponent) {
+  function addNodeWithMaterial(name: string, mat: MaterialOverride) {
     const node = editor.sceneDocument.createNode(name);
+    node.nodeType = 'mesh';
+    node.asset = 'assets://primitives/box';
+    node.mat = mat;
     editor.sceneDocument.addNode(node);
-    editor.sceneDocument.updateNode(node.id, { components: { material: mat } });
     return editor.sceneDocument.getNode(node.id)!;
   }
 
   function getMaterial(id: string) {
-    return editor.sceneDocument.getNode(id)?.components?.material as MaterialComponent;
+    return editor.sceneDocument.getNode(id)?.mat as MaterialOverride;
   }
 
   // ── color ────────────────────────────────────────────────────────────────
@@ -74,17 +76,15 @@ describe('SetMaterialPropertyCommand', () => {
     expect(getMaterial(node.id).transparent).toBe(false);
   });
 
-  // ── does not drop other components ───────────────────────────────────────
+  // ── does not drop nodeType/asset alongside mat ────────────────────────────
 
-  it('execute preserves geometry component alongside material', () => {
+  it('execute preserves nodeType and asset alongside material', () => {
     const node = addNodeWithMaterial('Box', { color: 0xffffff });
-    editor.sceneDocument.updateNode(node.id, {
-      components: { ...editor.sceneDocument.getNode(node.id)!.components, geometry: { type: 'box' } },
-    });
     editor.execute(new SetMaterialPropertyCommand(editor, node.id, 'color', 0x123456, 0xffffff));
-    const comps = editor.sceneDocument.getNode(node.id)!.components as Record<string, unknown>;
-    expect(comps.geometry).toEqual({ type: 'box' });
-    expect((comps.material as MaterialComponent).color).toBe(0x123456);
+    const updated = editor.sceneDocument.getNode(node.id)!;
+    expect(updated.nodeType).toBe('mesh');
+    expect(updated.asset).toBe('assets://primitives/box');
+    expect(updated.mat?.color).toBe(0x123456);
   });
 
   // ── canMerge ─────────────────────────────────────────────────────────────

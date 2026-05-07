@@ -1,36 +1,15 @@
-import type { SceneNode, GeometryComponent, LightComponent } from './SceneFormat';
+import type { SceneNode, NodeType } from './SceneFormat';
 
-export type NodeType =
-  | 'Mesh'
-  | 'Box' | 'Sphere' | 'Plane' | 'Cylinder'
-  | 'DirectionalLight' | 'AmbientLight'
-  | 'PerspectiveCamera'
-  | 'Group';
-
+/**
+ * Map from v1 nodeType to the display/icon category.
+ * In v1 we have a flat nodeType on each SceneNode — no inference needed from components.
+ * This function re-exports the spec NodeType, serving as the boundary used by panels/icons.
+ *
+ * Returns the node's nodeType directly. No components bag to inspect.
+ */
 export function inferNodeType(node: SceneNode): NodeType {
-  const { components } = node;
-
-  if (components.mesh) return 'Mesh';
-
-  if (components.geometry) {
-    const geo = components.geometry as GeometryComponent;
-    switch (geo.type) {
-      case 'box':      return 'Box';
-      case 'sphere':   return 'Sphere';
-      case 'plane':    return 'Plane';
-      case 'cylinder': return 'Cylinder';
-    }
-  }
-
-  if (components.light) {
-    const light = components.light as LightComponent;
-    switch (light.type) {
-      case 'directional': return 'DirectionalLight';
-      case 'ambient':     return 'AmbientLight';
-    }
-  }
-
-  if (components.camera) return 'PerspectiveCamera';
-
-  return 'Group';
+  return node.nodeType;
 }
+
+// Re-export NodeType so callers don't need to import from SceneFormat directly.
+export type { NodeType };
