@@ -40,9 +40,9 @@ export class Editor {
     this.scene.name = 'Scene';
     this.sceneDocument = new SceneDocument();
     this.resourceCache = new ResourceCache();
-    this.prefabRegistry = new PrefabRegistry();
-    this.assetResolver = new AssetResolver(projectManager);
     this.prefabGraph = new PrefabGraph();
+    this.prefabRegistry = new PrefabRegistry(this.prefabGraph);
+    this.assetResolver = new AssetResolver(projectManager);
     this.sceneSync = new SceneSync(this.sceneDocument, this.scene, this.resourceCache);
     this.events = new EventEmitter();
     this.history = new History(this.events);

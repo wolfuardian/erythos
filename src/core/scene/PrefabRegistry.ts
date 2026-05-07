@@ -17,20 +17,47 @@
  */
 
 import type { PrefabAsset } from './PrefabFormat';
+import { extractPrefabDeps } from './PrefabFormat';
 import type { ProjectManager } from '../project/ProjectManager';
 import type { AssetPath } from '../../utils/branded';
+import type { PrefabGraph } from '../io/PrefabGraph';
 
 type Listener = () => void;
 type PrefabChangedListener = (url: string, asset: PrefabAsset, path: AssetPath) => void;
 
+
+/**
+ * Derive a `prefabs://` asset URL from a project-relative path.
+ * "prefabs/chair.prefab" -> "prefabs://chair"
+ */
+function prefabAssetUrlFromPath(path: AssetPath): string {
+  return 'prefabs://' + path.replace(/^prefabs[/]/, '').replace(/[.]prefab$/, '');
+}
 export class PrefabRegistry {
   private readonly _cache = new Map<string, PrefabAsset>();       // url → asset
   private readonly _pathToURL = new Map<AssetPath, string>();     // project-relative path → url
   private readonly _listeners = new Set<Listener>();
   private readonly _prefabChangedListeners = new Set<PrefabChangedListener>();
+  private readonly _prefabGraph: PrefabGraph | null;
 
   /** Unsubscribe function returned by projectManager.onFileChanged; stored for dispose. */
   private _detachFileChanged: (() => void) | null = null;
+
+  constructor(prefabGraph: PrefabGraph | null = null) {
+    this._prefabGraph = prefabGraph;
+  }
+
+  private _updateGraphEdges(path: AssetPath, asset: PrefabAsset): void {
+    if (!this._prefabGraph) return;
+    const assetUrl = prefabAssetUrlFromPath(path);
+    this._prefabGraph.setEdges(assetUrl, extractPrefabDeps(asset));
+  }
+
+  private _removeGraphEdges(path: AssetPath): void {
+    if (!this._prefabGraph) return;
+    const assetUrl = prefabAssetUrlFromPath(path);
+    this._prefabGraph.setEdges(assetUrl, []);
+  }
 
   // ── Listeners ──────────────────────────────────────────────────────────────
 
@@ -109,8 +136,9 @@ export class PrefabRegistry {
         return;
       }
 
-      // Store freshly parsed asset
+      // Store freshly parsed asset and update graph edges (refetch path)
       this._cache.set(newURL, asset);
+      this._updateGraphEdges(path, asset);
       this._emit();
 
       // Notify live-sync subscribers with the new URL, asset, and stable path
@@ -151,7 +179,10 @@ export class PrefabRegistry {
       throw new Error(`[PrefabRegistry] invalid prefab format at URL ${url}`);
     }
     this._cache.set(url, asset);
-    if (path) this._pathToURL.set(path, url);
+    if (path) {
+      this._pathToURL.set(path, url);
+      this._updateGraphEdges(path, asset);
+    }
     this._emit();
     return asset;
   }
@@ -167,7 +198,10 @@ export class PrefabRegistry {
    */
   set(url: string, asset: PrefabAsset, path?: AssetPath): void {
     this._cache.set(url, asset);
-    if (path) this._pathToURL.set(path, url);
+    if (path) {
+      this._pathToURL.set(path, url);
+      this._updateGraphEdges(path, asset);
+    }
     this._emit();
   }
 
@@ -193,6 +227,7 @@ export class PrefabRegistry {
       for (const [p, u] of this._pathToURL) {
         if (u === url) {
           this._pathToURL.delete(p);
+          this._removeGraphEdges(p);
           break;
         }
       }
@@ -206,6 +241,7 @@ export class PrefabRegistry {
     if (!url) return false;
     this._cache.delete(url);
     this._pathToURL.delete(path);
+    this._removeGraphEdges(path);
     this._emit();
     return true;
   }
@@ -213,6 +249,9 @@ export class PrefabRegistry {
   clear(): void {
     this._cache.clear();
     this._pathToURL.clear();
+    if (this._prefabGraph) {
+      this._prefabGraph.clear();
+    }
     this._emit();
   }
 
