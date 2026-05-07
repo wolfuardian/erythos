@@ -36,6 +36,8 @@ export interface EditorBridge {
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   environmentSettings: Accessor<EnvironmentSettings>;
+  /** Set of node UUIDs with broken asset references (updated on scene reload). */
+  brokenRefIds: Accessor<ReadonlySet<string>>;
   isEnvSelected: Accessor<boolean>;
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
@@ -131,6 +133,7 @@ export function createEditorBridge(
   const onSceneReplaced = () => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setSceneVersion);
+    setBrokenRefIds(editor.sceneSync.getBrokenRefIds());
   };
 
   // Subscribe to editor events
@@ -151,6 +154,11 @@ export function createEditorBridge(
   // Subscribe to EnvironmentSettings events
   const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
     editor.getEnvironmentSettings()
+  );
+
+  // Broken-ref IDs signal -- updated whenever scene is replaced or nodes change
+  const [brokenRefIds, setBrokenRefIds] = createSignal<ReadonlySet<string>>(
+    editor.sceneSync.getBrokenRefIds()
   );
   const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
   editor.events.on('environmentChanged', onEnvChanged);
@@ -201,6 +209,7 @@ export function createEditorBridge(
     confirmBeforeLoad,
     hasClipboard,
     environmentSettings,
+    brokenRefIds,
     isEnvSelected,
     projectOpen,
     projectName,
