@@ -6,6 +6,13 @@ import type { NodeUUID } from '../../utils/branded';
 import type { ErythosSceneV1 } from './io/types';
 import type { HexColor } from './io/types';
 import { v0_to_v1 } from './io/migrations/v0_to_v1';
+import {
+  checkRawVersion,
+  validateScene,
+  SceneInvariantError,
+} from './io/SceneInvariants';
+
+export { SceneInvariantError, UnsupportedVersionError } from './io/SceneInvariants';
 
 // ── Color conversion ─────────────────────────────────────────────────────────
 
@@ -261,22 +268,43 @@ export class SceneDocument {
 
   /**
    * Deserialize raw JSON data into the runtime model.
-   * Accepts both v0 (components-bag) and v1 (nodeType) shapes — v0 is migrated first.
+   * Accepts both v0 (components-bag) and v1 (nodeType) shapes -- v0 is migrated first.
    * Colors in the v1 persistence shape (hex strings) are converted to runtime numbers.
    *
+   * Validation order:
+   *   1. checkRawVersion -- rejects non-integer, <=0, or future version
+   *      (throws UnsupportedVersionError or SceneInvariantError for bad version field)
+   *   2. v0_to_v1 migration
+   *   3. validateScene -- structural invariants (throws SceneInvariantError on violations)
+   *
    * @param data  Parsed JSON from a .erythos file (may be any legacy version).
+   * @throws {UnsupportedVersionError} if version > CURRENT_VERSION
+   * @throws {SceneInvariantError} if the migrated scene violates invariants
    */
   deserialize(data: unknown): void {
     this._nodes.clear();
 
-    // Run v0→v1 migration. This handles:
+    // Step 1: version gate (runs on raw JSON before migration)
+    checkRawVersion(data);
+
+    // Step 2: Run v0->v1 migration. This handles:
     //   - legacy components-bag shape
-    //   - 'leaf' → 'prefab' rename
-    //   - mesh.source → mesh.path
-    //   - prefab.id → stripped (P4: no resolver map)
-    //   - geometry component → mesh nodeType with assets://primitives/
+    //   - 'leaf' -> 'prefab' rename
+    //   - mesh.source -> mesh.path
+    //   - prefab.id -> stripped (P4: no resolver map)
+    //   - geometry component -> mesh nodeType with assets://primitives/
     //   - inject default env
     const v1: ErythosSceneV1 = v0_to_v1(data);
+
+    // Step 3: structural invariants on migrated v1 scene
+    const violations = validateScene(v1);
+    if (violations.length > 0) {
+      console.error('[SceneDocument] Scene invariant violations:');
+      for (const v of violations) {
+        console.error(`  [${v.path}] ${v.reason}`);
+      }
+      throw new SceneInvariantError(violations);
+    }
 
     // Restore env
     this._env = {
@@ -285,7 +313,7 @@ export class SceneDocument {
       rotation:  v1.env.rotation,
     };
 
-    // Convert persistence nodes → runtime nodes
+    // Convert persistence nodes -> runtime nodes
     for (const pn of v1.nodes) {
       const node: SceneNode = {
         id:       asNodeUUID(pn.id),

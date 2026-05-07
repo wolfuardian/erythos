@@ -1,4 +1,5 @@
 import type { Editor } from '../Editor';
+import { validateScene } from './io/SceneInvariants';
 
 const DEBOUNCE_DELAY = 2000;
 
@@ -18,7 +19,21 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
 
   const flushNow = async (): Promise<void> => {
     if (timer !== null) { clearTimeout(timer); timer = null; }
-    const json = JSON.stringify(editor.sceneDocument.serialize());
+    const scene = editor.sceneDocument.serialize();
+    const json = JSON.stringify(scene);
+
+    // Validate before writing: if the serialized scene violates invariants,
+    // emit error status and do NOT write to disk.
+    const violations = validateScene(scene, json);
+    if (violations.length > 0) {
+      console.error('[AutoSave] Pre-write validation failed:');
+      for (const v of violations) {
+        console.error(`  [${v.path}] ${v.reason}`);
+      }
+      editor.events.emit('autosaveStatusChanged', 'error');
+      return;
+    }
+
     const path = editor.projectManager.currentScenePath();
     try {
       await editor.projectManager.writeFile(path, json);

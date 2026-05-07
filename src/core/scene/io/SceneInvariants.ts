@@ -1,0 +1,411 @@
+/**
+ * SceneInvariants — structural correctness checks for ErythosSceneV1.
+ *
+ * Implements the 10 in-scope invariants from:
+ *   docs/erythos-format.md § Invariants (line 140-153)
+ *   docs/erythos-format.md § 機械驗收清單 (line 259-274)
+ *
+ * Note: DAG cycle detection (invariant #6) is out of scope for this issue
+ * and handled by the parallel Phase 3-B issue (#821).
+ *
+ * Architecture:
+ *   - validateScene(): pure function, returns violations (never throws).
+ *   - Callers (SceneDocument.deserialize, AutoSave) throw on non-empty violations.
+ *   - UnsupportedVersionError: version gate run on raw JSON before migration.
+ *   - SceneInvariantError: thrown after validation on migrated v1 scene.
+ *
+ * Invariant 10 — "no prefab subtree expanded":
+ *   We use the structural proxy: a nodeType:'prefab' node must have no children
+ *   in the same nodes[] array. Expanded subtrees are the forbidden case — a baked
+ *   prefab child would appear as parent === prefabNodeId. Runtime hydration is
+ *   never written to disk, so this structural check captures real violations.
+ */
+
+import { z } from 'zod';
+
+// ── CURRENT_VERSION ─────────────────────────────────────────────────────────
+
+/**
+ * Maximum supported schema version. Files with version > CURRENT_VERSION are
+ * rejected with UnsupportedVersionError (spec line 227-230).
+ */
+export const CURRENT_VERSION = 1;
+
+// ── Zod schema for ErythosSceneV1 ───────────────────────────────────────────
+
+const Vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
+
+const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'must be #rrggbb');
+
+const LightTypeSchema = z.enum(['directional', 'ambient', 'point', 'spot']);
+
+const LightPropsSchema = z.object({
+  type: LightTypeSchema,
+  color: HexColorSchema,
+  intensity: z.number(),
+});
+
+const CameraPropsSchema = z.object({
+  type: z.literal('perspective'),
+  fov: z.number(),
+  near: z.number(),
+  far: z.number(),
+});
+
+const MaterialOverrideSchema = z.object({
+  color: HexColorSchema.optional(),
+  roughness: z.number().optional(),
+  metalness: z.number().optional(),
+  emissive: HexColorSchema.optional(),
+  emissiveIntensity: z.number().optional(),
+  opacity: z.number().optional(),
+  transparent: z.boolean().optional(),
+  wireframe: z.boolean().optional(),
+});
+
+const NodeTypeSchema = z.enum(['mesh', 'light', 'camera', 'prefab', 'group']);
+
+const SceneNodeSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  parent: z.string().nullable(),
+  order: z.number().int(),
+  nodeType: NodeTypeSchema,
+  position: Vec3Schema,
+  rotation: Vec3Schema,
+  scale: Vec3Schema,
+  asset: z.string().optional(),
+  mat: MaterialOverrideSchema.optional(),
+  light: LightPropsSchema.optional(),
+  camera: CameraPropsSchema.optional(),
+  userData: z.record(z.string(), z.unknown()).optional(),
+});
+
+const SceneEnvSchema = z.object({
+  hdri: z.string().nullable(),
+  intensity: z.number(),
+  rotation: z.number(),
+});
+
+export const ErythosSceneV1Schema = z.object({
+  version: z.literal(1),
+  env: SceneEnvSchema,
+  nodes: z.array(SceneNodeSchema),
+});
+
+// ── Violation + Error types ──────────────────────────────────────────────────
+
+/**
+ * A single invariant violation with a specific path and human-readable reason.
+ */
+export interface InvariantViolation {
+  /** JSONPath-style pointer to the offending value, e.g. "nodes[2].asset" */
+  path: string;
+  /** Human-readable sentence describing the violation. */
+  reason: string;
+}
+
+/**
+ * Thrown when a .erythos file's version is newer than CURRENT_VERSION.
+ * Message format matches spec line 227-230.
+ */
+export class UnsupportedVersionError extends Error {
+  constructor(public readonly fileVersion: number) {
+    super(
+      `這個檔案是用較新版本的 Erythos 建立的(格式 v${fileVersion}),` +
+      `你的版本只支援到 v${CURRENT_VERSION}。請更新 Erythos。`,
+    );
+    this.name = 'UnsupportedVersionError';
+  }
+}
+
+/**
+ * Thrown when validateScene() returns one or more violations.
+ * Contains the full list for structured error handling / display.
+ */
+export class SceneInvariantError extends Error {
+  constructor(public readonly violations: InvariantViolation[]) {
+    const summary = violations
+      .map(v => `  [${v.path}] ${v.reason}`)
+      .join('\n');
+    super(`Scene invariant violations:\n${summary}`);
+    this.name = 'SceneInvariantError';
+  }
+}
+
+// ── Version gate (runs on raw JSON before migration) ─────────────────────────
+
+/**
+ * Validates the raw (un-migrated) version field of a parsed JSON object.
+ *
+ * Order required by architecture:
+ *   1. checkRawVersion(raw) — reject future/invalid version
+ *   2. v0_to_v1(raw) → ErythosSceneV1
+ *   3. validateScene(scene) — structural invariants
+ *
+ * @throws UnsupportedVersionError if version > CURRENT_VERSION
+ * @throws TypeError if raw is not an object or version is not a positive integer
+ */
+export function checkRawVersion(raw: unknown): void {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new TypeError('checkRawVersion: input must be a non-null object');
+  }
+  const input = raw as Record<string, unknown>;
+  const version = input['version'];
+
+  if (typeof version !== 'number' || !Number.isInteger(version) || version <= 0) {
+    throw new SceneInvariantError([
+      {
+        path: 'version',
+        reason: `version must be a positive integer, got ${JSON.stringify(version)}`,
+      },
+    ]);
+  }
+
+  if (version > CURRENT_VERSION) {
+    throw new UnsupportedVersionError(version);
+  }
+}
+
+// ── Core invariant validator ──────────────────────────────────────────────────
+
+/**
+ * Validates an already-migrated ErythosSceneV1 against the 10 in-scope invariants.
+ *
+ * Pure function — accumulates violations, never throws.
+ * Callers should throw SceneInvariantError when violations.length > 0.
+ *
+ * Out-of-scope (handled by Phase 3-B #821):
+ *   - DAG cycle detection (spec invariant #6)
+ *   - Broken AssetUrl resolution (spec 機械驗收清單: 404 → warning, not fail)
+ *
+ * @param scene  A migrated ErythosSceneV1 (version already checked by checkRawVersion).
+ * @param serializedJson  The JSON string of the scene (used for file-size check).
+ *                        Pass undefined to skip the size check (e.g. in unit tests).
+ */
+export function validateScene(
+  scene: unknown,
+  serializedJson?: string,
+): InvariantViolation[] {
+  const violations: InvariantViolation[] = [];
+
+  // ── Invariant 1: file size ≤ 1MB ──────────────────────────────────────────
+  if (serializedJson !== undefined) {
+    const byteLength = new TextEncoder().encode(serializedJson).byteLength;
+    if (byteLength > 1_048_576) {
+      violations.push({
+        path: '(file)',
+        reason: `ファイルサイズ ${byteLength} bytes が上限 1MB (1048576 bytes) を超えています`,
+      });
+    }
+  }
+
+  // ── Invariant 3 (pre-Zod): no inline geometry fields ─────────────────────
+  // Must run BEFORE Zod because Zod's strip mode removes unknown keys.
+  const INLINE_GEOMETRY_KEYS_PRE = ['geometry', 'vertices', 'positions', 'indices', 'uvs'] as const;
+  if (typeof scene === 'object' && scene !== null) {
+    const rawNodes = (scene as Record<string, unknown>)['nodes'];
+    if (Array.isArray(rawNodes)) {
+      for (let i = 0; i < rawNodes.length; i++) {
+        const node = rawNodes[i] as Record<string, unknown>;
+        if (typeof node !== 'object' || node === null) continue;
+        for (const key of INLINE_GEOMETRY_KEYS_PRE) {
+          if (key in node) {
+            violations.push({
+              path: `nodes[${i}].${key}`,
+              reason: `インライン geometry フィールド "${key}" は禁止です。asset URL (assets://) を使用してください。`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // ── Invariant 2: Zod schema validate ─────────────────────────────────────
+  const zodResult = ErythosSceneV1Schema.safeParse(scene);
+  if (!zodResult.success) {
+    for (const issue of zodResult.error.issues) {
+      violations.push({
+        path: issue.path.length > 0
+          ? issue.path
+              .map((p, i) =>
+                typeof p === 'number'
+                  ? `[${p}]`
+                  : i === 0
+                  ? String(p)
+                  : `.${String(p)}`,
+              )
+              .join('')
+          : '(root)',
+        reason: issue.message,
+      });
+    }
+    // Shape doesn't conform — remaining checks would fail on bad types; bail early.
+    return violations;
+  }
+
+  const v1 = zodResult.data;
+
+  // Build id lookup set for O(1) parent checks.
+  const idSet = new Set<string>(v1.nodes.map(n => n.id));
+  // Build set of ids that are parents of some node (for invariant 10).
+  const parentIdSet = new Set<string>();
+  for (const n of v1.nodes) {
+    if (n.parent !== null) parentIdSet.add(n.parent);
+  }
+
+  // ── Invariant 4: node.parent → existing id or null ───────────────────────
+  for (let i = 0; i < v1.nodes.length; i++) {
+    const n = v1.nodes[i];
+    if (n.parent !== null && !idSet.has(n.parent)) {
+      violations.push({
+        path: `nodes[${i}].parent`,
+        reason: `ノード "${n.name}" (id: ${n.id}) の parent "${n.parent}" は同じファイルに存在しません。`,
+      });
+    }
+  }
+
+  // ── Invariant 5: nodes[].id globally unique ───────────────────────────────
+  {
+    const seen = new Map<string, number>();
+    for (let i = 0; i < v1.nodes.length; i++) {
+      const id = v1.nodes[i].id;
+      if (seen.has(id)) {
+        violations.push({
+          path: `nodes[${i}].id`,
+          reason: `id "${id}" が重複しています (最初の出現: nodes[${seen.get(id)}])。`,
+        });
+      } else {
+        seen.set(id, i);
+      }
+    }
+  }
+
+  // ── Invariant 7: materialOverride field count ≤ 8 (excl. transparent/wireframe) ──
+  const MAT_EXCLUDED = new Set(['transparent', 'wireframe']);
+  for (let i = 0; i < v1.nodes.length; i++) {
+    const mat = v1.nodes[i].mat;
+    if (mat === undefined) continue;
+    const countableFields = Object.keys(mat).filter(k => !MAT_EXCLUDED.has(k));
+    if (countableFields.length > 8) {
+      violations.push({
+        path: `nodes[${i}].mat`,
+        reason: `MaterialOverride に ${countableFields.length} フィールドがあります (transparent/wireframe 除く上限 8)。materials:// に抽出してください。`,
+      });
+    }
+  }
+
+  // ── Invariant 8: nodeType vs auxiliary fields consistency ─────────────────
+  for (let i = 0; i < v1.nodes.length; i++) {
+    const n = v1.nodes[i];
+    switch (n.nodeType) {
+      case 'mesh':
+      case 'prefab':
+        if (n.asset === undefined) {
+          violations.push({
+            path: `nodes[${i}].asset`,
+            reason: `ノード "${n.name}" の nodeType "${n.nodeType}" には asset フィールドが必要です。`,
+          });
+        }
+        if (n.light !== undefined) {
+          violations.push({
+            path: `nodes[${i}].light`,
+            reason: `nodeType "${n.nodeType}" に light フィールドは不正です。`,
+          });
+        }
+        if (n.camera !== undefined) {
+          violations.push({
+            path: `nodes[${i}].camera`,
+            reason: `nodeType "${n.nodeType}" に camera フィールドは不正です。`,
+          });
+        }
+        break;
+      case 'light':
+        if (n.light === undefined) {
+          violations.push({
+            path: `nodes[${i}].light`,
+            reason: `ノード "${n.name}" の nodeType "light" には light フィールドが必要です。`,
+          });
+        }
+        if (n.asset !== undefined) {
+          violations.push({
+            path: `nodes[${i}].asset`,
+            reason: `nodeType "light" に asset フィールドは不正です。`,
+          });
+        }
+        if (n.camera !== undefined) {
+          violations.push({
+            path: `nodes[${i}].camera`,
+            reason: `nodeType "light" に camera フィールドは不正です。`,
+          });
+        }
+        break;
+      case 'camera':
+        if (n.camera === undefined) {
+          violations.push({
+            path: `nodes[${i}].camera`,
+            reason: `ノード "${n.name}" の nodeType "camera" には camera フィールドが必要です。`,
+          });
+        }
+        if (n.asset !== undefined) {
+          violations.push({
+            path: `nodes[${i}].asset`,
+            reason: `nodeType "camera" に asset フィールドは不正です。`,
+          });
+        }
+        if (n.light !== undefined) {
+          violations.push({
+            path: `nodes[${i}].light`,
+            reason: `nodeType "camera" に light フィールドは不正です。`,
+          });
+        }
+        break;
+      case 'group':
+        if (n.asset !== undefined) {
+          violations.push({
+            path: `nodes[${i}].asset`,
+            reason: `nodeType "group" に asset フィールドは不正です。`,
+          });
+        }
+        if (n.light !== undefined) {
+          violations.push({
+            path: `nodes[${i}].light`,
+            reason: `nodeType "group" に light フィールドは不正です。`,
+          });
+        }
+        if (n.camera !== undefined) {
+          violations.push({
+            path: `nodes[${i}].camera`,
+            reason: `nodeType "group" に camera フィールドは不正です。`,
+          });
+        }
+        break;
+    }
+  }
+
+  // ── Invariant 9: userData must be empty {} ────────────────────────────────
+  for (let i = 0; i < v1.nodes.length; i++) {
+    const ud = v1.nodes[i].userData;
+    if (ud !== undefined && Object.keys(ud).length > 0) {
+      violations.push({
+        path: `nodes[${i}].userData`,
+        reason: `userData は空 {} でなければなりません。v1 は userData への書き込みを禁止しています (keys: ${Object.keys(ud).join(', ')})。`,
+      });
+    }
+  }
+
+  // ── Invariant 10: no prefab subtree expansion ─────────────────────────────
+  // Structural proxy: a nodeType:'prefab' node must have no children in nodes[].
+  // If any other node has parent === prefabNodeId, a subtree has been expanded.
+  for (let i = 0; i < v1.nodes.length; i++) {
+    const n = v1.nodes[i];
+    if (n.nodeType === 'prefab' && parentIdSet.has(n.id)) {
+      violations.push({
+        path: `nodes[${i}]`,
+        reason: `prefab ノード "${n.name}" (id: ${n.id}) が子ノードを持っています。prefab は参照のみで子ツリーを展開してはいけません。`,
+      });
+    }
+  }
+
+  return violations;
+}
