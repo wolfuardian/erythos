@@ -212,6 +212,6 @@
   /* Row itself keeps its background; name color signals the error */
 }
 
-.nodeName.brokenRef {
+.row.brokenRef .nodeName {
   color: var(--accent-red, #e05252);
 }
