@@ -133,7 +133,7 @@ export function createEditorBridge(
   const onSceneReplaced = () => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setSceneVersion);
-    setBrokenRefIds(editor.sceneSync.getBrokenRefIds());
+    setBrokenRefIds(new Set(editor.sceneSync.getBrokenRefIds()));
   };
 
   // Subscribe to editor events
@@ -158,10 +158,13 @@ export function createEditorBridge(
 
   // Broken-ref IDs signal -- updated whenever scene is replaced or nodes change
   const [brokenRefIds, setBrokenRefIds] = createSignal<ReadonlySet<string>>(
-    editor.sceneSync.getBrokenRefIds()
+    new Set(editor.sceneSync.getBrokenRefIds())
   );
   const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
   editor.events.on('environmentChanged', onEnvChanged);
+  // Subscribe to brokenRefsChanged (fired by Editor.loadScene after full hydration)
+  const onBrokenRefsChanged = () => setBrokenRefIds(new Set(editor.sceneSync.getBrokenRefIds()));
+  editor.events.on('brokenRefsChanged', onBrokenRefsChanged);
 
   // Subscribe to env selection events
   const [isEnvSelected, setIsEnvSelected] = createSignal<boolean>(false);
@@ -188,6 +191,7 @@ export function createEditorBridge(
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('environmentChanged', onEnvChanged);
+    editor.events.off('brokenRefsChanged', onBrokenRefsChanged);
     editor.events.off('envSelectionChanged', onEnvSelectionChanged);
     unsubProject();
   };

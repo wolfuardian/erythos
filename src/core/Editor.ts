@@ -253,6 +253,7 @@ export class Editor {
     // sceneReplaced was emitted by deserialize, but SceneSync ran before hydration.
     // Kick a second rebuild to pick up loaded assets.
     this.sceneSync.rebuild();
+    this.events.emit('brokenRefsChanged');
   }
 
   // ── Scene clear ───────────────────────────────────
