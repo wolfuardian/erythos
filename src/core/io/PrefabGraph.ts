@@ -32,6 +32,10 @@ export class PrefabGraph {
   /**
    * Register a direct dependency edge: `from` references `to`.
    * Invalidates the deps cache for `from`.
+   *
+   * TODO(nested-prefab-refs): populate via PrefabRegistry on load once PrefabFormat
+   * carries nested prefab reference fields (currently PrefabNode.components does not
+   * encode prefab → prefab refs). Tracked in issue #824.
    */
   addEdge(from: string, to: string): void {
     let set = this._edges.get(from);
