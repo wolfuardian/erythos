@@ -1,27 +1,65 @@
 import {
   Scene, Object3D, Mesh, MeshStandardMaterial, Color,
   BoxGeometry, SphereGeometry, PlaneGeometry, CylinderGeometry,
-  DirectionalLight, AmbientLight, PerspectiveCamera,
+  DirectionalLight, AmbientLight, PointLight, SpotLight,
+  PerspectiveCamera, BufferGeometry,
 } from 'three';
-import type {
-  SceneNode, MeshComponent,
-  GeometryComponent, MaterialComponent, LightComponent, CameraComponent,
-} from './SceneFormat';
+import type { SceneNode, LightProps, MaterialOverride, CameraProps } from './SceneFormat';
 import type { SceneDocument } from './SceneDocument';
 import type { ResourceCache } from './ResourceCache';
 import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
-import { deserializeFromPrefab } from './PrefabSerializer';
-import type { PrefabInstanceWatcher } from './PrefabInstanceWatcher';
-import type { Selection } from '../Selection';
 import type { AssetPath, NodeUUID } from '../../utils/branded';
 
-function createGeometry(type: GeometryComponent['type']) {
+// ── Geometry helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Parse a primitive geometry type from an assets://primitives/ URL.
+ * Returns the geometry type string or null if not a primitives URL.
+ */
+function parsePrimitiveType(assetUrl: string): string | null {
+  const prefix = 'assets://primitives/';
+  if (!assetUrl.startsWith(prefix)) return null;
+  return assetUrl.slice(prefix.length);
+}
+
+function createPrimitiveGeometry(type: string): BufferGeometry | null {
   switch (type) {
     case 'box':      return new BoxGeometry();
     case 'sphere':   return new SphereGeometry();
     case 'plane':    return new PlaneGeometry();
     case 'cylinder': return new CylinderGeometry();
+    default:         return null;
+  }
+}
+
+/**
+ * Build a MeshStandardMaterial from a runtime MaterialOverride.
+ * Colors are already numbers (runtime shape).
+ */
+function buildMaterial(mat?: MaterialOverride): MeshStandardMaterial {
+  return new MeshStandardMaterial({
+    color:        mat?.color       ?? 0xcccccc,
+    roughness:    mat?.roughness   ?? 1,
+    metalness:    mat?.metalness   ?? 0,
+    emissive:     new Color(mat?.emissive ?? 0x000000),
+    opacity:      mat?.opacity     ?? 1,
+    transparent:  mat?.transparent ?? false,
+    wireframe:    mat?.wireframe   ?? false,
+  });
+}
+
+/**
+ * Create a Three.js light from runtime LightProps.
+ */
+function buildLight(light: LightProps): DirectionalLight | AmbientLight | PointLight | SpotLight {
+  const color = light.color;
+  const intensity = light.intensity;
+  switch (light.type) {
+    case 'directional': return new DirectionalLight(color, intensity);
+    case 'ambient':     return new AmbientLight(color, intensity);
+    case 'point':       return new PointLight(color, intensity);
+    case 'spot':        return new SpotLight(color, intensity);
   }
 }
 
@@ -30,6 +68,13 @@ function createGeometry(type: GeometryComponent['type']) {
  *
  * Listens to SceneDocument events and mirrors the flat node list
  * into a Three.js parent-child hierarchy.
+ *
+ * v1 behavior:
+ *   - Dispatches hydration based on SceneNode.nodeType (not components bag)
+ *   - Prefab nodes: runtime-only expansion into Three.js Object3D subtrees.
+ *     Prefab children are NOT added to SceneDocument — only to the Three.js scene.
+ *   - mesh with assets://primitives/ → inline geometry
+ *   - mesh with assets://* or blob:// → ResourceCache lookup
  */
 export class SceneSync {
   private readonly document: SceneDocument;
@@ -42,31 +87,36 @@ export class SceneSync {
   // Orphan tracking: child UUID → set of Object3D waiting for this parent
   private readonly pendingChildren = new Map<NodeUUID, Set<Object3D>>();
 
-  /** Bound prefabChanged handler for off() symmetry */
-  private _onPrefabChanged: ((url: string, asset: PrefabAsset, path: AssetPath) => void) | null = null;
-  /** Reference to PrefabInstanceWatcher for self-write skip check (optional) */
-  private _instanceWatcher: PrefabInstanceWatcher | null = null;
-  /** Reference to Selection for snapshot/restore during rebuild (optional) */
-  private _selection: Selection | null = null;
+  /** Bound event handlers for symmetrical on/off */
+  private readonly _onNodeAdded:   (node: SceneNode) => void;
+  private readonly _onNodeRemoved: (node: SceneNode) => void;
+  private readonly _onNodeChanged: (uuid: NodeUUID, changed: Partial<SceneNode>) => void;
+  private readonly _onSceneReplaced: () => void;
 
-  /** Reference to attached PrefabRegistry (for dispose) */
+  /** PrefabRegistry for prefab hydration */
   private _prefabRegistry: PrefabRegistry | null = null;
+
+  /**
+   * Runtime-only map: persistent asset URL (assets://...) → resolved blob URL.
+   * Populated by Editor.loadScene after asset resolution.
+   * SceneSync uses this to find the loaded blob URL without node.asset being mutated.
+   */
+  private readonly _resolvedBlobUrls = new Map<string, string>();
 
   constructor(document: SceneDocument, threeScene: Scene, resourceCache?: ResourceCache) {
     this.document = document;
     this.threeScene = threeScene;
     this.resourceCache = resourceCache ?? null;
 
-    // Bind named handlers so off() can match them
-    this.onNodeAdded = this.onNodeAdded.bind(this);
-    this.onNodeRemoved = this.onNodeRemoved.bind(this);
-    this.onNodeChanged = this.onNodeChanged.bind(this);
-    this.onSceneReplaced = this.onSceneReplaced.bind(this);
+    this._onNodeAdded    = this.onNodeAdded.bind(this);
+    this._onNodeRemoved  = this.onNodeRemoved.bind(this);
+    this._onNodeChanged  = this.onNodeChanged.bind(this);
+    this._onSceneReplaced = this.onSceneReplaced.bind(this);
 
-    document.events.on('nodeAdded', this.onNodeAdded);
-    document.events.on('nodeRemoved', this.onNodeRemoved);
-    document.events.on('nodeChanged', this.onNodeChanged);
-    document.events.on('sceneReplaced', this.onSceneReplaced);
+    document.events.on('nodeAdded',    this._onNodeAdded);
+    document.events.on('nodeRemoved',  this._onNodeRemoved);
+    document.events.on('nodeChanged',  this._onNodeChanged);
+    document.events.on('sceneReplaced', this._onSceneReplaced);
   }
 
   // ── Query API ──────────────────────────────────────────────────────────────
@@ -79,10 +129,36 @@ export class SceneSync {
     return this.objToUuid.get(object3d) ?? null;
   }
 
+  // ── Optional attachments ──────────────────────────────────────────────────
+
+  /**
+   * Attach a PrefabRegistry for prefab node hydration.
+   * Without this, prefab nodes render as empty Object3Ds.
+   */
+  attachPrefabRegistry(registry: PrefabRegistry): void {
+    this._prefabRegistry = registry;
+  }
+
+  /**
+   * Register a resolved blob URL for a persistent asset URL.
+   * Called by Editor.loadScene after AssetResolver resolves assets:// to blob URL.
+   * SceneSync uses this mapping in hydrateMesh — node.asset stays as assets:// (persistent).
+   */
+  setResolvedBlobUrl(assetUrl: string, blobUrl: string): void {
+    this._resolvedBlobUrls.set(assetUrl, blobUrl);
+  }
+
+  /**
+   * Clear all resolved blob URL mappings.
+   * Called by Editor.loadScene at the start of each load to prevent stale entries.
+   */
+  clearResolvedBlobUrls(): void {
+    this._resolvedBlobUrls.clear();
+  }
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   rebuild(): void {
-    // Clear all children from scene
     while (this.threeScene.children.length > 0) {
       this.threeScene.remove(this.threeScene.children[0]);
     }
@@ -90,341 +166,64 @@ export class SceneSync {
     this.objToUuid.clear();
     this.pendingChildren.clear();
 
-    // Re-add all nodes — order is not guaranteed, so onNodeAdded
-    // handles orphan resolution automatically
     for (const node of this.document.getAllNodes()) {
       this.onNodeAdded(node);
     }
   }
 
   dispose(): void {
-    this.document.events.off('nodeAdded', this.onNodeAdded);
-    this.document.events.off('nodeRemoved', this.onNodeRemoved);
-    this.document.events.off('nodeChanged', this.onNodeChanged);
-    this.document.events.off('sceneReplaced', this.onSceneReplaced);
-
-    // Unsubscribe from prefab live-sync if attached
-    if (this._prefabRegistry && this._onPrefabChanged) {
-      this._prefabRegistry.off('prefabChanged', this._onPrefabChanged);
-      this._onPrefabChanged = null;
-      this._prefabRegistry = null;
-    }
+    this.document.events.off('nodeAdded',    this._onNodeAdded);
+    this.document.events.off('nodeRemoved',  this._onNodeRemoved);
+    this.document.events.off('nodeChanged',  this._onNodeChanged);
+    this.document.events.off('sceneReplaced', this._onSceneReplaced);
 
     this.uuidToObj.clear();
     this.objToUuid.clear();
     this.pendingChildren.clear();
   }
 
-  // ── PrefabRegistry live-sync ───────────────────────────────────────────────
-
-  /**
-   * Opt-in subscription to PrefabRegistry's `prefabChanged` event.
-   *
-   * Called once from `Editor.init` on the main SceneSync only. Sandbox
-   * SceneSyncs (Workshop) deliberately do NOT call this — they must not
-   * auto-rebuild when the file the user is actively editing is saved.
-   *
-   * ARCHITECTURAL EXCEPTION: The rebuild below mutates SceneDocument OUTSIDE
-   * the Command/undo pipeline. This is intentional for P3 live-sync:
-   * - Prefab edits are file-level operations (Workshop commit writes a .prefab file).
-   * - Main editor undo/redo does not cover prefab file-level changes.
-   * - Reversing a prefab edit is done via Workshop reopen + further edits,
-   *   or filesystem-level revert.
-   * See docs/prefab-workshop.md §"Open Questions" and §"Event Flow & Live Sync".
-   *
-   * @param registry - The app's PrefabRegistry instance.
-   */
-  attachPrefabRegistry(registry: PrefabRegistry): void {
-    // Detach any prior subscription (idempotent guard)
-    if (this._prefabRegistry && this._onPrefabChanged) {
-      this._prefabRegistry.off('prefabChanged', this._onPrefabChanged);
-    }
-
-    this._prefabRegistry = registry;
-    this._onPrefabChanged = (url, asset, path) => {
-      this._rebuildPrefabInstances(url, asset, path);
-    };
-    registry.on('prefabChanged', this._onPrefabChanged);
-  }
-
-  /**
-   * Attach a PrefabInstanceWatcher so SceneSync can query the self-write registry
-   * before rebuilding individual instances.
-   *
-   * Call once from Editor.init after creating the watcher.
-   * Pass null to detach (called automatically by Editor.dispose order).
-   *
-   * @param watcher - The PrefabInstanceWatcher instance, or null to detach.
-   */
-  attachInstanceWatcher(watcher: PrefabInstanceWatcher | null): void {
-    this._instanceWatcher = watcher;
-  }
-
-  /**
-   * Attach a Selection instance so SceneSync can snapshot/restore selection
-   * state across prefab live-sync rebuilds.
-   *
-   * Call once from Editor.init after creating the selection.
-   * Pass null to detach.
-   */
-  attachSelection(selection: Selection | null): void {
-    this._selection = selection;
-  }
-
-  /**
-   * Rebuild all scene-graph instance subtrees whose `components.prefab.path`
-   * matches the given path (stable across URL rotation).
-   *
-   * ARCHITECTURAL EXCEPTION: direct SceneDocument mutation outside Command.
-   * See attachPrefabRegistry() for rationale.
-   */
-  private _rebuildPrefabInstances(newURL: string, newAsset: PrefabAsset, path: AssetPath): void {
-    const instances = this.document.getAllNodes().filter((n) => {
-      const prefab = n.components['prefab'] as { path?: AssetPath } | undefined;
-      return prefab?.path === path;
-    });
-
-    for (const instanceRoot of instances) {
-      // Self-write skip: if the PrefabInstanceWatcher wrote this path and this
-      // instance was the originator, skip the rebuild to avoid overwriting the
-      // user's in-progress edit with its own round-trip echo.
-      if (this._instanceWatcher?.hasRecentSelfWrite(path, instanceRoot.id)) {
-        continue;
-      }
-
-      // ── Selection snapshot (before rebuild) ──────────────────────────────
-      // Capture which selected UUIDs belong strictly to this instance's subtree,
-      // so we can restore them after the rebuild assigns fresh UUIDs.
-      const selectionSnapshot = this._selection
-        ? this._snapshotSubtreeSelection(instanceRoot.id)
-        : null;
-
-      // Hover snapshot: is the hovered node inside this subtree?
-      const hoveredInSubtree =
-        this._selection?.hovered !== null && this._selection?.hovered !== undefined
-          ? this._isDescendantOf(this._selection.hovered, instanceRoot.id)
-          : false;
-      const hoveredPathSnapshot = hoveredInSubtree && this._selection!.hovered
-        ? this._computeRelativePath(this._selection!.hovered, instanceRoot.id)
-        : null;
-
-      // Wrap each instance's rebuild in suppress() so the nodeAdded/nodeRemoved
-      // events fired during _removeDescendants + addNode do NOT arm a new debounce
-      // in PrefabInstanceWatcher. This is the primary guard against rebuild-echo;
-      // the 50ms self-write window is a secondary fallback.
-      const doRebuild = () => {
-        // Step 1: Remove existing children (recursive) from SceneDocument
-        this._removeDescendants(instanceRoot.id);
-
-        // Step 2: Update the instance root's prefab.url to the new URL
-        // (path remains stable; url must track the new blob URL)
-        const currentPrefab = instanceRoot.components['prefab'] as Record<string, unknown>;
-        this.document.updateNode(instanceRoot.id, {
-          components: {
-            ...instanceRoot.components,
-            prefab: { ...currentPrefab, url: newURL },
-          },
-        });
-
-        // Step 3: Deserialize new prefab content. The asset's first node is the
-        // prefab root, which corresponds to the existing instance root — we keep
-        // instanceRoot intact (per-instance transform/name/parent per design)
-        // and graft only the prefab root's descendants under it. Without this
-        // skip, every save would nest a fresh prefab-root layer below the
-        // instance root, deepening by one level per write cycle.
-        const deserialized = deserializeFromPrefab(newAsset, null);
-        const prefabRoot = deserialized[0];
-        for (const node of deserialized.slice(1)) {
-          if (node.parent === prefabRoot.id) {
-            node.parent = instanceRoot.id;
-          }
-          this.document.addNode(node);
-        }
-      };
-
-      if (this._instanceWatcher) {
-        this._instanceWatcher.suppress(doRebuild);
-      } else {
-        doRebuild();
-      }
-
-      // ── Selection restore (after rebuild) ───────────────────────────────
-      if (this._selection && selectionSnapshot) {
-        this._restoreSubtreeSelection(instanceRoot.id, selectionSnapshot);
-      }
-
-      // Hover restore
-      if (this._selection && hoveredPathSnapshot) {
-        const newHoveredNode = this._walkRelativePath(instanceRoot.id, hoveredPathSnapshot);
-        this._selection.hover(newHoveredNode ?? null);
-      } else if (this._selection && hoveredInSubtree) {
-        // Was hovering a node that no longer exists → clear hover
-        this._selection.hover(null);
-      }
-    }
-  }
-
-  /**
-   * Recursively remove all descendants of the given node from SceneDocument.
-   * Children are removed depth-first (leaf → root order) to avoid dangling refs.
-   */
-  private _removeDescendants(parentId: NodeUUID): void {
-    const children = this.document.getChildren(parentId);
-    for (const child of children) {
-      this._removeDescendants(child.id);
-      this.document.removeNode(child.id);
-    }
-  }
-
-  // ── Selection snapshot/restore helpers ──────────────────────────────────────
-
-  /**
-   * Returns true if `uuid` is a strict descendant of `ancestorId`
-   * (i.e. instanceRoot itself is NOT considered a descendant of itself).
-   */
-  private _isDescendantOf(uuid: NodeUUID, ancestorId: NodeUUID): boolean {
-    let node = this.document.getNode(uuid);
-    while (node?.parent !== null) {
-      if (node!.parent === ancestorId) return true;
-      node = this.document.getNode(node!.parent!);
-    }
-    return false;
-  }
-
-  /**
-   * A path step: { name, order } uniquely identifies a child among siblings
-   * when duplicate names exist (using sibling order as tiebreaker).
-   */
-  private _computeRelativePath(
-    uuid: NodeUUID,
-    instanceRootId: NodeUUID,
-  ): Array<{ name: string; order: number }> {
-    const steps: Array<{ name: string; order: number }> = [];
-    let node = this.document.getNode(uuid);
-    while (node && node.id !== instanceRootId) {
-      steps.unshift({ name: node.name, order: node.order });
-      if (!node.parent) break;
-      node = this.document.getNode(node.parent);
-    }
-    return steps;
-  }
-
-  /**
-   * Walk the subtree rooted at `instanceRootId` following the relative path
-   * (name + sibling-order match at each level). Returns the matched node's
-   * UUID, or null if any step fails to find a match.
-   */
-  private _walkRelativePath(
-    instanceRootId: NodeUUID,
-    path: Array<{ name: string; order: number }>,
-  ): NodeUUID | null {
-    let currentParentId: NodeUUID = instanceRootId;
-    for (const step of path) {
-      const children = this.document.getChildren(currentParentId); // sorted by order
-      // Find a child matching both name and order
-      const match = children.find(c => c.name === step.name && c.order === step.order);
-      if (!match) return null;
-      currentParentId = match.id;
-    }
-    return currentParentId === instanceRootId && path.length > 0 ? null : currentParentId;
-  }
-
-  /**
-   * Snapshot which currently-selected UUIDs are strict descendants of
-   * `instanceRootId`, storing their relative path for later restore.
-   *
-   * Returns a Map<oldUUID, relativePath>.
-   */
-  private _snapshotSubtreeSelection(
-    instanceRootId: NodeUUID,
-  ): Map<NodeUUID, Array<{ name: string; order: number }>> {
-    const snapshot = new Map<NodeUUID, Array<{ name: string; order: number }>>();
-    if (!this._selection) return snapshot;
-    for (const uuid of this._selection.all) {
-      if (this._isDescendantOf(uuid, instanceRootId)) {
-        snapshot.set(uuid, this._computeRelativePath(uuid, instanceRootId));
-      }
-    }
-    return snapshot;
-  }
-
-  /**
-   * After a rebuild, resolve each snapshotted path to its new UUID and
-   * call `Selection.replaceMany` to swap old → new (dropping deleted ones).
-   */
-  private _restoreSubtreeSelection(
-    instanceRootId: NodeUUID,
-    snapshot: Map<NodeUUID, Array<{ name: string; order: number }>>,
-  ): void {
-    if (!this._selection || snapshot.size === 0) return;
-
-    const replacements = new Map<NodeUUID, NodeUUID>();
-    const removals = new Set<NodeUUID>();
-
-    for (const [oldUUID, path] of snapshot) {
-      const newUUID = this._walkRelativePath(instanceRootId, path);
-      if (newUUID !== null) {
-        replacements.set(oldUUID, newUUID);
-      } else {
-        removals.add(oldUUID);
-      }
-    }
-
-    this._selection.replaceMany(replacements, removals);
-  }
-
-  // ── Event handlers (private) ───────────────────────────────────────────────
+  // ── Event handlers ─────────────────────────────────────────────────────────
 
   private onNodeAdded(node: SceneNode): void {
     const obj = new Object3D();
     obj.name = node.name;
     this.applyTransform(obj, node);
 
-    // Attach visual child based on component type (order: geometry > light > camera > mesh)
-    if (node.components.geometry && node.components.material) {
-      const geoComp = node.components.geometry as GeometryComponent;
-      const matComp = node.components.material as MaterialComponent;
-      obj.add(new Mesh(createGeometry(geoComp.type), new MeshStandardMaterial({
-        color:       matComp.color,
-        roughness:   matComp.roughness   ?? 1,
-        metalness:   matComp.metalness   ?? 0,
-        emissive:    new Color(matComp.emissive ?? 0x000000),
-        opacity:     matComp.opacity     ?? 1,
-        transparent: matComp.transparent ?? false,
-        wireframe:   matComp.wireframe   ?? false,
-      })));
-    } else if (node.components.light) {
-      const lightComp = node.components.light as LightComponent;
-      const light = lightComp.type === 'directional'
-        ? new DirectionalLight(lightComp.color, lightComp.intensity)
-        : new AmbientLight(lightComp.color, lightComp.intensity);
-      // User lights 放 layer 1，讓各 viewport camera 透過 layer mask 控制可見性
-      // set(1) 覆蓋（清 layer 0、設 layer 1），刻意讓 camera 預設看不到（camera 預設 layer 0）
-      light.layers.set(1);
-      obj.add(light);
-    } else if (node.components.camera) {
-      const camComp = node.components.camera as CameraComponent;
-      obj.add(new PerspectiveCamera(camComp.fov, 1, camComp.near, camComp.far));
-    } else if (this.resourceCache && node.components.mesh) {
-      const meshComp = node.components.mesh as MeshComponent;
-      // url is populated at hydrate time via projectManager.urlFor(path).
-      // If url is absent (file not found during hydrate), skip silently — soft-fail.
-      if (meshComp.url && this.resourceCache.has(meshComp.url)) {
-        const meshObj = this.resourceCache.cloneSubtree(meshComp.url, meshComp.nodePath);
-        if (meshObj) {
-          // Reset clone root transform: applyTransform(obj, node) already applied
-          // position/rotation/scale from SceneNode. The clone carries the same
-          // values baked into the gltf subtree root — adding meshObj directly
-          // would cause double-application (e.g. scale² for artist meter-to-unit root).
-          // This reset applies to ALL mesh nodes, not just root clones:
-          // gltfConverter always sets nodePath (path:nodePath), so
-          // every clone root's local transform is redundant with applyTransform.
-          meshObj.position.set(0, 0, 0);
-          meshObj.quaternion.identity();
-          meshObj.scale.set(1, 1, 1);
-          obj.add(meshObj);
-        }
+    // Dispatch hydration based on nodeType
+    switch (node.nodeType) {
+      case 'mesh': {
+        this.hydrateMesh(obj, node);
+        break;
       }
+
+      case 'prefab': {
+        // Prefab nodes are pure references — subtree is hydrated from PrefabRegistry
+        // into Three.js Object3D children only. No SceneDocument writes.
+        this.hydratePrefab(obj, node);
+        break;
+      }
+
+      case 'light': {
+        if (node.light) {
+          const lightObj = buildLight(node.light);
+          // User lights on layer 1 — viewport camera layer mask controls visibility.
+          lightObj.layers.set(1);
+          obj.add(lightObj);
+        }
+        break;
+      }
+
+      case 'camera': {
+        if (node.camera) {
+          const props = node.camera as CameraProps;
+          obj.add(new PerspectiveCamera(props.fov, 1, props.near, props.far));
+        }
+        break;
+      }
+
+      case 'group':
+        // Empty Object3D — nothing to add
+        break;
     }
 
     // Register in maps
@@ -432,29 +231,12 @@ export class SceneSync {
     this.objToUuid.set(obj, node.id);
 
     // Attach to parent (or scene root if parent unknown/null)
-    if (node.parent !== null) {
-      const parentObj = this.uuidToObj.get(node.parent);
-      if (parentObj) {
-        parentObj.add(obj);
-      } else {
-        // Orphan: parent not yet created — park at scene root and register as pending
-        this.threeScene.add(obj);
-        let set = this.pendingChildren.get(node.parent);
-        if (!set) {
-          set = new Set();
-          this.pendingChildren.set(node.parent, set);
-        }
-        set.add(obj);
-      }
-    } else {
-      this.threeScene.add(obj);
-    }
+    this.attachToParent(obj, node.parent);
 
     // Check if any orphans were waiting for THIS node as parent
     const waiting = this.pendingChildren.get(node.id);
     if (waiting) {
       for (const child of waiting) {
-        // Remove from current parent (scene root) and attach to this node
         child.removeFromParent();
         obj.add(child);
       }
@@ -491,34 +273,35 @@ export class SceneSync {
       obj.scale.set(...changed.scale);
     }
 
-    // Handle material component changes
-    const matComp = (changed as { components?: { material?: unknown } }).components?.material;
-    if (matComp !== undefined) {
+    // Handle material override changes (v1: mat field, number colors)
+    if (changed.mat !== undefined) {
       const meshChild = obj.children.find((c): c is Mesh => c instanceof Mesh);
       if (meshChild && meshChild.material instanceof MeshStandardMaterial) {
-        const mat = meshChild.material;
-        const m = matComp as MaterialComponent;
-        if (m.color     !== undefined) mat.color.setHex(m.color);
-        if (m.emissive  !== undefined) mat.emissive.setHex(m.emissive);
-        if (m.roughness !== undefined) mat.roughness  = m.roughness;
-        if (m.metalness !== undefined) mat.metalness  = m.metalness;
-        if (m.opacity   !== undefined) mat.opacity    = m.opacity;
-        if (m.wireframe !== undefined) mat.wireframe  = m.wireframe;
-        if (m.transparent !== undefined && mat.transparent !== m.transparent) {
-          mat.transparent = m.transparent;
-          mat.needsUpdate = true;
+        const stdMat = meshChild.material;
+        const m = changed.mat;
+        if (m === undefined) return;
+        if (m.color      !== undefined) stdMat.color.setHex(m.color);
+        if (m.emissive   !== undefined) stdMat.emissive.setHex(m.emissive);
+        if (m.roughness  !== undefined) stdMat.roughness  = m.roughness;
+        if (m.metalness  !== undefined) stdMat.metalness  = m.metalness;
+        if (m.opacity    !== undefined) stdMat.opacity    = m.opacity;
+        if (m.wireframe  !== undefined) stdMat.wireframe  = m.wireframe;
+        if (m.transparent !== undefined && stdMat.transparent !== m.transparent) {
+          stdMat.transparent = m.transparent;
+          stdMat.needsUpdate = true;
         }
       }
     }
 
-    // Handle light component changes
-    const lightComp = (changed as { components?: { light?: unknown } }).components?.light;
-    if (lightComp !== undefined) {
+    // Handle light prop changes (v1: light field, number colors)
+    if (changed.light !== undefined && changed.light !== null) {
       const lightChild = obj.children.find(
-        (c): c is DirectionalLight | AmbientLight => c instanceof DirectionalLight || c instanceof AmbientLight,
+        (c): c is DirectionalLight | AmbientLight | PointLight | SpotLight =>
+          c instanceof DirectionalLight || c instanceof AmbientLight ||
+          c instanceof PointLight || c instanceof SpotLight,
       );
       if (lightChild) {
-        const l = lightComp as LightComponent;
+        const l = changed.light;
         if (l.intensity !== undefined) lightChild.intensity = l.intensity;
         if (l.color     !== undefined) lightChild.color.setHex(l.color);
       }
@@ -527,21 +310,112 @@ export class SceneSync {
     // Parent change → re-attach
     if ('parent' in changed) {
       obj.removeFromParent();
-      if (changed.parent !== null && changed.parent !== undefined) {
-        const newParent = this.uuidToObj.get(changed.parent);
-        if (newParent) {
-          newParent.add(obj);
-        } else {
-          this.threeScene.add(obj);
-        }
-      } else {
-        this.threeScene.add(obj);
-      }
+      this.attachToParent(obj, changed.parent ?? null);
     }
   }
 
   private onSceneReplaced(): void {
     this.rebuild();
+  }
+
+  // ── Hydration helpers ─────────────────────────────────────────────────────
+
+  private hydrateMesh(obj: Object3D, node: SceneNode): void {
+    if (!node.asset) return;
+
+    // Check for primitive geometry URL: assets://primitives/<type>
+    const primitiveType = parsePrimitiveType(node.asset);
+    if (primitiveType !== null) {
+      const geo = createPrimitiveGeometry(primitiveType);
+      if (geo) {
+        obj.add(new Mesh(geo, buildMaterial(node.mat)));
+      }
+      return;
+    }
+
+    // Regular mesh: look up in ResourceCache by the resolved blob URL.
+    // The blob URL is resolved by Editor.loadScene via AssetResolver and registered
+    // via setResolvedBlobUrl(). node.asset stays as the persistent assets:// URL.
+    // If the asset isn't in ResourceCache yet, we skip silently (soft-fail).
+    const blobUrl = this._resolvedBlobUrls.get(node.asset) ?? node.asset;
+    if (this.resourceCache && this.resourceCache.has(blobUrl)) {
+      const meshObj = this.resourceCache.cloneSubtree(blobUrl, undefined);
+      if (meshObj) {
+        // Reset clone root transform — applyTransform already applied SceneNode
+        // position/rotation/scale. The clone carries gltf baked-in transforms.
+        meshObj.position.set(0, 0, 0);
+        meshObj.quaternion.identity();
+        meshObj.scale.set(1, 1, 1);
+        obj.add(meshObj);
+      }
+    }
+  }
+
+  private hydratePrefab(obj: Object3D, node: SceneNode): void {
+    // Prefab hydration: purely runtime Three.js expansion.
+    // The prefab asset URL is in node.asset ("prefabs://tree-pine").
+    // SceneSync expands the prefab into Three.js Object3D children of `obj`
+    // WITHOUT adding any nodes to SceneDocument.
+    if (!node.asset || !this._prefabRegistry) return;
+
+    // Look up the prefab asset by its project-relative path.
+    // AssetResolver convention: "prefabs://tree-pine" → "prefabs/tree-pine.prefab"
+    const prefabName = node.asset.replace('prefabs://', '');
+    const path = `prefabs/${prefabName}.prefab` as AssetPath;
+    const url = this._prefabRegistry.getURLForPath(path);
+    if (!url) {
+      // Prefab not loaded yet — soft fail (renders as empty Object3D)
+      return;
+    }
+    const asset = this._prefabRegistry.get(url);
+    if (!asset) return;
+
+    this.expandPrefabAssetIntoObject3D(obj, asset);
+  }
+
+  /**
+   * Recursively expand a PrefabAsset into Three.js Object3D children of `parent`.
+   * None of the expanded nodes enter SceneDocument.
+   */
+  private expandPrefabAssetIntoObject3D(parent: Object3D, asset: PrefabAsset): void {
+    const localIdToObj = new Map<number, Object3D>();
+
+    for (const pNode of asset.nodes) {
+      const obj = new Object3D();
+      obj.name = pNode.name;
+      obj.position.set(...pNode.position);
+      obj.rotation.set(...pNode.rotation);
+      obj.scale.set(...pNode.scale);
+      localIdToObj.set(pNode.localId, obj);
+
+      // Attach hydration based on components (prefab nodes still use components bag)
+      const comps = pNode.components as Record<string, unknown>;
+      if (comps['geometry']) {
+        const geo = comps['geometry'] as { type: string };
+        const threeGeo = createPrimitiveGeometry(geo.type);
+        if (threeGeo) {
+          const mat = comps['material'] as MaterialOverride | undefined;
+          obj.add(new Mesh(threeGeo, buildMaterial(mat)));
+        }
+      } else if (comps['light']) {
+        const l = comps['light'] as { type: string; color: number; intensity: number };
+        const lightObj = buildLight({ type: l.type as LightProps['type'], color: l.color, intensity: l.intensity });
+        lightObj.layers.set(1);
+        obj.add(lightObj);
+      }
+
+      // Attach to parent Object3D
+      if (pNode.parentLocalId === null) {
+        parent.add(obj);
+      } else {
+        const parentObj = localIdToObj.get(pNode.parentLocalId);
+        if (parentObj) {
+          parentObj.add(obj);
+        } else {
+          parent.add(obj);
+        }
+      }
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -550,5 +424,25 @@ export class SceneSync {
     obj.position.set(...node.position);
     obj.rotation.set(...node.rotation);
     obj.scale.set(...node.scale);
+  }
+
+  private attachToParent(obj: Object3D, parentId: NodeUUID | null): void {
+    if (parentId !== null) {
+      const parentObj = this.uuidToObj.get(parentId);
+      if (parentObj) {
+        parentObj.add(obj);
+      } else {
+        // Orphan: parent not yet created — park at scene root and register as pending
+        this.threeScene.add(obj);
+        let set = this.pendingChildren.get(parentId);
+        if (!set) {
+          set = new Set();
+          this.pendingChildren.set(parentId, set);
+        }
+        set.add(obj);
+      }
+    } else {
+      this.threeScene.add(obj);
+    }
   }
 }

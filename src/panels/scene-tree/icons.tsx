@@ -84,24 +84,21 @@ export const CursorOffIcon: Component = () => (
 );
 
 // ── Node type → icon mapping ─────────────────────────────────────────────────
-// Maps the 9 inferNodeType values down to 4 icon categories.
+// Maps v1 NodeType values to icon categories.
 
 import type { NodeType } from '../../core/scene/inferNodeType';
 
 export function nodeTypeToIcon(type: NodeType): Component<IconProps> {
   switch (type) {
-    case 'Mesh':
-    case 'Box':
-    case 'Sphere':
-    case 'Plane':
-    case 'Cylinder':
+    case 'mesh':
       return MeshIcon;
-    case 'DirectionalLight':
-    case 'AmbientLight':
+    case 'prefab':
+      return MeshIcon;  // prefab uses mesh icon (FAB badge distinguishes it)
+    case 'light':
       return LightIcon;
-    case 'PerspectiveCamera':
+    case 'camera':
       return CameraIcon;
-    case 'Group':
+    case 'group':
     default:
       return GroupIcon;
   }
@@ -109,18 +106,14 @@ export function nodeTypeToIcon(type: NodeType): Component<IconProps> {
 
 export function nodeTypeColor(type: NodeType): string {
   switch (type) {
-    case 'Mesh':
-    case 'Box':
-    case 'Sphere':
-    case 'Plane':
-    case 'Cylinder':
+    case 'mesh':
+    case 'prefab':
       return 'var(--badge-mesh)';
-    case 'DirectionalLight':
-    case 'AmbientLight':
+    case 'light':
       return 'var(--badge-light)';
-    case 'PerspectiveCamera':
+    case 'camera':
       return 'var(--badge-camera)';
-    case 'Group':
+    case 'group':
     default:
       return 'var(--badge-group)';
   }

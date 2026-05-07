@@ -11,7 +11,7 @@ function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    components: {},
+    nodeType: 'group',
     userData: {},
     ...overrides,
   };
@@ -194,169 +194,6 @@ describe('SceneDocument', () => {
       doc.deserialize({ version: 1, nodes: [] });
       expect(doc.getAllNodes()).toHaveLength(0);
     });
-
-    it('strips runtime mesh.url from serialized output (blob URLs must not persist)', () => {
-      const doc = new SceneDocument();
-      doc.addNode(makeNode({
-        id: 'm',
-        components: { mesh: { url: 'blob:http://localhost/abc', path: 'models/foo.glb' } },
-      }));
-      const file = doc.serialize();
-      const mesh = file.nodes[0].components.mesh as Record<string, unknown>;
-      expect(mesh.url).toBeUndefined();
-      expect(mesh.path).toBe('models/foo.glb');
-    });
-  });
-
-  // ── migrateNodeComponents ───────────────────────────────────────────────────
-
-  // ── prefab migration (legacy id → stripped in P4) ───────────────────────
-  //
-  // P4 removes the IDB→file migration that produced the prefabIdToPath map.
-  // Any node still carrying prefab.id (UUID) has no resolvable path and is stripped.
-
-  describe('prefab migration (legacy id → stripped in P4)', () => {
-    it('strips prefab.id (P4: IDB migration removed, no map to resolve)', () => {
-      const doc = new SceneDocument();
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-pfb-1' } } })],
-      });
-      const node = doc.getNode('n')!;
-      // prefab component is stripped (id-only ref is unresolvable post-P4)
-      expect('prefab' in node.components).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('uuid-pfb-1'),
-      );
-      consoleSpy.mockRestore();
-    });
-
-    it('strips prefab.id with no throw (soft-fail)', () => {
-      const doc = new SceneDocument();
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { prefab: { id: 'uuid-orphan' } } })],
-      });
-      const node = doc.getNode('n')!;
-      expect('prefab' in node.components).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('uuid-orphan'),
-      );
-      consoleSpy.mockRestore();
-    });
-
-    it('does not touch prefab that already has { path } (no id)', () => {
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { prefab: { path: 'prefabs/table.prefab' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const prefab = node.components['prefab'] as Record<string, unknown>;
-      expect(prefab['path']).toBe('prefabs/table.prefab');
-      expect(prefab['id']).toBeUndefined();
-    });
-
-    it('strips prefab.url from serialized output', () => {
-      const doc = new SceneDocument();
-      doc.addNode(makeNode({
-        id: 'pf',
-        components: { prefab: { url: 'blob:http://localhost/abc', path: 'prefabs/chair.prefab' } },
-      }));
-      const file = doc.serialize();
-      const prefab = file.nodes[0].components.prefab as Record<string, unknown>;
-      expect(prefab.url).toBeUndefined();
-      expect(prefab.path).toBe('prefabs/chair.prefab');
-    });
-  });
-
-  describe('mesh migration (legacy source → { path, nodePath? })', () => {
-    it('migrates legacy mesh.source (filename only) to { path }', () => {
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'model.glb' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const mesh = node.components['mesh'] as Record<string, unknown>;
-      expect(mesh['path']).toBe('models/model.glb');
-      expect(mesh['source']).toBeUndefined();
-      expect(mesh['nodePath']).toBeUndefined();
-    });
-
-    it('migrates legacy mesh.source with colon (filename:nodePath)', () => {
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'character.glb:Torso' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const mesh = node.components['mesh'] as Record<string, unknown>;
-      expect(mesh['path']).toBe('models/character.glb');
-      expect(mesh['nodePath']).toBe('Torso');
-      expect(mesh['source']).toBeUndefined();
-    });
-
-    it('preserves source that already contains "/" as-is (path-like)', () => {
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { mesh: { source: 'models/chair.glb' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const mesh = node.components['mesh'] as Record<string, unknown>;
-      expect(mesh['path']).toBe('models/chair.glb');
-      expect(mesh['source']).toBeUndefined();
-    });
-
-    it('does not touch mesh that already has { path } shape (no source)', () => {
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { mesh: { path: 'models/desk.glb', nodePath: 'Legs' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const mesh = node.components['mesh'] as Record<string, unknown>;
-      expect(mesh['path']).toBe('models/desk.glb');
-      expect(mesh['nodePath']).toBe('Legs');
-    });
-
-    it('leaf → prefab migration + mesh migration work together (id stripped post-P4)', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const doc = new SceneDocument();
-      // P4: prefab.id is stripped regardless (no map). Leaf migration still renames 'leaf' → 'prefab'
-      // but the result is immediately stripped by the id-strip check.
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' }, mesh: { source: 'a.glb' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const comp = node.components as Record<string, unknown>;
-      // prefab component stripped (id-only ref unresolvable)
-      expect('prefab' in comp).toBe(false);
-      expect('leaf' in comp).toBe(false);
-      // mesh migration still applied
-      const mesh = comp['mesh'] as Record<string, unknown>;
-      expect(mesh['path']).toBe('models/a.glb');
-      consoleSpy.mockRestore();
-    });
-
-    it('strips prefab when leaf migration results in unknown id', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const doc = new SceneDocument();
-      doc.deserialize({
-        version: 1,
-        nodes: [makeNode({ id: 'n', components: { leaf: { id: 'pf-1' } } })],
-      });
-      const node = doc.getNode('n')!;
-      const comp = node.components as Record<string, unknown>;
-      // Orphan: prefab was stripped since id is unresolvable
-      expect('prefab' in comp).toBe(false);
-      expect('leaf' in comp).toBe(false);
-      consoleSpy.mockRestore();
-    });
   });
 
   describe('createNode', () => {
@@ -369,7 +206,7 @@ describe('SceneDocument', () => {
       expect(node.position).toEqual([0, 0, 0]);
       expect(node.rotation).toEqual([0, 0, 0]);
       expect(node.scale).toEqual([1, 1, 1]);
-      expect(node.components).toEqual({});
+      expect(node.nodeType).toBe('group');
       expect(node.userData).toEqual({});
       expect(typeof node.id).toBe('string');
       expect(node.id.length).toBeGreaterThan(0);

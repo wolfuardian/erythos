@@ -14,7 +14,7 @@ function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    components: {},
+    nodeType: 'group',
     userData: {},
     ...overrides,
   };
@@ -251,7 +251,7 @@ describe('SceneSync', () => {
 
   // ── mesh component ───────────────────────────────────────────────────────────
 
-  describe('components.mesh', () => {
+  describe('nodeType mesh', () => {
     function makeMockCache(hit: boolean): ResourceCache {
       const meshObj = new Object3D();
       meshObj.name = 'cloned-mesh';
@@ -268,51 +268,32 @@ describe('SceneSync', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { url: 'blob:test/1', path: 'models/model.glb' } },
+        nodeType: 'mesh',
+        asset: 'blob:test/1',
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0].name).toBe('cloned-mesh');
     });
 
-    it('cache hit with nodePath: passes url and nodePath to cloneSubtree', () => {
-      let capturedUrl = '';
-      let capturedNodePath: string | undefined;
-      const meshObj = new Object3D();
-      meshObj.name = 'Torso';
-      const mockCache = {
-        has: (url: string) => { capturedUrl = url; return true; },
-        cloneSubtree: (url: string, np?: string) => { capturedUrl = url; capturedNodePath = np; return meshObj.clone(true); },
-        loadFromURL: async () => new Group(),
-        evict: () => {},
-        clear: () => {},
-      } as unknown as ResourceCache;
-
-      const syncWithCache = new SceneSync(doc, scene, mockCache);
-      doc.addNode(makeNode({
-        id: 'mesh-node',
-        components: { mesh: { url: 'blob:test/char', path: 'models/character.glb', nodePath: 'Torso' } },
-      }));
-      expect(capturedUrl).toBe('blob:test/char');
-      expect(capturedNodePath).toBe('Torso');
-    });
-
-    it('cache miss: falls back to empty Object3D (no children)', () => {
+        it('cache miss: falls back to empty Object3D (no children)', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { url: 'blob:test/missing', path: 'models/missing.glb' } },
+        nodeType: 'mesh',
+        asset: 'blob:test/missing',
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(0);
     });
 
-    it('missing url (hydrate soft-fail): falls back to empty Object3D', () => {
-      const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
+    it('asset not in cache (hydrate soft-fail): falls back to empty Object3D', () => {
+      const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
       doc.addNode(makeNode({
         id: 'mesh-node',
-        // url absent — file-not-found during hydrate
-        components: { mesh: { path: 'models/missing.glb' } },
+        // asset not in cache — hydrate soft-fail
+        nodeType: 'mesh',
+        asset: 'assets://models/missing.glb',
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(0);
@@ -320,7 +301,7 @@ describe('SceneSync', () => {
 
     it('no mesh component: Object3D has no extra children', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
-      doc.addNode(makeNode({ id: 'plain-node', components: {} }));
+      doc.addNode(makeNode({ id: 'plain-node' }));
       const obj = syncWithCache.getObject3D('plain-node')!;
       expect(obj.children).toHaveLength(0);
     });
@@ -329,7 +310,8 @@ describe('SceneSync', () => {
       // sync (no cache) is the default created in beforeEach
       doc.addNode(makeNode({
         id: 'mesh-node',
-        components: { mesh: { url: 'blob:test/1', path: 'models/model.glb' } },
+        nodeType: 'mesh',
+        asset: 'blob:test/1',
       }));
       const obj = sync.getObject3D('mesh-node');
       expect(obj).not.toBeNull();
@@ -339,11 +321,13 @@ describe('SceneSync', () => {
 
   // ── geometry + material component ───────────────────────────────────────────
 
-  describe('components.geometry + material', () => {
+  describe('nodeType mesh (primitives)', () => {
     it('attaches a Mesh child to the entity Object3D', () => {
       doc.addNode(makeNode({
         id: 'geo-node',
-        components: { geometry: { type: 'box' }, material: { color: 0xff0000 } },
+        nodeType: 'mesh',
+        asset: 'assets://primitives/box',
+        mat: { color: 0xff0000 },
       }));
       const obj = sync.getObject3D('geo-node')!;
       expect(obj.children).toHaveLength(1);
@@ -354,7 +338,9 @@ describe('SceneSync', () => {
       for (const type of ['box', 'sphere', 'plane', 'cylinder'] as const) {
         doc.addNode(makeNode({
           id: `geo-${type}`,
-          components: { geometry: { type }, material: { color: 0xffffff } },
+          nodeType: 'mesh',
+          asset: 'assets://primitives/' + type,
+          mat: { color: 0xffffff },
         }));
         const obj = sync.getObject3D(`geo-${type}`)!;
         expect(obj.children).toHaveLength(1);
@@ -364,11 +350,12 @@ describe('SceneSync', () => {
 
   // ── light component ──────────────────────────────────────────────────────────
 
-  describe('components.light', () => {
+  describe('nodeType light', () => {
     it('attaches DirectionalLight for type directional', () => {
       doc.addNode(makeNode({
         id: 'dir-light',
-        components: { light: { type: 'directional', color: 0xffffff, intensity: 1 } },
+        nodeType: 'light',
+        light: { type: 'directional', color: 0xffffff, intensity: 1 },
       }));
       const obj = sync.getObject3D('dir-light')!;
       expect(obj.children).toHaveLength(1);
@@ -379,7 +366,8 @@ describe('SceneSync', () => {
     it('attaches AmbientLight for type ambient', () => {
       doc.addNode(makeNode({
         id: 'amb-light',
-        components: { light: { type: 'ambient', color: 0x404040, intensity: 0.5 } },
+        nodeType: 'light',
+        light: { type: 'ambient', color: 0x404040, intensity: 0.5 },
       }));
       const obj = sync.getObject3D('amb-light')!;
       expect(obj.children).toHaveLength(1);
@@ -389,11 +377,12 @@ describe('SceneSync', () => {
 
   // ── camera component ─────────────────────────────────────────────────────────
 
-  describe('components.camera', () => {
+  describe('nodeType camera', () => {
     it('attaches PerspectiveCamera with correct fov', () => {
       doc.addNode(makeNode({
         id: 'cam-node',
-        components: { camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 } },
+        nodeType: 'camera',
+        camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 },
       }));
       const obj = sync.getObject3D('cam-node')!;
       expect(obj.children).toHaveLength(1);

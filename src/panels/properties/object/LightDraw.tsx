@@ -1,8 +1,7 @@
 import { createSignal, createEffect, createMemo, Show, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { SetLightPropertyCommand } from '../../../core/commands';
-import { inferNodeType } from '../../../core/scene/inferNodeType';
-import type { LightComponent } from '../../../core/scene/SceneFormat';
+import type { LightProps } from '../../../core/scene/SceneFormat';
 import { NumberDrag } from '../../../components/NumberDrag';
 import FoldableSection from '../components/FoldableSection';
 import styles from './object.module.css';
@@ -19,10 +18,10 @@ const LightDraw: Component<Props> = (props) => {
 
   const nodeUUID = (): NodeUUID => asNodeUUID(props.uuid);
 
-  const isDirectionalLight = createMemo(() => {
+  const isLight = createMemo(() => {
     bridge.objectVersion();
     const node = bridge.getNode(nodeUUID());
-    return node != null && inferNodeType(node) === 'DirectionalLight';
+    return node != null && node.nodeType === 'light';
   });
 
   const [intensity, setIntensity] = createSignal(1);
@@ -30,8 +29,8 @@ const LightDraw: Component<Props> = (props) => {
   createEffect(() => {
     bridge.objectVersion();
     const node = bridge.getNode(nodeUUID());
-    if (!node || inferNodeType(node) !== 'DirectionalLight') return;
-    const light = node.components?.light as LightComponent | null;
+    if (!node || node.nodeType !== 'light') return;
+    const light = node.light as LightProps | null;
     if (light) {
       setIntensity(light.intensity);
     }
@@ -39,12 +38,12 @@ const LightDraw: Component<Props> = (props) => {
 
   const getOldIntensity = (): number => {
     const node = bridge.getNode(nodeUUID());
-    const light = node?.components?.light as LightComponent | null;
+    const light = node?.light as LightProps | null;
     return light?.intensity ?? 1;
   };
 
   return (
-    <Show when={isDirectionalLight()}>
+    <Show when={isLight()}>
       <FoldableSection sectionKey="light" label="LIGHT">
         <div class={styles.fieldRow}>
           <label class={styles.fieldLabel}>Intensity</label>

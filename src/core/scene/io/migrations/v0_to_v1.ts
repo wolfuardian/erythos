@@ -165,13 +165,26 @@ export function v0_to_v1(raw: unknown): ErythosSceneV1 {
   const input = raw as Record<string, unknown>;
   const rawNodes = Array.isArray(input['nodes']) ? input['nodes'] : [];
 
+  // Preserve existing env if already present (round-trip from serialize())
+  const rawEnv = input['env'] as Record<string, unknown> | undefined;
+  const env = rawEnv
+    ? {
+        hdri:      (rawEnv['hdri'] as string | null) ?? null,
+        intensity: typeof rawEnv['intensity'] === 'number' ? rawEnv['intensity'] : 1,
+        rotation:  typeof rawEnv['rotation']  === 'number' ? rawEnv['rotation']  : 0,
+      }
+    : { hdri: null, intensity: 1, rotation: 0 };
+
   return {
     version: 1,
-    env: {
-      hdri: null,
-      intensity: 1,
-      rotation: 0,
-    },
-    nodes: rawNodes.map((n) => migrateNode(n as V0Node)),
+    env,
+    nodes: rawNodes.map((n) => {
+      const node = n as Record<string, unknown>;
+      // If the node already has nodeType (already v1 shape), pass through directly.
+      if (typeof node['nodeType'] === 'string') {
+        return node as unknown as SceneNode;
+      }
+      return migrateNode(n as V0Node);
+    }),
   };
 }

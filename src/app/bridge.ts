@@ -3,7 +3,7 @@ import type { Object3D } from 'three';
 import type { Editor } from '../core/Editor';
 import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
-import type { EnvironmentSettings } from '../core/scene/EnvironmentSettings';
+import type { SceneEnv as EnvironmentSettings } from '../core/scene/SceneFormat';
 import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';

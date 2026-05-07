@@ -25,50 +25,62 @@ export const HeaderToolBar: Component<{
     switch (type) {
       case 'cube': {
         const node = editor.sceneDocument.createNode('Cube');
-        node.components = { geometry: { type: 'box' }, material: { color: 0x808080 } };
+        node.nodeType = 'mesh';
+        node.asset = 'assets://primitives/box';
+        node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'sphere': {
         const node = editor.sceneDocument.createNode('Sphere');
-        node.components = { geometry: { type: 'sphere' }, material: { color: 0x808080 } };
+        node.nodeType = 'mesh';
+        node.asset = 'assets://primitives/sphere';
+        node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'plane': {
         const node = editor.sceneDocument.createNode('Plane');
-        node.components = { geometry: { type: 'plane' }, material: { color: 0x808080 } };
+        node.nodeType = 'mesh';
+        node.asset = 'assets://primitives/plane';
+        node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'cylinder': {
         const node = editor.sceneDocument.createNode('Cylinder');
-        node.components = { geometry: { type: 'cylinder' }, material: { color: 0x808080 } };
+        node.nodeType = 'mesh';
+        node.asset = 'assets://primitives/cylinder';
+        node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'directional-light': {
         const node = editor.sceneDocument.createNode('Directional Light');
-        node.components = { light: { type: 'directional', color: 0xffffff, intensity: 1 } };
+        node.nodeType = 'light';
+        node.light = { type: 'directional', color: 0xffffff, intensity: 1 };
         node.position = [2, 4, 3];
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'ambient-light': {
         const node = editor.sceneDocument.createNode('Ambient Light');
-        node.components = { light: { type: 'ambient', color: 0xffffff, intensity: 0.4 } };
+        node.nodeType = 'light';
+        node.light = { type: 'ambient', color: 0xffffff, intensity: 0.4 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'camera': {
         const node = editor.sceneDocument.createNode('Camera');
-        node.components = { camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 } };
+        node.nodeType = 'camera';
+        node.camera = { type: 'perspective', fov: 50, near: 0.1, far: 100 };
         node.position = [0, 2, 5];
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }
       case 'group': {
         const node = editor.sceneDocument.createNode('Group');
+        node.nodeType = 'group';
         editor.execute(new AddNodeCommand(editor, node));
         break;
       }

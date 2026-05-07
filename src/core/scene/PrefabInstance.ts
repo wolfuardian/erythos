@@ -5,7 +5,7 @@ import type { NodeUUID } from '../../utils/branded';
  * Returns true if `nodeId` is a descendant of a prefab instance root.
  *
  * A node is a prefab descendant if any ancestor (excluding the node itself)
- * has `components.prefab` set. Instance roots themselves are NOT descendants.
+ * has `nodeType === 'prefab'`. Instance roots themselves are NOT descendants.
  *
  * @param nodeId  - The UUID of the node to test.
  * @param nodes   - Full flat node list (e.g. from bridge.nodes() or SceneDocument.getAllNodes()).
@@ -19,7 +19,7 @@ export function isPrefabDescendant(nodeId: NodeUUID, nodes: SceneNode[]): boolea
   while (cursor !== null) {
     const ancestor = nodeMap.get(cursor);
     if (!ancestor) break;
-    if (ancestor.components.prefab != null) return true;
+    if (ancestor.nodeType === 'prefab') return true;
     cursor = ancestor.parent;
   }
   return false;
@@ -40,7 +40,7 @@ export function findPrefabInstanceRoot(nodeId: NodeUUID, nodes: SceneNode[]): No
   while (cursor !== null) {
     const ancestor = nodeMap.get(cursor);
     if (!ancestor) break;
-    if (ancestor.components.prefab != null) return ancestor.id;
+    if (ancestor.nodeType === 'prefab') return ancestor.id;
     cursor = ancestor.parent;
   }
   return null;

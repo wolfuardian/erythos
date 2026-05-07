@@ -1,4 +1,4 @@
-import type { EnvironmentSettings } from '../scene/EnvironmentSettings';
+import type { SceneEnv } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
 
@@ -6,15 +6,15 @@ export class SetEnvironmentCommand extends Command {
   readonly type = 'SetEnvironment';
   updatable = true;
 
-  private prop: keyof EnvironmentSettings;
-  private oldValue: number;
-  private newValue: number;
+  private prop: keyof SceneEnv;
+  private oldValue: SceneEnv[keyof SceneEnv];
+  private newValue: SceneEnv[keyof SceneEnv];
 
   constructor(
     editor: Editor,
-    prop: keyof EnvironmentSettings,
-    newValue: number,
-    oldValue: number,
+    prop: keyof SceneEnv,
+    newValue: SceneEnv[keyof SceneEnv],
+    oldValue: SceneEnv[keyof SceneEnv],
   ) {
     super(editor);
     this.prop = prop;
@@ -23,11 +23,11 @@ export class SetEnvironmentCommand extends Command {
   }
 
   execute(): void {
-    this.editor.setEnvironmentSettings({ [this.prop]: this.newValue } as Partial<EnvironmentSettings>);
+    this.editor.setEnvironmentSettings({ [this.prop]: this.newValue } as Partial<SceneEnv>);
   }
 
   undo(): void {
-    this.editor.setEnvironmentSettings({ [this.prop]: this.oldValue } as Partial<EnvironmentSettings>);
+    this.editor.setEnvironmentSettings({ [this.prop]: this.oldValue } as Partial<SceneEnv>);
   }
 
   canMerge(cmd: Command): boolean {

@@ -2,7 +2,6 @@ import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { NumberDrag } from '../../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../../core/commands';
-import { asAssetPath, asBlobURL } from '../../../utils/branded';
 import styles from './EnvironmentDraw.module.css';
 
 const EnvironmentDraw: Component = () => {
@@ -12,18 +11,16 @@ const EnvironmentDraw: Component = () => {
   const env = () => bridge.environmentSettings();
 
   const handleClear = () => {
-    editor.setEnvironmentSettings({ hdrUrl: null });
+    editor.setEnvironmentSettings({ hdri: null });
   };
 
   const projectHdrFiles = () => bridge.projectFiles().filter((f) => f.type === 'hdr');
 
   const handleSelectFromProject = async (path: string) => {
     if (!path) return;
-    const file = await editor.projectManager.readFile(asAssetPath(path));
-    const blob = new Blob([await file.arrayBuffer()], { type: 'application/octet-stream' });
-    const url = asBlobURL(URL.createObjectURL(blob));
-    editor.setEnvironmentSettings({ hdrUrl: url });
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    // Store the assets:// URL in SceneEnv.hdri for persistence
+    // Viewport resolves it at render time
+    editor.setEnvironmentSettings({ hdri: `assets://${path}` });
   };
 
   return (
@@ -31,9 +28,9 @@ const EnvironmentDraw: Component = () => {
       {/* HDR Image section */}
       <div class={styles.section}>
         <div class={styles.sectionLabel}>HDR Image</div>
-        <Show when={env().hdrUrl}>
+        <Show when={env().hdri}>
           <div class={styles.hdrRow}>
-            <span class={styles.hdrUrl}>{env().hdrUrl}</span>
+            <span class={styles.hdrUrl}>{env().hdri}</span>
             <button onClick={handleClear} class={styles.clearBtn}>×</button>
           </div>
         </Show>

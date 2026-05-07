@@ -185,19 +185,8 @@ const ViewportPanel: Component = () => {
         const dropPosition = computeDropPosition(e, canvasRef, viewport);
 
         try {
-          // Look up URL from PrefabRegistry via path, then get the parsed asset
-          const url = editor.prefabRegistry.getURLForPath(prefabPath);
-          if (url) {
-            const asset = editor.prefabRegistry.get(url);
-            if (asset) {
-              editor.execute(new InstantiatePrefabCommand(editor, asset, prefabPath, dropPosition));
-            }
-          } else {
-            // URL not cached yet — load via urlFor + registry
-            const resolvedURL = await editor.projectManager.urlFor(prefabPath);
-            const asset = await editor.prefabRegistry.loadFromURL(resolvedURL, prefabPath);
-            editor.execute(new InstantiatePrefabCommand(editor, asset, prefabPath, dropPosition));
-          }
+          // v1: InstantiatePrefabCommand only needs the path (no asset expansion)
+          editor.execute(new InstantiatePrefabCommand(editor, prefabPath, dropPosition));
         } catch (err) {
           setErrorMessage(err instanceof Error ? err.message : String(err));
         }
@@ -489,11 +478,11 @@ const ViewportPanel: Component = () => {
     viewport.setEnvironmentRotation(env.rotation * Math.PI / 180);
   });
 
-  // hdrUrl 變更時載入/清除 HDRI（獨立 effect 避免每次 intensity 變更都重新載入 HDR）
+  // hdri 變更時載入/清除 HDRI（獨立 effect 避免每次 intensity 變更都重新載入 HDR）
   let lastHdrUrl: string | null = null;
   createEffect(() => {
     const env = bridge.environmentSettings();
-    const url = env.hdrUrl;
+    const url = env.hdri;
     if (url === lastHdrUrl) return; // 沒變就不重新載入
     lastHdrUrl = url;
 
