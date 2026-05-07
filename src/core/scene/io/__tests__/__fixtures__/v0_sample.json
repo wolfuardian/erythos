@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Mesh Node",
+      "parent": null,
+      "order": 0,
+      "position": [1, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {
+        "mesh": { "path": "models/chair.glb" }
+      },
+      "userData": { "someKey": "someValue" }
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Key Light",
+      "parent": null,
+      "order": 1,
+      "position": [5, 5, 5],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {
+        "light": { "type": "directional", "color": 16777215, "intensity": 1.5 }
+      },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Main Camera",
+      "parent": null,
+      "order": 2,
+      "position": [0, 2, 10],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {
+        "camera": { "type": "perspective", "fov": 60, "near": 0.1, "far": 1000 }
+      },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "name": "Tree Prefab",
+      "parent": null,
+      "order": 3,
+      "position": [10, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {
+        "prefab": { "path": "prefabs/tree-pine.prefab" }
+      },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000005",
+      "name": "Group Container",
+      "parent": null,
+      "order": 4,
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {},
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000006",
+      "name": "Mesh With Material",
+      "parent": null,
+      "order": 5,
+      "position": [3, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [2, 2, 2],
+      "components": {
+        "mesh": { "path": "models/sphere.glb" },
+        "material": {
+          "color": 16711680,
+          "roughness": 0.3,
+          "metalness": 0.8,
+          "emissive": 255,
+          "opacity": 0.9,
+          "transparent": true,
+          "wireframe": false
+        }
+      },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000007",
+      "name": "Child Mesh",
+      "parent": "00000000-0000-0000-0000-000000000005",
+      "order": 0,
+      "position": [0, 1, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "components": {
+        "geometry": { "type": "sphere" }
+      },
+      "userData": {}
+    }
+  ]
+}
