@@ -195,7 +195,7 @@ export function validateScene(
     if (byteLength > 1_048_576) {
       violations.push({
         path: '(file)',
-        reason: `ファイルサイズ ${byteLength} bytes が上限 1MB (1048576 bytes) を超えています`,
+        reason: `檔案大小 ${byteLength} bytes 超過上限 1MB (1048576 bytes)`,
       });
     }
   }
@@ -213,7 +213,7 @@ export function validateScene(
           if (key in node) {
             violations.push({
               path: `nodes[${i}].${key}`,
-              reason: `インライン geometry フィールド "${key}" は禁止です。asset URL (assets://) を使用してください。`,
+              reason: `禁止使用內嵌 geometry 欄位 "${key}"，請改用 asset URL (assets://)。`,
             });
           }
         }
@@ -260,7 +260,7 @@ export function validateScene(
     if (n.parent !== null && !idSet.has(n.parent)) {
       violations.push({
         path: `nodes[${i}].parent`,
-        reason: `ノード "${n.name}" (id: ${n.id}) の parent "${n.parent}" は同じファイルに存在しません。`,
+        reason: `節點 "${n.name}" (id: ${n.id}) 的 parent "${n.parent}" 不存在於同一檔案中。`,
       });
     }
   }
@@ -273,7 +273,7 @@ export function validateScene(
       if (seen.has(id)) {
         violations.push({
           path: `nodes[${i}].id`,
-          reason: `id "${id}" が重複しています (最初の出現: nodes[${seen.get(id)}])。`,
+          reason: `id "${id}" 重複 (首次出現於 nodes[${seen.get(id)}])。`,
         });
       } else {
         seen.set(id, i);
@@ -290,7 +290,7 @@ export function validateScene(
     if (countableFields.length > 8) {
       violations.push({
         path: `nodes[${i}].mat`,
-        reason: `MaterialOverride に ${countableFields.length} フィールドがあります (transparent/wireframe 除く上限 8)。materials:// に抽出してください。`,
+        reason: `MaterialOverride 有 ${countableFields.length} 個欄位（不含 transparent/wireframe，上限 8）。請抽離至 materials://。`,
       });
     }
   }
@@ -304,19 +304,19 @@ export function validateScene(
         if (n.asset === undefined) {
           violations.push({
             path: `nodes[${i}].asset`,
-            reason: `ノード "${n.name}" の nodeType "${n.nodeType}" には asset フィールドが必要です。`,
+            reason: `節點 "${n.name}" 的 nodeType "${n.nodeType}" 必須包含 asset 欄位。`,
           });
         }
         if (n.light !== undefined) {
           violations.push({
             path: `nodes[${i}].light`,
-            reason: `nodeType "${n.nodeType}" に light フィールドは不正です。`,
+            reason: `nodeType "${n.nodeType}" 不得包含 light 欄位。`,
           });
         }
         if (n.camera !== undefined) {
           violations.push({
             path: `nodes[${i}].camera`,
-            reason: `nodeType "${n.nodeType}" に camera フィールドは不正です。`,
+            reason: `nodeType "${n.nodeType}" 不得包含 camera 欄位。`,
           });
         }
         break;
@@ -324,19 +324,19 @@ export function validateScene(
         if (n.light === undefined) {
           violations.push({
             path: `nodes[${i}].light`,
-            reason: `ノード "${n.name}" の nodeType "light" には light フィールドが必要です。`,
+            reason: `節點 "${n.name}" 的 nodeType "light" 必須包含 light 欄位。`,
           });
         }
         if (n.asset !== undefined) {
           violations.push({
             path: `nodes[${i}].asset`,
-            reason: `nodeType "light" に asset フィールドは不正です。`,
+            reason: `nodeType "light" 不得包含 asset 欄位。`,
           });
         }
         if (n.camera !== undefined) {
           violations.push({
             path: `nodes[${i}].camera`,
-            reason: `nodeType "light" に camera フィールドは不正です。`,
+            reason: `nodeType "light" 不得包含 camera 欄位。`,
           });
         }
         break;
@@ -344,19 +344,19 @@ export function validateScene(
         if (n.camera === undefined) {
           violations.push({
             path: `nodes[${i}].camera`,
-            reason: `ノード "${n.name}" の nodeType "camera" には camera フィールドが必要です。`,
+            reason: `節點 "${n.name}" 的 nodeType "camera" 必須包含 camera 欄位。`,
           });
         }
         if (n.asset !== undefined) {
           violations.push({
             path: `nodes[${i}].asset`,
-            reason: `nodeType "camera" に asset フィールドは不正です。`,
+            reason: `nodeType "camera" 不得包含 asset 欄位。`,
           });
         }
         if (n.light !== undefined) {
           violations.push({
             path: `nodes[${i}].light`,
-            reason: `nodeType "camera" に light フィールドは不正です。`,
+            reason: `nodeType "camera" 不得包含 light 欄位。`,
           });
         }
         break;
@@ -364,19 +364,19 @@ export function validateScene(
         if (n.asset !== undefined) {
           violations.push({
             path: `nodes[${i}].asset`,
-            reason: `nodeType "group" に asset フィールドは不正です。`,
+            reason: `nodeType "group" 不得包含 asset 欄位。`,
           });
         }
         if (n.light !== undefined) {
           violations.push({
             path: `nodes[${i}].light`,
-            reason: `nodeType "group" に light フィールドは不正です。`,
+            reason: `nodeType "group" 不得包含 light 欄位。`,
           });
         }
         if (n.camera !== undefined) {
           violations.push({
             path: `nodes[${i}].camera`,
-            reason: `nodeType "group" に camera フィールドは不正です。`,
+            reason: `nodeType "group" 不得包含 camera 欄位。`,
           });
         }
         break;
@@ -389,7 +389,7 @@ export function validateScene(
     if (ud !== undefined && Object.keys(ud).length > 0) {
       violations.push({
         path: `nodes[${i}].userData`,
-        reason: `userData は空 {} でなければなりません。v1 は userData への書き込みを禁止しています (keys: ${Object.keys(ud).join(', ')})。`,
+        reason: `userData 必須為空 {}，v1 禁止寫入 userData (keys: ${Object.keys(ud).join(', ')})。`,
       });
     }
   }
@@ -402,7 +402,7 @@ export function validateScene(
     if (n.nodeType === 'prefab' && parentIdSet.has(n.id)) {
       violations.push({
         path: `nodes[${i}]`,
-        reason: `prefab ノード "${n.name}" (id: ${n.id}) が子ノードを持っています。prefab は参照のみで子ツリーを展開してはいけません。`,
+        reason: `prefab 節點 "${n.name}" (id: ${n.id}) 含有子節點。prefab 僅作為參照，不得展開子樹。`,
       });
     }
   }
