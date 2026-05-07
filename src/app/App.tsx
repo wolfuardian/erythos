@@ -2,7 +2,7 @@ import { type Component, createEffect, createSignal, onCleanup, onMount, Show } 
 import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
-import { InMemorySyncEngine } from '../core/sync/InMemorySyncEngine';
+import { LocalSyncEngine } from '../core/sync/LocalSyncEngine';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { createEditorBridge, type EditorBridge } from './bridge';
@@ -22,8 +22,8 @@ import styles from './App.module.css';
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
   const projectManager = new ProjectManager();
-  // Singleton SyncEngine — constructed once at app boot; swapped for LocalSyncEngine in step 3.
-  const syncEngine = new InMemorySyncEngine();
+  // Singleton SyncEngine — IndexedDB-backed; persists across page reloads.
+  const syncEngine = new LocalSyncEngine();
 
   const [editor, setEditor] = createSignal<Editor | null>(null);
   const [bridge, setBridge] = createSignal<EditorBridge | null>(null);
