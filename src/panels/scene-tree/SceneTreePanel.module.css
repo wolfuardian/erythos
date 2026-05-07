@@ -1,22 +1,10 @@
 /** SceneTreePanel — CSS Modules migration (refs #733) */
 
-.panel {
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-well-outer);
-  border-radius: var(--radius-lg);
-  margin: 3px;
-  box-sizing: border-box;
-}
+/* .panel root class removed — replaced by <Panel> anatomy component */
 
+/* Layout (flex:1, overflow:auto, position:relative) handled by <PanelContent>.
+   Only content-specific rules remain here. */
 .scrollArea {
-  position: relative;
-  flex: 1;
-  overflow: auto;
   padding: var(--space-xs) 0;
   outline: none;
 }
