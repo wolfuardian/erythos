@@ -36,6 +36,8 @@ export interface EditorBridge {
   confirmBeforeLoad: Accessor<boolean>;
   hasClipboard: Accessor<boolean>;
   environmentSettings: Accessor<EnvironmentSettings>;
+  /** Set of node UUIDs with broken asset references (updated on scene reload). */
+  brokenRefIds: Accessor<ReadonlySet<string>>;
   isEnvSelected: Accessor<boolean>;
   projectOpen: Accessor<boolean>;
   projectName: Accessor<string | null>;
@@ -131,6 +133,7 @@ export function createEditorBridge(
   const onSceneReplaced = () => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setSceneVersion);
+    setBrokenRefIds(new Set(editor.sceneSync.getBrokenRefIds()));
   };
 
   // Subscribe to editor events
@@ -152,8 +155,16 @@ export function createEditorBridge(
   const [environmentSettings, setEnvironmentSettings] = createSignal<EnvironmentSettings>(
     editor.getEnvironmentSettings()
   );
+
+  // Broken-ref IDs signal -- updated whenever scene is replaced or nodes change
+  const [brokenRefIds, setBrokenRefIds] = createSignal<ReadonlySet<string>>(
+    new Set(editor.sceneSync.getBrokenRefIds())
+  );
   const onEnvChanged = () => setEnvironmentSettings(editor.getEnvironmentSettings());
   editor.events.on('environmentChanged', onEnvChanged);
+  // Subscribe to brokenRefsChanged (fired by Editor.loadScene after full hydration)
+  const onBrokenRefsChanged = () => setBrokenRefIds(new Set(editor.sceneSync.getBrokenRefIds()));
+  editor.events.on('brokenRefsChanged', onBrokenRefsChanged);
 
   // Subscribe to env selection events
   const [isEnvSelected, setIsEnvSelected] = createSignal<boolean>(false);
@@ -180,6 +191,7 @@ export function createEditorBridge(
     editor.sceneDocument.events.off('sceneReplaced', onSceneReplaced);
     editor.clipboard.off('clipboardChanged', onClipboardChanged);
     editor.events.off('environmentChanged', onEnvChanged);
+    editor.events.off('brokenRefsChanged', onBrokenRefsChanged);
     editor.events.off('envSelectionChanged', onEnvSelectionChanged);
     unsubProject();
   };
@@ -201,6 +213,7 @@ export function createEditorBridge(
     confirmBeforeLoad,
     hasClipboard,
     environmentSettings,
+    brokenRefIds,
     isEnvSelected,
     projectOpen,
     projectName,

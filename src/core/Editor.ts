@@ -16,6 +16,7 @@ import type { SceneNode } from './scene/SceneFormat';
 import type { SceneEnv } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
 import { AssetResolver } from './io/AssetResolver';
+import { PrefabGraph } from './io/PrefabGraph';
 import { prefabPathForName } from '../utils/prefabPath';
 
 export class Editor {
@@ -30,6 +31,7 @@ export class Editor {
   readonly keybindings: KeybindingManager;
   readonly clipboard: Clipboard;
   readonly assetResolver: AssetResolver;
+  readonly prefabGraph: PrefabGraph;
 
   private _transformMode: TransformMode = 'translate';
 
@@ -40,6 +42,7 @@ export class Editor {
     this.resourceCache = new ResourceCache();
     this.prefabRegistry = new PrefabRegistry();
     this.assetResolver = new AssetResolver(projectManager);
+    this.prefabGraph = new PrefabGraph();
     this.sceneSync = new SceneSync(this.sceneDocument, this.scene, this.resourceCache);
     this.events = new EventEmitter();
     this.history = new History(this.events);
@@ -206,6 +209,7 @@ export class Editor {
 
     // Clear stale resolved URL mappings from any previous load.
     this.sceneSync.clearResolvedBlobUrls();
+    this.sceneSync.clearBrokenRefs();
 
     // Hydrate mesh and prefab URLs.
     // IMPORTANT: node.asset is never mutated here — it always holds the persistent
@@ -225,6 +229,7 @@ export class Editor {
           this.sceneSync.setResolvedBlobUrl(node.asset, blobUrl);
         } catch (err) {
           console.warn(`[Editor] loadScene: could not hydrate mesh asset "${node.asset}" — will render empty:`, err);
+          this.sceneSync.markBrokenRef(node.id);
         }
       }
 
@@ -239,6 +244,7 @@ export class Editor {
           }
         } catch (err) {
           console.warn(`[Editor] loadScene: could not hydrate prefab "${node.asset}" — will render empty:`, err);
+          this.sceneSync.markBrokenRef(node.id);
         }
       }
     }
@@ -247,6 +253,7 @@ export class Editor {
     // sceneReplaced was emitted by deserialize, but SceneSync ran before hydration.
     // Kick a second rebuild to pick up loaded assets.
     this.sceneSync.rebuild();
+    this.events.emit('brokenRefsChanged');
   }
 
   // ── Scene clear ───────────────────────────────────

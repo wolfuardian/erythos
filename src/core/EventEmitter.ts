@@ -32,6 +32,7 @@ export interface EditorEventMap {
   prefabStoreChanged:     [];
   environmentChanged:     [];
   envSelectionChanged:    [selected: boolean];
+  brokenRefsChanged:      [];
 
 }
 

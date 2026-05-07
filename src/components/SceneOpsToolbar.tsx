@@ -5,6 +5,7 @@ import { useEditor } from '../app/EditorContext';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import type { TransformMode } from '../core/EventEmitter';
 import styles from './SceneOpsToolbar.module.css';
+import { BrokenRefsBadge } from './BrokenRefsBadge';
 
 export const SceneOpsToolbar: Component<{
   orientation: 'horizontal' | 'vertical';
@@ -172,6 +173,9 @@ export const SceneOpsToolbar: Component<{
         message={errorMsg()}
         onClose={() => setErrorMsg('')}
       />
+
+      {/* Broken refs badge -- shows count + details when assets are missing */}
+      <BrokenRefsBadge />
     </div>
   );
 };

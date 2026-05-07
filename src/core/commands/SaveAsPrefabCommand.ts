@@ -5,6 +5,9 @@ import type { PrefabAsset } from '../scene/PrefabFormat';
 import type { AssetPath, NodeUUID } from '../../utils/branded';
 import type { NodeType, MaterialOverride, LightProps, CameraProps } from '../scene/SceneFormat';
 
+/** Re-export for consumers. */
+export { CircularReferenceError } from '../io/PrefabGraph';
+
 /** Snapshot of type-specific fields captured before execute() modifies the root node. */
 interface NodeTypeSnapshot {
   nodeType: NodeType;
@@ -34,6 +37,32 @@ export class SaveAsPrefabCommand extends Command {
     const allNodes = this.editor.sceneDocument.getAllNodes();
     const root = this.editor.sceneDocument.getNode(this.rootUUID);
     if (!root) return;
+
+    // Cycle guard: check that saving as a prefab won't create a reference cycle.
+    // The new prefab URL would be "prefabs://<name>". Any prefab-typed nodes in the
+    // subtree that reference a prefab which transitively depends on the new name would form a cycle.
+    {
+      const graph = this.editor.prefabGraph;
+      const newPrefabUrl = `prefabs://${this.name}`;
+      if (graph) {
+        const allNodes = this.editor.sceneDocument.getAllNodes();
+        const subtreeIds = new Set<string>();
+        const queue: string[] = [this.rootUUID];
+        while (queue.length > 0) {
+          const id = queue.shift()!;
+          subtreeIds.add(id);
+          for (const n of allNodes) {
+            if (n.parent === id) queue.push(n.id);
+          }
+        }
+        for (const id of subtreeIds) {
+          const n = allNodes.find(x => x.id === id);
+          if (n?.nodeType === 'prefab' && n.asset) {
+            graph.assertNoCycle(newPrefabUrl, n.asset);
+          }
+        }
+      }
+    }
 
     // Snapshot all type-specific fields before we overwrite them.
     // undo() uses this to restore the original node shape exactly.

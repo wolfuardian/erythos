@@ -204,3 +204,14 @@
   color: var(--text-disabled);
   opacity: 0.45;
 }
+
+
+/* -- Broken reference state (asset missing / cycle guard) ─────────────────── */
+
+.row.brokenRef {
+  /* Row itself keeps its background; name color signals the error */
+}
+
+.row.brokenRef .nodeName {
+  color: var(--accent-red, #e05252);
+}
