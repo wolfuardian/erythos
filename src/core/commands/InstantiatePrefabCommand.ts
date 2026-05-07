@@ -4,6 +4,10 @@ import { generateUUID } from '../../utils/uuid';
 import { asNodeUUID } from '../../utils/branded';
 import type { AssetPath } from '../../utils/branded';
 import type { SceneNode, Vec3 } from '../scene/SceneFormat';
+import { CircularReferenceError as _CREImport } from '../io/PrefabGraph';
+
+/** Re-export for consumers that catch cycle errors from commands. */
+export { CircularReferenceError } from '../io/PrefabGraph';
 
 export class InstantiatePrefabCommand extends Command {
   readonly type = 'InstantiateLeaf';  // persisted in undo/redo history — do NOT rename
@@ -26,7 +30,18 @@ export class InstantiatePrefabCommand extends Command {
   }
 
   execute(): void {
-    const node: SceneNode = {
+    // Cycle guard: check that instantiating this prefab won't create a reference cycle.
+    // Use PrefabGraph if available. Throw CircularReferenceError to abort the command
+    // (History.execute will not push the command since it throws before returning).
+    {
+      const graph = this.editor.prefabGraph;
+      const currentScenePath = this.editor.projectManager.currentScenePath();
+      if (graph && currentScenePath) {
+        graph.assertNoCycle(currentScenePath, this.prefabAssetUrl);
+      }
+    }
+
+        const node: SceneNode = {
       id: asNodeUUID(generateUUID()),
       name: this.prefabAssetUrl.replace('prefabs://', ''),
       parent: null,

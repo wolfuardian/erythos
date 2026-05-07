@@ -103,6 +103,14 @@ export class SceneSync {
    */
   private readonly _resolvedBlobUrls = new Map<string, string>();
 
+  /**
+   * Runtime-only set of node UUIDs whose asset reference failed to resolve.
+   * Populated by hydratePrefab (registry lookup fails / cycle guard) and
+   * by Editor.loadScene via markBrokenRef() for mesh nodes.
+   * Cleared on scene reload via clearBrokenRefs() / onSceneReplaced().
+   */
+  private readonly _brokenRefIds = new Set<NodeUUID>();
+
   constructor(document: SceneDocument, threeScene: Scene, resourceCache?: ResourceCache) {
     this.document = document;
     this.threeScene = threeScene;
@@ -129,6 +137,28 @@ export class SceneSync {
     return this.objToUuid.get(object3d) ?? null;
   }
 
+
+  /**
+   * Returns the current set of broken node UUIDs (live view, not cached).
+   */
+  getBrokenRefIds(): ReadonlySet<NodeUUID> {
+    return this._brokenRefIds;
+  }
+
+  /**
+   * Mark a node UUID as having a broken asset reference.
+   * Called by Editor.loadScene for mesh/prefab nodes that fail resolution.
+   */
+  markBrokenRef(nodeId: NodeUUID): void {
+    this._brokenRefIds.add(nodeId);
+  }
+
+  /**
+   * Clear all broken-ref state. Call at start of each scene load.
+   */
+  clearBrokenRefs(): void {
+    this._brokenRefIds.clear();
+  }
   // ── Optional attachments ──────────────────────────────────────────────────
 
   /**
@@ -199,7 +229,7 @@ export class SceneSync {
       case 'prefab': {
         // Prefab nodes are pure references — subtree is hydrated from PrefabRegistry
         // into Three.js Object3D children only. No SceneDocument writes.
-        this.hydratePrefab(obj, node);
+        this.hydratePrefab(obj, node, new Set<string>());
         break;
       }
 
@@ -251,6 +281,7 @@ export class SceneSync {
     obj.removeFromParent();
     this.uuidToObj.delete(node.id);
     this.objToUuid.delete(obj);
+    this._brokenRefIds.delete(node.id);
   }
 
   private onNodeChanged(uuid: NodeUUID, changed: Partial<SceneNode>): void {
@@ -315,6 +346,7 @@ export class SceneSync {
   }
 
   private onSceneReplaced(): void {
+    this._brokenRefIds.clear();
     this.rebuild();
   }
 
@@ -351,33 +383,42 @@ export class SceneSync {
     }
   }
 
-  private hydratePrefab(obj: Object3D, node: SceneNode): void {
+  private hydratePrefab(obj: Object3D, node: SceneNode, visiting: Set<string>): void {
     // Prefab hydration: purely runtime Three.js expansion.
     // The prefab asset URL is in node.asset ("prefabs://tree-pine").
-    // SceneSync expands the prefab into Three.js Object3D children of `obj`
+    // SceneSync expands the prefab into Three.js Object3D children of obj
     // WITHOUT adding any nodes to SceneDocument.
     if (!node.asset || !this._prefabRegistry) return;
 
+    // Cycle guard: if already expanding this URL in the current call stack,
+    // stop to prevent infinite recursion on broken-on-disk cyclic prefab files.
+    if (visiting.has(node.asset)) {
+      this._brokenRefIds.add(node.id);
+      return;
+    }
+
     // Look up the prefab asset by its project-relative path.
-    // AssetResolver convention: "prefabs://tree-pine" → "prefabs/tree-pine.prefab"
+    // AssetResolver convention: "prefabs://tree-pine" -> "prefabs/tree-pine.prefab"
     const prefabName = node.asset.replace('prefabs://', '');
     const path = `prefabs/${prefabName}.prefab` as AssetPath;
     const url = this._prefabRegistry.getURLForPath(path);
     if (!url) {
-      // Prefab not loaded yet — soft fail (renders as empty Object3D)
+      // Prefab not in registry -- mark broken ref
+      this._brokenRefIds.add(node.id);
       return;
     }
     const asset = this._prefabRegistry.get(url);
-    if (!asset) return;
+    if (!asset) {
+      // URL mapped but not cached -- mark broken ref
+      this._brokenRefIds.add(node.id);
+      return;
+    }
 
-    this.expandPrefabAssetIntoObject3D(obj, asset);
+    const newVisiting = new Set(visiting);
+    newVisiting.add(node.asset);
+    this.expandPrefabAssetIntoObject3D(obj, asset, newVisiting);
   }
-
-  /**
-   * Recursively expand a PrefabAsset into Three.js Object3D children of `parent`.
-   * None of the expanded nodes enter SceneDocument.
-   */
-  private expandPrefabAssetIntoObject3D(parent: Object3D, asset: PrefabAsset): void {
+  private expandPrefabAssetIntoObject3D(parent: Object3D, asset: PrefabAsset, _visiting: Set<string>): void {
     const localIdToObj = new Map<number, Object3D>();
 
     for (const pNode of asset.nodes) {
