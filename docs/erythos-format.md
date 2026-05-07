@@ -15,7 +15,7 @@
 
 ```typescript
 type ErythosSceneV1 = {
-  v: 1;                         // 版本欄位,嚴格遞增
+  version: 1;                   // 版本欄位,literal,嚴格遞增
   env: SceneEnv;
   nodes: SceneNode[];
 };
@@ -26,16 +26,35 @@ type SceneEnv = {
   rotation: number;             // radians
 };
 
+type NodeType = 'mesh' | 'light' | 'camera' | 'prefab' | 'group';
+
 type SceneNode = {
   id: NodeId;                   // UUIDv4
   name: string;
   parent: NodeId | null;        // null = root
   order: number;                // sibling order(整數)
-  asset: AssetUrl;              // 引用,禁止 inline geometry
-  t: Vec3;                      // translation
-  r: Vec3;                      // euler XYZ rad
-  s: Vec3;                      // scale
-  mat?: MaterialOverride;       // optional override,沒給就用 asset 自帶
+  nodeType: NodeType;           // 決定 asset / light / camera 哪些欄位有意義
+  position: Vec3;               // translation
+  rotation: Vec3;               // euler XYZ rad
+  scale: Vec3;                  // scale
+  asset?: AssetUrl;             // mesh / prefab 必有;light / camera / group 不寫
+  mat?: MaterialOverride;       // 只 mesh / prefab 可選 override;沒給就用 asset 自帶
+  light?: LightProps;           // 只 nodeType === 'light' 寫
+  camera?: CameraProps;         // 只 nodeType === 'camera' 寫
+  userData?: Record<string, unknown>; // 保留欄位,v1 規定為 `{}`(見「砍掉的東西」)
+};
+
+type LightProps = {
+  type: 'directional' | 'ambient' | 'point' | 'spot';
+  color: HexColor;              // 持久化 hex string,runtime 邊界轉 number
+  intensity: number;
+};
+
+type CameraProps = {
+  type: 'perspective';          // v1 僅支援 perspective,orthographic 留待後續 bump
+  fov: number;                  // degrees
+  near: number;
+  far: number;
 };
 
 type MaterialOverride = {
@@ -45,6 +64,8 @@ type MaterialOverride = {
   emissive?: HexColor;
   emissiveIntensity?: number;
   opacity?: number;             // 0..1
+  transparent?: boolean;        // Three.js 渲染需求(opacity < 1 時必開)
+  wireframe?: boolean;          // debug 用
 };
 
 type Vec3 = [number, number, number];
@@ -53,11 +74,23 @@ type NodeId = string;           // UUIDv4
 type AssetUrl = string;         // 見 URI Scheme 章節
 ```
 
+**Color 表面 vs Runtime**:`HexColor` 是**持久化外觀**(JSON 友好、git diffable、LLM 看得懂)。Runtime 與 Three.js 邊界用 `number`(`0xffffff`)。轉換責任歸 serialize / deserialize 層,Editor / Command / Panel 內部全程操作 `number`。
+
+**`nodeType` 決定欄位有效性**:
+
+| nodeType | asset 必填 | mat | light | camera |
+|---|---|---|---|---|
+| `mesh` | ✅(`assets://` 或 `materials://` 或 `blob://`) | optional override | — | — |
+| `prefab` | ✅(`prefabs://`) | optional override | — | — |
+| `light` | — | — | ✅ | — |
+| `camera` | — | — | — | ✅ |
+| `group` | — | — | — | — |
+
 範例 JSON:
 
 ```json
 {
-  "v": 1,
+  "version": 1,
   "env": {
     "hdri": "assets://studio.hdr",
     "intensity": 1.0,
@@ -69,11 +102,23 @@ type AssetUrl = string;         // 見 URI Scheme 章節
       "name": "Sphere",
       "parent": null,
       "order": 0,
+      "nodeType": "mesh",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
       "asset": "assets://primitives/sphere",
-      "t": [0, 0, 0],
-      "r": [0, 0, 0],
-      "s": [1, 1, 1],
       "mat": { "color": "#ffffff", "roughness": 0.5 }
+    },
+    {
+      "id": "9c68e2e0-1234-4abc-9def-000000000002",
+      "name": "Key Light",
+      "parent": null,
+      "order": 1,
+      "nodeType": "light",
+      "position": [5, 5, 5],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "light": { "type": "directional", "color": "#ffffff", "intensity": 1.0 }
     }
   ]
 }
@@ -97,12 +142,14 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 下列規則寫成 lint rule / CI check / runtime assertion,**任何違反即拒絕儲存**:
 
 1. **檔案大小** ≤ 1MB(典型 < 50KB)
-2. **無 inline geometry / texture** — `nodes[].asset` 必為 `AssetUrl` 字串,**禁止** `geometry`、`vertices`、`positions`、`indices`、`uvs` 等 array 欄位
-3. **版本嚴格遞增** — `v` 必為正整數;讀到 `v > CURRENT_VERSION` 拒絕載入(明確錯誤訊息,不嘗試「儘量讀」)
+2. **無 inline geometry / texture** — mesh / prefab node 的 `asset` 必為 `AssetUrl` 字串,**禁止** `geometry`、`vertices`、`positions`、`indices`、`uvs` 等 array 欄位
+3. **版本嚴格遞增** — `version` 必為正整數;讀到 `version > CURRENT_VERSION` 拒絕載入(明確錯誤訊息,不嘗試「儘量讀」)
 4. **node.parent 必須指向同檔內存在的 node id 或 null**(無孤兒、無外部 parent)
 5. **nodes[].id 全域唯一**(在同一檔案內)
 6. **無循環引用**(prefab 引用鏈用 DAG 環偵測,見 `erythos-architecture.md`)
-7. **MaterialOverride 欄位上限**(超過 8 欄位的 mat 應抽出成 `materials://` asset)
+7. **MaterialOverride 欄位上限** — 超過 8 欄位(扣除 `transparent` / `wireframe` 渲染輔助欄位)的 mat 應抽出成 `materials://` asset
+8. **`nodeType` 與輔助欄位一致性** — 例如 `nodeType: 'light'` 必有 `light` 欄位;`nodeType: 'mesh' | 'prefab'` 必有 `asset`(見 v1 Schema 表)
+9. **`userData` 必為空 `{}`** — v1 不開放使用者自由欄位(見「砍掉的東西」)
 
 ## Material:引用 vs Inline Override
 
@@ -113,27 +160,43 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 
 **禁止 inline 整個 material 定義**(超過 8 欄位的 mat 應抽出成 `materials://` asset,投影到 invariant #7)。
 
+### Color 表面型 vs Runtime 型
+
+`HexColor`(`"#ffffff"`)是**持久化外觀** — JSON 友好、git diffable、LLM 看得懂、人類可手寫。
+
+`number`(`0xffffff`)是 **Three.js / runtime 型** — Editor / Command / Panel / Viewport 一律用 number。
+
+**邊界規則**:`SceneFormat` serialize / deserialize 函式負責雙向轉換。**Runtime code 任何地方都不操作 hex string**(避免大量 `parseInt('0x' + ...)` 散在 codebase)。同樣適用於 `LightProps.color` 與 `MaterialOverride.emissive`。
+
 ## Prefab 引用機制
 
 預設**引用**(reference),非注入(inject)。
 
 ```json
 {
-  "id": "...",
+  "id": "9c68e2e0-...",
   "name": "Tree #1",
+  "parent": null,
+  "order": 0,
+  "nodeType": "prefab",
+  "position": [10, 0, 0],
+  "rotation": [0, 0, 0],
+  "scale": [1, 1, 1],
   "asset": "prefabs://tree-pine",
-  "t": [10, 0, 0],
   "mat": { "color": "#3a5f1c" }
 }
 ```
 
-行為:
+行為(嚴格):
 
-- prefab 內容**不展開進當前場景檔** — 只記引用 + override
+- prefab 內容**不展開進當前場景檔的 `nodes[]`** — SceneFile 只記**一個** `nodeType: 'prefab'` 的 SceneNode + 引用 URL + 可選 override。**禁止** prefab 子樹的 nodes 出現在父 SceneFile 的 `nodes[]` 中
+- prefab 子樹只在 **runtime hydrate 時**才展開(從 `prefabs://` 解析回原 `.erythos` 檔讀出子節點,instantiate 進場景圖,但**不寫入磁碟**)
 - 原 prefab(`prefabs://tree-pine`)更新 → 所有引用方下次載入時看到新版
-- 想脫鉤 → 使用者明確指令 `Bake / Flatten` → 把 prefab 內容展平進當前場景,從此跟原 prefab 脫鉤(對應 AE 的 `Import as Composition` → `Detach`)
+- 想脫鉤 → 使用者明確指令 `Bake / Flatten` → 把 prefab 子樹複製進當前 SceneFile 的 `nodes[]`(每個子節點變獨立 SceneNode 帶新 UUID),從此跟原 prefab 脫鉤(對應 AE 的 `Import as Composition` → `Detach`)。**Bake 是 explicit destructive op**,使用者要主動觸發
 
 DAG 環偵測:見 `erythos-architecture.md` § Reference Cycle Detection。
+
+**為什麼嚴格**:Spec 設計哲學「中型場景 < 50KB」依賴 prefab 引用不展開。一旦 SceneFile 內含 prefab 子樹副本,場景檔會隨 prefab 節點數線性膨脹,`.erythos` 檔在 git diff / LLM 輸入 / 雲端同步上的價值失守。
 
 ## Broken Reference 處理
 
@@ -146,9 +209,11 @@ DAG 環偵測:見 `erythos-architecture.md` § Reference Cycle Detection。
 | 全局 | toolbar 顯示「本場景有 N 個掉檔」警告 chip,點開列出 |
 | 檔案本身 | **不刪 node、不修改引用 URL** — 等使用者手動修(資料安全 > 自動清理) |
 
+**適用範圍**:僅 `nodeType: 'mesh' | 'prefab'`(有 `asset` 引用)及 `mat.color = "materials://..."`(若日後支援)。`light` / `camera` / `group` node 沒有外部引用,不適用此章節。
+
 ## Migration 規則
 
-`v` 欄位嚴格遞增 → migration registry 線性鏈接。
+`version` 欄位嚴格遞增 → migration registry 線性鏈接。
 
 ```typescript
 const migrations: Record<number, (data: any) => any> = {
@@ -157,15 +222,15 @@ const migrations: Record<number, (data: any) => any> = {
   // ...
 };
 
-function loadScene(raw: { v: number; ... }): ErythosSceneCurrent {
-  if (raw.v > CURRENT_VERSION) {
+function loadScene(raw: { version: number; ... }): ErythosSceneCurrent {
+  if (raw.version > CURRENT_VERSION) {
     throw new UnsupportedVersionError(
-      `這個檔案是用較新版本的 Erythos 建立的(格式 v${raw.v}),` +
+      `這個檔案是用較新版本的 Erythos 建立的(格式 v${raw.version}),` +
       `你的版本只支援到 v${CURRENT_VERSION}。請更新 Erythos。`
     );
   }
   let data = raw;
-  for (let v = raw.v; v < CURRENT_VERSION; v++) {
+  for (let v = raw.version; v < CURRENT_VERSION; v++) {
     data = migrations[v + 1](data);
   }
   return data;
@@ -188,8 +253,8 @@ function loadScene(raw: { v: number; ... }): ErythosSceneCurrent {
 以下 Three.js 原生欄位**不進** `.erythos`:
 
 - `geometries[]` / `materials[]` / `textures[]` / `images[]` — 通通變引用
-- `metadata` 區塊 — 一個 `v` 欄位夠了
-- `userData` 自由欄位 — 暫不開放(避免使用者塞整個應用狀態進場景檔)
+- `metadata` 區塊 — 一個 `version` 欄位夠了
+- `userData` 自由欄位 — v1 規定 `userData: {}`(保留欄位佔位、避免將來 schema bump 但不開放使用者塞應用狀態進場景檔。Editor / Command / Panel 不得寫入 `userData`)
 
 ## 機械驗收清單(供 lint rule / CI 實作)
 
@@ -202,8 +267,11 @@ function loadScene(raw: { v: number; ... }): ErythosSceneCurrent {
 - [ ] 同 nodes[].id 重複 → fail
 - [ ] 解析所有 `AssetUrl`:404 → 警告(非 fail,broken ref 是合法狀態)
 - [ ] DAG 環偵測:任何 prefab 鏈含環 → fail
-- [ ] 版本欄位:`v` 為正整數 → fail otherwise
-- [ ] MaterialOverride 欄位數 > 8 → fail(應抽 `materials://`)
+- [ ] 版本欄位:`version` 為正整數 → fail otherwise
+- [ ] MaterialOverride 欄位數 > 8(扣除 `transparent` / `wireframe`)→ fail(應抽 `materials://`)
+- [ ] `nodeType` 與輔助欄位一致性(`nodeType: 'mesh' \| 'prefab'` 必有 `asset`;`light` 必有 `light` 欄位;`camera` 必有 `camera` 欄位)→ fail otherwise
+- [ ] 任何 `userData` 非空 `{}` → fail
+- [ ] 父 SceneFile 內含 prefab 子樹 nodes(不是只有一個 `nodeType: 'prefab'` reference node)→ fail
 
 ## 開放議題(v1 暫不決,留路)
 
