@@ -1,5 +1,6 @@
 import type { SceneDocument } from '../scene/SceneDocument';
 import { type SceneId, type SyncEngine, ConflictError, NotFoundError } from './SyncEngine';
+import { generateUUID } from '../../utils/uuid';
 
 interface SceneRecord {
   version: number;
@@ -32,7 +33,7 @@ export class InMemorySyncEngine implements SyncEngine {
   }
 
   async create(name: string, body: SceneDocument): Promise<{ id: SceneId; version: number }> {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     this.store.set(id, { version: 0, body, name });
     return { id, version: 0 };
   }
