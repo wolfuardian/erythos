@@ -33,8 +33,8 @@
 
 panel 統一 anatomy = `Panel > PanelHeader + PanelContent`,Viewport 為合理例外(純 canvas)。
 
-- [ ] **P0** components/ 開 `<Panel>` / `<PanelHeader>` / `<PanelContent>` 三件套(視需要加 `<PanelToolbar>` / `<PanelFooter>`,小心 PanelHeader 不要變上帝元件)
-- [ ] **P0** 既有 panel migration 套骨架(scene-tree / properties / prefab / project / environment / console / context / settings)
+- [x] **P0** components/ 開五件套 `<Panel>` / `<PanelHeader>` / `<PanelToolbar>` / `<PanelContent>` / `<PanelFooter>` + `<PanelEditorSwitcher>` 拆出讓 PanelHeader 變純 layout(PR #828)
+- [x] **P0** 既有 panel migration 套骨架(scene-tree / properties / project / viewport;prefab/environment/console/context/settings 已 cut)(PR #828)
 - [ ] **P1** ESLint / grep rule:panel 模組根元件必須是 `<Panel>`,不是 → fail
 
 ## D. Spec 機械可驗化(分工破口)
