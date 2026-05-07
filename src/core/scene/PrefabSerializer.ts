@@ -40,6 +40,12 @@ export function serializeToPrefab(
       }
     }
 
+    if (node.asset && node.nodeType === 'prefab') {
+      // Encode nested prefab reference for N-hop cycle detection via PrefabGraph.
+      // Root node's self-reference is stripped below (localId === 0 guard).
+      components['prefab'] = { asset: node.asset };
+    }
+
     if (node.mat) {
       // MaterialOverride uses runtime numbers — store as-is (prefab internal format)
       components['material'] = { ...node.mat };
@@ -112,6 +118,10 @@ export function deserializeFromPrefab(
       const geo = comps['geometry'] as { type: string };
       nodeType = 'mesh';
       asset = `assets://primitives/${geo.type}`;
+    } else if (comps['prefab']) {
+      const pref = comps['prefab'] as { asset?: string };
+      nodeType = 'prefab';
+      if (pref.asset) asset = pref.asset;
     } else if (comps['light']) {
       const l = comps['light'] as { type: string; color: number; intensity: number };
       nodeType = 'light';
