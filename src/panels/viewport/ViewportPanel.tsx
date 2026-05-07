@@ -516,6 +516,7 @@ const ViewportPanel: Component = () => {
     <Panel
       ref={containerRef}
       testid="viewport-panel"
+      class={styles.viewportRoot}
     >
       <PanelHeader
         title="Viewport"

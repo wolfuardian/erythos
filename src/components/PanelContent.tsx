@@ -13,12 +13,12 @@ const PanelContent: Component<PanelContentProps> = (props) => {
   return (
     <div
       ref={local.ref}
-      class={styles.content}
+      {...rest}
+      class={`${styles.content}${local.class ? ' ' + local.class : ''}`}
       classList={{
         [styles.scrollable]: scrollable(),
         [styles.fixed]: !scrollable(),
       }}
-      {...rest}
     >
       {local.children}
     </div>

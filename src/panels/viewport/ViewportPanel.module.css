@@ -1,5 +1,11 @@
 /** ViewportPanel — CSS Modules migration (refs #742) */
 
+/* ── Panel root override: viewport uses --bg-app instead of default --bg-panel ─ */
+
+.viewportRoot {
+  background: var(--bg-app);
+}
+
 /* ── Canvas area (inner div within PanelContent) ─────────────────────────── */
 
 .canvas {

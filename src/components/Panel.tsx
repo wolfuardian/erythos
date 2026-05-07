@@ -13,8 +13,8 @@ const Panel: Component<PanelProps> = (props) => {
     <div
       ref={local.ref}
       data-testid={local.testid}
-      class={styles.panel}
       {...rest}
+      class={`${styles.panel}${local.class ? ' ' + local.class : ''}`}
     >
       {local.children}
     </div>

@@ -11,8 +11,8 @@ const PanelToolbar: Component<PanelToolbarProps> = (props) => {
   return (
     <div
       ref={local.ref}
-      class={styles.toolbar}
       {...rest}
+      class={`${styles.toolbar}${local.class ? ' ' + local.class : ''}`}
     >
       {local.children}
     </div>
