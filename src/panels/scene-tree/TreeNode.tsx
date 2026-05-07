@@ -55,6 +55,9 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   /** True if this node is itself a prefab instance root (nodeType === 'prefab'). */
   const isPrefabRoot = () => props.node.nodeType === 'prefab';
 
+  /** True if this node has an unresolvable asset reference. */
+  const isBrokenRef = () => bridge.brokenRefIds().has(props.node.id);
+
   const childNodes = () =>
     bridge.nodes()
       .filter(n => n.parent === props.node.id)
@@ -205,6 +208,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
           [styles.hovered]: isHovered(),
           [styles.dropTargetInside]: isDropTarget() && indicator()?.position === 'inside',
           [styles.dragging]: props.draggedId() === props.node.id,
+          [styles.brokenRef]: isBrokenRef(),
         }}
         // inline-allowed: CSS variable injection — depth-based padding-left consumed by CSS
         style={{ '--depth': props.depth, '--row-padding-left': `${ROW_PADDING_LEFT}px`, '--indent-w': `${INDENT_W}px` }}
