@@ -40,7 +40,8 @@
     "audit:context": "node scripts/audit/context.mjs",
     "audit:inline-style": "node scripts/audit/inline-style.mjs",
     "check:command-pattern": "node scripts/check-command-pattern.mjs",
-    "check": "npm run check:command-pattern",
+    "check:panel-root": "node scripts/check-panel-root.mjs",
+    "check": "npm run check:command-pattern && npm run check:panel-root",
     "lint": "eslint src"
   },
   "dependencies": {

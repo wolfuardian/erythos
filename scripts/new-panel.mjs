@@ -55,17 +55,22 @@ function validatePanelName(name) {
 function genTsx(pascalName) {
   const testId = toKebab(pascalName);
   return `import { type Component } from 'solid-js';
+import { Panel } from '../../components/Panel';
 import { PanelHeader } from '../../components/PanelHeader';
+import { PanelContent } from '../../components/PanelContent';
+import { PanelEditorSwitcher } from '../../components/PanelEditorSwitcher';
 import styles from './${pascalName}.module.css';
 
 const ${pascalName}: Component = () => {
   return (
-    <div data-testid="${testId}" class={styles.panel}>
-      <PanelHeader title="${pascalName.replace(/Panel$/, '')}" />
-      <div class={styles.body}>
-        {/* TODO: panel content */}
-      </div>
-    </div>
+    <Panel testid="${testId}">
+      <PanelHeader title="${pascalName.replace(/Panel$/, '')}" actions={<PanelEditorSwitcher />} />
+      <PanelContent>
+        <div class={styles.body}>
+          {/* TODO: panel content */}
+        </div>
+      </PanelContent>
+    </Panel>
   );
 };
 
@@ -74,22 +79,9 @@ export default ${pascalName};
 }
 
 function genCss() {
-  return `.panel {
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-well-outer);
-  border-radius: var(--radius-lg);
-  margin: 3px;
-  box-sizing: border-box;
-}
+  return `/* Panel root + content layout 由 <Panel> / <PanelContent> 接管 — 這裡只放 panel-specific inner styles */
 
 .body {
-  flex: 1;
-  overflow: auto;
   padding: 10px;
   box-sizing: border-box;
   font-size: 11px;
