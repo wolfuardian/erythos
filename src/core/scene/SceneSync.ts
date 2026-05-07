@@ -96,6 +96,13 @@ export class SceneSync {
   /** PrefabRegistry for prefab hydration */
   private _prefabRegistry: PrefabRegistry | null = null;
 
+  /**
+   * Runtime-only map: persistent asset URL (assets://...) → resolved blob URL.
+   * Populated by Editor.loadScene after asset resolution.
+   * SceneSync uses this to find the loaded blob URL without node.asset being mutated.
+   */
+  private readonly _resolvedBlobUrls = new Map<string, string>();
+
   constructor(document: SceneDocument, threeScene: Scene, resourceCache?: ResourceCache) {
     this.document = document;
     this.threeScene = threeScene;
@@ -130,6 +137,23 @@ export class SceneSync {
    */
   attachPrefabRegistry(registry: PrefabRegistry): void {
     this._prefabRegistry = registry;
+  }
+
+  /**
+   * Register a resolved blob URL for a persistent asset URL.
+   * Called by Editor.loadScene after AssetResolver resolves assets:// to blob URL.
+   * SceneSync uses this mapping in hydrateMesh — node.asset stays as assets:// (persistent).
+   */
+  setResolvedBlobUrl(assetUrl: string, blobUrl: string): void {
+    this._resolvedBlobUrls.set(assetUrl, blobUrl);
+  }
+
+  /**
+   * Clear all resolved blob URL mappings.
+   * Called by Editor.loadScene at the start of each load to prevent stale entries.
+   */
+  clearResolvedBlobUrls(): void {
+    this._resolvedBlobUrls.clear();
   }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -309,13 +333,13 @@ export class SceneSync {
       return;
     }
 
-    // Regular mesh: look up in ResourceCache by blob URL
-    // The blob URL is resolved by Editor.loadScene via AssetResolver;
-    // SceneSync receives the already-resolved URL in node.asset at runtime.
+    // Regular mesh: look up in ResourceCache by the resolved blob URL.
+    // The blob URL is resolved by Editor.loadScene via AssetResolver and registered
+    // via setResolvedBlobUrl(). node.asset stays as the persistent assets:// URL.
     // If the asset isn't in ResourceCache yet, we skip silently (soft-fail).
-    if (this.resourceCache && this.resourceCache.has(node.asset)) {
-      // node.asset at runtime holds the blob URL after hydration
-      const meshObj = this.resourceCache.cloneSubtree(node.asset, undefined);
+    const blobUrl = this._resolvedBlobUrls.get(node.asset) ?? node.asset;
+    if (this.resourceCache && this.resourceCache.has(blobUrl)) {
+      const meshObj = this.resourceCache.cloneSubtree(blobUrl, undefined);
       if (meshObj) {
         // Reset clone root transform — applyTransform already applied SceneNode
         // position/rotation/scale. The clone carries gltf baked-in transforms.

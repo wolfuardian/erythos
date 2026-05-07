@@ -35,6 +35,7 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
     editor.sceneDocument.events.off('nodeRemoved', scheduleSnapshot);
     editor.sceneDocument.events.off('nodeChanged', scheduleSnapshot);
     editor.sceneDocument.events.off('sceneReplaced', scheduleSnapshot);
+    editor.sceneDocument.events.off('envChanged', scheduleSnapshot);
   };
 
   // Attach listeners
@@ -42,6 +43,7 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
   editor.sceneDocument.events.on('nodeRemoved', scheduleSnapshot);
   editor.sceneDocument.events.on('nodeChanged', scheduleSnapshot);
   editor.sceneDocument.events.on('sceneReplaced', scheduleSnapshot);
+  editor.sceneDocument.events.on('envChanged', scheduleSnapshot);
 
   return { flushNow, dispose };
 }

@@ -204,7 +204,13 @@ export class Editor {
     // Deserialize (runs v0_to_v1 migration internally, restores env)
     this.sceneDocument.deserialize(data);
 
-    // Hydrate mesh and prefab URLs
+    // Clear stale resolved URL mappings from any previous load.
+    this.sceneSync.clearResolvedBlobUrls();
+
+    // Hydrate mesh and prefab URLs.
+    // IMPORTANT: node.asset is never mutated here — it always holds the persistent
+    // assets:// URL. Resolved blob URLs are registered with SceneSync via
+    // setResolvedBlobUrl() so SceneSync can look them up without data-loss on save.
     for (const node of this.sceneDocument.getAllNodes()) {
       if (node.nodeType === 'mesh' && node.asset) {
         // Skip primitives — no file loading needed
@@ -215,8 +221,8 @@ export class Editor {
           if (!this.resourceCache.has(blobUrl)) {
             await this.resourceCache.loadFromURL(blobUrl);
           }
-          // Store resolved blob URL back in node.asset for SceneSync lookup
-          node.asset = blobUrl;
+          // Register blob URL with SceneSync. node.asset stays as assets:// (persistent).
+          this.sceneSync.setResolvedBlobUrl(node.asset, blobUrl);
         } catch (err) {
           console.warn(`[Editor] loadScene: could not hydrate mesh asset "${node.asset}" — will render empty:`, err);
         }

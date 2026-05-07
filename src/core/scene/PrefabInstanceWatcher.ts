@@ -6,7 +6,7 @@
  * SceneDocument (they live only in Three.js scene graph). This means the watcher
  * is effectively dormant for in-place editing in v1 — prefab editing is deferred
  * to Phase 3. The implementation is kept structurally intact but aligned to v1
- * nodeType checks. The suppress() API is still used by InstantiatePrefabCommand.
+ * nodeType checks. The suppress() API is no longer called by any command (v1 dormant).
  */
 
 import type { SceneNode } from './SceneFormat';

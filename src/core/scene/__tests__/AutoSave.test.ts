@@ -11,7 +11,13 @@ function makeEditor(scenePath = 'scenes/scene.erythos') {
           listeners[evt] ??= [];
           listeners[evt].push(fn);
         }),
-        off: vi.fn(),
+        off: vi.fn((evt: string, fn: () => void) => {
+          const arr = listeners[evt];
+          if (arr) {
+            const idx = arr.indexOf(fn);
+            if (idx !== -1) arr.splice(idx, 1);
+          }
+        }),
         emit: vi.fn((evt: string) => listeners[evt]?.forEach(fn => fn())),
       },
       serialize: vi.fn(() => ({ version: 1, nodes: [] })),
@@ -79,6 +85,47 @@ describe('AutoSave', () => {
     autosave.dispose();
     vi.advanceTimersByTime(2000);
     expect(editor.projectManager.writeFile).not.toHaveBeenCalled();
-    expect(editor.sceneDocument.events.off).toHaveBeenCalledTimes(4);
+    expect(editor.sceneDocument.events.off).toHaveBeenCalledTimes(5);
+  });
+
+  describe('env subscription (F-2)', () => {
+    it('env change (hdri) triggers save', async () => {
+      const editor = makeEditor();
+      const autosave = createAutoSave(editor);
+      editor.sceneDocument.events.emit('envChanged');
+      vi.advanceTimersByTime(2000);
+      await vi.runAllTimersAsync();
+      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
+      autosave.dispose();
+    });
+
+    it('env change (intensity) triggers save', async () => {
+      const editor = makeEditor();
+      const autosave = createAutoSave(editor);
+      editor.sceneDocument.events.emit('envChanged');
+      vi.advanceTimersByTime(2000);
+      await vi.runAllTimersAsync();
+      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
+      autosave.dispose();
+    });
+
+    it('env change (rotation) triggers save', async () => {
+      const editor = makeEditor();
+      const autosave = createAutoSave(editor);
+      editor.sceneDocument.events.emit('envChanged');
+      vi.advanceTimersByTime(2000);
+      await vi.runAllTimersAsync();
+      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
+      autosave.dispose();
+    });
+
+    it('dispose unsubscribes envChanged — env change after dispose does not trigger save', () => {
+      const editor = makeEditor();
+      const autosave = createAutoSave(editor);
+      autosave.dispose();
+      editor.sceneDocument.events.emit('envChanged');
+      vi.advanceTimersByTime(2000);
+      expect(editor.projectManager.writeFile).not.toHaveBeenCalled();
+    });
   });
 });
