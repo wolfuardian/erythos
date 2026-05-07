@@ -12,5 +12,10 @@ if [ -f .version-bumped ]; then
   exit 0
 fi
 
+# Skip bump on .claude/-only commits (meta files, no production code change).
+if ! git diff --cached --name-only | grep -qv '^\.claude/'; then
+  exit 0
+fi
+
 node scripts/bump.js patch
 git add package.json package-lock.json
