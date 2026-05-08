@@ -285,10 +285,12 @@ export class Editor {
         const { id, version } = await this.syncEngine.create(sceneName, this.sceneDocument);
         this.syncSceneId = id;
         this.syncBaseVersion = version;
+        this.events.emit("syncSceneIdChanged", id);
       } catch (err) {
         console.warn('[Editor] loadScene: syncEngine.create failed — sync disabled for this session:', err);
         this.syncSceneId = null;
         this.syncBaseVersion = null;
+        this.events.emit("syncSceneIdChanged", null);
       }
     }
   }

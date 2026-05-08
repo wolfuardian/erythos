@@ -81,6 +81,8 @@ export interface EditorBridge {
   syncConflict: Accessor<SyncConflictPayload | null>;
   /** Resolve the pending sync conflict by choosing which version to keep */
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
+  /** Scene ID currently tracked in the SyncEngine; null until first loadScene completes. */
+  currentSceneId: Accessor<SceneId | null>;
   dispose: () => void;
 }
 
@@ -119,6 +121,7 @@ export function createEditorBridge(
     editor.projectManager.currentId,
   );
   const [syncConflict, setSyncConflict] = createSignal<SyncConflictPayload | null>(null);
+  const [currentSceneId, setCurrentSceneId] = createSignal<SceneId | null>(null);
 
   // 非同步初始化（fire-and-forget）
   void editor.projectManager.getRecentProjects().then(setRecentProjects);
@@ -194,6 +197,10 @@ export function createEditorBridge(
   const onSyncConflict = (payload: SyncConflictPayload) => setSyncConflict(payload);
   editor.events.on('syncConflict', onSyncConflict);
 
+  // Subscribe to sync scene ID changes (fired by Editor.loadScene after create)
+  const onSyncSceneIdChanged = (id: SceneId | null) => setCurrentSceneId(id);
+  editor.events.on('syncSceneIdChanged', onSyncSceneIdChanged);
+
   // Subscribe to ProjectManager events
   const onProjectChanged = () => {
     setProjectOpen(editor.projectManager.isOpen);
@@ -217,6 +224,7 @@ export function createEditorBridge(
     editor.events.off('brokenRefsChanged', onBrokenRefsChanged);
     editor.events.off('envSelectionChanged', onEnvSelectionChanged);
     editor.events.off('syncConflict', onSyncConflict);
+    editor.events.off('syncSceneIdChanged', onSyncSceneIdChanged);
     // Lock 6: clear syncConflict signal on dispose
     setSyncConflict(null);
     unsubProject();
@@ -260,6 +268,7 @@ export function createEditorBridge(
     createScene: (name: string) => editor.projectManager.createScene(name),
     syncConflict,
     resolveSyncConflict: deps?.resolveSyncConflict ?? ((_choice: 'keep-local' | 'use-cloud') => Promise.resolve()),
+    currentSceneId,
     dispose,
   };
 }

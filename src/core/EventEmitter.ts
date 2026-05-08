@@ -36,6 +36,8 @@ export interface EditorEventMap {
   envSelectionChanged:    [selected: boolean];
   brokenRefsChanged:      [];
   syncConflict:           [payload: { sceneId: SceneId; scenePath: AssetPath; baseVersion: number; currentVersion: number; localBody: SceneDocument; cloudBody: SceneDocument }];
+  /** Fired by Editor.loadScene after syncEngine.create completes (or fails). Null = sync disabled. */
+  syncSceneIdChanged:     [id: SceneId | null];
 
 }
 
