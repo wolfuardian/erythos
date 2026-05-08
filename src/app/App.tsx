@@ -19,11 +19,14 @@ import { CopyAsJsonModal } from '../components/CopyAsJsonModal';
 import { PasteFromJsonModal } from '../components/PasteFromJsonModal';
 import { ErrorDialog } from '../components/ErrorDialog';
 import { UnsupportedVersionError, SceneInvariantError } from '../core/scene/SceneDocument';
+import { NotFoundError } from '../core/sync/SyncEngine';
 import {
   DEFAULT_SCENE_PATH,
   getLastProjectId, setLastProjectId, clearLastProjectId,
   getLastScenePath, setLastScenePath, clearLastScenePath,
 } from './projectSession';
+import { currentRoute } from './router';
+import { ViewerShell } from './ViewerBanner';
 import styles from './App.module.css';
 
 const App: Component = () => {
@@ -37,6 +40,10 @@ const App: Component = () => {
   const [projectOpen, setProjectOpen] = createSignal(false);
   let sharedGrid: GridHelpers | null = null;
   let autosaveHandle: AutoSaveHandle | null = null;
+
+  // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
+  const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
+  const [viewerSceneName, setViewerSceneName] = createSignal<string>('Untitled Scene');
 
   // 地雷 2：保存 listener ref 以便 closeProject 時 off
   let onSceneReplaced: (() => void) | null = null;
@@ -271,8 +278,39 @@ const App: Component = () => {
     if (id) setLastScenePath(id, path);
   });
 
-  // Auto-restore last opened project on page reload
+  // Auto-restore last opened project on page reload, or enter viewer mode if URL is /scenes/{uuid}
   onMount(() => {
+    const route = currentRoute();
+
+    if (route.kind === 'scene') {
+      // URL is /scenes/{uuid} — check if we own this scene locally
+      void (async () => {
+        try {
+          await syncEngine.fetch(route.sceneId);
+          // Scene found locally → owner path: auto-restore project if available, or show Welcome
+          const lastId = getLastProjectId();
+          if (lastId) {
+            const handle = await projectManager.openRecent(lastId);
+            if (handle) {
+              await openProject(handle);
+              return;
+            }
+            clearLastProjectId();
+          }
+          // No local project: fall through to Welcome (owner can still open project)
+        } catch (err) {
+          if (err instanceof NotFoundError) {
+            // Not found locally → guest / viewer mode
+            setViewerSceneId(route.sceneId);
+            setViewerSceneName(route.sceneId);
+          }
+          // Other errors: fall through to Welcome
+        }
+      })();
+      return;
+    }
+
+    // Default: /  — auto-restore last opened project
     const lastId = getLastProjectId();
     if (!lastId) return;
     void (async () => {
@@ -286,42 +324,65 @@ const App: Component = () => {
     })();
   });
 
+  // When viewer forks and navigates to /scenes/{newId}, clear viewer mode so the
+  // regular editor flow can take over (user will open project to edit the fork)
+  createEffect(() => {
+    const route = currentRoute();
+    if (route.kind === 'home' || (route.kind === 'scene' && route.sceneId !== viewerSceneId())) {
+      setViewerSceneId(null);
+    }
+  });
+
   onCleanup(() => { void closeProject(); });
 
+  // Viewer mode: URL is /scenes/{uuid} and scene is not locally owned
+  const isViewerMode = () => viewerSceneId() !== null;
+
   return (
-    <Show when={projectOpen() && editor() && bridge()} fallback={
-      <Welcome projectManager={projectManager} onOpenProject={openProject} />
-    }>
-      <EditorProvider bridge={bridge()!} editors={editors}>
-        <div class={styles.root}>
-          <Toolbar />
-          <div class={styles.contentArea}>
-            <AreaTreeRenderer />
+    <Show
+      when={!isViewerMode()}
+      fallback={
+        <ViewerShell
+          sceneId={viewerSceneId()!}
+          sceneName={viewerSceneName()}
+          syncEngine={syncEngine}
+        />
+      }
+    >
+      <Show when={projectOpen() && editor() && bridge()} fallback={
+        <Welcome projectManager={projectManager} onOpenProject={openProject} />
+      }>
+        <EditorProvider bridge={bridge()!} editors={editors}>
+          <div class={styles.root}>
+            <Toolbar />
+            <div class={styles.contentArea}>
+              <AreaTreeRenderer />
+            </div>
+            <StatusBar bridge={bridge()!} />
           </div>
-          <StatusBar bridge={bridge()!} />
-        </div>
-        <SyncConflictDialog
-          conflict={bridge()!.syncConflict()}
-          onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
-          onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
-        />
-        <CopyAsJsonModal
-          open={copyAsJsonOpen()}
-          json={copyAsJsonContent()}
-          onClose={() => setCopyAsJsonOpen(false)}
-        />
-        <PasteFromJsonModal
-          open={pasteFromJsonOpen()}
-          onImport={handlePasteImport}
-          onClose={() => setPasteFromJsonOpen(false)}
-        />
-        <ErrorDialog
-          open={pasteErrorOpen()}
-          title={pasteErrorTitle()}
-          message={pasteErrorMessage()}
-          onClose={() => setPasteErrorOpen(false)}
-        />
-      </EditorProvider>
+          <SyncConflictDialog
+            conflict={bridge()!.syncConflict()}
+            onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
+            onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
+          />
+          <CopyAsJsonModal
+            open={copyAsJsonOpen()}
+            json={copyAsJsonContent()}
+            onClose={() => setCopyAsJsonOpen(false)}
+          />
+          <PasteFromJsonModal
+            open={pasteFromJsonOpen()}
+            onImport={handlePasteImport}
+            onClose={() => setPasteFromJsonOpen(false)}
+          />
+          <ErrorDialog
+            open={pasteErrorOpen()}
+            title={pasteErrorTitle()}
+            message={pasteErrorMessage()}
+            onClose={() => setPasteErrorOpen(false)}
+          />
+        </EditorProvider>
+      </Show>
     </Show>
   );
 };
