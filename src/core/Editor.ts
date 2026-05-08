@@ -114,9 +114,18 @@ export class Editor {
 
   /**
    * Register a new prefab: write to project file, update PrefabRegistry, emit event.
+   *
+   * Synchronously caches the asset by path before the async write begins so that
+   * viewport drag-drop (SceneSync.hydratePrefab) can resolve the prefab immediately,
+   * even if the async writeFile+urlFor hasn't completed yet (race guard — issue #753).
+   * Once writeFile+urlFor succeed, PrefabRegistry.set() promotes the entry to the
+   * URL-keyed cache and clears the pre-write path-keyed entry.
    */
   registerPrefab(asset: PrefabAsset): AssetPath {
     const path = prefabPathForName(asset.name);
+
+    // Synchronous pre-write cache: lets SceneSync hydrate immediately (issue #753).
+    this.prefabRegistry.setAssetByPath(path, asset);
 
     void (async () => {
       try {

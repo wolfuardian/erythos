@@ -36,6 +36,10 @@ function prefabAssetUrlFromPath(path: AssetPath): string {
 export class PrefabRegistry {
   private readonly _cache = new Map<string, PrefabAsset>();       // url → asset
   private readonly _pathToURL = new Map<AssetPath, string>();     // project-relative path → url
+  /** Pre-write path-keyed cache: populated synchronously before blob URL is available.
+   *  Allows SceneSync to hydrate prefab nodes immediately after registerPrefab returns,
+   *  even before the async writeFile+urlFor completes (race guard — issue #753). */
+  private readonly _pathToAsset = new Map<AssetPath, PrefabAsset>(); // path → asset (no URL yet)
   private readonly _listeners = new Set<Listener>();
   private readonly _prefabChangedListeners = new Set<PrefabChangedListener>();
   private readonly _prefabGraph: PrefabGraph | null;
@@ -200,6 +204,9 @@ export class PrefabRegistry {
     this._cache.set(url, asset);
     if (path) {
       this._pathToURL.set(path, url);
+      // Real blob URL is now available — clear the pre-write path-keyed entry so
+      // SceneSync uses the URL-based lookup path going forward (issue #753).
+      this._pathToAsset.delete(path);
       this._updateGraphEdges(path, asset);
     }
     this._emit();
@@ -238,7 +245,12 @@ export class PrefabRegistry {
   /** Evict by project-relative path. Returns true if something was evicted. */
   evictByPath(path: AssetPath): boolean {
     const url = this._pathToURL.get(path);
-    if (!url) return false;
+    // Also clear any pre-write path-keyed entry (issue #753 race guard)
+    const hadPending = this._pathToAsset.delete(path);
+    if (!url) {
+      if (hadPending) this._emit();
+      return hadPending;
+    }
     this._cache.delete(url);
     this._pathToURL.delete(path);
     this._removeGraphEdges(path);
@@ -249,10 +261,39 @@ export class PrefabRegistry {
   clear(): void {
     this._cache.clear();
     this._pathToURL.clear();
+    this._pathToAsset.clear();
     if (this._prefabGraph) {
       this._prefabGraph.clear();
     }
     this._emit();
+  }
+
+  /**
+   * Cache a pre-parsed PrefabAsset keyed by project-relative path, before the
+   * blob URL is available. Called synchronously by Editor.registerPrefab so that
+   * SceneSync can hydrate prefab nodes immediately even if the async write hasn't
+   * completed yet. Once `set()` is called with the real URL, this entry is cleared.
+   *
+   * Also updates the PrefabGraph edges so cycle detection works immediately.
+   *
+   * @param path  Project-relative path ("prefabs/chair.prefab").
+   * @param asset Parsed PrefabAsset.
+   */
+  setAssetByPath(path: AssetPath, asset: PrefabAsset): void {
+    this._pathToAsset.set(path, asset);
+    this._updateGraphEdges(path, asset);
+    this._emit();
+  }
+
+  /**
+   * Get a pre-parsed PrefabAsset by project-relative path, if available from the
+   * pre-write cache. Returns null if no entry exists (either never registered, or
+   * the real URL-keyed entry was already promoted by `set()`).
+   *
+   * @param path  Project-relative path ("prefabs/chair.prefab").
+   */
+  getAssetByPath(path: AssetPath): PrefabAsset | null {
+    return this._pathToAsset.get(path) ?? null;
   }
 
   /** Returns all currently-cached assets as an array snapshot. */
