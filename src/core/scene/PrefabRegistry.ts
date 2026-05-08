@@ -248,7 +248,11 @@ export class PrefabRegistry {
     // Also clear any pre-write path-keyed entry (issue #753 race guard)
     const hadPending = this._pathToAsset.delete(path);
     if (!url) {
-      if (hadPending) this._emit();
+      if (hadPending) {
+        // setAssetByPath added graph edges pre-emptively — must clear them too.
+        this._removeGraphEdges(path);
+        this._emit();
+      }
       return hadPending;
     }
     this._cache.delete(url);

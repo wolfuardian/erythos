@@ -193,5 +193,25 @@ describe('Editor', () => {
       // SceneSync.hydratePrefab must succeed: node should NOT be in brokenRefIds
       expect(editor.sceneSync.getBrokenRefIds().has(node.id)).toBe(false);
     });
+
+    it('writeFile failure clears pre-write entry (no zombie state)', async () => {
+      vi.spyOn(editor.projectManager, 'writeFile').mockRejectedValue(new Error('disk full'));
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const asset = minimalPrefab('chair');
+      const path = editor.registerPrefab(asset);
+
+      // Pre-write entry exists synchronously after registerPrefab returns
+      expect(editor.prefabRegistry.getAssetByPath(path)).toBe(asset);
+
+      // Drain microtasks until the catch block runs (writeFile reject → catch → evictByPath)
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Pre-write entry must be cleared after failure — no zombie state
+      expect(editor.prefabRegistry.getAssetByPath(path)).toBeNull();
+
+      warnSpy.mockRestore();
+    });
   });
 });

@@ -135,6 +135,9 @@ export class Editor {
         await this.projectManager.rescan();
         this.events.emit('prefabStoreChanged');
       } catch (err) {
+        // Write failed — evict the pre-write entry so SceneSync stops hydrating
+        // a ghost prefab on subsequent attempts (issue #753 / QC follow-up).
+        this.prefabRegistry.evictByPath(path);
         console.warn(`[Editor] registerPrefab: could not write "${path}":`, err);
       }
     })();
