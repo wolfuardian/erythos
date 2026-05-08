@@ -1,0 +1,73 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  width: min(800px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-well-outer);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.copyButton {
+  padding: 4px 16px;
+  height: 28px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  white-space: nowrap;
+}
+
+.copyButton:hover {
+  background: var(--accent-blue-hover);
+}
+
+.copiedButton {
+  background: var(--accent-green);
+}
+
+.copiedButton:hover {
+  background: var(--accent-green);
+}
+
+.pre {
+  margin: 0;
+  padding: var(--space-md);
+  background: var(--bg-section);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  overflow: auto;
+  flex: 1;
+  white-space: pre;
+  word-break: normal;
+}
