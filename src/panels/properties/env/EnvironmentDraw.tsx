@@ -2,6 +2,8 @@ import { For, Show, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { NumberDrag } from '../../../components/NumberDrag';
 import { SetEnvironmentCommand } from '../../../core/commands';
+import type { AssetPath } from '../../../utils/branded';
+import { asAssetPath } from '../../../utils/branded';
 import styles from './EnvironmentDraw.module.css';
 
 const EnvironmentDraw: Component = () => {
@@ -16,7 +18,7 @@ const EnvironmentDraw: Component = () => {
 
   const projectHdrFiles = () => bridge.projectFiles().filter((f) => f.type === 'hdr');
 
-  const handleSelectFromProject = async (path: string) => {
+  const handleSelectFromProject = async (path: AssetPath) => {
     if (!path) return;
     // Store the project:// URL in SceneEnv.hdri for persistence
     // Viewport resolves it at render time
@@ -41,7 +43,7 @@ const EnvironmentDraw: Component = () => {
         <div class={styles.sectionLabel}>From Project</div>
         <select
           value=""
-          onChange={(e) => void handleSelectFromProject(e.target.value)}
+          onChange={(e) => void handleSelectFromProject(asAssetPath(e.target.value))}
           class={styles.select}
         >
           <option value="">From project…</option>
