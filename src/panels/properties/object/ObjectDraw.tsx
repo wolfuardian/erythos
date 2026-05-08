@@ -1,6 +1,7 @@
 import { createSignal, createEffect, type Component } from 'solid-js';
 import { useEditor } from '../../../app/EditorContext';
 import { SetNodePropertyCommand } from '../../../core/commands/SetNodePropertyCommand';
+import { BakeCommand } from '../../../core/commands/BakeCommand';
 import { inferNodeType } from '../../../core/scene/inferNodeType';
 import FoldableSection from '../components/FoldableSection';
 import styles from './object.module.css';
@@ -15,6 +16,7 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
   const { editor } = bridge;
   const [name, setName] = createSignal('');
   const [type, setType] = createSignal('');
+  const [isPrefab, setIsPrefab] = createSignal(false);
 
   createEffect(() => {
     bridge.objectVersion();
@@ -22,12 +24,21 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
     if (node) {
       setName(node.name);
       setType(inferNodeType(node));
+      setIsPrefab(node.nodeType === 'prefab');
     }
   });
 
   const handleNameChange = (value: string) => {
     editor.execute(new SetNodePropertyCommand(editor, props.uuid, 'name', value));
     setName(value);
+  };
+
+  const handleBake = () => {
+    try {
+      editor.execute(new BakeCommand(editor, props.uuid));
+    } catch (err) {
+      console.warn('[BakeCommand] failed:', err);
+    }
   };
 
   return (
@@ -51,6 +62,20 @@ const ObjectDraw: Component<ObjectDrawProps> = (props) => {
           {type()}
         </span>
       </div>
+
+      {/* Bake button — only shown for prefab instances */}
+      {isPrefab() && (
+        <div class={styles.fieldRow}>
+          <label class={styles.fieldLabel}></label>
+          <button
+            onClick={handleBake}
+            class={styles.bakeButton}
+            title="Flatten prefab instance into independent scene nodes"
+          >
+            Bake Instance
+          </button>
+        </div>
+      )}
     </FoldableSection>
     </div>
   );
