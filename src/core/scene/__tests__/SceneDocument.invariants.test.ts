@@ -11,8 +11,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { resolve, dirname } from 'path';
 import { SceneDocument } from '../SceneDocument';
 import { SceneInvariantError, UnsupportedVersionError } from '../SceneDocument';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '../../../../');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -60,16 +67,16 @@ describe('SceneDocument.deserialize — valid fixtures', () => {
     expect(doc.getAllNodes()).toHaveLength(5);
   });
 
-  it('v0 fixture (components-bag) is migrated and validated successfully', async () => {
-    const v0sample = await import('../io/__tests__/__fixtures__/v0_sample.json');
+  it('v0 fixture (components-bag) is migrated and validated successfully', () => {
+    const v0sample = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v0_sample.erythos'), 'utf-8'));
     const doc = new SceneDocument();
-    expect(() => doc.deserialize(v0sample.default)).not.toThrow();
+    expect(() => doc.deserialize(v0sample)).not.toThrow();
   });
 
-  it('v1 fixture (full fixture file) deserializes correctly', async () => {
-    const v1sample = await import('../io/__tests__/__fixtures__/v1_sample.json');
+  it('v1 fixture (full fixture file) deserializes correctly', () => {
+    const v1sample = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v1_sample.erythos'), 'utf-8'));
     const doc = new SceneDocument();
-    expect(() => doc.deserialize(v1sample.default)).not.toThrow();
+    expect(() => doc.deserialize(v1sample)).not.toThrow();
     expect(doc.getAllNodes().length).toBeGreaterThan(0);
   });
 });
