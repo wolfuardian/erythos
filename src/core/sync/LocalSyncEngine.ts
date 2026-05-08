@@ -32,35 +32,16 @@ function openDB(dbName: string): Promise<IDBDatabase> {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
       }
 
-      // v2: backfill visibility + forkedFrom on existing records
-      if (oldVersion < 2) {
-        const upgradeTx = (event.target as IDBOpenDBRequest).transaction!;
-        const store = upgradeTx.objectStore(STORE_NAME);
-        const cursorReq = store.openCursor();
-        cursorReq.onsuccess = (e) => {
-          const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
-          if (!cursor) return;
-          const record = cursor.value as SceneRecord;
-          if (record.visibility === undefined) {
-            record.visibility = 'private';
-          }
-          if (record.forkedFrom === undefined) {
-            record.forkedFrom = null;
-          }
-          cursor.update(record);
-          cursor.continue();
-        };
-      }
+      const upgradeTx = (event.target as IDBOpenDBRequest).transaction!;
+      const store = upgradeTx.objectStore(STORE_NAME);
 
-      // v3: backfill upAxis='Y' in body for any record missing it
+      // v3 cursor walk: backfill upAxis='Y' in body for any record missing it.
       // SceneDocument.deserialize auto-migrates via v2→v3 chain on read, but
       // eagerly patching the stored JSON ensures corrupt-data detection works
       // even for direct indexedDB reads (e.g. cloud sync export tools).
-      if (oldVersion < 3) {
-        const upgradeTx = (event.target as IDBOpenDBRequest).transaction!;
-        const store = upgradeTx.objectStore(STORE_NAME);
-        const cursorReq = store.openCursor();
-        cursorReq.onsuccess = (e) => {
+      const runV3Walk = () => {
+        const v3CursorReq = store.openCursor();
+        v3CursorReq.onsuccess = (e) => {
           const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
           if (!cursor) return;
           const record = cursor.value as SceneRecord;
@@ -74,6 +55,35 @@ function openDB(dbName: string): Promise<IDBDatabase> {
           }
           cursor.continue();
         };
+      };
+
+      // v2: backfill visibility + forkedFrom on existing records.
+      // When oldVersion < 2, v3 walk is chained *inside* the v2 cursor's terminal
+      // branch (cursor === null) to guarantee sequential execution on the same
+      // upgrade transaction — opening two cursors concurrently on the same store
+      // is not reliable across Chrome/Firefox/Safari.
+      if (oldVersion < 2) {
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = (e) => {
+          const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
+          if (!cursor) {
+            // v2 walk finished; chain v3 walk if this upgrade also spans v3
+            if (oldVersion < 3) runV3Walk();
+            return;
+          }
+          const record = cursor.value as SceneRecord;
+          if (record.visibility === undefined) {
+            record.visibility = 'private';
+          }
+          if (record.forkedFrom === undefined) {
+            record.forkedFrom = null;
+          }
+          cursor.update(record);
+          cursor.continue();
+        };
+      } else if (oldVersion < 3) {
+        // Upgrading from v2 → v3 (skipping v2 walk): run v3 walk directly
+        runV3Walk();
       }
     };
     req.onsuccess = () => resolve(req.result);
