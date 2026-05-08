@@ -1,8 +1,13 @@
 /**
- * Postgres pool stub (D1 placeholder).
- * Real connection will be validated in D2 (schema migration).
+ * Postgres connection — drizzle ORM wrapping a pg Pool.
+ *
+ * Exports:
+ *   db   — drizzle instance for typed queries
+ *   pool — raw pg Pool for auth adapters / raw SQL that drizzle cannot express
  */
 import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from './db/schema.js';
 
 const { Pool } = pg;
 
@@ -10,4 +15,4 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Do not run any queries at startup — D2 will handle schema init.
+export const db = drizzle(pool, { schema });
