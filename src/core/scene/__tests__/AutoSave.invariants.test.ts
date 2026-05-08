@@ -12,15 +12,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAutoSave } from '../AutoSave';
-import type { ErythosSceneV1 } from '../io/types';
+import type { ErythosSceneV2 } from '../io/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeEditor(overrideSerialize?: () => ErythosSceneV1) {
+function makeEditor(overrideSerialize?: () => ErythosSceneV2) {
   const listeners: Record<string, (() => void)[]> = {};
 
-  const defaultSerialize = (): ErythosSceneV1 => ({
-    version: 1,
+  const defaultSerialize = (): ErythosSceneV2 => ({
+    version: 2,
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [],
   });
@@ -55,9 +55,9 @@ function makeEditor(overrideSerialize?: () => ErythosSceneV1) {
 }
 
 // A valid scene with a single mesh node
-function makeValidScene(): ErythosSceneV1 {
+function makeValidScene(): ErythosSceneV2 {
   return {
-    version: 1,
+    version: 2,
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [
       {
@@ -69,7 +69,7 @@ function makeValidScene(): ErythosSceneV1 {
         position: [0, 0, 0],
         rotation: [0, 0, 0],
         scale: [1, 1, 1],
-        asset: 'assets://box.glb',
+        asset: 'project://box.glb',
         userData: {},
       },
     ],
@@ -78,9 +78,9 @@ function makeValidScene(): ErythosSceneV1 {
 
 // An invalid scene: mesh node missing required asset field.
 // We cast to bypass TS to simulate a corrupted in-memory state.
-function makeInvalidScene(): ErythosSceneV1 {
+function makeInvalidScene(): ErythosSceneV2 {
   return {
-    version: 1,
+    version: 2,
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [
       {

@@ -29,7 +29,7 @@ import { z } from 'zod';
  * Maximum supported schema version. Files with version > CURRENT_VERSION are
  * rejected with UnsupportedVersionError (spec line 227-230).
  */
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 // ── Zod schema for ErythosSceneV1 ───────────────────────────────────────────
 
@@ -89,6 +89,17 @@ const SceneEnvSchema = z.object({
 
 export const ErythosSceneV1Schema = z.object({
   version: z.literal(1),
+  env: SceneEnvSchema,
+  nodes: z.array(SceneNodeSchema),
+});
+
+/**
+ * Zod schema for ErythosSceneV2.
+ * Shape is identical to V1 schema except for the version literal.
+ * Used by validateScene() after v1→v2 migration runs.
+ */
+export const ErythosSceneV2Schema = z.object({
+  version: z.literal(2),
   env: SceneEnvSchema,
   nodes: z.array(SceneNodeSchema),
 });
@@ -213,7 +224,7 @@ export function validateScene(
           if (key in node) {
             violations.push({
               path: `nodes[${i}].${key}`,
-              reason: `禁止使用內嵌 geometry 欄位 "${key}"，請改用 asset URL (assets://)。`,
+              reason: `禁止使用內嵌 geometry 欄位 "${key}"，請改用 asset URL (project:// / assets://)。`,
             });
           }
         }
@@ -222,7 +233,7 @@ export function validateScene(
   }
 
   // ── Invariant 2: Zod schema validate ─────────────────────────────────────
-  const zodResult = ErythosSceneV1Schema.safeParse(scene);
+  const zodResult = ErythosSceneV2Schema.safeParse(scene);
   if (!zodResult.success) {
     for (const issue of zodResult.error.issues) {
       violations.push({

@@ -20,7 +20,7 @@ function makeEditor(scenePath = 'scenes/scene.erythos') {
         }),
         emit: vi.fn((evt: string) => listeners[evt]?.forEach(fn => fn())),
       },
-      serialize: vi.fn(() => ({ version: 1, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] })),
+      serialize: vi.fn(() => ({ version: 2, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] })),
     },
     projectManager: {
       currentScenePath: vi.fn(() => scenePath),

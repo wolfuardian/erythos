@@ -196,11 +196,11 @@ export class Editor {
   // ── Scene load ────────────────────────────────────
 
   /**
-   * Load a scene: deserialize nodes (with v0→v1 migration), then hydrate
+   * Load a scene: deserialize nodes (with v0→v1→v2 migration chain), then hydrate
    * mesh URLs via AssetResolver and prefab assets via PrefabRegistry.
    *
    * Hydration walk:
-   *   - mesh nodes with assets:// or blob:// URLs: resolve to blob URL, load into ResourceCache
+   *   - mesh nodes with project:// or assets:// or blob:// URLs: resolve to blob URL, load into ResourceCache
    *   - prefab nodes with prefabs:// URLs: resolve path, load PrefabAsset into PrefabRegistry
    *
    * Soft-fail per node — missing assets log a warning and the node renders as empty.
@@ -212,7 +212,7 @@ export class Editor {
     this.selection.hover(null);
     this.history.clear();
 
-    // Deserialize (runs v0_to_v1 migration internally, restores env)
+    // Deserialize (runs v0→v1→v2 migration chain internally, restores env)
     this.sceneDocument.deserialize(data);
 
     // Clear stale resolved URL mappings from any previous load.
@@ -221,19 +221,19 @@ export class Editor {
 
     // Hydrate mesh and prefab URLs.
     // IMPORTANT: node.asset is never mutated here — it always holds the persistent
-    // assets:// URL. Resolved blob URLs are registered with SceneSync via
+    // project:// or assets:// URL. Resolved blob URLs are registered with SceneSync via
     // setResolvedBlobUrl() so SceneSync can look them up without data-loss on save.
     for (const node of this.sceneDocument.getAllNodes()) {
       if (node.nodeType === 'mesh' && node.asset) {
         // Skip primitives — no file loading needed
-        if (node.asset.startsWith('assets://primitives/')) continue;
+        if (node.asset.startsWith('project://primitives/')) continue;
 
         try {
           const blobUrl = await this.assetResolver.resolve(node.asset);
           if (!this.resourceCache.has(blobUrl)) {
             await this.resourceCache.loadFromURL(blobUrl);
           }
-          // Register blob URL with SceneSync. node.asset stays as assets:// (persistent).
+          // Register blob URL with SceneSync. node.asset stays as project:// or assets:// (persistent).
           this.sceneSync.setResolvedBlobUrl(node.asset, blobUrl);
         } catch (err) {
           console.warn(`[Editor] loadScene: could not hydrate mesh asset "${node.asset}" — will render empty:`, err);

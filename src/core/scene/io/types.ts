@@ -16,7 +16,7 @@ import type { NodeUUID } from '../../../utils/branded';
 export type NodeId = NodeUUID;
 
 /**
- * Asset URL — four sanctioned schemes: assets://, prefabs://, materials://, blob://.
+ * Asset URL — five sanctioned schemes: project://, assets://, prefabs://, materials://, blob://.
  * Plain string alias (not branded — resolver handles scheme dispatch).
  */
 export type AssetUrl = string;
@@ -106,6 +106,18 @@ export type SceneEnv = {
 
 export type ErythosSceneV1 = {
   version: 1;
+  env: SceneEnv;
+  nodes: SceneNode[];
+};
+
+/**
+ * Schema v2 — introduced in asset sync Phase B (refs #842).
+ * `project://` replaces the local-file usage of `assets://`.
+ * `assets://` is now reserved for cloud content-addressed URLs (Phase B PR2).
+ * Shape is identical to v1 except version literal and scheme used in node.asset / env.hdri.
+ */
+export type ErythosSceneV2 = {
+  version: 2;
   env: SceneEnv;
   nodes: SceneNode[];
 };

@@ -29,14 +29,14 @@ export function serializeToPrefab(
     const components: Record<string, unknown> = {};
 
     if (node.asset && node.nodeType === 'mesh') {
-      // Convert assets:// back to a path for prefab storage
-      const assetPath = node.asset.startsWith('assets://primitives/')
+      // Convert project:// back to a path for prefab storage
+      const assetPath = node.asset.startsWith('project://primitives/')
         ? null  // skip primitives — handled by geometry field below
-        : node.asset.replace('assets://', '');
+        : node.asset.replace('project://', '');
       if (assetPath) {
         components['mesh'] = { path: assetPath };
-      } else if (node.asset.startsWith('assets://primitives/')) {
-        components['geometry'] = { type: node.asset.replace('assets://primitives/', '') };
+      } else if (node.asset.startsWith('project://primitives/')) {
+        components['geometry'] = { type: node.asset.replace('project://primitives/', '') };
       }
     }
 
@@ -113,11 +113,11 @@ export function deserializeFromPrefab(
     if (comps['mesh']) {
       const mesh = comps['mesh'] as { path?: string };
       nodeType = 'mesh';
-      if (mesh.path) asset = `assets://${mesh.path}`;
+      if (mesh.path) asset = `project://${mesh.path}`;
     } else if (comps['geometry']) {
       const geo = comps['geometry'] as { type: string };
       nodeType = 'mesh';
-      asset = `assets://primitives/${geo.type}`;
+      asset = `project://primitives/${geo.type}`;
     } else if (comps['prefab']) {
       const pref = comps['prefab'] as { asset?: string };
       nodeType = 'prefab';

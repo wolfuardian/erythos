@@ -49,7 +49,7 @@ describe('Editor', () => {
 
 
   describe('loadScene — asset URL round-trip (F-1)', () => {
-    it('loadScene does not mutate node.asset — assets:// stays as assets://', async () => {
+    it('loadScene does not mutate node.asset — project:// stays as project:// (v1 assets:// migrated)', async () => {
       // Stub AssetResolver.resolve to return a fake blob URL
       const fakeBlob = 'blob:http://localhost/fake-uuid';
       vi.spyOn(editor.assetResolver, 'resolve').mockResolvedValue(fakeBlob as any);
@@ -73,10 +73,10 @@ describe('Editor', () => {
 
       // node.asset must NOT have been mutated to blob URL
       const node = editor.sceneDocument.getNode('node-1' as any);
-      expect(node?.asset).toBe('assets://models/chair.glb');
+      expect(node?.asset).toBe('project://models/chair.glb');
     });
 
-    it('serialize after loadScene produces assets:// URLs (not blob://)', async () => {
+    it('serialize after loadScene produces project:// URLs (not blob://)', async () => {
       // Stub AssetResolver.resolve to return a fake blob URL
       const fakeBlob = 'blob:http://localhost/fake-uuid';
       vi.spyOn(editor.assetResolver, 'resolve').mockResolvedValue(fakeBlob as any);
@@ -102,7 +102,7 @@ describe('Editor', () => {
       // No node asset should be a blob URL after serialize
       const blobNodes = nodes.filter(n => n.asset?.startsWith('blob:'));
       expect(blobNodes).toHaveLength(0);
-      expect(nodes[0].asset).toBe('assets://models/chair.glb');
+      expect(nodes[0].asset).toBe('project://models/chair.glb');
     });
   });
 });

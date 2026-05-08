@@ -57,7 +57,7 @@ describe('SaveAsPrefabCommand', () => {
       const node = makeNode({
         id: 'root-uuid' as NodeUUID,
         nodeType: 'mesh',
-        asset: 'assets://models/chair.glb',
+        asset: 'project://models/chair.glb',
       });
       editor.sceneDocument.addNode(node);
 
@@ -70,7 +70,7 @@ describe('SaveAsPrefabCommand', () => {
 
       const restored = editor.sceneDocument.getNode('root-uuid' as NodeUUID);
       expect(restored?.nodeType).toBe('mesh');
-      expect(restored?.asset).toBe('assets://models/chair.glb');
+      expect(restored?.asset).toBe('project://models/chair.glb');
     });
 
     it('undo restores light node with light props', () => {

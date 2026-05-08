@@ -13,7 +13,7 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<Node
   // 3. Load and cache the GLTF via URL
   const gltfScene = await editor.resourceCache.loadFromURL(url);
 
-  // 4. Build v1 scene nodes. In v1 shape, node.asset holds the assets:// URL.
+  // 4. Build v2 scene nodes. In v2 shape, node.asset holds the project:// URL.
   //    After loadFromURL, the blob URL is in ResourceCache; we store it in node.asset
   //    so SceneSync can look it up via resourceCache.has(node.asset).
   const lastSegment = path.split('/').pop() ?? path;
@@ -23,10 +23,10 @@ export async function loadGLTFFromFile(file: File, editor: Editor): Promise<Node
 
   const childNodes = convertGLTFToNodes(gltfScene, groupNode.id, path);
 
-  // Replace assets:// URL with the resolved blob URL so SceneSync can look it up
+  // Replace project:// URL with the resolved blob URL so SceneSync can look it up
   // in ResourceCache immediately (before the full loadScene hydration cycle).
   for (const node of childNodes) {
-    if (node.nodeType === 'mesh' && node.asset && node.asset.startsWith('assets://')) {
+    if (node.nodeType === 'mesh' && node.asset && node.asset.startsWith('project://')) {
       node.asset = url;
     }
   }

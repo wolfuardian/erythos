@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "env": {
+    "hdri": null,
+    "intensity": 1,
+    "rotation": 0
+  },
+  "nodes": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Mesh Node",
+      "parent": null,
+      "order": 0,
+      "nodeType": "mesh",
+      "position": [1, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "asset": "project://models/chair.glb",
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Key Light",
+      "parent": null,
+      "order": 1,
+      "nodeType": "light",
+      "position": [5, 5, 5],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "light": { "type": "directional", "color": "#ffffff", "intensity": 1.5 },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Main Camera",
+      "parent": null,
+      "order": 2,
+      "nodeType": "camera",
+      "position": [0, 2, 10],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "camera": { "type": "perspective", "fov": 60, "near": 0.1, "far": 1000 },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000004",
+      "name": "Tree Prefab",
+      "parent": null,
+      "order": 3,
+      "nodeType": "prefab",
+      "position": [10, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "asset": "prefabs://tree-pine",
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000005",
+      "name": "Group Container",
+      "parent": null,
+      "order": 4,
+      "nodeType": "group",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000006",
+      "name": "Mesh With Material",
+      "parent": null,
+      "order": 5,
+      "nodeType": "mesh",
+      "position": [3, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [2, 2, 2],
+      "asset": "project://models/sphere.glb",
+      "mat": {
+        "color": "#ff0000",
+        "roughness": 0.3,
+        "metalness": 0.8,
+        "emissive": "#0000ff",
+        "opacity": 0.9,
+        "transparent": true,
+        "wireframe": false
+      },
+      "userData": {}
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000007",
+      "name": "Child Mesh",
+      "parent": "00000000-0000-0000-0000-000000000005",
+      "order": 0,
+      "nodeType": "mesh",
+      "position": [0, 1, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "asset": "project://primitives/sphere",
+      "userData": {}
+    }
+  ]
+}
