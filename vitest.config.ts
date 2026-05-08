@@ -1,9 +1,11 @@
 import { defineConfig } from 'vitest/config';
+import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
+  plugins: [solidPlugin({ hot: false })],
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
   },
   resolve: {
     alias: {
