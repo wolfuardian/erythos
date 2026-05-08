@@ -16,6 +16,7 @@
 import type { ProjectManager } from '../project/ProjectManager';
 import { asAssetPath, asBlobURL } from '../../utils/branded';
 import type { BlobURL, AssetPath } from '../../utils/branded';
+import type { AssetSyncClient } from '../sync/asset/AssetSyncClient';
 
 export type AssetScheme = 'project' | 'assets' | 'prefabs' | 'blob' | 'materials';
 
@@ -44,7 +45,10 @@ export function parseAssetUrl(url: string): { scheme: AssetScheme; rest: string 
 }
 
 export class AssetResolver {
-  constructor(private readonly projectManager: ProjectManager) {}
+  constructor(
+    private readonly projectManager: ProjectManager,
+    private readonly assetClient?: AssetSyncClient,
+  ) {}
 
   /**
    * Resolve an AssetUrl to a blob URL for loading.
@@ -82,14 +86,21 @@ export class AssetResolver {
       }
 
       case 'assets': {
-        // assets:// is reserved for cloud content-addressed assets (Phase B PR2).
-        // Receiving a local-style assets:// URL here means a migration did not run,
-        // or a cloud URL was fed to the wrong resolver path.
-        throw new Error(
-          `AssetResolver: cloud assets:// scheme not yet implemented (Phase B PR2). ` +
-          `URL: "${assetUrl}". To add cloud asset support, implement AssetSyncClient ` +
-          `and add a case here (refs #843).`
-        );
+        // assets://<hash>/<filename> — cloud content-addressed asset (Phase B PR2, refs #843).
+        // AssetSyncClient must be injected into the AssetResolver constructor to resolve these.
+        if (!this.assetClient) {
+          throw new Error(
+            `AssetResolver: AssetSyncClient must be injected into the AssetResolver constructor ` +
+            `to resolve cloud assets:// URLs. ` +
+            `URL: "${assetUrl}". Pass an AssetSyncClient as the second constructor argument ` +
+            `to enable cloud asset resolution (refs #843).`
+          );
+        }
+        // rest = "<hash>/<filename>" — split on first "/" to extract hash
+        const slashIdx = parsed.rest.indexOf('/');
+        const hash = slashIdx >= 0 ? parsed.rest.slice(0, slashIdx) : parsed.rest;
+        const blob = await this.assetClient.download(hash);
+        return asBlobURL(URL.createObjectURL(blob));
       }
 
       case 'materials': {
