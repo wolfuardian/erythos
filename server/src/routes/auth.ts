@@ -61,7 +61,6 @@ function createOAuthState(): string {
  */
 function verifyOAuthState(received: string, stored: string): boolean {
   if (!received || !stored) return false;
-  if (received !== stored) return false;
 
   const parts = received.split('.');
   if (parts.length !== 3) return false;
@@ -246,8 +245,9 @@ authRoutes.get('/github/callback', async (c) => {
 
     await createSession(c, userId);
 
-    const redirectPath = c.req.query('redirect') ?? '/';
-    return c.redirect(redirectPath, 302);
+    // Always redirect to root after successful OAuth.
+    // We do NOT honor `?redirect=` from query — it would be an open-redirect surface.
+    return c.redirect('/', 302);
   } catch (err) {
     console.error('[auth/callback]', err);
     return c.redirect('/?auth_error=oauth_failed', 302);
