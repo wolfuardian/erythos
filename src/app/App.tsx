@@ -13,6 +13,7 @@ import { Toolbar } from '../components/Toolbar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
 import { SyncConflictDialog } from '../components/SyncConflictDialog';
+import { CopyAsJsonModal } from '../components/CopyAsJsonModal';
 import {
   DEFAULT_SCENE_PATH,
   getLastProjectId, setLastProjectId, clearLastProjectId,
@@ -34,6 +35,28 @@ const App: Component = () => {
 
   // 地雷 2：保存 listener ref 以便 closeProject 時 off
   let onSceneReplaced: (() => void) | null = null;
+
+  // Copy as JSON modal state
+  const [copyAsJsonOpen, setCopyAsJsonOpen] = createSignal(false);
+  const [copyAsJsonContent, setCopyAsJsonContent] = createSignal('');
+
+  // Cmd+J (Mac) / Ctrl+J (Win/Linux) -- open Copy as JSON modal
+  createEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'j') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const el = e.target as HTMLElement;
+      if (el.isContentEditable) return;
+      const e2 = editor();
+      if (!e2) return;
+      e.preventDefault();
+      setCopyAsJsonContent(JSON.stringify(e2.sceneDocument.serialize(), null, 2));
+      setCopyAsJsonOpen(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    onCleanup(() => window.removeEventListener('keydown', onKeyDown));
+  });
 
   const openProject = async (handle: FileSystemDirectoryHandle) => {
     const e = new Editor(projectManager);
@@ -195,6 +218,11 @@ const App: Component = () => {
           conflict={bridge()!.syncConflict()}
           onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
           onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
+        />
+        <CopyAsJsonModal
+          open={copyAsJsonOpen()}
+          json={copyAsJsonContent()}
+          onClose={() => setCopyAsJsonOpen(false)}
         />
       </EditorProvider>
     </Show>
