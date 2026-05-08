@@ -1,7 +1,6 @@
 import {
   DirectionalLight,
   Euler,
-  MeshBasicMaterial,
   MeshLambertMaterial,
   ACESFilmicToneMapping,
   NoToneMapping,
@@ -15,7 +14,7 @@ import {
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
-export type ShadingMode = 'wireframe' | 'solid' | 'shading' | 'rendering';
+export type ShadingMode = 'solid' | 'rendering';
 export type LookdevPreset = 'none' | 'room' | 'factory';
 
 export class ShadingManager {
@@ -30,7 +29,6 @@ export class ShadingManager {
   private headlightTarget: Object3D;
   private defaultEnv: ReturnType<PMREMGenerator['fromScene']> | null = null;
   private customEnv: ReturnType<PMREMGenerator['fromEquirectangular']> | null = null;
-  private _lookdevPreset: LookdevPreset = 'room';
   private _sceneLightsOverride: boolean | undefined = undefined;
 
   constructor(renderer: WebGLRenderer, sceneHelpers: Scene, camera: Camera) {
@@ -95,7 +93,6 @@ export class ShadingManager {
   }
 
   setLookdevPreset(preset: LookdevPreset): void {
-    this._lookdevPreset = preset;
     // 切換時預建 defaultEnv（room / factory fallback 都需要）
     if (preset !== 'none') {
       this.ensureDefaultEnv();
@@ -125,25 +122,8 @@ export class ShadingManager {
         } else {
           (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
         }
-      } else if (this._mode === 'shading') {
-        // shading：依 lookdevPreset 決定是否套用環境
-        // factory fallback room（UI 標 disabled，防禦性 fallback）
-        const useRoom = this._lookdevPreset === 'room' || this._lookdevPreset === 'factory';
-        if (useRoom) {
-          this.ensureDefaultEnv();
-          scene.environment = this.defaultEnv?.texture ?? null;
-          (scene as any).environmentIntensity = this._envIntensity;
-          if ((scene as any).environmentRotation) {
-            (scene as any).environmentRotation.y = this._envRotation;
-          } else {
-            (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
-          }
-        } else {
-          // none
-          scene.environment = null;
-        }
       } else {
-        // solid / wireframe：明確隔離 HDRI
+        // solid：明確隔離 HDRI
         scene.environment = null;
       }
 
@@ -177,18 +157,10 @@ export class ShadingManager {
 
   private applyMode(): void {
     switch (this._mode) {
-      case 'wireframe':
-        this.renderer.toneMapping = NoToneMapping;
-        this._modeMaterial = new MeshBasicMaterial({ wireframe: true, color: 0x888888 });
-        break;
       case 'solid':
         this.renderer.toneMapping = NoToneMapping;
         this.addHeadlight();
         this._modeMaterial = new MeshLambertMaterial({ color: 0xffffff });
-        break;
-      case 'shading':
-        this.renderer.toneMapping = ACESFilmicToneMapping;
-        this._modeMaterial = null;
         break;
       case 'rendering':
         this.renderer.toneMapping = ACESFilmicToneMapping;
@@ -200,19 +172,8 @@ export class ShadingManager {
   }
 
   private applyLayerMask(): void {
-    // mode default
-    let defaultEnabled: boolean;
-    switch (this._mode) {
-      case 'solid':
-      case 'rendering':
-        defaultEnabled = true;
-        break;
-      case 'shading':
-      case 'wireframe':
-      default:
-        defaultEnabled = false;
-        break;
-    }
+    // mode default — both solid and rendering default to true
+    const defaultEnabled = true;
     // override 蓋掉 default（undefined = 不 override）
     const enabled = this._sceneLightsOverride ?? defaultEnabled;
     if (enabled) {
