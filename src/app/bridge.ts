@@ -22,6 +22,8 @@ export function setConfirmBeforeLoad(value: boolean): void {
 
 export interface SyncConflictPayload {
   sceneId: SceneId;
+  scenePath: AssetPath;
+  baseVersion: number;
   currentVersion: number;
 }
 

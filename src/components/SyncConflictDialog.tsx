@@ -27,7 +27,7 @@ const SyncConflictDialog: Component<SyncConflictDialogProps> = (props) => {
               Your local changes have been saved to a backup file.
               Choose which version to keep:
               <span class={styles.bakPath}>
-                Backup: {props.conflict!.sceneId}.bak.v{props.conflict!.currentVersion - 1}
+                Backup: {props.conflict!.scenePath}.bak.v{props.conflict!.baseVersion}
               </span>
             </p>
             <div class={styles.actions}>

@@ -78,7 +78,12 @@ describe('AutoSave conflict flow', () => {
 
     // syncConflict event emitted
     expect(conflictEvents).toHaveLength(1);
-    expect(conflictEvents[0]).toEqual({ sceneId: 'scene-1', currentVersion: 5 });
+    expect(conflictEvents[0]).toEqual({
+      sceneId: 'scene-1',
+      scenePath: 'scenes/scene.erythos',
+      baseVersion: 3,
+      currentVersion: 5,
+    });
   });
 
   /**

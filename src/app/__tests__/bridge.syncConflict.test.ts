@@ -18,6 +18,7 @@ vi.mock('../../core/project/ProjectHandleStore', () => ({
 
 import { Editor } from '../../core/Editor';
 import { ProjectManager } from '../../core/project/ProjectManager';
+import type { AssetPath } from '../../utils/branded';
 import { createEditorBridge } from '../bridge';
 
 describe('bridge syncConflict signal', () => {
@@ -48,9 +49,19 @@ describe('bridge syncConflict signal', () => {
       expect(bridge.syncConflict()).toBeNull();
 
       // Emit syncConflict event
-      editor.events.emit('syncConflict', { sceneId: 'scene-abc', currentVersion: 7 });
+      editor.events.emit('syncConflict', {
+        sceneId: 'scene-abc',
+        scenePath: 'scenes/scene.erythos' as AssetPath,
+        baseVersion: 6,
+        currentVersion: 7,
+      });
 
-      expect(bridge.syncConflict()).toEqual({ sceneId: 'scene-abc', currentVersion: 7 });
+      expect(bridge.syncConflict()).toEqual({
+        sceneId: 'scene-abc',
+        scenePath: 'scenes/scene.erythos',
+        baseVersion: 6,
+        currentVersion: 7,
+      });
     });
   });
 

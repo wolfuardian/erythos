@@ -51,7 +51,8 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
       if (err instanceof ConflictError) {
         // Capture base version BEFORE any mutation — this is the stale version
         const bakBaseVersion = editor.syncBaseVersion;
-        const bakPath = `${editor.projectManager.currentScenePath()}.bak.v${bakBaseVersion}` as AssetPath;
+        const scenePath = editor.projectManager.currentScenePath();
+        const bakPath = `${scenePath}.bak.v${bakBaseVersion}` as AssetPath;
 
         // Write .bak first; failure is non-fatal (warn and continue)
         try {
@@ -68,6 +69,8 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
 
         editor.events.emit('syncConflict', {
           sceneId: err.sceneId,
+          scenePath,
+          baseVersion: bakBaseVersion,
           currentVersion: err.currentVersion,
         });
       } else if (err instanceof NotFoundError) {
