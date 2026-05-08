@@ -34,11 +34,11 @@ export const Toolbar: Component = () => {
     const sceneId = bridge.currentSceneId();
     const syncEngine = bridge.editor.syncEngine;
     if (!sceneId || !syncEngine) return;
+    const prev = shareVisibility();
     setShareVisibility(vis); // optimistic update
     void syncEngine.setVisibility(sceneId, vis).catch((err: unknown) => {
       setShareError(err instanceof Error ? err.message : 'Failed to update visibility');
-      // rollback optimistic update
-      setShareVisibility(vis === 'public' ? 'private' : 'public');
+      setShareVisibility(prev); // rollback to captured prev
     });
   };
 
@@ -139,7 +139,7 @@ export const Toolbar: Component = () => {
         onVisibilityChange={handleVisibilityChange}
       />
       <Show when={shareOpen() && shareError()}>
-        <div data-testid="share-error" style={{ color: 'var(--text-danger, red)', padding: '4px 8px', 'font-size': '0.85em' }}>
+        <div data-testid="share-error" class={styles.shareError}>
           {shareError()}
         </div>
       </Show>
