@@ -293,7 +293,7 @@ describe('SceneSync', () => {
         id: 'mesh-node',
         // asset not in cache — hydrate soft-fail
         nodeType: 'mesh',
-        asset: 'assets://models/missing.glb',
+        asset: 'project://models/missing.glb',
       }));
       const obj = syncWithCache.getObject3D('mesh-node')!;
       expect(obj.children).toHaveLength(0);
@@ -326,7 +326,7 @@ describe('SceneSync', () => {
       doc.addNode(makeNode({
         id: 'geo-node',
         nodeType: 'mesh',
-        asset: 'assets://primitives/box',
+        asset: 'project://primitives/box',
         mat: { color: 0xff0000 },
       }));
       const obj = sync.getObject3D('geo-node')!;
@@ -339,7 +339,7 @@ describe('SceneSync', () => {
         doc.addNode(makeNode({
           id: `geo-${type}`,
           nodeType: 'mesh',
-          asset: 'assets://primitives/' + type,
+          asset: 'project://primitives/' + type,
           mat: { color: 0xffffff },
         }));
         const obj = sync.getObject3D(`geo-${type}`)!;

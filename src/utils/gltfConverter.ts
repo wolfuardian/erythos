@@ -18,9 +18,9 @@ function buildNodes(
 ): void {
   const id = asNodeUUID(generateUUID());
 
-  // v1: use nodeType + asset (assets:// scheme) instead of components bag.
+  // v2: use nodeType + asset (project:// scheme) instead of components bag.
   const nodeType: SceneNode['nodeType'] = obj instanceof Mesh ? 'mesh' : 'group';
-  const asset = obj instanceof Mesh ? `assets://${filePath}` : undefined;
+  const asset = obj instanceof Mesh ? `project://${filePath}` : undefined;
 
   const node: SceneNode = {
     id,

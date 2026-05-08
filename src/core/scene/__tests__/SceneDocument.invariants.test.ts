@@ -51,7 +51,7 @@ describe('SceneDocument.deserialize — valid fixtures', () => {
     const doc = new SceneDocument();
     const scene = makeV1Scene([
       makeGroupNode('g1'),
-      { ...makeGroupNode('m1'), nodeType: 'mesh', asset: 'assets://box.glb' },
+      { ...makeGroupNode('m1'), nodeType: 'mesh', asset: 'project://box.glb' },
       { ...makeGroupNode('l1'), nodeType: 'light', light: { type: 'directional', color: '#ffffff', intensity: 1 } },
       { ...makeGroupNode('c1'), nodeType: 'camera', camera: { type: 'perspective', fov: 75, near: 0.1, far: 1000 } },
       { ...makeGroupNode('p1'), nodeType: 'prefab', asset: 'prefabs://tree' },

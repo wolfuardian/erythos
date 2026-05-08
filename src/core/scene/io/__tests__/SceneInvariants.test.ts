@@ -28,7 +28,7 @@ import type { InvariantViolation } from '../SceneInvariants';
 
 function makeValidScene() {
   return {
-    version: 1 as const,
+    version: 2 as const,
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [] as unknown[],
   };
@@ -52,7 +52,7 @@ function makeMeshNode(id: string, parent: string | null = null) {
   return {
     ...makeGroupNode(id, parent),
     nodeType: 'mesh' as const,
-    asset: 'assets://box.glb',
+    asset: 'project://box.glb',
   };
 }
 
@@ -87,8 +87,12 @@ function pathsOf(violations: InvariantViolation[]): string[] {
 // ── checkRawVersion tests ──────────────────────────────────────────────────────
 
 describe('checkRawVersion', () => {
-  it('PASS: version 1 (CURRENT_VERSION) does not throw', () => {
+  it('PASS: version 1 (below CURRENT_VERSION) does not throw', () => {
     expect(() => checkRawVersion({ version: 1 })).not.toThrow();
+  });
+
+  it('PASS: version 2 (CURRENT_VERSION) does not throw', () => {
+    expect(() => checkRawVersion({ version: 2 })).not.toThrow();
   });
 
   it('PASS: version 0 is rejected as non-positive', () => {
@@ -370,7 +374,7 @@ describe('invariant 7: MaterialOverride field count', () => {
         position: [0, 0, 0] as [number, number, number],
         rotation: [0, 0, 0] as [number, number, number],
         scale: [1, 1, 1] as [number, number, number],
-        asset: 'assets://box.glb',
+        asset: 'project://box.glb',
         userData: {},
         mat: {
           color: '#ff0000',
@@ -471,7 +475,7 @@ describe('invariant 8: nodeType and auxiliary field consistency', () => {
   });
 
   it('FAIL: group nodeType with asset field is rejected', () => {
-    const node = { ...makeGroupNode('g1'), asset: 'assets://box.glb' };
+    const node = { ...makeGroupNode('g1'), asset: 'project://box.glb' };
     const scene = { ...makeValidScene(), nodes: [node] };
     const violations = validateScene(scene);
     expect(violations.some(v => v.path === 'nodes[0].asset' && v.reason.includes('"group"'))).toBe(true);
@@ -500,7 +504,7 @@ describe('invariant 8: nodeType and auxiliary field consistency', () => {
   it('FAIL: light nodeType with asset field is rejected', () => {
     const node = {
       ...makeLightNode('l1'),
-      asset: 'assets://box.glb',
+      asset: 'project://box.glb',
     };
     const scene = { ...makeValidScene(), nodes: [node] };
     const violations = validateScene(scene);
@@ -527,7 +531,7 @@ describe('invariant 9: userData must be empty {}', () => {
     // We need to test with a synthetic scene since Zod allows Record<string,unknown>
     // but our invariant catches non-empty userData post-Zod.
     const syntheticScene = {
-      version: 1 as const,
+      version: 2 as const,
       env: { hdri: null, intensity: 1, rotation: 0 },
       nodes: [{
         id: 'a1',
@@ -627,19 +631,23 @@ describe('SceneInvariantError', () => {
 
 // ── v0 fixture via migrate -> validateScene ───────────────────────────────────
 
-describe('migration path: v0 fixture -> validateScene', () => {
-  it('v0 sample migrates to valid v1 (0 violations)', async () => {
+describe('migration path: v0 fixture -> v0_to_v1 -> v1_to_v2 -> validateScene', () => {
+  it('v0 sample migrates through full chain to valid v2 (0 violations)', async () => {
     const { v0_to_v1 } = await import('../migrations/v0_to_v1');
+    const { v1_to_v2 } = await import('../migrations/v1_to_v2');
     const v0sample = await import('./__fixtures__/v0_sample.json');
     const v1 = v0_to_v1(v0sample.default);
-    const violations = validateScene(v1);
+    const v2 = v1_to_v2(v1);
+    const violations = validateScene(v2);
     expect(violations).toHaveLength(0);
   });
 
-  it('empty v0 scene migrates to valid v1', async () => {
+  it('empty v0 scene migrates through full chain to valid v2', async () => {
     const { v0_to_v1 } = await import('../migrations/v0_to_v1');
+    const { v1_to_v2 } = await import('../migrations/v1_to_v2');
     const v1 = v0_to_v1({ version: 1, nodes: [] });
-    const violations = validateScene(v1);
+    const v2 = v1_to_v2(v1);
+    const violations = validateScene(v2);
     expect(violations).toHaveLength(0);
   });
 });

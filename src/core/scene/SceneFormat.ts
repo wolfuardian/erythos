@@ -63,7 +63,7 @@ export interface SceneNode {
   rotation: Vec3;
   scale: Vec3;
   /** Required for mesh and prefab nodeTypes; absent for light / camera / group. */
-  asset?: string;           // AssetUrl: assets:// prefabs:// blob:// materials://
+  asset?: string;           // AssetUrl: project:// assets:// prefabs:// blob:// materials://
   /** Optional material override; only valid on mesh / prefab. */
   mat?: MaterialOverride;
   /** Required for light nodeType only. */
@@ -80,7 +80,7 @@ export interface SceneNode {
  * but we store the AssetUrl (assets:// etc.) for serialization.
  */
 export interface SceneEnv {
-  /** Asset URL (assets://, blob://, or null for no environment). */
+  /** Asset URL (project://, assets://, blob://, or null for no environment). */
   hdri: string | null;
   intensity: number;
   rotation: number;

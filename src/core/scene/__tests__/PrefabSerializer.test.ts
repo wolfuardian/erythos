@@ -33,14 +33,14 @@ describe('serializeToPrefab', () => {
   });
 
   it('converts v1 mesh asset to components.mesh in prefab format', () => {
-    const node = makeNode({ nodeType: 'mesh', asset: 'assets://models/chair.glb' });
+    const node = makeNode({ nodeType: 'mesh', asset: 'project://models/chair.glb' });
     const asset = serializeToPrefab('uuid-root', [node], 'Chair');
     const mesh = asset.nodes[0].components['mesh'] as Record<string, unknown>;
     expect(mesh['path']).toBe('models/chair.glb');
   });
 
   it('does not mutate the original node', () => {
-    const node = makeNode({ nodeType: 'mesh', asset: 'assets://models/chair.glb', mat: { color: 0xff0000 } });
+    const node = makeNode({ nodeType: 'mesh', asset: 'project://models/chair.glb', mat: { color: 0xff0000 } });
     const originalAsset = node.asset;
     serializeToPrefab('uuid-root', [node], 'Chair');
     // Original asset field must be unchanged

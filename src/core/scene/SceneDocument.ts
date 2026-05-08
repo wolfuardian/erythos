@@ -3,9 +3,10 @@ import type { MaterialOverride, LightProps } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
 import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
-import type { ErythosSceneV1 } from './io/types';
+import type { ErythosSceneV2 } from './io/types';
 import type { HexColor } from './io/types';
 import { v0_to_v1 } from './io/migrations/v0_to_v1';
+import { v1_to_v2 } from './io/migrations/v1_to_v2';
 import {
   checkRawVersion,
   validateScene,
@@ -31,7 +32,7 @@ function numberToHex(n: number): HexColor {
 /**
  * Converts a persistence MaterialOverride (HexColor strings) to runtime shape (numbers).
  */
-function persistMatToRuntime(mat: ErythosSceneV1['nodes'][number]['mat']): MaterialOverride | undefined {
+function persistMatToRuntime(mat: ErythosSceneV2['nodes'][number]['mat']): MaterialOverride | undefined {
   if (!mat) return undefined;
   const result: MaterialOverride = {};
   if (mat.color     !== undefined) result.color     = hexToNumber(mat.color);
@@ -48,8 +49,8 @@ function persistMatToRuntime(mat: ErythosSceneV1['nodes'][number]['mat']): Mater
 /**
  * Converts a runtime MaterialOverride (numbers) to persistence shape (HexColor strings).
  */
-function runtimeMatToPersist(mat: MaterialOverride): ErythosSceneV1['nodes'][number]['mat'] {
-  const result: NonNullable<ErythosSceneV1['nodes'][number]['mat']> = {};
+function runtimeMatToPersist(mat: MaterialOverride): ErythosSceneV2['nodes'][number]['mat'] {
+  const result: NonNullable<ErythosSceneV2['nodes'][number]['mat']> = {};
   if (mat.color     !== undefined) result.color     = numberToHex(mat.color);
   if (mat.roughness !== undefined) result.roughness = mat.roughness;
   if (mat.metalness !== undefined) result.metalness = mat.metalness;
@@ -64,7 +65,7 @@ function runtimeMatToPersist(mat: MaterialOverride): ErythosSceneV1['nodes'][num
 /**
  * Converts a persistence LightProps (HexColor) to runtime shape (number).
  */
-function persistLightToRuntime(light: NonNullable<ErythosSceneV1['nodes'][number]['light']>): LightProps {
+function persistLightToRuntime(light: NonNullable<ErythosSceneV2['nodes'][number]['light']>): LightProps {
   return {
     type: light.type,
     color: hexToNumber(light.color),
@@ -75,7 +76,7 @@ function persistLightToRuntime(light: NonNullable<ErythosSceneV1['nodes'][number
 /**
  * Converts a runtime LightProps (number) to persistence shape (HexColor).
  */
-function runtimeLightToPersist(light: LightProps): NonNullable<ErythosSceneV1['nodes'][number]['light']> {
+function runtimeLightToPersist(light: LightProps): NonNullable<ErythosSceneV2['nodes'][number]['light']> {
   return {
     type: light.type,
     color: numberToHex(light.color),
@@ -234,19 +235,19 @@ export class SceneDocument {
   // ── Serialization ─────────────────────────────────────────────────────────
 
   /**
-   * Serialize the runtime model to the v1 persistence shape (ErythosSceneV1).
+   * Serialize the runtime model to the v2 persistence shape (ErythosSceneV2).
    * Colors are converted from runtime numbers to hex strings.
    */
-  serialize(): ErythosSceneV1 {
+  serialize(): ErythosSceneV2 {
     return {
-      version: 1,
+      version: 2,
       env: {
         hdri: this._env.hdri,
         intensity: this._env.intensity,
         rotation: this._env.rotation,
       },
       nodes: Array.from(this._nodes.values()).map(n => {
-        const persisted: ErythosSceneV1['nodes'][number] = {
+        const persisted: ErythosSceneV2['nodes'][number] = {
           id: n.id,
           name: n.name,
           parent: n.parent,
@@ -268,14 +269,14 @@ export class SceneDocument {
 
   /**
    * Deserialize raw JSON data into the runtime model.
-   * Accepts both v0 (components-bag) and v1 (nodeType) shapes -- v0 is migrated first.
-   * Colors in the v1 persistence shape (hex strings) are converted to runtime numbers.
+   * Accepts v0 (components-bag), v1 (nodeType + assets:// local), or v2 (nodeType + project://) shapes.
+   * Colors in the persistence shape (hex strings) are converted to runtime numbers.
    *
    * Validation order:
    *   1. checkRawVersion -- rejects non-integer, <=0, or future version
    *      (throws UnsupportedVersionError or SceneInvariantError for bad version field)
-   *   2. v0_to_v1 migration
-   *   3. validateScene -- structural invariants (throws SceneInvariantError on violations)
+   *   2. v0_to_v1 → v1_to_v2 migration chain
+   *   3. validateScene -- structural invariants on migrated v2 scene (throws SceneInvariantError on violations)
    *
    * @param data  Parsed JSON from a .erythos file (may be any legacy version).
    * @throws {UnsupportedVersionError} if version > CURRENT_VERSION
@@ -287,17 +288,14 @@ export class SceneDocument {
     // Step 1: version gate (runs on raw JSON before migration)
     checkRawVersion(data);
 
-    // Step 2: Run v0->v1 migration. This handles:
-    //   - legacy components-bag shape
-    //   - 'leaf' -> 'prefab' rename
-    //   - mesh.source -> mesh.path
-    //   - prefab.id -> stripped (P4: no resolver map)
-    //   - geometry component -> mesh nodeType with assets://primitives/
-    //   - inject default env
-    const v1: ErythosSceneV1 = v0_to_v1(data);
+    // Step 2: Run migration chain v0→v1→v2.
+    //   v0→v1: legacy components-bag → nodeType shape + inject default env
+    //   v1→v2: `assets://<path>` (local) → `project://<path>` scheme rename
+    const asV1 = v0_to_v1(data);
+    const v2: ErythosSceneV2 = v1_to_v2(asV1);
 
-    // Step 3: structural invariants on migrated v1 scene
-    const violations = validateScene(v1);
+    // Step 3: structural invariants on migrated v2 scene
+    const violations = validateScene(v2);
     if (violations.length > 0) {
       console.error('[SceneDocument] Scene invariant violations:');
       for (const v of violations) {
@@ -308,13 +306,13 @@ export class SceneDocument {
 
     // Restore env
     this._env = {
-      hdri:      v1.env.hdri,
-      intensity: v1.env.intensity,
-      rotation:  v1.env.rotation,
+      hdri:      v2.env.hdri,
+      intensity: v2.env.intensity,
+      rotation:  v2.env.rotation,
     };
 
     // Convert persistence nodes -> runtime nodes
-    for (const pn of v1.nodes) {
+    for (const pn of v2.nodes) {
       const node: SceneNode = {
         id:       asNodeUUID(pn.id),
         name:     pn.name,

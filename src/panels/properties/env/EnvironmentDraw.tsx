@@ -18,9 +18,9 @@ const EnvironmentDraw: Component = () => {
 
   const handleSelectFromProject = async (path: string) => {
     if (!path) return;
-    // Store the assets:// URL in SceneEnv.hdri for persistence
+    // Store the project:// URL in SceneEnv.hdri for persistence
     // Viewport resolves it at render time
-    editor.setEnvironmentSettings({ hdri: `assets://${path}` });
+    editor.setEnvironmentSettings({ hdri: `project://${path}` });
   };
 
   return (

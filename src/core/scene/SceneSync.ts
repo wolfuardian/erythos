@@ -14,11 +14,11 @@ import type { AssetPath, NodeUUID } from '../../utils/branded';
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
 /**
- * Parse a primitive geometry type from an assets://primitives/ URL.
+ * Parse a primitive geometry type from a project://primitives/ URL.
  * Returns the geometry type string or null if not a primitives URL.
  */
 function parsePrimitiveType(assetUrl: string): string | null {
-  const prefix = 'assets://primitives/';
+  const prefix = 'project://primitives/';
   if (!assetUrl.startsWith(prefix)) return null;
   return assetUrl.slice(prefix.length);
 }
@@ -69,12 +69,12 @@ function buildLight(light: LightProps): DirectionalLight | AmbientLight | PointL
  * Listens to SceneDocument events and mirrors the flat node list
  * into a Three.js parent-child hierarchy.
  *
- * v1 behavior:
+ * v2 behavior:
  *   - Dispatches hydration based on SceneNode.nodeType (not components bag)
  *   - Prefab nodes: runtime-only expansion into Three.js Object3D subtrees.
  *     Prefab children are NOT added to SceneDocument — only to the Three.js scene.
- *   - mesh with assets://primitives/ → inline geometry
- *   - mesh with assets://* or blob:// → ResourceCache lookup
+ *   - mesh with project://primitives/ → inline geometry
+ *   - mesh with project://* or blob:// → ResourceCache lookup
  */
 export class SceneSync {
   private readonly document: SceneDocument;
@@ -97,7 +97,7 @@ export class SceneSync {
   private _prefabRegistry: PrefabRegistry | null = null;
 
   /**
-   * Runtime-only map: persistent asset URL (assets://...) → resolved blob URL.
+   * Runtime-only map: persistent asset URL (project://... or assets://...) → resolved blob URL.
    * Populated by Editor.loadScene after asset resolution.
    * SceneSync uses this to find the loaded blob URL without node.asset being mutated.
    */
@@ -171,8 +171,8 @@ export class SceneSync {
 
   /**
    * Register a resolved blob URL for a persistent asset URL.
-   * Called by Editor.loadScene after AssetResolver resolves assets:// to blob URL.
-   * SceneSync uses this mapping in hydrateMesh — node.asset stays as assets:// (persistent).
+   * Called by Editor.loadScene after AssetResolver resolves project:// or assets:// to blob URL.
+   * SceneSync uses this mapping in hydrateMesh — node.asset stays as project:// or assets:// (persistent).
    */
   setResolvedBlobUrl(assetUrl: string, blobUrl: string): void {
     this._resolvedBlobUrls.set(assetUrl, blobUrl);
@@ -355,7 +355,7 @@ export class SceneSync {
   private hydrateMesh(obj: Object3D, node: SceneNode): void {
     if (!node.asset) return;
 
-    // Check for primitive geometry URL: assets://primitives/<type>
+    // Check for primitive geometry URL: project://primitives/<type>
     const primitiveType = parsePrimitiveType(node.asset);
     if (primitiveType !== null) {
       const geo = createPrimitiveGeometry(primitiveType);
@@ -367,7 +367,7 @@ export class SceneSync {
 
     // Regular mesh: look up in ResourceCache by the resolved blob URL.
     // The blob URL is resolved by Editor.loadScene via AssetResolver and registered
-    // via setResolvedBlobUrl(). node.asset stays as the persistent assets:// URL.
+    // via setResolvedBlobUrl(). node.asset stays as the persistent project:// or assets:// URL.
     // If the asset isn't in ResourceCache yet, we skip silently (soft-fail).
     const blobUrl = this._resolvedBlobUrls.get(node.asset) ?? node.asset;
     if (this.resourceCache && this.resourceCache.has(blobUrl)) {
