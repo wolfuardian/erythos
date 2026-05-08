@@ -155,6 +155,8 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 7. **MaterialOverride 欄位上限** — 超過 8 欄位(扣除 `transparent` / `wireframe` 渲染輔助欄位)的 mat 應抽出成 `materials://` asset
 8. **`nodeType` 與輔助欄位一致性** — 例如 `nodeType: 'light'` 必有 `light` 欄位;`nodeType: 'mesh' | 'prefab'` 必有 `asset`(見 v1 Schema 表)
 9. **`userData` 必為空 `{}`** — v1 不開放使用者自由欄位(見「砍掉的東西」)
+10. **無 prefab 子樹展開** — `nodeType: 'prefab'` node 在 SceneFile 中必為純引用(不含子節點)。Runtime hydrate 才展開,不寫回磁碟
+11. **`upAxis` 必為 `'Y'`**(v3+) — 頂層欄位必填,唯一合法值為 `'Y'`;缺少或為其他值 → `SceneInvariantError`(見 § v2 → v3 Migration)
 
 ## Material:引用 vs Inline Override
 
@@ -253,7 +255,7 @@ function loadScene(raw: { version: number; ... }): ErythosSceneCurrent {
 
 每次 migration 前留 `.erythos.bak.v{原版本}`(IndexedDB 存一份 raw)。**永遠不主動清** — 由使用者手動。空間便宜,信任貴。
 
-### v1 → v2(計劃中,asset sync Phase B)
+### v1 → v2(已實作,asset sync Phase B)
 
 對應 issue #840:`assets://` scheme 重新定義為 cloud content-addressed,既有 local 用法搬遷至 `project://`(見 § URI Scheme)。v2 schema 將執行 scheme rename:
 
@@ -262,7 +264,33 @@ function loadScene(raw: { version: number; ... }): ErythosSceneCurrent {
 - `materials://` / `blob://` / `prefabs://` 不變
 - `assets://<sha256>/<filename>` 形式 v2 起新增,Phase B client 上線後才會出現於 scene file
 
-實作於 `src/core/scene/io/migrations/v1_to_v2.ts`(尚未建立)+ 對應 fixture `fixtures/v1_sample.erythos` → `v2_sample.erythos`。
+實作於 `src/core/scene/io/migrations/v1_to_v2.ts` + 對應 fixture `fixtures/v1_sample.erythos` → `v2_sample.erythos`。
+
+### v2 → v3(已實作,Y-up axis schema invariant)
+
+來源:`.claude/編輯器的核心功能設計.md` 第 8 輪 Q5「現在不寫進 schema,未來資產一爛全爛」拍板。
+
+Erythos 採 **Y-up + 公尺**(對齊 GLB/glTF 規範)。v2 以前這是 viewport 約定,沒寫入 schema。v3 補上成不可改的頂層欄位:
+
+```typescript
+type ErythosSceneV3 = {
+  version: 3;
+  upAxis: 'Y';   // 必填,不可改。唯一合法值:'Y'
+  env: SceneEnv;
+  nodes: SceneNode[];
+};
+```
+
+Migration 行為:
+
+- 讀到 v2 record → v2→v3 migration 補 `upAxis: 'Y'`(unambiguous:Erythos 從未支援其他 axis)
+- 讀到 `upAxis` 存在但 ≠ `'Y'` → **拒絕載入**(`SceneInvariantError`「Erythos only supports Y-up」)
+- IndexedDB DB_VERSION 同步升至 3,`onupgradeneeded` cursor-walk 直接在 body 補 `upAxis: 'Y'`
+
+**為何不讓 upAxis 可設定**:asset pipeline(GLB 規格、Three.js 預設、AssetResolver 轉換邏輯)全部硬綁 Y-up。開放 Z-up 選項 = 全鏈要加 if/else,維護成本遠超過使用者效益。Z-up asset → 由 `AssetResolver` 在 import 時轉軸,不進 schema。
+
+實作於 `src/core/scene/io/migrations/v2_to_v3.ts` + fixture `fixtures/v2_sample.erythos` → `v3_sample.erythos`。
+
 
 ## 砍掉的東西(對照 Three.js `toJSON()`)
 
@@ -292,5 +320,5 @@ function loadScene(raw: { version: number; ... }): ErythosSceneCurrent {
 ## 開放議題(v1 暫不決,留路)
 
 - **動畫存** — keyframe / timeline 暫不進 `.erythos`(動畫是 GLB 內部的事 OR 走 `.eanim` 引用 — 待第一個動畫需求出現時決定)
-- **座標系與單位** — 預設 Y-up + 公尺(對齊 GLB 規範),但 schema 暫不寫死。若引用的 asset 來自 Z-up / 公分,由 `AssetResolver` 在解析時轉換
+- ~~**座標系與單位** — schema 暫不寫死~~ → **已決(v3)**:Y-up + 公尺(對齊 GLB 規範),schema 層寫死 `upAxis: 'Y'`。若引用的 asset 來自 Z-up / 公分,由 `AssetResolver` 在解析時轉換。見 § v3 Schema / § Invariants #11。
 - **field-level 衝突合併** — node 級衝突由同步協定處理(見 `erythos-architecture.md`)。同 node 同欄位由兩人同時改,v1 走 last-write-wins on full file,v2 再考慮 CRDT
