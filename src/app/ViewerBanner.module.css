@@ -1,0 +1,61 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  height: var(--toolbar-height, 36px);
+  padding: 0 var(--space-md);
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.sceneName {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.sceneNameEmphasis {
+  color: var(--text-default);
+  font-weight: 500;
+}
+
+.viewingLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.editButton {
+  font-size: var(--font-size-sm);
+  padding: 3px 10px;
+  background: var(--accent-blue, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.editButton:hover {
+  opacity: 0.85;
+}
+
+.viewerRoot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+}
+
+.viewerContent {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
