@@ -1,6 +1,6 @@
 # Erythos
 
-A web-based 3D scene editor for Three.js — designed by someone who cares about every panel header, every keystroke, and every empty state.
+**Figma for 3D.** A web-based 3D scene editor for Three.js — desktop for editing, mobile for viewing and commenting. Designed by someone who cares about every panel header, every keystroke, and every empty state.
 
 > ![Erythos editor screenshot](docs/images/hero.png)
 > _Replace this with a hero screenshot. Recommended size: 1600 × 900._
@@ -16,6 +16,8 @@ Three.js gives you the engine. Existing editors mostly give you either an engine
 Erythos sits in the middle: an **opinionated, polished editor for building Three.js scenes on the web**, built around the conviction that a good editor is felt before it is understood. Every interaction is shaped by the question _"would I want to use this every day?"_.
 
 It is, first and foremost, a personal tool — and that's the point. The taste comes from one person actually using it.
+
+The form factor is split on purpose: **desktop for the work, mobile for the witness**. Two people edit a scene together; a third person opens a link on their phone and is looking at it five seconds later. Good-looking output isn't the editor's job — Three.js's PBR and IBL pipeline already does that work. The ambition is in the editing, not the engine.
 
 ## Status
 
