@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Scene } from 'three';
+import { Scene, Mesh, BoxGeometry, CylinderGeometry } from 'three';
 import { SceneDocument } from '../SceneDocument';
 import { SceneSync } from '../SceneSync';
 import type { SceneNode } from '../SceneFormat';
@@ -165,13 +165,76 @@ describe('SceneSync broken-ref tracking', () => {
       // with a visiting set that already contains the target URL.
       // We test this indirectly: create a scenario where registry has a prefab
       // but we manually verify cycle detection via the visiting mechanism.
-      
+
       // This is an integration test via addNode + registry that has the same prefab
       // (can't easily simulate visiting from outside, so we rely on the registry lookup test)
       // Cycle guard path: the guard only fires if the same URL appears in visiting,
       // which means the expansion is already underway for that URL.
       // Testing the guard directly requires internal access -- verified via PrefabGraph tests.
       expect(true).toBe(true); // guard mechanism tested in PrefabGraph tests
+    });
+  });
+
+  describe('prefab hydration invariant (refs #846)', () => {
+    it('hydrates prefab subtree into Three.js Object3D only — SceneDocument unchanged beyond placeholder', () => {
+      const prefab: PrefabAsset = {
+        version: 1,
+        id: 'pref-id' as any,
+        name: 'tree-pine',
+        modified: '2025-01-01T00:00:00Z',
+        nodes: [
+          {
+            localId: 0,
+            parentLocalId: null,
+            name: 'Root',
+            order: 0,
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1],
+            components: { geometry: { type: 'box' } },
+          },
+          {
+            localId: 1,
+            parentLocalId: 0,
+            name: 'Trunk',
+            order: 1,
+            position: [0, 0, 0],
+            rotation: [0, 0, 0],
+            scale: [1, 1, 1],
+            components: { geometry: { type: 'cylinder' } },
+          },
+        ],
+      };
+      const registry = makePrefabRegistry({ 'tree-pine': prefab });
+      sync.attachPrefabRegistry(registry);
+
+      const id = asNodeUUID('prefab-instance');
+      doc.addNode(makeNode({
+        id,
+        name: 'TreePineInstance',
+        nodeType: 'prefab',
+        asset: 'prefabs://tree-pine',
+      }));
+
+      // SceneDocument holds only the placeholder — prefab subtree is NOT written back
+      const allNodes = doc.getAllNodes();
+      expect(allNodes.length).toBe(1);
+      expect(allNodes[0].id).toBe(id);
+
+      // Successful hydration — no broken-ref mark
+      expect(sync.getBrokenRefIds().has(id)).toBe(false);
+
+      // Three.js tree DID expand — both prefab geometries materialised in the scene
+      let boxFound = false;
+      let cylinderFound = false;
+      scene.traverse((obj) => {
+        if (obj instanceof Mesh) {
+          if (obj.geometry instanceof BoxGeometry) boxFound = true;
+          if (obj.geometry instanceof CylinderGeometry) cylinderFound = true;
+        }
+      });
+      expect(boxFound).toBe(true);
+      expect(cylinderFound).toBe(true);
     });
   });
 });
