@@ -124,9 +124,9 @@ sceneRoutes.put('/:id', authMiddleware, async (c) => {
   const scene = rows[0];
   if (!scene) return c.json({ error: 'Not Found' }, 404);
 
-  // --- Owner check ---
+  // --- Owner check (non-owner → 404, no existence leak; consistent with PATCH/fork) ---
   if (scene.owner_id !== user.id) {
-    return c.json({ error: 'Forbidden' }, 403);
+    return c.json({ error: 'Not Found' }, 404);
   }
 
   // --- Optimistic concurrency check ---

@@ -8,7 +8,7 @@
  *   GET  /scenes/:id     — happy path (public), 404 (not found), 404 (private, not owner),
  *                          200 (private, owner), 401-not-applicable (GET is anonymous-friendly)
  *   PUT  /scenes/:id     — happy, 409 version mismatch, 412 format wrong, 428 missing header,
- *                          401 (no auth), 403 (non-owner)
+ *                          401 (no auth), 404 (non-owner, no-leak consistency)
  *   POST /scenes         — happy 201, 401 (no auth)
  *   PATCH /scenes/:id/visibility — happy 200, 401 (no auth), 404 (non-owner)
  *   POST /scenes/:id/fork — happy 201, 401 (no auth), 404 (private non-owner source)
@@ -282,7 +282,7 @@ describe('PUT /scenes/:id', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 when caller is not the owner', async () => {
+  it('returns 404 when caller is not the owner (no existence leak)', async () => {
     mockResolveSession.mockResolvedValue({ ...FAKE_USER, id: OTHER_USER_ID });
     mockSelect.mockReturnValue(selectChain([fakeScene({ version: 5 })]));
 
@@ -297,7 +297,7 @@ describe('PUT /scenes/:id', () => {
         cookie: 'session=other-token',
       }),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 });
 
