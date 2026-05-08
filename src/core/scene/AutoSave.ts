@@ -72,6 +72,8 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
           scenePath,
           baseVersion: bakBaseVersion,
           currentVersion: err.currentVersion,
+          localBody: editor.sceneDocument,
+          cloudBody: err.currentBody,
         });
       } else if (err instanceof NotFoundError) {
         console.warn(`[AutoSave] SyncEngine scene not found: "${editor.syncSceneId}"`, err);

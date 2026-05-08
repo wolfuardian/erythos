@@ -76,14 +76,17 @@ describe('AutoSave conflict flow', () => {
     expect(bakCall).toBeDefined();
     expect(String(bakCall![0])).toBe('scenes/scene.erythos.bak.v3');
 
-    // syncConflict event emitted
+    // syncConflict event emitted with version fields + body refs
     expect(conflictEvents).toHaveLength(1);
-    expect(conflictEvents[0]).toEqual({
+    expect(conflictEvents[0]).toMatchObject({
       sceneId: 'scene-1',
       scenePath: 'scenes/scene.erythos',
       baseVersion: 3,
       currentVersion: 5,
     });
+    // localBody === the live sceneDocument; cloudBody === the remote doc from ConflictError
+    expect((conflictEvents[0] as any).localBody).toBe(editor.sceneDocument);
+    expect((conflictEvents[0] as any).cloudBody).toBe(remoteDoc);
   });
 
   /**
