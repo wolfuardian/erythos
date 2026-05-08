@@ -2,7 +2,8 @@
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
 export type InteractionMode = 'object' | 'edit';
-import type { NodeUUID } from '../utils/branded';
+import type { AssetPath, NodeUUID } from '../utils/branded';
+import type { SceneId } from './sync/SyncEngine';
 
 // ── Event map ──────────────────────────────────────────
 
@@ -33,6 +34,7 @@ export interface EditorEventMap {
   environmentChanged:     [];
   envSelectionChanged:    [selected: boolean];
   brokenRefsChanged:      [];
+  syncConflict:           [payload: { sceneId: SceneId; scenePath: AssetPath; baseVersion: number; currentVersion: number }];
 
 }
 

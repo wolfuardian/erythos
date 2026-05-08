@@ -12,6 +12,7 @@ import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
 import { Toolbar } from '../components/Toolbar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
+import { SyncConflictDialog } from '../components/SyncConflictDialog';
 import {
   DEFAULT_SCENE_PATH,
   getLastProjectId, setLastProjectId, clearLastProjectId,
@@ -93,6 +94,7 @@ const App: Component = () => {
       projectManager,
       openProjectById,
       autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
+      resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
     });
 
     e.keybindings.registerMany([
@@ -189,6 +191,11 @@ const App: Component = () => {
           </div>
           <StatusBar bridge={bridge()!} />
         </div>
+        <SyncConflictDialog
+          conflict={bridge()!.syncConflict()}
+          onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
+          onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
+        />
       </EditorProvider>
     </Show>
   );
