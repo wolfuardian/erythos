@@ -26,7 +26,7 @@ export interface SyncConflictPayload {
   scenePath: AssetPath;
   baseVersion: number;
   currentVersion: number;
-  /** Local SceneDocument snapshot at the moment of conflict (before any resolution) */
+  /** Local SceneDocument snapshot at the moment of conflict (snapshot, not live reference) */
   localBody: SceneDocument;
   /** Cloud SceneDocument returned by the server's 409 response */
   cloudBody: SceneDocument;

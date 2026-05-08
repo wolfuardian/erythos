@@ -1,5 +1,5 @@
 import type { Editor } from '../Editor';
-import type { SceneDocument } from './SceneDocument';
+import { SceneDocument } from './SceneDocument';
 import { asAssetPath } from '../../utils/branded';
 import { validateScene } from './io/SceneInvariants';
 import { ConflictError, NotFoundError } from '../sync/SyncEngine';
@@ -67,12 +67,18 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
           remoteBody: err.currentBody,
         };
 
+        // Snapshot the local document at conflict time so the dialog always
+        // shows the state at the moment of conflict — not a live reference
+        // that could drift if the user continues editing.
+        const localSnapshot = new SceneDocument();
+        localSnapshot.deserialize(editor.sceneDocument.serialize());
+
         editor.events.emit('syncConflict', {
           sceneId: err.sceneId,
           scenePath,
           baseVersion: bakBaseVersion,
           currentVersion: err.currentVersion,
-          localBody: editor.sceneDocument,
+          localBody: localSnapshot,
           cloudBody: err.currentBody,
         });
       } else if (err instanceof NotFoundError) {

@@ -7,24 +7,24 @@ import { render, screen, fireEvent, cleanup } from '@solidjs/testing-library';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SyncConflictDialog } from '../SyncConflictDialog';
 import type { SyncConflictPayload } from '../../app/bridge';
+import { SceneDocument } from '../../core/scene/SceneDocument';
+import type { AssetPath } from '../../utils/branded';
 
-// ── Minimal SceneDocument stub ───────────────────────────────────────────────
+// ── SceneDocument fixtures ────────────────────────────────────────────────────
 
-// We only need serialize() to return stable JSON-serializable data.
-function makeSceneDocStub(label: string) {
-  return {
-    serialize: () => ({ __label: label, nodes: [] }),
-  } as any;
-}
+// Two real SceneDocuments that differ in env.rotation so the JSON diff
+// produces both removed (-) and added (+) lines.
+const localDoc = new SceneDocument();
+localDoc.setEnv({ rotation: 0 });
+
+const cloudDoc = new SceneDocument();
+cloudDoc.setEnv({ rotation: 1 });
 
 afterEach(cleanup);
 
-const localDoc = makeSceneDocStub('local');
-const cloudDoc = makeSceneDocStub('cloud');
-
 const defaultConflict: SyncConflictPayload = {
   sceneId: 'scene-abc',
-  scenePath: 'scenes/my-scene.erythos' as any,
+  scenePath: 'scenes/my-scene.erythos' as AssetPath,
   baseVersion: 3,
   currentVersion: 5,
   localBody: localDoc,
@@ -100,7 +100,7 @@ describe('SyncConflictDialog', () => {
       fireEvent.click(screen.getByTestId('sync-conflict-show-diff'));
       const diffSection = screen.getByTestId('sync-conflict-diff-section');
       const text = diffSection.textContent ?? '';
-      // Both docs differ in __label — local has "local", cloud has "cloud"
+      // Both docs differ in env.rotation (0 vs 1) — produces removed and added lines
       expect(text).toContain('- ');
       expect(text).toContain('+ ');
     });

@@ -84,8 +84,11 @@ describe('AutoSave conflict flow', () => {
       baseVersion: 3,
       currentVersion: 5,
     });
-    // localBody === the live sceneDocument; cloudBody === the remote doc from ConflictError
-    expect((conflictEvents[0] as any).localBody).toBe(editor.sceneDocument);
+    // localBody is a snapshot (not the live sceneDocument ref) — verify structural equality
+    // cloudBody === the remote doc from ConflictError (still a direct reference)
+    const localBody = (conflictEvents[0] as any).localBody as import('./SceneDocument').SceneDocument;
+    expect(localBody).not.toBe(editor.sceneDocument);
+    expect(localBody.serialize()).toEqual(editor.sceneDocument.serialize());
     expect((conflictEvents[0] as any).cloudBody).toBe(remoteDoc);
   });
 
