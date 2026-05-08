@@ -1,6 +1,6 @@
 import type { Editor } from '../Editor';
 import type { SceneDocument } from './SceneDocument';
-import type { AssetPath } from '../../utils/branded';
+import { asAssetPath } from '../../utils/branded';
 import { validateScene } from './io/SceneInvariants';
 import { ConflictError, NotFoundError } from '../sync/SyncEngine';
 
@@ -52,7 +52,7 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
         // Capture base version BEFORE any mutation — this is the stale version
         const bakBaseVersion = editor.syncBaseVersion;
         const scenePath = editor.projectManager.currentScenePath();
-        const bakPath = `${scenePath}.bak.v${bakBaseVersion}` as AssetPath;
+        const bakPath = asAssetPath(`${scenePath}.bak.v${bakBaseVersion}`);
 
         // Write .bak first; failure is non-fatal (warn and continue)
         try {

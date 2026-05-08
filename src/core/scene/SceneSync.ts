@@ -9,7 +9,7 @@ import type { SceneDocument } from './SceneDocument';
 import type { ResourceCache } from './ResourceCache';
 import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
-import type { AssetPath, NodeUUID } from '../../utils/branded';
+import { asAssetPath, type NodeUUID } from '../../utils/branded';
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
@@ -400,7 +400,7 @@ export class SceneSync {
     // Look up the prefab asset by its project-relative path.
     // AssetResolver convention: "prefabs://tree-pine" -> "prefabs/tree-pine.prefab"
     const prefabName = node.asset.replace('prefabs://', '');
-    const path = `prefabs/${prefabName}.prefab` as AssetPath;
+    const path = asAssetPath(`prefabs/${prefabName}.prefab`);
     const url = this._prefabRegistry.getURLForPath(path);
     let asset = url ? this._prefabRegistry.get(url) : null;
     if (!asset) {
