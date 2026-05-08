@@ -18,3 +18,5 @@ projects/
 .playwright-mcp/
 .superpowers/
 .idea/
+
+server/.env

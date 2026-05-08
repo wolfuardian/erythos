@@ -43,7 +43,9 @@
     "check:command-pattern": "node scripts/check-command-pattern.mjs",
     "check:panel-root": "node scripts/check-panel-root.mjs",
     "check": "npm run check:command-pattern && npm run check:panel-root",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "server:dev": "npm run -w server dev",
+    "server:build": "npm run -w server build"
   },
   "dependencies": {
     "solid-js": "^1.9.12",
@@ -65,5 +67,8 @@
     "vite": "^8.0.10",
     "vite-plugin-solid": "^2.11.10",
     "vitest": "^4.1.5"
-  }
+  },
+  "workspaces": [
+    "server"
+  ]
 }
