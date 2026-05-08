@@ -2,13 +2,13 @@
  * SceneDocument.parsePastePayload — unit tests
  *
  * Covers the 4 required acceptance paths:
- *   1. Valid v2 JSON → returns runtime SceneNode[] with fresh ids
+ *   1. Valid v2 JSON → migrated to v3, returns runtime SceneNode[] with fresh ids
  *   2. Invalid JSON shape (structural) → throws SceneInvariantError
  *   3. Version mismatch (future version) → throws UnsupportedVersionError
  *   4. Id-conflict scenario → paste same JSON twice; both succeed with distinct ids
  *
  * Plus:
- *   5. v1 fixture → migrated to v2, passes (migration coverage)
+ *   5. v1 fixture → migrated to v3, passes (migration coverage)
  *   6. Parent-child relationship preserved within pasted batch
  *   7. targetParentId wired to root nodes
  */
@@ -18,7 +18,7 @@ import { asNodeUUID } from '../../../utils/branded';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-/** Minimal valid v2 scene with one group node at scene root. */
+/** Minimal valid v2 scene with one group node at scene root (will migrate to v3 via parsePastePayload). */
 const V2_SINGLE_NODE = {
   version: 2,
   env: { hdri: null, intensity: 1, rotation: 0 },
@@ -37,7 +37,7 @@ const V2_SINGLE_NODE = {
   ],
 };
 
-/** v2 scene with parent-child pair. */
+/** v2 scene with parent-child pair (will migrate to v3 via parsePastePayload). */
 const V2_PARENT_CHILD = {
   version: 2,
   env: { hdri: null, intensity: 1, rotation: 0 },
@@ -89,8 +89,8 @@ const V1_SINGLE_NODE = {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('SceneDocument.parsePastePayload', () => {
-  // 1. Valid v2 → returns SceneNode[] with fresh ids
-  it('valid v2 JSON returns runtime nodes with fresh ids', () => {
+  // 1. Valid v2 input → migrated to v3 internally, returns SceneNode[] with fresh ids
+  it('valid v2 JSON is migrated to v3 and returns runtime nodes with fresh ids', () => {
     const doc = new SceneDocument();
     const result = doc.parsePastePayload(V2_SINGLE_NODE, null);
 
@@ -142,8 +142,8 @@ describe('SceneDocument.parsePastePayload', () => {
     expect(first[0].id).not.toBe(second[0].id);
   });
 
-  // 5. v1 fixture → migrated, passes
-  it('v1 fixture is migrated to v2 and returns nodes', () => {
+  // 5. v1 fixture → migrated to v3, passes
+  it('v1 fixture is migrated to v3 and returns nodes', () => {
     const doc = new SceneDocument();
     const result = doc.parsePastePayload(V1_SINGLE_NODE, null);
 

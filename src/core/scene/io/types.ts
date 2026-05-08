@@ -121,3 +121,24 @@ export type ErythosSceneV2 = {
   env: SceneEnv;
   nodes: SceneNode[];
 };
+
+/**
+ * Schema v3 — introduces `upAxis: 'Y'` as a required, immutable top-level invariant.
+ *
+ * Erythos exclusively uses a Y-up, metre-unit coordinate system (aligning with the
+ * GLB/glTF specification). Writing this into the schema rather than leaving it as a
+ * viewport convention ensures that every `.erythos` file is self-describing; if the
+ * field is absent or not 'Y', the file is treated as corrupt (not merely old).
+ *
+ * Rationale (refs round 8 Q5 of .claude/編輯器的核心功能設計.md):
+ *   "現在不寫進 schema，未來資產一爛全爛" — the consultant's warning, formalised here.
+ *
+ * upAxis is not user-configurable. Asset imports from Z-up sources (e.g. Blender export)
+ * must be converted at the AssetResolver boundary, not stored as an alternative axis value.
+ */
+export type ErythosSceneV3 = {
+  version: 3;
+  upAxis: 'Y';
+  env: SceneEnv;
+  nodes: SceneNode[];
+};

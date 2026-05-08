@@ -8,7 +8,7 @@ import {
 } from './SyncEngine';
 import { generateUUID } from '../../utils/uuid';
 
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'scenes';
 
 interface SceneRecord {
@@ -51,6 +51,30 @@ function openDB(dbName: string): Promise<IDBDatabase> {
           cursor.continue();
         };
       }
+
+      // v3: backfill upAxis='Y' in body for any record missing it
+      // SceneDocument.deserialize auto-migrates via v2→v3 chain on read, but
+      // eagerly patching the stored JSON ensures corrupt-data detection works
+      // even for direct indexedDB reads (e.g. cloud sync export tools).
+      if (oldVersion < 3) {
+        const upgradeTx = (event.target as IDBOpenDBRequest).transaction!;
+        const store = upgradeTx.objectStore(STORE_NAME);
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = (e) => {
+          const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
+          if (!cursor) return;
+          const record = cursor.value as SceneRecord;
+          if (
+            typeof record.body === 'object' &&
+            record.body !== null &&
+            (record.body as Record<string, unknown>)['upAxis'] === undefined
+          ) {
+            (record.body as Record<string, unknown>)['upAxis'] = 'Y';
+            cursor.update(record);
+          }
+          cursor.continue();
+        };
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -81,6 +105,10 @@ function idbPut(store: IDBObjectStore, value: SceneRecord): Promise<void> {
  *   v1 — initial schema: id, version, name, body
  *   v2 — adds visibility ('private'|'public') and forkedFrom (SceneId|null);
  *        existing v1 records are backfilled with visibility='private', forkedFrom=null
+ *   v3 — body.upAxis invariant: patches any existing record whose body lacks upAxis
+ *        to add upAxis='Y' directly in the stored JSON body;
+ *        subsequent reads via SceneDocument.deserialize also auto-migrate via the
+ *        v2→v3 migration chain, so this eager patch is belt-and-suspenders.
  */
 export class LocalSyncEngine implements SyncEngine {
   private readonly dbName: string;

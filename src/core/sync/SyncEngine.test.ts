@@ -261,3 +261,57 @@ describe("LocalSyncEngine v1-to-v2 migration", () => {
     expect(forkedFrom).toBeNull();
   });
 });
+
+// -- LocalSyncEngine v2 to v3 migration --
+describe("LocalSyncEngine v2-to-v3 migration", () => {
+  it("existing v2 DB records without upAxis in body are backfilled on DB open", async () => {
+    const idb = new IDBFactory();
+    (globalThis as unknown as Record<string, unknown>).indexedDB = idb;
+    const dbName = `migration-test-db-${++dbCounter}`;
+
+    // Manually seed a v2-style record directly via fake-indexeddb at DB version 2
+    // (no upAxis in body — simulates a record written before schema v3)
+    await new Promise<void>((resolve, reject) => {
+      const req = idb.open(dbName, 2);
+      req.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const oldVersion = event.oldVersion;
+        if (oldVersion < 1) {
+          db.createObjectStore("scenes", { keyPath: "id" });
+        }
+        // v2 upgrade: backfill visibility/forkedFrom (mimic real v2 migration)
+        if (oldVersion < 2) {
+          // no existing records to backfill at this point
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction("scenes", "readwrite");
+        const store = tx.objectStore("scenes");
+        // Seed a v2-style record with no upAxis in body
+        store.put({
+          id: "v2-scene-id",
+          version: 1,
+          name: "v2 scene",
+          body: { version: 2, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] },
+          visibility: "private",
+          forkedFrom: null,
+        });
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // Now open via LocalSyncEngine at DB v3 -- should trigger v3 body migration
+    const engine = new LocalSyncEngine(dbName);
+    const { body } = await engine.fetch("v2-scene-id");
+    // serialize() must produce v3 output now (deserialized via v2→v3 migration chain)
+    const serialized = body.serialize();
+    expect(serialized.version).toBe(3);
+    expect(serialized.upAxis).toBe("Y");
+  });
+});
