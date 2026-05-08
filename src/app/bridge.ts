@@ -8,6 +8,7 @@ import type { ProjectFile } from '../core/project/ProjectFile';
 import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import type { AssetPath, NodeUUID } from '../utils/branded';
+import type { SceneId } from '../core/sync/SyncEngine';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -17,6 +18,11 @@ const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
 export function setConfirmBeforeLoad(value: boolean): void {
   localStorage.setItem(CONFIRM_LOAD_KEY, String(value));
   _setConfirmBeforeLoad(value);
+}
+
+export interface SyncConflictPayload {
+  sceneId: SceneId;
+  currentVersion: number;
 }
 
 export interface EditorBridge {
@@ -64,6 +70,10 @@ export interface EditorBridge {
   setCurrentScenePath: (path: AssetPath) => void;
   /** Create a new empty scene file; throws if name already exists */
   createScene: (name: string) => Promise<AssetPath>;
+  /** Current sync conflict payload — null when no conflict is pending */
+  syncConflict: Accessor<SyncConflictPayload | null>;
+  /** Resolve the pending sync conflict by choosing which version to keep */
+  resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
   dispose: () => void;
 }
 
@@ -72,6 +82,7 @@ export interface EditorBridgeDeps {
   projectManager: ProjectManager;
   openProjectById: (id: string) => Promise<void>;
   autosaveFlush: () => Promise<void>;
+  resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
 }
 
 export function createEditorBridge(
@@ -100,6 +111,7 @@ export function createEditorBridge(
   const [currentProjectId, setCurrentProjectId] = createSignal<string | null>(
     editor.projectManager.currentId,
   );
+  const [syncConflict, setSyncConflict] = createSignal<SyncConflictPayload | null>(null);
 
   // 非同步初始化（fire-and-forget）
   void editor.projectManager.getRecentProjects().then(setRecentProjects);
@@ -171,6 +183,10 @@ export function createEditorBridge(
   const onEnvSelectionChanged = (selected: boolean) => setIsEnvSelected(selected);
   editor.events.on('envSelectionChanged', onEnvSelectionChanged);
 
+  // Subscribe to sync conflict events
+  const onSyncConflict = (payload: SyncConflictPayload) => setSyncConflict(payload);
+  editor.events.on('syncConflict', onSyncConflict);
+
   // Subscribe to ProjectManager events
   const onProjectChanged = () => {
     setProjectOpen(editor.projectManager.isOpen);
@@ -193,6 +209,9 @@ export function createEditorBridge(
     editor.events.off('environmentChanged', onEnvChanged);
     editor.events.off('brokenRefsChanged', onBrokenRefsChanged);
     editor.events.off('envSelectionChanged', onEnvSelectionChanged);
+    editor.events.off('syncConflict', onSyncConflict);
+    // Lock 6: clear syncConflict signal on dispose
+    setSyncConflict(null);
     unsubProject();
   };
 
@@ -232,6 +251,8 @@ export function createEditorBridge(
     currentScenePath: editor.projectManager.currentScenePath,
     setCurrentScenePath: (path: AssetPath) => editor.projectManager.setCurrentScenePath(path),
     createScene: (name: string) => editor.projectManager.createScene(name),
+    syncConflict,
+    resolveSyncConflict: deps?.resolveSyncConflict ?? ((_choice: 'keep-local' | 'use-cloud') => Promise.resolve()),
     dispose,
   };
 }
