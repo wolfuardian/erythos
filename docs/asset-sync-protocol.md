@@ -39,6 +39,26 @@ assets://<sha256>/<filename>
 
 **為什麼 hash 在 URL 不在 metadata**:hash 在 URL = 自證身份;不在 URL = 必須查 metadata 才知道內容,違反不可變承諾。
 
+## 跟 local project files 共存
+
+`assets://` 專指 cloud content-addressed asset。本機 project 內的 file 引用走 `project://<path>`(scheme 規範見 `docs/erythos-format.md` § URI Scheme)。
+
+兩 scheme 切換時機:
+
+| 階段 | scene file 內字面 |
+|------|------------------|
+| Anonymous / offline mode(無帳號) | 全 `project://` |
+| Phase B 之前(本 spec 未實作) | 全 `project://` |
+| 登入 + 上傳成功後 | 該 asset 字面從 `project://<path>` 改寫為 `assets://<sha256>/<filename>` |
+| 既有 v1 專案 migrate 至 v2 | `assets://<path>` 全 rewrite 為 `project://<path>`(見 `erythos-format.md` § v1 → v2) |
+
+**為什麼分兩個 scheme**:
+
+- `assets://` — 內容不可變、hash 顯式 = 跨裝置 / 跨帳號可重現
+- `project://` — 內容可變、無 hash = 純本機,沒上傳沒不可變承諾
+
+一個 namespace 表「兩種語意」會撞 parser:`assets://abc123/sphere.glb` 既能 parse 成 `hash=abc123 / file=sphere.glb`,也能 parse 成 `path=abc123/sphere.glb`。早期 spec 草案嘗試用「first segment 是不是 64 hex chars」啟發式 disambiguate,被推翻(違反 URL 自證身份哲學;且 64 hex chars 的合法 filename 會誤判)。**scheme 一刀分明,parser 不依靠啟發式**。
+
 ## 資料模型
 
 ```sql

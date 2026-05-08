@@ -80,7 +80,7 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 
 | nodeType | asset 必填 | mat | light | camera |
 |---|---|---|---|---|
-| `mesh` | ✅(`assets://` 或 `materials://` 或 `blob://`) | optional override | — | — |
+| `mesh` | ✅(`assets://` / `project://` / `materials://` / `blob://`) | optional override | — | — |
 | `prefab` | ✅(`prefabs://`) | optional override | — | — |
 | `light` | — | — | ✅ | — |
 | `camera` | — | — | — | ✅ |
@@ -126,16 +126,21 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 
 ## URI Scheme
 
-`AssetUrl` 分四個 scheme,語意嚴格區分:
+`AssetUrl` 分五個 scheme,語意嚴格區分:
 
 | Scheme | 內容 | 範例 | 可變性 |
 |---|---|---|---|
-| `assets://` | 二進位資產(GLB / HDR / texture / primitive mesh) | `assets://studio.hdr` | 不可變(隱含 hash 由 resolver 補) |
+| `assets://` | Cloud 二進位資產,content-addressed | `assets://<sha256>/studio.hdr` | **不可變**(hash 顯式於 URL,內容改 = 新 hash = 新 URL) |
+| `project://` | 本機 project file 引用(尚未 upload 至雲端 / 純離線專案) | `project://models/chair.glb` | 可變(專案資料夾內檔案被改,URL 字面不變) |
 | `prefabs://` | 場景片段(`.erythos` 引用 `.erythos`) | `prefabs://tree-pine` | 可變(原 prefab 更新時引用方跟著新) |
 | `materials://` | 共用 PBR material | `materials://gold` | 可變 |
-| `blob://` | 本機 IndexedDB 暫存(尚未 upload 的 anonymous user 資產) | `blob://abc123` | 不可變 |
+| `blob://` | 本機 IndexedDB 暫存(尚未持久化的 anonymous user 資產) | `blob://abc123` | 不可變(in-memory snapshot) |
 
-**解析責任:`AssetResolver`(in `src/core/`)** — 統一抽象層,本機(IndexedDB)/ 專案資料夾 / CDN 三條路徑都走它。詳見 memory `feedback_url_first_principle.md`。
+**`assets://` vs `project://`**:`assets://` 是 cloud-backed 不可變(hash-pinned),`project://` 是 project file system 內可變引用。寫入時偏好 `assets://`(跨裝置 / 跨帳號可重現);`project://` 留給尚未上傳或無雲端帳號的本機專案。Asset sync Phase B 上線後 client 才開始產 `assets://`,在那之前所有引用都是 `project://`。詳見 `docs/asset-sync-protocol.md` § 跟 local project files 共存。
+
+**v1 範例字面相容**:本文件 v1 schema 範例(下方 § v1 Schema)使用 `assets://<path>` 形式,係 schema v1 歷史寫法。v2 schema bump 將 rewrite 為 `project://<path>`,實作於 asset sync Phase B(對應 issue #840 / `assets://` 重新定義為 cloud-only)。
+
+**解析責任:`AssetResolver`**(`src/core/io/AssetResolver.ts`)— 統一抽象層,將任何 scheme 的 URL 解到 runtime blob URL。
 
 ## Invariants(可機械驗)
 
@@ -247,6 +252,17 @@ function loadScene(raw: { version: number; ... }): ErythosSceneCurrent {
 ### Backup
 
 每次 migration 前留 `.erythos.bak.v{原版本}`(IndexedDB 存一份 raw)。**永遠不主動清** — 由使用者手動。空間便宜,信任貴。
+
+### v1 → v2(計劃中,asset sync Phase B)
+
+對應 issue #840:`assets://` scheme 重新定義為 cloud content-addressed,既有 local 用法搬遷至 `project://`(見 § URI Scheme)。v2 schema 將執行 scheme rename:
+
+- 所有 `node.asset` 字面 `assets://<path>` rewrite 為 `project://<path>`
+- 所有 `env.hdri` 字面 `assets://<path>` rewrite 為 `project://<path>`
+- `materials://` / `blob://` / `prefabs://` 不變
+- `assets://<sha256>/<filename>` 形式 v2 起新增,Phase B client 上線後才會出現於 scene file
+
+實作於 `src/core/scene/io/migrations/v1_to_v2.ts`(尚未建立)+ 對應 fixture `fixtures/v1_sample.erythos` → `v2_sample.erythos`。
 
 ## 砍掉的東西(對照 Three.js `toJSON()`)
 
