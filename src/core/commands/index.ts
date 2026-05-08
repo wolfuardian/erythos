@@ -10,3 +10,4 @@ export { InstantiatePrefabCommand } from './InstantiatePrefabCommand';
 export { SaveAsPrefabCommand } from './SaveAsPrefabCommand';
 export { SetMaterialPropertyCommand } from './SetMaterialPropertyCommand';
 export { SetLightPropertyCommand } from './SetLightPropertyCommand';
+export { BakeCommand } from './BakeCommand';

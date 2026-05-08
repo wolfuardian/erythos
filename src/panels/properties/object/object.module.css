@@ -104,3 +104,27 @@
   text-align: center;
   margin-bottom: var(--space-lg);
 }
+
+.bakeButton {
+  flex: 1;
+  height: 22px;
+  border-radius: 3px;
+  padding: 0 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.bakeButton:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.bakeButton:active {
+  background: var(--bg-active, var(--bg-hover));
+}
