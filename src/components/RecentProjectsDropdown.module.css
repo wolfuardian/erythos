@@ -162,7 +162,7 @@
 .closeProjectBtn {
   padding: 6px 10px;
   font-size: var(--font-size-sm);
-  color: #e07070;
+  color: var(--text-danger);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -176,7 +176,7 @@
 }
 
 .closeProjectBtn:hover {
-  background: #2a1a1a;
+  background: var(--bg-danger-hover);
 }
 
 .closeIcon {
