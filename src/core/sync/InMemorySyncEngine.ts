@@ -12,15 +12,27 @@ interface SceneRecord {
   version: number;
   body: SceneDocument;
   name: string;
+  visibility: SceneVisibility;
+  forkedFrom: SceneId | null;
 }
 
 export class InMemorySyncEngine implements SyncEngine {
   private readonly store = new Map<SceneId, SceneRecord>();
 
-  async fetch(id: SceneId): Promise<{ body: SceneDocument; version: number }> {
+  async fetch(id: SceneId): Promise<{
+    body: SceneDocument;
+    version: number;
+    visibility: SceneVisibility;
+    forkedFrom: SceneId | null;
+  }> {
     const record = this.store.get(id);
     if (!record) throw new NotFoundError(id);
-    return { body: record.body, version: record.version };
+    return {
+      body: record.body,
+      version: record.version,
+      visibility: record.visibility,
+      forkedFrom: record.forkedFrom,
+    };
   }
 
   async push(
@@ -40,20 +52,38 @@ export class InMemorySyncEngine implements SyncEngine {
 
   async create(name: string, body: SceneDocument): Promise<{ id: SceneId; version: number }> {
     const id = generateUUID();
-    this.store.set(id, { version: 0, body, name });
+    this.store.set(id, {
+      version: 0,
+      body,
+      name,
+      visibility: 'private',
+      forkedFrom: null,
+    });
     return { id, version: 0 };
   }
 
-  // Stub — implemented in feat/share-link-engine PR
-  async setVisibility(_id: SceneId, _visibility: SceneVisibility): Promise<void> {
-    throw new Error('setVisibility not implemented');
+  async setVisibility(id: SceneId, visibility: SceneVisibility): Promise<void> {
+    const record = this.store.get(id);
+    if (!record) throw new NotFoundError(id);
+    // visibility is metadata — does not bump version
+    this.store.set(id, { ...record, visibility });
   }
 
-  // Stub — implemented in feat/share-link-engine PR
   async fork(
-    _id: SceneId,
-    _name?: string,
+    id: SceneId,
+    name?: string,
   ): Promise<{ id: SceneId; version: number; forkedFrom: SceneId }> {
-    throw new Error('fork not implemented');
+    const source = this.store.get(id);
+    if (!source) throw new NotFoundError(id);
+    const newId = generateUUID();
+    const newName = name ?? `${source.name} (fork)`;
+    this.store.set(newId, {
+      version: 0,
+      body: source.body,
+      name: newName,
+      visibility: 'private', // forks always start private per spec
+      forkedFrom: id,
+    });
+    return { id: newId, version: 0, forkedFrom: id };
   }
 }
