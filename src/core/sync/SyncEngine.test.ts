@@ -224,7 +224,7 @@ runSyncEngineContract(
   { fetchedBodyIsSameRef: false },
 );
 
-// -- LocalSyncEngine v1 to v2 migration --
+// -- LocalSyncEngine v1 to v3 migration (v2 walk chained into v3 walk) --
 describe("LocalSyncEngine v1-to-v2 migration", () => {
   it("existing v1 records without visibility/forkedFrom are backfilled on DB open", async () => {
     const idb = new IDBFactory();
@@ -255,10 +255,13 @@ describe("LocalSyncEngine v1-to-v2 migration", () => {
 
     // Now open via LocalSyncEngine at v2 -- should trigger migration
     const engine = new LocalSyncEngine(dbName);
-    const { version, visibility, forkedFrom } = await engine.fetch("legacy-id");
+    const { version, visibility, forkedFrom, body } = await engine.fetch("legacy-id");
     expect(version).toBe(3);
     expect(visibility).toBe("private");
     expect(forkedFrom).toBeNull();
+    // v3 walk must have run (chained after v2 walk) — upAxis eagerly patched in stored JSON
+    const serialized = body.serialize();
+    expect(serialized.upAxis).toBe("Y");
   });
 });
 
@@ -313,5 +316,110 @@ describe("LocalSyncEngine v2-to-v3 migration", () => {
     const serialized = body.serialize();
     expect(serialized.version).toBe(3);
     expect(serialized.upAxis).toBe("Y");
+  });
+});
+
+// -- LocalSyncEngine v0→v3 upgrade (new install, no records) --
+describe("LocalSyncEngine v0-to-v3 upgrade (fresh install)", () => {
+  it("v0→v3: store is created, both cursor walks no-op (no records to backfill)", async () => {
+    const idb = new IDBFactory();
+    (globalThis as unknown as Record<string, unknown>).indexedDB = idb;
+    const dbName = `migration-test-db-${++dbCounter}`;
+
+    // Open directly via LocalSyncEngine with no prior DB (simulates brand-new install)
+    const engine = new LocalSyncEngine(dbName);
+    // DB opens without error; no records exist yet — create one to verify normal operation
+    const { id } = await engine.create("new-scene", makeDoc());
+    const { visibility, forkedFrom, body } = await engine.fetch(id);
+    expect(visibility).toBe("private");
+    expect(forkedFrom).toBeNull();
+    const serialized = body.serialize();
+    expect(serialized.upAxis).toBe("Y");
+  });
+});
+
+// -- LocalSyncEngine v1→v3 full chain (v2 walk serialized then v3 walk) --
+describe("LocalSyncEngine v1-to-v3 serialized-walk migration", () => {
+  it("v1→v3: visibility, forkedFrom, and body.upAxis all backfilled on the same record", async () => {
+    const idb = new IDBFactory();
+    (globalThis as unknown as Record<string, unknown>).indexedDB = idb;
+    const dbName = `migration-test-db-${++dbCounter}`;
+
+    // Seed a v1-style record: no visibility, no forkedFrom, no upAxis in body
+    await new Promise<void>((resolve, reject) => {
+      const req = idb.open(dbName, 1);
+      req.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        db.createObjectStore("scenes", { keyPath: "id" });
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction("scenes", "readwrite");
+        const store = tx.objectStore("scenes");
+        store.put({
+          id: "v1-chain-id",
+          version: 0,
+          name: "v1 scene",
+          body: { version: 2, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] },
+          // no visibility, no forkedFrom, no upAxis in body
+        });
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // Open via LocalSyncEngine at DB_VERSION=3 — v2 walk runs, then v3 walk chains in
+    const engine = new LocalSyncEngine(dbName);
+    const { visibility, forkedFrom, body } = await engine.fetch("v1-chain-id");
+    expect(visibility).toBe("private");   // v2 walk applied
+    expect(forkedFrom).toBeNull();        // v2 walk applied
+    const serialized = body.serialize();
+    expect(serialized.upAxis).toBe("Y");  // v3 walk applied (chained after v2)
+  });
+});
+
+// -- LocalSyncEngine v2→v3 (only v3 walk runs, v2 fields must not be clobbered) --
+describe("LocalSyncEngine v2-to-v3 serialized-walk migration", () => {
+  it("v2→v3: body.upAxis backfilled; existing visibility/forkedFrom preserved", async () => {
+    const idb = new IDBFactory();
+    (globalThis as unknown as Record<string, unknown>).indexedDB = idb;
+    const dbName = `migration-test-db-${++dbCounter}`;
+
+    // Seed a v2-style record: has visibility + forkedFrom but body lacks upAxis
+    await new Promise<void>((resolve, reject) => {
+      const req = idb.open(dbName, 2);
+      req.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (event.oldVersion < 1) {
+          db.createObjectStore("scenes", { keyPath: "id" });
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction("scenes", "readwrite");
+        const store = tx.objectStore("scenes");
+        store.put({
+          id: "v2-only-id",
+          version: 2,
+          name: "v2 scene",
+          body: { version: 2, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] },
+          visibility: "public",
+          forkedFrom: "some-source-id",
+        });
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // Open via LocalSyncEngine at DB_VERSION=3 — only v3 walk should run
+    const engine = new LocalSyncEngine(dbName);
+    const { visibility, forkedFrom, body } = await engine.fetch("v2-only-id");
+    // v2 fields preserved (v2 walk must NOT have clobbered them)
+    expect(visibility).toBe("public");
+    expect(forkedFrom).toBe("some-source-id");
+    const serialized = body.serialize();
+    expect(serialized.upAxis).toBe("Y");  // v3 walk applied
   });
 });
