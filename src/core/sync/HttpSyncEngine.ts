@@ -6,19 +6,7 @@ import {
   ConflictError,
   NotFoundError,
 } from './SyncEngine';
-
-// ── AuthError ─────────────────────────────────────────────────────────────────
-
-/**
- * Thrown when the server returns 401 (not logged in / token expired) or
- * 403 (identity verified but operation forbidden).
- */
-export class AuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AuthError';
-  }
-}
+import { AuthError } from '../auth/AuthClient';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

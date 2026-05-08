@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SceneDocument } from '../scene/SceneDocument';
 import { ConflictError, NotFoundError } from './SyncEngine';
-import { AuthError, HttpSyncEngine } from './HttpSyncEngine';
+import { HttpSyncEngine } from './HttpSyncEngine';
+import { AuthError } from '../auth/AuthClient';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -75,8 +76,9 @@ describe('HttpSyncEngine.fetch()', () => {
     expect(result.body).toBeInstanceOf(SceneDocument);
 
     // Verify round-trip: serialize the deserialized doc and compare structure
+    // Note: input is v2 (legacy); deserialize migrates to v3, so re-serialize is v3
     const serialized = result.body.serialize();
-    expect(serialized.version).toBe(2);
+    expect(serialized.version).toBe(3);
     expect(serialized.nodes).toEqual(sceneJson.nodes);
 
     // Verify request shape
@@ -166,9 +168,9 @@ describe('HttpSyncEngine.push()', () => {
     expect(init.headers['If-Match']).toBe('"5"'); // RFC 7232 quoted
     expect(init.headers['Content-Type']).toBe('application/json');
 
-    // Verify body is the raw serialized ErythosSceneV2, not wrapped
+    // Verify body is the raw serialized ErythosSceneV3, not wrapped
     const sentBody = JSON.parse(init.body as string) as { version: number };
-    expect(sentBody.version).toBe(2);
+    expect(sentBody.version).toBe(3);
   });
 
   it('throws ConflictError on 409 with server current_version and current_body', async () => {
@@ -246,7 +248,7 @@ describe('HttpSyncEngine.create()', () => {
     // POST /scenes wraps with {name, body: <erythos JSON>}
     const sentBody = JSON.parse(init.body as string) as { name: string; body: { version: number } };
     expect(sentBody.name).toBe('My Scene');
-    expect(sentBody.body.version).toBe(2);
+    expect(sentBody.body.version).toBe(3);
   });
 
   it('throws AuthError on 401 (anonymous user trying to create)', async () => {
