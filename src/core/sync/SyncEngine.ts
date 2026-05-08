@@ -12,6 +12,8 @@ export type SceneId = string;
  *   or after receiving it from `fetch`. If the caller needs to continue using the
  *   body, it should work from a serialized snapshot rather than the live object.
  */
+export type SceneVisibility = 'private' | 'public';
+
 export interface SyncEngine {
   fetch(id: SceneId): Promise<{ body: SceneDocument; version: number }>;
   push(
@@ -20,6 +22,11 @@ export interface SyncEngine {
     baseVersion: number,
   ): Promise<{ version: number }>;
   create(name: string, body: SceneDocument): Promise<{ id: SceneId; version: number }>;
+  setVisibility(id: SceneId, visibility: SceneVisibility): Promise<void>;
+  fork(
+    id: SceneId,
+    name?: string,
+  ): Promise<{ id: SceneId; version: number; forkedFrom: SceneId }>;
 }
 
 export class NotFoundError extends Error {

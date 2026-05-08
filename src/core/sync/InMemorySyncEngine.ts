@@ -1,5 +1,11 @@
 import type { SceneDocument } from '../scene/SceneDocument';
-import { type SceneId, type SyncEngine, ConflictError, NotFoundError } from './SyncEngine';
+import {
+  type SceneId,
+  type SceneVisibility,
+  type SyncEngine,
+  ConflictError,
+  NotFoundError,
+} from './SyncEngine';
 import { generateUUID } from '../../utils/uuid';
 
 interface SceneRecord {
@@ -36,5 +42,18 @@ export class InMemorySyncEngine implements SyncEngine {
     const id = generateUUID();
     this.store.set(id, { version: 0, body, name });
     return { id, version: 0 };
+  }
+
+  // Stub — implemented in feat/share-link-engine PR
+  async setVisibility(_id: SceneId, _visibility: SceneVisibility): Promise<void> {
+    throw new Error('setVisibility not implemented');
+  }
+
+  // Stub — implemented in feat/share-link-engine PR
+  async fork(
+    _id: SceneId,
+    _name?: string,
+  ): Promise<{ id: SceneId; version: number; forkedFrom: SceneId }> {
+    throw new Error('fork not implemented');
   }
 }
