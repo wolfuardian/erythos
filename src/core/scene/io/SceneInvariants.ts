@@ -193,6 +193,39 @@ export function checkRawVersion(raw: unknown): void {
   }
 }
 
+/**
+ * Pre-migration guard for the upAxis invariant on raw v3 inputs.
+ *
+ * The migration chain (v2_to_v3) hardcodes `upAxis: 'Y'` for backfill, which
+ * means a corrupt v3 input with `upAxis: 'Z'` would otherwise be silently
+ * rewritten to 'Y' before Zod sees it. This guard runs after checkRawVersion
+ * but before the migration chain, preserving the spec invariant:
+ *
+ *   docs/erythos-format.md Invariant #11 — upAxis must be 'Y'; deserialize
+ *   throws SceneInvariantError when reading any other value.
+ *
+ * Only applies to v3 inputs. v0/v1/v2 schemas have no `upAxis` field; the
+ * migration chain ignores any stray field on those versions.
+ *
+ * @throws SceneInvariantError if version === 3 and upAxis is present and not 'Y'.
+ */
+export function checkRawUpAxis(raw: unknown): void {
+  if (typeof raw !== 'object' || raw === null) return; // checkRawVersion handles
+  const input = raw as Record<string, unknown>;
+  if (
+    input['version'] === 3 &&
+    input['upAxis'] !== undefined &&
+    input['upAxis'] !== 'Y'
+  ) {
+    throw new SceneInvariantError([
+      {
+        path: 'upAxis',
+        reason: `upAxis must be 'Y'; received ${JSON.stringify(input['upAxis'])}`,
+      },
+    ]);
+  }
+}
+
 // ── Core invariant validator ──────────────────────────────────────────────────
 
 /**

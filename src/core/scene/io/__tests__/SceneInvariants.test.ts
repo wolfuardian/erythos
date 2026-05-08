@@ -21,6 +21,7 @@ import { resolve, dirname } from 'path';
 import {
   validateScene,
   checkRawVersion,
+  checkRawUpAxis,
   UnsupportedVersionError,
   SceneInvariantError,
   CURRENT_VERSION,
@@ -132,6 +133,60 @@ describe('checkRawVersion', () => {
       expect(err.message).toContain('99');
       expect(err.message).toContain(String(CURRENT_VERSION));
       expect(err.fileVersion).toBe(99);
+    }
+  });
+});
+
+// ── checkRawUpAxis tests ──────────────────────────────────────────────────────
+
+describe('checkRawUpAxis', () => {
+  it('PASS: v3 with upAxis "Y" does not throw', () => {
+    expect(() => checkRawUpAxis({ version: 3, upAxis: 'Y' })).not.toThrow();
+  });
+
+  it('PASS: v3 without upAxis does not throw (migration backfills)', () => {
+    expect(() => checkRawUpAxis({ version: 3 })).not.toThrow();
+  });
+
+  it('PASS: v2 with stray upAxis "Z" does not throw (out of v3 scope)', () => {
+    expect(() => checkRawUpAxis({ version: 2, upAxis: 'Z' })).not.toThrow();
+  });
+
+  it('PASS: v1 input does not throw regardless of upAxis', () => {
+    expect(() => checkRawUpAxis({ version: 1, upAxis: 'Z' })).not.toThrow();
+  });
+
+  it('PASS: non-object input does not throw (delegated to checkRawVersion)', () => {
+    expect(() => checkRawUpAxis(null)).not.toThrow();
+    expect(() => checkRawUpAxis('string')).not.toThrow();
+  });
+
+  it('FAIL: v3 with upAxis "Z" throws SceneInvariantError', () => {
+    expect(() => checkRawUpAxis({ version: 3, upAxis: 'Z' })).toThrow(
+      SceneInvariantError,
+    );
+  });
+
+  it('FAIL: v3 with upAxis "X" throws SceneInvariantError', () => {
+    expect(() => checkRawUpAxis({ version: 3, upAxis: 'X' })).toThrow(
+      SceneInvariantError,
+    );
+  });
+
+  it('FAIL: v3 with upAxis as empty string throws', () => {
+    expect(() => checkRawUpAxis({ version: 3, upAxis: '' })).toThrow(
+      SceneInvariantError,
+    );
+  });
+
+  it('error message includes the bad upAxis value', () => {
+    try {
+      checkRawUpAxis({ version: 3, upAxis: 'Z' });
+      expect.fail('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(SceneInvariantError);
+      expect((e as SceneInvariantError).message).toContain('Z');
+      expect((e as SceneInvariantError).violations[0].path).toBe('upAxis');
     }
   });
 });

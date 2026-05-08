@@ -10,6 +10,7 @@ import { v1_to_v2 } from './io/migrations/v1_to_v2';
 import { v2_to_v3 } from './io/migrations/v2_to_v3';
 import {
   checkRawVersion,
+  checkRawUpAxis,
   validateScene,
   SceneInvariantError,
 } from './io/SceneInvariants';
@@ -291,6 +292,9 @@ export class SceneDocument {
 
     // Step 1: version gate (runs on raw JSON before migration)
     checkRawVersion(data);
+    // Step 1b: upAxis gate — rejects v3 inputs with upAxis !== 'Y' before
+    //   v2_to_v3 silently overwrites the corrupt value.
+    checkRawUpAxis(data);
 
     // Step 2: Run migration chain v0→v1→v2→v3.
     //   v0→v1: legacy components-bag → nodeType shape + inject default env
@@ -392,6 +396,9 @@ export class SceneDocument {
   parsePastePayload(raw: unknown, targetParentId: NodeUUID | null): SceneNode[] {
     // Step 1: version gate
     checkRawVersion(raw);
+    // Step 1b: upAxis gate — rejects v3 inputs with upAxis !== 'Y' before
+    //   v2_to_v3 silently overwrites the corrupt value.
+    checkRawUpAxis(raw);
 
     // Step 2: migration chain v0→v1→v2→v3
     const asV1 = v0_to_v1(raw);
