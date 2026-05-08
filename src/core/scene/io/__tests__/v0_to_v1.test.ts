@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { resolve, dirname } from 'path';
 import { v0_to_v1 } from '../migrations/v0_to_v1';
-import v0sample from './__fixtures__/v0_sample.json';
-import v1expected from './__fixtures__/v1_sample.json';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '../../../../../');
+
+const v0sample = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v0_sample.erythos'), 'utf-8'));
+const v1expected = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v1_sample.erythos'), 'utf-8'));
 
 describe('v0_to_v1', () => {
   it('migrates sample fixture to expected v1 shape', () => {

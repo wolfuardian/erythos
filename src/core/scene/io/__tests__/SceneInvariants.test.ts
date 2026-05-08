@@ -15,6 +15,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { resolve, dirname } from 'path';
 import {
   validateScene,
   checkRawVersion,
@@ -23,6 +26,10 @@ import {
   CURRENT_VERSION,
 } from '../SceneInvariants';
 import type { InvariantViolation } from '../SceneInvariants';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '../../../../../');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -635,8 +642,8 @@ describe('migration path: v0 fixture -> v0_to_v1 -> v1_to_v2 -> validateScene', 
   it('v0 sample migrates through full chain to valid v2 (0 violations)', async () => {
     const { v0_to_v1 } = await import('../migrations/v0_to_v1');
     const { v1_to_v2 } = await import('../migrations/v1_to_v2');
-    const v0sample = await import('./__fixtures__/v0_sample.json');
-    const v1 = v0_to_v1(v0sample.default);
+    const v0sample = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v0_sample.erythos'), 'utf-8'));
+    const v1 = v0_to_v1(v0sample);
     const v2 = v1_to_v2(v1);
     const violations = validateScene(v2);
     expect(violations).toHaveLength(0);
