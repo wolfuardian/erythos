@@ -86,11 +86,14 @@ CREATE TABLE scenes (
   version     INTEGER NOT NULL DEFAULT 0,   -- 嚴格遞增,衝突偵測用
   body        BYTEA NOT NULL,               -- .erythos JSON 二進位
   body_size   INTEGER NOT NULL,             -- 給計費 / quota
+  visibility  TEXT NOT NULL DEFAULT 'private',  -- 'private' | 'public';分享連結需 'public'
+  forked_from UUID REFERENCES scenes(id) ON DELETE SET NULL,  -- fork 來源,顯示用;原 scene 刪了不影響 fork
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX scenes_owner_idx ON scenes(owner_id);
+CREATE INDEX scenes_public_idx ON scenes(visibility) WHERE visibility = 'public';  -- 公開場景查詢加速
 
 CREATE TABLE scene_versions (    -- append-only 歷史,給「scene history = git-like」做基礎
   scene_id    UUID NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
@@ -186,6 +189,98 @@ Response 201:
 
 軟刪除(進 trash 表,30 天內可復原)。v0 可省略,etag 不適用。
 
+### `PATCH /scenes/:id/visibility`
+
+切換場景公開 / 私有。**只有 owner 可呼叫**;非 owner 回 404(不洩露存在性)。
+
+```
+Request:
+  Headers:
+    Content-Type: application/json
+  Body:
+    { "visibility": "public" }        # 或 "private"
+
+Response 200:
+  Body:
+    { "id": "...", "visibility": "public" }
+
+Response 400 Bad Request:             # visibility 值非 'public' / 'private'
+Response 401 Unauthorized:            # 未登入
+Response 404 Not Found:               # 不存在或 caller 非 owner
+```
+
+切換不影響 `version` / etag(visibility 是 metadata,不算內容變更)。
+
+### `POST /scenes/:id/fork`
+
+複製場景到 caller 帳號,產生新 scene。
+
+```
+Request:
+  Body:
+    { "name": "My Forest (fork)" }    # optional;省略時複製原 name 加 " (fork)"
+
+Response 201:
+  Headers:
+    Location: /scenes/<new_id>
+    ETag: "0"
+  Body:
+    {
+      "id": "<new_id>",
+      "version": 0,
+      "forked_from": "<source_id>"
+    }
+
+Response 401 Unauthorized:            # 未登入(匿名訪客先導去登入)
+Response 404 Not Found:               # 來源不存在,或來源 visibility='private' 且 caller 非 owner
+```
+
+server 行為:複製來源 `body` + `name` → 寫新 row,`owner_id = caller`、`version = 0`、`forked_from = source.id`、`visibility = 'private'`(fork 永遠先私有,owner 自己決定是否再分享)。
+
+## 分享連結 + Fork
+
+來源:第 6 輪「分享連結是定位的命脈,沒這個其他都白做」+ 第 12 輪 Q6 fork 模型 + 帳管 row 1 / row 6。
+
+### URL scheme
+
+| 階段 | URL 形態 | 備註 |
+|------|---------|------|
+| **v0**(本 spec) | `https://erythos.app/scenes/{scene_uuid}` | 直接用 scene UUID,無需 handle 系統,起手最簡單 |
+| **v2**(最終形態) | `https://erythos.app/{handle}/{scene-slug}` | handle 系統上線後;`/scenes/{uuid}` 永遠保留並 301 redirect 到新形態(Cool URIs Don't Change) |
+
+v0 用 UUID 對齊帳管 row 2「不為未來美感增加今天的摩擦」原則;v2 升級時 handle 衝突 / slug 命名規則由那時 spec 處理,本文件不預設。
+
+### 公開 / 私有
+
+新建場景預設 `visibility = 'private'`(`POST /scenes` 不可指定 visibility,一律從私有起手)。owner 透過 `PATCH /scenes/:id/visibility` 切換。
+
+匿名訪客打開 `https://erythos.app/scenes/{uuid}`:
+- 場景 `visibility = 'public'` → 走 `GET /scenes/:id` 取得 body,client 進入 viewer 模式
+- 場景 `visibility = 'private'` → 404(無論 caller 是誰,non-owner 一律 404,不洩露存在性)
+
+### 訪客流程
+
+| 訪客身份 | 開公開連結看到的 | 點 Edit 按鈕的行為 |
+|---------|-----------------|-----------------|
+| 匿名(未登入) | viewer 唯讀 | 提示登入 → 登入後 `POST /scenes/:id/fork` |
+| 登入,非 owner | viewer 唯讀 | `POST /scenes/:id/fork` 後跳轉 `/scenes/{new_id}` |
+| Owner | 完整編輯器 | (本來就在編 owner 的 scene,無 fork) |
+
+非 owner **絕不可直接編 owner 的 scene**。Edit 按鈕在訪客身上一律觸發 fork,對齊 Figma / GitHub 的 fork model — 心智模型清楚,使用者一秒理解「這是別人的東西,我改 = 我自己的副本」。
+
+### Copy Link 按鈕語意
+
+Share dialog 內的兩件事顯式分開:
+
+1. **Visibility toggle**(`Private` ↔ `Public`)— 切到 public 才會出現連結
+2. **Copy Link 按鈕** — 只在 `visibility = 'public'` 時 enabled;點擊複製 `https://erythos.app/scenes/{uuid}` 到剪貼簿
+
+**不自動切公開**:即使 owner 點 Copy Link 時 visibility 為 private,按鈕 disabled 並顯示提示「Make public to share」。避免使用者誤把私密場景連結貼出去。
+
+### Fork 後的關係
+
+`scenes.forked_from` 僅供顯示(「Forked from <name>」標籤),server 不維護 fork 連動 — 原 scene 刪除設 NULL,fork scene 與原 scene 自此完全獨立。**不做 upstream sync / pull request 機制**(那是 v3+ 議題)。
+
 ## 衝突解決流程(409 處理)
 
 client 收到 409 時,**永遠先把本機版本寫進 `.erythos.bak.v{base_version}`** 再進對話框。確保不論使用者選哪邊,本機改動都不會消失。
@@ -231,7 +326,7 @@ client 收到 409 時,**永遠先把本機版本寫進 `.erythos.bak.v{base_vers
 1. **Phase A — Spec 凍結**(本文件 review + 修訂) — 1 天
 2. **Phase B — Client `SyncEngine` 抽象層 + IndexedDB local-first** — server 用 mock 的記憶體實作測;1 週
 3. **Phase C — 帳管 7 題拍板**(寫進本文件) — 半天
-4. **Phase D — 真實 Linode 部署 + Postgres + magic link + API** — 1 週
+4. **Phase D — 真實 Linode 部署 + Postgres + GitHub OAuth + API**(含 share / fork / visibility) — 1 週
 5. **Phase E — Client wire 真 server,跑通跨裝置同步** — 半週
 
 Phase A–C 完成前不開 Linode 機器,避免 ops 雜事(domain / SPF / Postgres backup / SSH)卡住客戶端側進度。
