@@ -114,9 +114,18 @@ export class Editor {
 
   /**
    * Register a new prefab: write to project file, update PrefabRegistry, emit event.
+   *
+   * Synchronously caches the asset by path before the async write begins so that
+   * viewport drag-drop (SceneSync.hydratePrefab) can resolve the prefab immediately,
+   * even if the async writeFile+urlFor hasn't completed yet (race guard — issue #753).
+   * Once writeFile+urlFor succeed, PrefabRegistry.set() promotes the entry to the
+   * URL-keyed cache and clears the pre-write path-keyed entry.
    */
   registerPrefab(asset: PrefabAsset): AssetPath {
     const path = prefabPathForName(asset.name);
+
+    // Synchronous pre-write cache: lets SceneSync hydrate immediately (issue #753).
+    this.prefabRegistry.setAssetByPath(path, asset);
 
     void (async () => {
       try {
@@ -126,6 +135,9 @@ export class Editor {
         await this.projectManager.rescan();
         this.events.emit('prefabStoreChanged');
       } catch (err) {
+        // Write failed — evict the pre-write entry so SceneSync stops hydrating
+        // a ghost prefab on subsequent attempts (issue #753 / QC follow-up).
+        this.prefabRegistry.evictByPath(path);
         console.warn(`[Editor] registerPrefab: could not write "${path}":`, err);
       }
     })();

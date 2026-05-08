@@ -37,11 +37,15 @@ function makePrefabRegistry(prefabs: Record<string, PrefabAsset>): PrefabRegistr
   return {
     getURLForPath: (path: string) => pathToURL.get(path) ?? null,
     get: (url: string) => urlToAsset.get(url) ?? null,
+    // Pre-write path-keyed lookup (issue #753 race guard) — always null in this stub
+    // because the mock populates full URL-keyed entries, not pre-write pending ones.
+    getAssetByPath: (_path: string) => null,
     has: (url: string) => urlToAsset.has(url),
     getAllAssets: () => [...urlToAsset.values()],
     on: () => {},
     off: () => {},
     set: () => {},
+    setAssetByPath: () => {},
     loadFromURL: async () => { throw new Error('not impl'); },
     evict: () => {},
     evictByPath: () => false,

@@ -402,14 +402,15 @@ export class SceneSync {
     const prefabName = node.asset.replace('prefabs://', '');
     const path = `prefabs/${prefabName}.prefab` as AssetPath;
     const url = this._prefabRegistry.getURLForPath(path);
-    if (!url) {
-      // Prefab not in registry -- mark broken ref
-      this._brokenRefIds.add(node.id);
-      return;
-    }
-    const asset = this._prefabRegistry.get(url);
+    let asset = url ? this._prefabRegistry.get(url) : null;
     if (!asset) {
-      // URL mapped but not cached -- mark broken ref
+      // URL not yet available or URL mapped but not cached — fall back to the
+      // pre-write path-keyed entry set synchronously by Editor.registerPrefab
+      // before the async writeFile+urlFor completes (race guard — issue #753).
+      asset = this._prefabRegistry.getAssetByPath(path);
+    }
+    if (!asset) {
+      // Neither URL-keyed nor path-keyed entry exists -- mark broken ref
       this._brokenRefIds.add(node.id);
       return;
     }
