@@ -77,6 +77,27 @@
   flex-shrink: 0;
 }
 
+.shareButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  padding: 0 8px;
+  height: 20px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.shareButton:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+}
+
 .resetLayoutButton {
   display: flex;
   align-items: center;

@@ -1,7 +1,8 @@
-import { type Component, For } from 'solid-js';
+import { type Component, For, createSignal } from 'solid-js';
 import { BrandMark } from './BrandMark';
 import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
+import { ShareDialog, type SceneVisibility } from './ShareDialog';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
 import { store, mutate, addWorkspace } from '../app/workspaceStore';
@@ -11,6 +12,8 @@ import styles from './Toolbar.module.css';
 export const Toolbar: Component = () => {
   const bridge = useEditor();
   const tabRefs = new Map<string, HTMLElement>();
+  const [shareOpen, setShareOpen] = createSignal(false);
+  const [shareVisibility, setShareVisibility] = createSignal<SceneVisibility>('private');
 
   return (
     <div
@@ -80,6 +83,16 @@ export const Toolbar: Component = () => {
       {/* Split divider */}
       <div class={styles.divider} />
 
+      {/* Share button */}
+      <button
+        data-testid="toolbar-share"
+        onClick={() => setShareOpen(true)}
+        title="Share scene"
+        class={styles.shareButton}
+      >
+        Share
+      </button>
+
       {/* Reset Layout icon button */}
       <button
         data-testid="toolbar-reset-layout"
@@ -89,6 +102,14 @@ export const Toolbar: Component = () => {
       >
         ↺
       </button>
+
+      <ShareDialog
+        open={shareOpen()}
+        onClose={() => setShareOpen(false)}
+        sceneId="placeholder"
+        visibility={shareVisibility()}
+        onVisibilityChange={setShareVisibility}
+      />
     </div>
   );
 };
