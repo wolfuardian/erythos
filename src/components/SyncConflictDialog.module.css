@@ -73,3 +73,90 @@
 .useCloudButton:hover {
   background: var(--accent-blue-hover);
 }
+
+/* ── Expanded dialog when diff is showing ── */
+.dialogExpanded {
+  max-width: 720px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogExpanded .message {
+  flex-shrink: 0;
+}
+
+.dialogExpanded .actions {
+  flex-shrink: 0;
+}
+
+/* ── Diff section ── */
+.diffSection {
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+}
+
+.diffLegend {
+  display: flex;
+  gap: var(--space-md);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+  background: var(--bg-section);
+}
+
+.legendRemoved {
+  color: var(--text-error, #f87171);
+}
+
+.legendAdded {
+  color: var(--text-success, #4ade80);
+}
+
+.diffPre {
+  margin: 0;
+  padding: 8px;
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  white-space: pre;
+  overflow: visible;
+}
+
+.diffRemoved {
+  display: block;
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--text-error, #f87171);
+}
+
+.diffAdded {
+  display: block;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--text-success, #4ade80);
+}
+
+.diffSame {
+  display: block;
+  color: var(--text-secondary);
+}
+
+/* ── Show diff button ── */
+.showDiffButton {
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.showDiffButton:hover {
+  background: var(--bg-hover);
+}
+
+.actionsSpacer {
+  flex: 1;
+}

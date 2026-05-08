@@ -9,6 +9,7 @@ import type { ProjectManager } from '../core/project/ProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import type { AssetPath, NodeUUID } from '../utils/branded';
 import type { SceneId } from '../core/sync/SyncEngine';
+import type { SceneDocument } from '../core/scene/SceneDocument';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -25,6 +26,10 @@ export interface SyncConflictPayload {
   scenePath: AssetPath;
   baseVersion: number;
   currentVersion: number;
+  /** Local SceneDocument snapshot at the moment of conflict (before any resolution) */
+  localBody: SceneDocument;
+  /** Cloud SceneDocument returned by the server's 409 response */
+  cloudBody: SceneDocument;
 }
 
 export interface EditorBridge {

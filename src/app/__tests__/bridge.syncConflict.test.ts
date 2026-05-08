@@ -18,6 +18,7 @@ vi.mock('../../core/project/ProjectHandleStore', () => ({
 
 import { Editor } from '../../core/Editor';
 import { ProjectManager } from '../../core/project/ProjectManager';
+import { SceneDocument } from '../../core/scene/SceneDocument';
 import type { AssetPath } from '../../utils/branded';
 import { createEditorBridge } from '../bridge';
 
@@ -48,20 +49,27 @@ describe('bridge syncConflict signal', () => {
       // Initially null
       expect(bridge.syncConflict()).toBeNull();
 
+      const localDoc = new SceneDocument();
+      const cloudDoc = new SceneDocument();
+
       // Emit syncConflict event
       editor.events.emit('syncConflict', {
         sceneId: 'scene-abc',
         scenePath: 'scenes/scene.erythos' as AssetPath,
         baseVersion: 6,
         currentVersion: 7,
+        localBody: localDoc,
+        cloudBody: cloudDoc,
       });
 
-      expect(bridge.syncConflict()).toEqual({
+      expect(bridge.syncConflict()).toMatchObject({
         sceneId: 'scene-abc',
         scenePath: 'scenes/scene.erythos',
         baseVersion: 6,
         currentVersion: 7,
       });
+      expect(bridge.syncConflict()!.localBody).toBe(localDoc);
+      expect(bridge.syncConflict()!.cloudBody).toBe(cloudDoc);
     });
   });
 
