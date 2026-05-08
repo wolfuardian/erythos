@@ -161,6 +161,24 @@
   color: var(--text-primary, #fff);
 }
 
+/* ── Shading Panel (side-by-side with Render Effects in Final mode) ────────── */
+
+.panelShading {
+  position: absolute;
+  top: 8px;
+  right: 236px; /* 220px panel + 8px gap + 8px from viewport edge */
+  width: 220px;
+  max-height: calc(100% - 56px);
+  overflow-y: auto;
+  background: var(--bg-app);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 6;
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+  user-select: none;
+}
+
 /* ── Shading Panel specific ────────────────────────────────────────────────── */
 
 .settingRow {

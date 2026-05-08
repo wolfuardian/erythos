@@ -313,8 +313,8 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
       </Show>
 
       {/* Shading 懸浮面板 */}
-      <Show when={props.renderMode() === 'shading'}>
-        <div class={styles.panel}>
+      <Show when={props.renderMode() === 'rendering'}>
+        <div class={styles.panelShading}>
           {/* 面板 Header */}
           <div
             class={styles.panelHeader}
@@ -330,7 +330,7 @@ export const RenderSettingsPanel: Component<RenderSettingsPanelProps> = (props) 
             <div class={styles.settingRow} classList={{ [styles.bordered]: true }}>
               <label class={styles.settingLabel}>
                 <input type="checkbox" checked={props.sceneLightsOn()}
-                  disabled={props.renderMode() !== 'shading'}
+                  disabled={props.renderMode() !== 'rendering'}
                   onChange={e => props.onSceneLightsChange(e.target.checked)} />
                 <span class={styles.primaryText}>Scene Lights</span>
               </label>

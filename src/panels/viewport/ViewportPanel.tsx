@@ -433,18 +433,18 @@ const ViewportPanel: Component = () => {
   });
 
   createEffect(() => {
-    if (renderMode() !== 'shading') return;
+    if (renderMode() !== 'rendering') return;
     viewport?.setLookdevPreset(lookdevPreset());
   });
 
   createEffect(() => {
-    if (renderMode() !== 'shading') return;
+    if (renderMode() !== 'rendering') return;
     viewport?.setEnvironmentIntensity(hdrIntensity());
     viewport?.requestRender();
   });
 
   createEffect(() => {
-    if (renderMode() !== 'shading') return;
+    if (renderMode() !== 'rendering') return;
     viewport?.setEnvironmentRotation(hdrRotation() * Math.PI / 180); // deg → rad
     viewport?.requestRender();
   });
