@@ -1,5 +1,6 @@
 import { type Component, For } from 'solid-js';
 import { BrandMark } from './BrandMark';
+import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
@@ -37,6 +38,14 @@ export const Toolbar: Component = () => {
           currentProjectId={bridge.currentProjectId()}
           onOpenProject={bridge.openProjectById}
         />
+      </div>
+
+      {/* Broken-ref warning chip — only renders when count > 0 (spec round 8). */}
+      <div
+        data-testid="toolbar-broken-refs"
+        class={styles.brokenRefs}
+      >
+        <BrokenRefsBadge />
       </div>
 
       {/* Spacer */}
