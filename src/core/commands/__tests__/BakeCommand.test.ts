@@ -303,6 +303,32 @@ describe('BakeCommand', () => {
       expect(doc.getAllNodes()).toHaveLength(2);
       expect(doc.getNode(asNodeUUID('box-inst'))).toBeNull();
     });
+
+    it('redo produces the same node UUIDs as the first execute (UUID stability)', () => {
+      const asset = makePrefabAsset('stable', [
+        { name: 'Root',  parentLocalId: null },
+        { name: 'Child', parentLocalId: 0 },
+      ]);
+      registerPrefab(registry, 'prefabs://stable', asset);
+
+      const instance = makeSceneNode('stable-inst', { nodeType: 'prefab', asset: 'prefabs://stable' });
+      doc.addNode(instance);
+
+      const editor = makeEditorStub(doc, registry);
+      const cmd = new BakeCommand(editor, asNodeUUID('stable-inst'));
+
+      // First execute: capture UUIDs
+      cmd.execute();
+      const idsBefore = doc.getAllNodes().map(n => n.id).sort();
+
+      // Undo → redo
+      cmd.undo();
+      cmd.execute();
+      const idsAfter = doc.getAllNodes().map(n => n.id).sort();
+
+      // UUIDs must be identical — redo reuses cached nodes, not freshly minted ones
+      expect(idsAfter).toEqual(idsBefore);
+    });
   });
 
   // ── Nested prefab not recursed ────────────────────────────────────────────
