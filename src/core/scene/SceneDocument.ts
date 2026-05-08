@@ -361,4 +361,72 @@ export class SceneDocument {
     this._env = { ...DEFAULT_SCENE_ENV };
     this.events.emit('sceneReplaced');
   }
+
+  /**
+   * Parse a paste payload (raw JSON) into runtime SceneNode[], ready for AddNodeCommand.
+   *
+   * Pipeline:
+   *   1. checkRawVersion   — reject invalid/future version
+   *   2. v0_to_v1 + v1_to_v2  — migrate to current version
+   *   3. validateScene     — structural invariants
+   *   4. Re-mint ALL node ids unconditionally (avoids collision with existing scene)
+   *   5. Rewrite parent refs using the old→new id map;
+   *      root-level nodes (parent === null) receive targetParentId.
+   *   6. Convert persistence shape (HexColor strings) → runtime shape (number colors)
+   *
+   * Does NOT modify the SceneDocument — callers wrap the returned nodes in AddNodeCommand[].
+   *
+   * @param raw            Parsed JSON (any legacy version).
+   * @param targetParentId Parent uuid for the imported root nodes (null = scene root).
+   * @returns              Array of runtime SceneNodes with fresh ids.
+   * @throws {UnsupportedVersionError} if version > CURRENT_VERSION
+   * @throws {SceneInvariantError}     if migrated scene violates structural invariants
+   * @throws {TypeError}               if raw is not a valid object
+   */
+  parsePastePayload(raw: unknown, targetParentId: NodeUUID | null): SceneNode[] {
+    // Step 1: version gate
+    checkRawVersion(raw);
+
+    // Step 2: migration chain
+    const asV1 = v0_to_v1(raw);
+    const v2: ErythosSceneV2 = v1_to_v2(asV1);
+
+    // Step 3: structural invariants
+    const violations = validateScene(v2);
+    if (violations.length > 0) {
+      throw new SceneInvariantError(violations);
+    }
+
+    // Step 4: build old-id -> new-id map (re-mint ALL ids unconditionally)
+    const idMap = new Map<string, NodeUUID>();
+    for (const pn of v2.nodes) {
+      idMap.set(pn.id, asNodeUUID(generateUUID()));
+    }
+
+    // Step 5 & 6: convert persistence nodes -> runtime nodes with fresh ids
+    return v2.nodes.map(pn => {
+      const node: SceneNode = {
+        id:       idMap.get(pn.id)!,
+        name:     pn.name,
+        // parent=null means this is a root node in the pasted subtree -> attach to targetParentId
+        // parent=someId means it has a parent within the pasted batch -> rewrite via idMap
+        parent:   pn.parent === null
+          ? targetParentId
+          : (idMap.get(pn.parent) ?? targetParentId),
+        order:    pn.order,
+        nodeType: pn.nodeType,
+        position: [...pn.position],
+        rotation: [...pn.rotation],
+        scale:    [...pn.scale],
+        userData: {},
+      };
+
+      if (pn.asset  !== undefined) node.asset  = pn.asset;
+      if (pn.mat    !== undefined) node.mat    = persistMatToRuntime(pn.mat);
+      if (pn.light  !== undefined) node.light  = persistLightToRuntime(pn.light);
+      if (pn.camera !== undefined) node.camera = { ...pn.camera };
+
+      return node;
+    });
+  }
 }

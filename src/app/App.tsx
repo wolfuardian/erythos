@@ -5,6 +5,8 @@ import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { LocalSyncEngine } from '../core/sync/LocalSyncEngine';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
+import { AddNodeCommand } from '../core/commands/AddNodeCommand';
+import { MultiCmdsCommand } from '../core/commands/MultiCmdsCommand';
 import { createEditorBridge, type EditorBridge } from './bridge';
 import { EditorProvider } from './EditorContext';
 import { editors } from './editors';
@@ -14,6 +16,9 @@ import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
 import { SyncConflictDialog } from '../components/SyncConflictDialog';
 import { CopyAsJsonModal } from '../components/CopyAsJsonModal';
+import { PasteFromJsonModal } from '../components/PasteFromJsonModal';
+import { ErrorDialog } from '../components/ErrorDialog';
+import { UnsupportedVersionError, SceneInvariantError } from '../core/scene/SceneDocument';
 import {
   DEFAULT_SCENE_PATH,
   getLastProjectId, setLastProjectId, clearLastProjectId,
@@ -40,6 +45,14 @@ const App: Component = () => {
   const [copyAsJsonOpen, setCopyAsJsonOpen] = createSignal(false);
   const [copyAsJsonContent, setCopyAsJsonContent] = createSignal('');
 
+  // Paste from JSON modal state
+  const [pasteFromJsonOpen, setPasteFromJsonOpen] = createSignal(false);
+
+  // Paste error dialog state
+  const [pasteErrorOpen, setPasteErrorOpen] = createSignal(false);
+  const [pasteErrorTitle, setPasteErrorTitle] = createSignal('');
+  const [pasteErrorMessage, setPasteErrorMessage] = createSignal('');
+
   // Cmd+J (Mac) / Ctrl+J (Win/Linux) -- open Copy as JSON modal
   createEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -57,6 +70,79 @@ const App: Component = () => {
     window.addEventListener('keydown', onKeyDown);
     onCleanup(() => window.removeEventListener('keydown', onKeyDown));
   });
+
+  // Cmd+Shift+V (Mac) / Ctrl+Shift+V (Win/Linux) -- open Paste from JSON modal
+  createEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.key.toLowerCase() !== 'v') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const el = e.target as HTMLElement;
+      if (el.isContentEditable) return;
+      const e2 = editor();
+      if (!e2) return;
+      e.preventDefault();
+      setPasteFromJsonOpen(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    onCleanup(() => window.removeEventListener('keydown', onKeyDown));
+  });
+
+  /** Execute the paste-from-JSON import pipeline. Called from PasteFromJsonModal on confirm. */
+  const handlePasteImport = (text: string) => {
+    const e = editor();
+    if (!e) return;
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      setPasteFromJsonOpen(false);
+      setPasteErrorTitle('Invalid JSON');
+      setPasteErrorMessage('The text you pasted is not valid JSON. Please check and try again.');
+      setPasteErrorOpen(true);
+      return;
+    }
+
+    // Determine target parent: current selection or scene root.
+    const targetParent = e.selection.primary ?? null;
+
+    let nodes;
+    try {
+      nodes = e.sceneDocument.parsePastePayload(raw, targetParent);
+    } catch (err) {
+      setPasteFromJsonOpen(false);
+      if (err instanceof UnsupportedVersionError) {
+        setPasteErrorTitle('Unsupported Version');
+        setPasteErrorMessage(err.message);
+      } else if (err instanceof SceneInvariantError) {
+        const summary = err.violations
+          .slice(0, 3)
+          .map(v => `[${v.path}] ${v.reason}`)
+          .join('\n');
+        const extra = err.violations.length > 3
+          ? `\n…and ${err.violations.length - 3} more.`
+          : '';
+        setPasteErrorTitle('Invalid Scene Data');
+        setPasteErrorMessage(`Scene validation failed:\n${summary}${extra}`);
+      } else {
+        setPasteErrorTitle('Import Failed');
+        setPasteErrorMessage(err instanceof Error ? err.message : String(err));
+      }
+      setPasteErrorOpen(true);
+      return;
+    }
+
+    if (nodes.length === 0) {
+      setPasteFromJsonOpen(false);
+      return;
+    }
+
+    // Wrap all AddNodeCommands in a single MultiCmdsCommand for atomic undo.
+    const cmds = nodes.map(n => new AddNodeCommand(e, n));
+    e.execute(new MultiCmdsCommand(e, cmds));
+    setPasteFromJsonOpen(false);
+  };
 
   const openProject = async (handle: FileSystemDirectoryHandle) => {
     const e = new Editor(projectManager);
@@ -223,6 +309,17 @@ const App: Component = () => {
           open={copyAsJsonOpen()}
           json={copyAsJsonContent()}
           onClose={() => setCopyAsJsonOpen(false)}
+        />
+        <PasteFromJsonModal
+          open={pasteFromJsonOpen()}
+          onImport={handlePasteImport}
+          onClose={() => setPasteFromJsonOpen(false)}
+        />
+        <ErrorDialog
+          open={pasteErrorOpen()}
+          title={pasteErrorTitle()}
+          message={pasteErrorMessage()}
+          onClose={() => setPasteErrorOpen(false)}
         />
       </EditorProvider>
     </Show>
