@@ -1,4 +1,4 @@
-import { type Component, For, createSignal } from 'solid-js';
+import { type Component, For, Show, createEffect, createSignal } from 'solid-js';
 import { BrandMark } from './BrandMark';
 import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
@@ -14,6 +14,33 @@ export const Toolbar: Component = () => {
   const tabRefs = new Map<string, HTMLElement>();
   const [shareOpen, setShareOpen] = createSignal(false);
   const [shareVisibility, setShareVisibility] = createSignal<SceneVisibility>('private');
+  const [shareError, setShareError] = createSignal<string | null>(null);
+
+  // When dialog opens, fetch current visibility from SyncEngine
+  createEffect(() => {
+    if (!shareOpen()) return;
+    const sceneId = bridge.currentSceneId();
+    const syncEngine = bridge.editor.syncEngine;
+    if (!sceneId || !syncEngine) return;
+    setShareError(null);
+    void syncEngine.fetch(sceneId).then((result) => {
+      setShareVisibility(result.visibility);
+    }).catch((err: unknown) => {
+      setShareError(err instanceof Error ? err.message : 'Failed to load visibility');
+    });
+  });
+
+  const handleVisibilityChange = (vis: SceneVisibility) => {
+    const sceneId = bridge.currentSceneId();
+    const syncEngine = bridge.editor.syncEngine;
+    if (!sceneId || !syncEngine) return;
+    setShareVisibility(vis); // optimistic update
+    void syncEngine.setVisibility(sceneId, vis).catch((err: unknown) => {
+      setShareError(err instanceof Error ? err.message : 'Failed to update visibility');
+      // rollback optimistic update
+      setShareVisibility(vis === 'public' ? 'private' : 'public');
+    });
+  };
 
   return (
     <div
@@ -83,12 +110,13 @@ export const Toolbar: Component = () => {
       {/* Split divider */}
       <div class={styles.divider} />
 
-      {/* Share button */}
+      {/* Share button — disabled until scene has a sync ID */}
       <button
         data-testid="toolbar-share"
         onClick={() => setShareOpen(true)}
         title="Share scene"
         class={styles.shareButton}
+        disabled={bridge.currentSceneId() === null}
       >
         Share
       </button>
@@ -105,11 +133,16 @@ export const Toolbar: Component = () => {
 
       <ShareDialog
         open={shareOpen()}
-        onClose={() => setShareOpen(false)}
-        sceneId="placeholder"
+        onClose={() => { setShareOpen(false); setShareError(null); }}
+        sceneId={bridge.currentSceneId() ?? ''}
         visibility={shareVisibility()}
-        onVisibilityChange={setShareVisibility}
+        onVisibilityChange={handleVisibilityChange}
       />
+      <Show when={shareOpen() && shareError()}>
+        <div data-testid="share-error" style={{ color: 'var(--text-danger, red)', padding: '4px 8px', 'font-size': '0.85em' }}>
+          {shareError()}
+        </div>
+      </Show>
     </div>
   );
 };
