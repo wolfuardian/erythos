@@ -8,7 +8,7 @@ import {
 } from './SyncEngine';
 import { generateUUID } from '../../utils/uuid';
 
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'scenes';
 
 interface SceneRecord {
@@ -16,6 +16,8 @@ interface SceneRecord {
   version: number;
   name: string;
   body: unknown; // serialized via SceneDocument.serialize()
+  visibility: SceneVisibility;
+  forkedFrom: SceneId | null;
 }
 
 function openDB(dbName: string): Promise<IDBDatabase> {
@@ -23,8 +25,31 @@ function openDB(dbName: string): Promise<IDBDatabase> {
     const req = indexedDB.open(dbName, DB_VERSION);
     req.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
+      const oldVersion = event.oldVersion;
+
+      // v1: create the object store
+      if (oldVersion < 1) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+
+      // v2: backfill visibility + forkedFrom on existing records
+      if (oldVersion < 2) {
+        const upgradeTx = (event.target as IDBOpenDBRequest).transaction!;
+        const store = upgradeTx.objectStore(STORE_NAME);
+        const cursorReq = store.openCursor();
+        cursorReq.onsuccess = (e) => {
+          const cursor = (e.target as IDBRequest<IDBCursorWithValue>).result;
+          if (!cursor) return;
+          const record = cursor.value as SceneRecord;
+          if (record.visibility === undefined) {
+            record.visibility = 'private';
+          }
+          if (record.forkedFrom === undefined) {
+            record.forkedFrom = null;
+          }
+          cursor.update(record);
+          cursor.continue();
+        };
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -51,6 +76,11 @@ function idbPut(store: IDBObjectStore, value: SceneRecord): Promise<void> {
 /**
  * IndexedDB-backed SyncEngine. Stores scenes in a single object store keyed by SceneId.
  * DB name defaults to "erythos-sync"; pass a custom name in tests to keep each suite isolated.
+ *
+ * Schema versions:
+ *   v1 — initial schema: id, version, name, body
+ *   v2 — adds visibility ('private'|'public') and forkedFrom (SceneId|null);
+ *        existing v1 records are backfilled with visibility='private', forkedFrom=null
  */
 export class LocalSyncEngine implements SyncEngine {
   private readonly dbName: string;
@@ -67,7 +97,12 @@ export class LocalSyncEngine implements SyncEngine {
     return this.dbPromise;
   }
 
-  async fetch(id: SceneId): Promise<{ body: SceneDocument; version: number }> {
+  async fetch(id: SceneId): Promise<{
+    body: SceneDocument;
+    version: number;
+    visibility: SceneVisibility;
+    forkedFrom: SceneId | null;
+  }> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
@@ -80,7 +115,12 @@ export class LocalSyncEngine implements SyncEngine {
           }
           const doc = new SceneDocument();
           doc.deserialize(record.body);
-          resolve({ body: doc, version: record.version });
+          resolve({
+            body: doc,
+            version: record.version,
+            visibility: record.visibility ?? 'private',
+            forkedFrom: record.forkedFrom ?? null,
+          });
         })
         .catch(reject);
     });
@@ -115,6 +155,8 @@ export class LocalSyncEngine implements SyncEngine {
             name: record.name,
             version: newVersion,
             body: body.serialize(),
+            visibility: record.visibility ?? 'private',
+            forkedFrom: record.forkedFrom ?? null,
           };
           idbPut(store, updated)
             .then(() => resolve({ version: newVersion }))
@@ -132,6 +174,8 @@ export class LocalSyncEngine implements SyncEngine {
       name,
       version: 0,
       body: body.serialize(),
+      visibility: 'private',
+      forkedFrom: null,
     };
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -142,16 +186,56 @@ export class LocalSyncEngine implements SyncEngine {
     });
   }
 
-  // Stub — implemented in feat/share-link-engine PR
-  async setVisibility(_id: SceneId, _visibility: SceneVisibility): Promise<void> {
-    throw new Error('setVisibility not implemented');
+  async setVisibility(id: SceneId, visibility: SceneVisibility): Promise<void> {
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      idbGet(store, id)
+        .then((record) => {
+          if (!record) {
+            reject(new NotFoundError(id));
+            return;
+          }
+          // visibility is metadata — does not bump version
+          const updated: SceneRecord = { ...record, visibility };
+          idbPut(store, updated)
+            .then(() => resolve())
+            .catch(reject);
+        })
+        .catch(reject);
+    });
   }
 
-  // Stub — implemented in feat/share-link-engine PR
   async fork(
-    _id: SceneId,
-    _name?: string,
+    id: SceneId,
+    name?: string,
   ): Promise<{ id: SceneId; version: number; forkedFrom: SceneId }> {
-    throw new Error('fork not implemented');
+    const db = await this.getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      idbGet(store, id)
+        .then((source) => {
+          if (!source) {
+            reject(new NotFoundError(id));
+            return;
+          }
+          const newId = generateUUID();
+          const newName = name ?? `${source.name} (fork)`;
+          const forked: SceneRecord = {
+            id: newId,
+            name: newName,
+            version: 0,
+            body: structuredClone(source.body), // defensive copy so the two rows are independent
+            visibility: 'private', // forks always start private per spec
+            forkedFrom: id,
+          };
+          idbPut(store, forked)
+            .then(() => resolve({ id: newId, version: 0, forkedFrom: id }))
+            .catch(reject);
+        })
+        .catch(reject);
+    });
   }
 }

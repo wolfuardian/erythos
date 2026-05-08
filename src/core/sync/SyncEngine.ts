@@ -15,7 +15,12 @@ export type SceneId = string;
 export type SceneVisibility = 'private' | 'public';
 
 export interface SyncEngine {
-  fetch(id: SceneId): Promise<{ body: SceneDocument; version: number }>;
+  fetch(id: SceneId): Promise<{
+    body: SceneDocument;
+    version: number;
+    visibility: SceneVisibility;
+    forkedFrom: SceneId | null;
+  }>;
   push(
     id: SceneId,
     body: SceneDocument,

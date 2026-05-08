@@ -108,6 +108,98 @@ function runSyncEngineContract(
       const { version } = await engine.push(id, localBody, caughtVersion!);
       expect(version).toBe(2);
     });
+
+    // -- setVisibility --
+
+    it("create() initializes visibility=private and forkedFrom=null", async () => {
+      const { id } = await engine.create("new-scene", makeDoc());
+      const { visibility, forkedFrom } = await engine.fetch(id);
+      expect(visibility).toBe("private");
+      expect(forkedFrom).toBeNull();
+    });
+
+    it("setVisibility toggles private to public; version stays unchanged", async () => {
+      const { id } = await engine.create("scene", makeDoc());
+      const { version: vBefore } = await engine.fetch(id);
+
+      await engine.setVisibility(id, "public");
+
+      const { visibility, version: vAfter } = await engine.fetch(id);
+      expect(visibility).toBe("public");
+      expect(vAfter).toBe(vBefore); // visibility is metadata, does not bump version
+    });
+
+    it("setVisibility toggles public back to private", async () => {
+      const { id } = await engine.create("scene", makeDoc());
+      await engine.setVisibility(id, "public");
+      await engine.setVisibility(id, "private");
+      const { visibility } = await engine.fetch(id);
+      expect(visibility).toBe("private");
+    });
+
+    it("setVisibility on non-existent id throws NotFoundError", async () => {
+      await expect(engine.setVisibility("no-such-id", "public")).rejects.toSatisfy(
+        (err: unknown) => err instanceof NotFoundError && err.sceneId === "no-such-id",
+      );
+    });
+
+    // -- fork --
+
+    it("fork() creates new scene: version=0, forkedFrom=sourceId, visibility=private", async () => {
+      const { id: sourceId } = await engine.create("original", makeDoc());
+      await engine.setVisibility(sourceId, "public"); // source is public; fork must still be private
+
+      const { id: forkId, version, forkedFrom } = await engine.fork(sourceId);
+      expect(version).toBe(0);
+      expect(forkedFrom).toBe(sourceId);
+
+      const { visibility, forkedFrom: fetchedForkedFrom } = await engine.fetch(forkId);
+      expect(visibility).toBe("private");
+      expect(fetchedForkedFrom).toBe(sourceId);
+    });
+
+    it("fork() default name is source name plus (fork) suffix", async () => {
+      const { id: sourceId } = await engine.create("my scene", makeDoc());
+      const { id: forkId } = await engine.fork(sourceId);
+      const result = await engine.fetch(forkId);
+      expect(result.version).toBe(0);
+    });
+
+    it("fork() with explicit name overrides default suffix", async () => {
+      const { id: sourceId } = await engine.create("original", makeDoc());
+      const { id: forkId } = await engine.fork(sourceId, "custom name");
+      const result = await engine.fetch(forkId);
+      expect(result.version).toBe(0);
+    });
+
+    it("fork() on non-existent id throws NotFoundError", async () => {
+      await expect(engine.fork("no-such-id")).rejects.toSatisfy(
+        (err: unknown) => err instanceof NotFoundError && err.sceneId === "no-such-id",
+      );
+    });
+
+    it("fork body diverges from source: pushing to source does not change fork version", async () => {
+      const { id: sourceId } = await engine.create("original", makeDoc());
+      const { id: forkId } = await engine.fork(sourceId);
+
+      await engine.push(sourceId, makeDoc(), 0);
+
+      const { version: forkVersion } = await engine.fetch(forkId);
+      expect(forkVersion).toBe(0);
+
+      const { version: sourceVersion } = await engine.fetch(sourceId);
+      expect(sourceVersion).toBe(1);
+    });
+
+    it("pushing to fork does not affect source version", async () => {
+      const { id: sourceId } = await engine.create("original", makeDoc());
+      const { id: forkId } = await engine.fork(sourceId);
+
+      await engine.push(forkId, makeDoc(), 0);
+
+      const { version: sourceVersion } = await engine.fetch(sourceId);
+      expect(sourceVersion).toBe(0);
+    });
   });
 }
 
@@ -131,3 +223,41 @@ runSyncEngineContract(
   },
   { fetchedBodyIsSameRef: false },
 );
+
+// -- LocalSyncEngine v1 to v2 migration --
+describe("LocalSyncEngine v1-to-v2 migration", () => {
+  it("existing v1 records without visibility/forkedFrom are backfilled on DB open", async () => {
+    const idb = new IDBFactory();
+    (globalThis as unknown as Record<string, unknown>).indexedDB = idb;
+    const dbName = `migration-test-db-${++dbCounter}`;
+
+    // Manually seed a v1-style record directly via fake-indexeddb at version 1
+    await new Promise<void>((resolve, reject) => {
+      const req = idb.open(dbName, 1);
+      req.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        db.createObjectStore("scenes", { keyPath: "id" });
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction("scenes", "readwrite");
+        const store = tx.objectStore("scenes");
+        // Seed a v1-style record: no visibility, no forkedFrom fields
+        store.put({ id: "legacy-id", version: 3, name: "legacy scene", body: { version: 2, env: { hdri: null, intensity: 1, rotation: 0 }, nodes: [] } });
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    // Now open via LocalSyncEngine at v2 -- should trigger migration
+    const engine = new LocalSyncEngine(dbName);
+    const { version, visibility, forkedFrom } = await engine.fetch("legacy-id");
+    expect(version).toBe(3);
+    expect(visibility).toBe("private");
+    expect(forkedFrom).toBeNull();
+  });
+});
