@@ -20,3 +20,7 @@ projects/
 .idea/
 
 server/.env
+
+# Client env (Vite) — .env.example is tracked, actual secrets are not
+.env
+.env.*.local
