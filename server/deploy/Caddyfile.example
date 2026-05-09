@@ -1,0 +1,33 @@
+# Erythos sync server — Caddy reverse proxy site block
+#
+# Append the block below to /etc/caddy/Caddyfile, then:
+#   sudo caddy fmt --overwrite /etc/caddy/Caddyfile
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Caddy auto-issues a Let's Encrypt cert for the host on the site block on
+# the first request, and auto-renews ~30 days before expiry — no certbot,
+# no systemd timer, no renewal hook needed.
+#
+# Domain note: replace `erythos.eoswolf.com` if you swap domain. Also update
+# the GitHub OAuth callback URL and the client HttpSyncEngine baseUrl.
+
+erythos.eoswolf.com {
+	reverse_proxy 127.0.0.1:3000
+
+	# Body upper bound — aligns with spec line 194 / issue #897.
+	# Hono server-side enforce remains the authoritative limit;
+	# this is a coarse outer fence so abusive bodies never reach Node.
+	request_body {
+		max_size 1MB
+	}
+
+	# Security headers (mirror nginx legacy config — applied to every response)
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		-Server
+	}
+}
