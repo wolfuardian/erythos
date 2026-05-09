@@ -4,8 +4,14 @@
  * Thin HTTP client for the Erythos auth API (Phase D).
  * Session is managed via HttpOnly cookie — no token storage in JS.
  *
+ * Default base URL is resolved from the `VITE_SYNC_BASE_URL` env variable
+ * (see `../sync/baseUrl.ts`).  Production falls back to
+ * `https://erythos.eoswolf.com`; dev to `http://localhost:3000`.
+ *
  * Spec refs: docs/sync-protocol.md §認證實作, §OAuth flow, §users schema.
  */
+
+import { defaultBaseUrl } from '../sync/baseUrl';
 
 // ─── Domain types ────────────────────────────────────────────────────────────
 
@@ -35,7 +41,7 @@ export class AuthError extends Error {
 // ─── Client ──────────────────────────────────────────────────────────────────
 
 export class AuthClient {
-  constructor(private readonly baseUrl: string = 'https://erythos.app/api') {}
+  constructor(private readonly baseUrl: string = defaultBaseUrl()) {}
 
   /**
    * Returns the currently authenticated user, or null for anonymous / guest.

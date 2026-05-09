@@ -7,6 +7,7 @@ import {
   NotFoundError,
 } from './SyncEngine';
 import { AuthError } from '../auth/AuthClient';
+import { defaultBaseUrl } from './baseUrl';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -93,12 +94,12 @@ async function doFetch(
 // ── HttpSyncEngine ────────────────────────────────────────────────────────────
 
 /**
- * Phase D pre-stub: fetch-based implementation of `SyncEngine`.
+ * Phase D fetch-based implementation of `SyncEngine`.
  *
- * The Linode server is not yet running.  Once the server is deployed,
- * swap `baseUrl` to the real endpoint — no other code changes needed.
- *
- * Default base URL: `https://erythos.app/api`
+ * Default base URL is resolved from the `VITE_SYNC_BASE_URL` env variable
+ * (see `baseUrl.ts`).  Production falls back to `https://erythos.eoswolf.com`;
+ * dev falls back to `http://localhost:3000`.  No explicit `baseUrl` is needed
+ * in normal usage — pass one only in tests or custom deployments.
  *
  * Session auth: all requests include `credentials: 'include'` so the
  * browser sends the session cookie automatically.
@@ -117,7 +118,7 @@ async function doFetch(
 export class HttpSyncEngine implements SyncEngine {
   private readonly baseUrl: string;
 
-  constructor(baseUrl = 'https://erythos.app/api') {
+  constructor(baseUrl: string = defaultBaseUrl()) {
     // Strip trailing slash for safe concatenation
     this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
