@@ -37,7 +37,15 @@ vi.mock('../db.js', () => ({
 }));
 
 // resolveSession — by default returns null (unauthenticated)
-type AuthUser = { id: string; github_id: number; handle: string | null; storage_used: number } | null;
+type AuthUser = {
+  id: string;
+  github_id: number;
+  github_login: string;
+  email: string;
+  avatar_url: string | null;
+  handle: string | null;
+  storage_used: number;
+} | null;
 const mockResolveSession = vi.fn<() => Promise<AuthUser>>();
 
 vi.mock('../auth.js', () => ({
@@ -69,7 +77,15 @@ function makeRequest(
 }
 
 /** Fake authenticated user */
-const FAKE_USER = { id: 'user-1', github_id: 1, handle: 'alice', storage_used: 0 };
+const FAKE_USER = {
+  id: 'user-1',
+  github_id: 1,
+  github_login: 'alice',
+  email: 'alice@example.com',
+  avatar_url: 'https://avatars.githubusercontent.com/u/1',
+  handle: 'alice',
+  storage_used: 0,
+};
 /** A different user id (for non-owner tests) */
 const OTHER_USER_ID = 'user-other';
 

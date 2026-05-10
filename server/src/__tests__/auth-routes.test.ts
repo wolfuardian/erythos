@@ -74,6 +74,9 @@ describe('GET /auth/me', () => {
         {
           id: 'user-uuid-1',
           github_id: 12345,
+          github_login: 'alice',
+          email: 'alice@example.com',
+          avatar_url: 'https://avatars.githubusercontent.com/u/12345',
           handle: 'alice',
           storage_used: 0,
           expires_at: fakeExpiry,
@@ -90,10 +93,13 @@ describe('GET /auth/me', () => {
     const body = await res.json();
     expect(body).toMatchObject({
       id: 'user-uuid-1',
-      github_id: 12345,
-      handle: 'alice',
-      storage_used: 0,
+      github_login: 'alice',
+      email: 'alice@example.com',
+      avatar_url: 'https://avatars.githubusercontent.com/u/12345',
     });
+    expect(body).not.toHaveProperty('github_id');
+    expect(body).not.toHaveProperty('handle');
+    expect(body).not.toHaveProperty('storage_used');
   });
 
   it('returns 401 when no session cookie is present', async () => {
@@ -131,6 +137,9 @@ describe('GET /auth/me', () => {
         {
           id: 'user-uuid-1',
           github_id: 12345,
+          github_login: 'alice',
+          email: 'alice@example.com',
+          avatar_url: null,
           handle: null,
           storage_used: 0,
           expires_at: pastExpiry,

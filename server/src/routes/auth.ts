@@ -159,14 +159,19 @@ async function fetchGitHubPrimaryEmail(accessToken: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 // GET /auth/me
+//
+// Response shape aligns with `src/core/auth/AuthClient.ts` `User` interface
+// (`{id, github_login, email, avatar_url}`). Internal-only fields like
+// `github_id`, `handle`, `storage_used` stay on `AuthUser` for server use
+// but are not exposed on the wire.
 authRoutes.get('/me', async (c) => {
   const user = await resolveSession(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
   return c.json({
     id: user.id,
-    github_id: user.github_id,
-    handle: user.handle,
-    storage_used: user.storage_used,
+    github_login: user.github_login,
+    email: user.email,
+    avatar_url: user.avatar_url,
   });
 });
 

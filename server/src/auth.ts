@@ -55,6 +55,9 @@ export function clearSessionCookie(c: Context): void {
 export interface AuthUser {
   id: string;
   github_id: number;
+  github_login: string;
+  email: string;
+  avatar_url: string | null;
   handle: string | null;
   storage_used: number;
 }
@@ -73,6 +76,9 @@ export async function resolveSession(c: Context): Promise<AuthUser | null> {
     .select({
       id: users.id,
       github_id: users.github_id,
+      github_login: users.github_login,
+      email: users.email,
+      avatar_url: users.avatar_url,
       handle: users.handle,
       storage_used: users.storage_used,
       expires_at: sessions.expires_at,
@@ -89,6 +95,9 @@ export async function resolveSession(c: Context): Promise<AuthUser | null> {
   return {
     id: row.id,
     github_id: row.github_id,
+    github_login: row.github_login,
+    email: row.email,
+    avatar_url: row.avatar_url,
     handle: row.handle,
     storage_used: row.storage_used,
   };
