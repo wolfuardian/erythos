@@ -18,36 +18,81 @@
 
 ## Phase 1 — Initial system hardening
 
+> **PowerShell ssh paste 地雷**:在 PowerShell terminal 裡用 ssh 連進 VPS 時,**不要一次把多行命令全部貼入**。PowerShell 會把換行折疊成一行,或讓互動命令(如 `adduser`)把後面幾行當 stdin 答 prompt,造成 user 建不起來、ssh key 沒設、sshd config 沒改的連環錯。**以下每個 code block 逐步 paste,等上一段執行完再貼下一段。**
+
 第一次以 root SSH 進機器:
 
 ```bash
 ssh root@139.162.101.231
 ```
 
-更新系統 + 建非 root user + 關掉 root SSH login:
+### 步驟 1-a:更新系統套件
 
 ```bash
 apt update && apt upgrade -y
+```
 
-adduser erythos
+### 步驟 1-b:建非 root user
+
+`adduser --disabled-password` 不進密碼 prompt,直接建好 user;再用 `passwd` 單獨設密碼(兩次輸入)。**這兩條分開跑,等每條執行完再貼下一條。**
+
+```bash
+adduser --disabled-password --gecos '' erythos
+```
+
+```bash
+passwd erythos
+```
+
+`passwd` 會進互動 prompt,輸入新密碼兩次後自動結束,然後再繼續:
+
+```bash
 usermod -aG sudo erythos
+```
 
-# 把 root 的 authorized_keys 複製給 erythos(假設 ssh key 已用 root 連上)
+### 步驟 1-c:複製 SSH authorized_keys 給 erythos
+
+> **以下 5 條逐條 paste,別一次黏。** PowerShell ssh paste 會把多行黏成一行,第一條還沒跑完第二條就進去,`chown` 可能在 `mkdir` 之前執行而失敗。每條等 prompt 回來再貼下一條。
+
+```bash
 mkdir -p /home/erythos/.ssh
-cp /root/.ssh/authorized_keys /home/erythos/.ssh/authorized_keys
-chown -R erythos:erythos /home/erythos/.ssh
-chmod 700 /home/erythos/.ssh
-chmod 600 /home/erythos/.ssh/authorized_keys
+```
 
-# 關掉 root SSH 登入 + password 登入
+```bash
+cp /root/.ssh/authorized_keys /home/erythos/.ssh/authorized_keys
+```
+
+```bash
+chown -R erythos:erythos /home/erythos/.ssh
+```
+
+```bash
+chmod 700 /home/erythos/.ssh
+```
+
+```bash
+chmod 600 /home/erythos/.ssh/authorized_keys
+```
+
+### 步驟 1-d:關掉 root SSH 登入 + password 登入
+
+> **這兩條 sed 也要逐條 paste。** 改完後 reload sshd,**先別關 root session**,另開 terminal 驗 `erythos` user 能進才繼續,否則把自己關在外面。
+
+```bash
 sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+```
+
+```bash
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+```
+
+```bash
 systemctl reload ssh
 ```
 
-**驗證**:**先別斷線 root**,另開一個 terminal 試 `ssh erythos@139.162.101.231` 通,再關 root session。
+**驗證**:**先別斷線 root**,另開一個 terminal 試 `ssh erythos@139.162.101.231` 通,再關 root session。確認可用 key 登入後才繼續往下。
 
-UFW firewall:
+### 步驟 1-e:UFW firewall
 
 ```bash
 ufw default deny incoming
@@ -302,6 +347,120 @@ journalctl -u caddy -n 50    # 看 renewal 行為
 | `npm run -w server db:migrate` 噴 `password authentication failed` | DATABASE_URL 密碼不對 / 含特殊字元未 URL-encode:用 `psql "$DATABASE_URL"` 直接驗 |
 | Cloudflare 改成 orange cloud 後 OAuth 流壞掉 | CF proxy 會改 cookie domain / 加自家 cookies,還會擋 ACME。回到 grey cloud 即可 |
 | psql 命令好像「卡住」吃不到下一條 | psql 在 tty 模式進了 less pager(`(END)` 字樣),按 `q` 退出。後續一律加 `-P pager=off` |
+| `ssh erythos@host` prompt 要密碼 | public key 沒通:authorized_keys 沒建、perm 錯、或 PasswordAuthentication 已關。LISH 內 `ls -la /home/erythos/.ssh` 確認檔案存在 + perm 700/600 |
+| `sudo` prompt 要密碼(且不知道密碼) | user 沒設密碼又沒加 NOPASSWD。LISH 內用 root 跑 `passwd erythos` 設密碼,或 `visudo` 加 NOPASSWD 行 |
+| `bash -s` 收到亂碼 + `\r: command not found` | 在 PowerShell 用 `Get-Content \| ssh` 傳了 CRLF。改用 git-bash:`ssh user@host 'bash -s' < script.sh`,或見下方「LF/CRLF 雷」節 |
+
+## 推 script 上 host 的 LF/CRLF 雷
+
+**症狀**:在 PowerShell 跑 `Get-Content script.sh | ssh user@host 'bash -s'`,遠端 bash 看到 `\r` 符號,噴 `$'\r': command not found` 或中文亂碼。
+
+**根因**:`Get-Content` 預設以 UTF-16 讀檔後逐行重新加 CRLF(`\r\n`)再丟 stdin;bash 看到行尾 `\r` 視為合法字元而不是分隔符,整行命令名字變成 `command\r` — 找不到。
+
+**三種解**:
+
+**推薦 — git-bash 直接傳(最乾淨)**
+
+git-bash 的 stdin redirection 不動換行:
+
+```bash
+# 在 git-bash 裡跑(不是 PowerShell):
+ssh user@host 'bash -s' < script.sh
+```
+
+**PowerShell — `[IO.File]::ReadAllText` 強制 LF**
+
+```powershell
+[IO.File]::ReadAllText('script.sh').Replace("`r`n","`n") | ssh user@host 'bash -s'
+```
+
+> `ReadAllText` 讀原始 bytes 後交由 .NET 解 encoding;`Replace` 把 CRLF 換成 LF;stdin 給 ssh 的是純 LF 文字流。
+
+**PowerShell — `-Raw` + Replace(一行版)**
+
+```powershell
+Get-Content script.sh -Raw | ForEach-Object { $_.Replace("`r`n","`n") } | ssh user@host 'bash -s'
+```
+
+> `-Raw` 把整個檔案當一個字串讀(不逐行),再統一換行。比 `Get-Content`(逐行)穩,但仍不如 `[IO.File]::ReadAllText` 直覺。
+
+## 救援篇 — Linode LISH
+
+**適用場景**:ssh 進不去、sudo 沒設好、authorized_keys 沒建、sshd 鎖太死把自己關在外面、任何 Phase 1 錯誤導致普通 ssh 路徑不通。
+
+### 怎麼進 LISH
+
+Linode Cloud Manager → 左側導覽點該 Linode → 右上角 **"Launch LISH Console"** 按鈕 → 瀏覽器彈出視窗,直接以 root 登入(等同實體 tty)。
+
+> **LISH 也有 paste 雷**:同樣是瀏覽器 terminal,多行一次 paste 也會串行亂掉。**以下救援命令也要逐條 paste,等提示符回來再貼下一條。**
+
+### 常見救援操作
+
+#### 設 NOPASSWD sudoers(讓 erythos 不用密碼 sudo)
+
+```bash
+echo 'erythos ALL=(ALL) NOPASSWD:ALL' | tee /etc/sudoers.d/erythos
+```
+
+```bash
+chmod 440 /etc/sudoers.d/erythos
+```
+
+```bash
+visudo -c
+```
+
+`visudo -c` 回 `parsed OK` 才算生效。
+
+#### 補 SSH authorized_keys
+
+```bash
+mkdir -p /home/erythos/.ssh
+```
+
+```bash
+cp /root/.ssh/authorized_keys /home/erythos/.ssh/authorized_keys
+```
+
+```bash
+chown -R erythos:erythos /home/erythos/.ssh
+```
+
+```bash
+chmod 700 /home/erythos/.ssh
+```
+
+```bash
+chmod 600 /home/erythos/.ssh/authorized_keys
+```
+
+補完後在本機試 `ssh erythos@<ip>`,應可用 key 進。
+
+#### 重設 erythos 密碼
+
+```bash
+passwd erythos
+```
+
+互動輸入新密碼兩次。若 sshd 的 `PasswordAuthentication no` 已生效,設密碼僅供 LISH 本地登入用,ssh 仍需 key。
+
+#### 驗 sshd_config 是否生效
+
+```bash
+grep -E '^(PermitRootLogin|PasswordAuthentication)' /etc/ssh/sshd_config
+```
+
+若上面 sed 沒生效(顯示帶 `#` 或原值),手動改:
+
+```bash
+nano /etc/ssh/sshd_config
+```
+
+找到 `PermitRootLogin` / `PasswordAuthentication` 行,去掉 `#`,改成 `no`。存檔後:
+
+```bash
+systemctl reload ssh
+```
 
 ## 下一步(Phase D D6 / Phase E)
 
