@@ -16,6 +16,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { scenes, scene_versions } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
+import { bodyLimitMiddleware } from '../middleware/body-limit.js';
 import type { Context, Next } from 'hono';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,7 @@ sceneRoutes.get('/:id', async (c) => {
 // Requires auth. Owner-only write. Optimistic concurrency via If-Match.
 // ---------------------------------------------------------------------------
 
-sceneRoutes.put('/:id', authMiddleware, async (c) => {
+sceneRoutes.put('/:id', bodyLimitMiddleware, authMiddleware, async (c) => {
   const id = c.req.param('id')!;
   const user = c.get('user');
 
@@ -182,7 +183,7 @@ sceneRoutes.put('/:id', authMiddleware, async (c) => {
 // Requires auth. version=0, visibility='private'.
 // ---------------------------------------------------------------------------
 
-sceneRoutes.post('/', authMiddleware, async (c) => {
+sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
   const user = c.get('user');
 
   let reqBody: { name?: unknown; body?: unknown };
@@ -234,7 +235,7 @@ sceneRoutes.post('/', authMiddleware, async (c) => {
 // Requires auth. Owner-only.
 // ---------------------------------------------------------------------------
 
-sceneRoutes.patch('/:id/visibility', authMiddleware, async (c) => {
+sceneRoutes.patch('/:id/visibility', bodyLimitMiddleware, authMiddleware, async (c) => {
   const id = c.req.param('id')!;
   const user = c.get('user');
 
@@ -269,7 +270,7 @@ sceneRoutes.patch('/:id/visibility', authMiddleware, async (c) => {
 // Requires auth. Source must be public OR caller is owner; else 404 (no leak).
 // ---------------------------------------------------------------------------
 
-sceneRoutes.post('/:id/fork', authMiddleware, async (c) => {
+sceneRoutes.post('/:id/fork', bodyLimitMiddleware, authMiddleware, async (c) => {
   const sourceId = c.req.param('id')!;
   const user = c.get('user');
 
