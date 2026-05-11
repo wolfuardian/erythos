@@ -88,25 +88,6 @@ describe('HttpSyncEngine.fetch()', () => {
     expect((init as RequestInit & { credentials: string }).credentials).toBe('include');
   });
 
-  it('defaults visibility to "public" and forkedFrom to null when server omits fields', async () => {
-    const engine = makeEngine();
-
-    fetchSpy.mockResolvedValueOnce(
-      mockResponse(200, {
-        id: 'scene-1',
-        owner_id: 'owner-1',
-        name: 'My Scene',
-        version: 2,
-        body: minimalSceneJson(),
-        // no visibility or forked_from
-      }),
-    );
-
-    const result = await engine.fetch('scene-1');
-    expect(result.visibility).toBe('public');
-    expect(result.forkedFrom).toBeNull();
-  });
-
   it('throws NotFoundError on 404', async () => {
     const engine = makeEngine();
     fetchSpy.mockResolvedValueOnce(mockResponse(404, {}));

@@ -111,15 +111,6 @@ async function doFetch(
  * browser sends the session cookie automatically.
  *
  * Spec reference: docs/sync-protocol.md §REST API (line 113+)
- *
- * **Note on fetch() response shape:**
- * The spec's GET /scenes/:id response (line 124–131) shows
- * `{id, owner_id, name, version, body}` but does not list `visibility` or
- * `forked_from` fields.  The `SyncEngine` interface requires both.  This
- * implementation reads them if present and defaults to
- * `visibility='public'` (anything that returns 200 to a GET is publicly
- * readable by that caller) and `forkedFrom=null`.  The server will need
- * to add these fields before Phase E wire-up — see PR notes.
  */
 export class HttpSyncEngine implements SyncEngine {
   private readonly baseUrl: string;
@@ -146,9 +137,8 @@ export class HttpSyncEngine implements SyncEngine {
       name: string;
       version: number;
       body: unknown;
-      // Server may add these later (Phase D assumption — see class JSDoc)
-      visibility?: SceneVisibility;
-      forked_from?: SceneId | null;
+      visibility: SceneVisibility;
+      forked_from: SceneId | null;
     };
 
     const doc = new SceneDocument();
@@ -157,8 +147,8 @@ export class HttpSyncEngine implements SyncEngine {
     return {
       body: doc,
       version: payload.version,
-      visibility: payload.visibility ?? 'public',
-      forkedFrom: payload.forked_from ?? null,
+      visibility: payload.visibility,
+      forkedFrom: payload.forked_from,
     };
   }
 
