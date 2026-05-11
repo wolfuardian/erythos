@@ -17,6 +17,11 @@ export interface Counters {
   scene_push_total: number;
   scene_create_total: number;
   scene_fork_total: number;
+  // Asset counters — F-1c
+  asset_upload_total: number;
+  asset_upload_bytes: number;
+  asset_download_total: number;
+  asset_dedup_hit_total: number;
 }
 
 export const counters: Counters = {
@@ -26,6 +31,11 @@ export const counters: Counters = {
   scene_push_total: 0,
   scene_create_total: 0,
   scene_fork_total: 0,
+  // Asset counters — F-1c
+  asset_upload_total: 0,
+  asset_upload_bytes: 0,
+  asset_download_total: 0,
+  asset_dedup_hit_total: 0,
 };
 
 export const startEpochMs = Date.now();
