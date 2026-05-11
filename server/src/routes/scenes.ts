@@ -225,7 +225,7 @@ sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
     });
   });
 
-  c.header('Location', `/scenes/${id}`);
+  c.header('Location', `/api/scenes/${id}`);
   c.header('ETag', `"${version}"`);
   return c.json({ id, version }, 201);
 });
@@ -318,7 +318,7 @@ sceneRoutes.post('/:id/fork', bodyLimitMiddleware, authMiddleware, async (c) => 
     });
   });
 
-  c.header('Location', `/scenes/${newId}`);
+  c.header('Location', `/api/scenes/${newId}`);
   c.header('ETag', `"${version}"`);
   return c.json({ id: newId, version, forked_from: source.id }, 201);
 });
