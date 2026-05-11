@@ -140,3 +140,30 @@ export const magicLinkTokens = pgTable(
     index('magic_link_tokens_expires_idx').on(t.expiresAt),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// assets  (content-addressed binary storage — refs #957 F-1b; spec docs/asset-sync-protocol.md)
+// ---------------------------------------------------------------------------
+//
+// Hash = sha256 hex (64 chars) of file content; primary key + URL identifier.
+// storage_url = absolute Linode Object Storage URL (set by F-1c upload endpoint).
+// ref_count: spec § 砍掉的東西 — v0 不啟用 GC,欄位先預留 (default 0).
+// uploadedBy: nullable (not NOT NULL as in spec literal) to align with spec § Open Questions
+//   「跨帳號 dedup vs GDPR」— GDPR 刪帳號時把 uploaded_by 改 null,storage 不動。
+//   onDelete: 'set null' mirrors scene_versions.saved_by SET NULL pattern.
+//   Spec字面寫 NOT NULL,但 § Open Questions 推薦路徑需要 nullable — 偏差已在 PR Notes 說明。
+
+export const assets = pgTable(
+  'assets',
+  {
+    hash: text('hash').primaryKey(),
+    filename: text('filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    size: bigint('size', { mode: 'bigint' }).notNull(),
+    storageUrl: text('storage_url').notNull(),
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+    refCount: integer('ref_count').notNull().default(0),
+  },
+  (t) => [index('assets_uploader_idx').on(t.uploadedBy)],
+);
