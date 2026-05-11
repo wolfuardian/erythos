@@ -10,8 +10,10 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' }, 200);
 });
 
-app.route('/auth', authRoutes);
-app.route('/scenes', sceneRoutes);
+const api = new Hono();
+api.route('/auth', authRoutes);
+api.route('/scenes', sceneRoutes);
+app.route('/api', api);
 
 const port = Number(process.env.PORT ?? 3000);
 

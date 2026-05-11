@@ -38,7 +38,9 @@ const { authRoutes } = await import('../routes/auth.js');
 
 // Build a minimal Hono app that mirrors index.ts mounting
 const app = new Hono();
-app.route('/auth', authRoutes);
+const api = new Hono();
+api.route('/auth', authRoutes);
+app.route('/api', api);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,7 +88,7 @@ describe('GET /auth/me', () => {
     mockSelect.mockReturnValue(chainResult);
 
     const res = await app.request(
-      makeRequest('/auth/me', { cookie: 'session=valid-token-hex' }),
+      makeRequest('/api/auth/me', { cookie: 'session=valid-token-hex' }),
     );
 
     expect(res.status).toBe(200);
@@ -104,7 +106,7 @@ describe('GET /auth/me', () => {
 
   it('returns 401 when no session cookie is present', async () => {
     // No db call should be made — the resolver exits early on missing cookie
-    const res = await app.request(makeRequest('/auth/me'));
+    const res = await app.request(makeRequest('/api/auth/me'));
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body).toMatchObject({ error: 'Unauthorized' });
@@ -121,7 +123,7 @@ describe('GET /auth/me', () => {
     mockSelect.mockReturnValue(chainResult);
 
     const res = await app.request(
-      makeRequest('/auth/me', { cookie: 'session=unknown-token' }),
+      makeRequest('/api/auth/me', { cookie: 'session=unknown-token' }),
     );
     expect(res.status).toBe(401);
   });
@@ -149,7 +151,7 @@ describe('GET /auth/me', () => {
     mockSelect.mockReturnValue(chainResult);
 
     const res = await app.request(
-      makeRequest('/auth/me', { cookie: 'session=expired-token' }),
+      makeRequest('/api/auth/me', { cookie: 'session=expired-token' }),
     );
     expect(res.status).toBe(401);
   });
@@ -172,7 +174,7 @@ describe('POST /auth/signout', () => {
     mockDelete.mockReturnValue(deleteChain);
 
     const res = await app.request(
-      makeRequest('/auth/signout', { method: 'POST', cookie: 'session=some-valid-token' }),
+      makeRequest('/api/auth/signout', { method: 'POST', cookie: 'session=some-valid-token' }),
     );
 
     expect(res.status).toBe(200);
@@ -191,7 +193,7 @@ describe('POST /auth/signout', () => {
   it('returns 200 even when no session cookie is present', async () => {
     // No db.delete call — deleteSession no-ops without a cookie
     const res = await app.request(
-      makeRequest('/auth/signout', { method: 'POST' }),
+      makeRequest('/api/auth/signout', { method: 'POST' }),
     );
 
     expect(res.status).toBe(200);

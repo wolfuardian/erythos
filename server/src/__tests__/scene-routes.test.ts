@@ -60,7 +60,9 @@ vi.mock('../auth.js', () => ({
 const { sceneRoutes } = await import('../routes/scenes.js');
 
 const app = new Hono();
-app.route('/scenes', sceneRoutes);
+const api = new Hono();
+api.route('/scenes', sceneRoutes);
+app.route('/api', api);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -137,7 +139,7 @@ describe('GET /scenes/:id', () => {
   it('returns 200 with scene payload for public scene (anonymous)', async () => {
     mockSelect.mockReturnValue(selectChain([fakeScene()]));
 
-    const res = await app.request(makeRequest('/scenes/scene-1'));
+    const res = await app.request(makeRequest('/api/scenes/scene-1'));
 
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, unknown>;
@@ -157,14 +159,14 @@ describe('GET /scenes/:id', () => {
   it('returns 404 when scene does not exist', async () => {
     mockSelect.mockReturnValue(selectChain([]));
 
-    const res = await app.request(makeRequest('/scenes/nonexistent'));
+    const res = await app.request(makeRequest('/api/scenes/nonexistent'));
     expect(res.status).toBe(404);
   });
 
   it('returns 404 for private scene when caller is not owner (anonymous)', async () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ visibility: 'private' })]));
 
-    const res = await app.request(makeRequest('/scenes/scene-1'));
+    const res = await app.request(makeRequest('/api/scenes/scene-1'));
     expect(res.status).toBe(404);
   });
 
@@ -173,7 +175,7 @@ describe('GET /scenes/:id', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ visibility: 'private' })]));
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', { cookie: 'session=valid-token' }),
+      makeRequest('/api/scenes/scene-1', { cookie: 'session=valid-token' }),
     );
     expect(res.status).toBe(200);
   });
@@ -183,7 +185,7 @@ describe('GET /scenes/:id', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ visibility: 'private' })]));
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', { cookie: 'session=other-token' }),
+      makeRequest('/api/scenes/scene-1', { cookie: 'session=other-token' }),
     );
     expect(res.status).toBe(404);
   });
@@ -210,7 +212,7 @@ describe('PUT /scenes/:id', () => {
     });
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +233,7 @@ describe('PUT /scenes/:id', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ version: 7 })]));
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -251,7 +253,7 @@ describe('PUT /scenes/:id', () => {
 
   it('returns 412 when If-Match header is malformed (unquoted)', async () => {
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'If-Match': '5' }, // unquoted
         body: JSON.stringify({ nodes: [] }),
@@ -263,7 +265,7 @@ describe('PUT /scenes/:id', () => {
 
   it('returns 412 when If-Match contains non-integer', async () => {
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'If-Match': '"abc"' },
         body: JSON.stringify({ nodes: [] }),
@@ -275,7 +277,7 @@ describe('PUT /scenes/:id', () => {
 
   it('returns 428 when If-Match header is missing', async () => {
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes: [] }),
@@ -289,7 +291,7 @@ describe('PUT /scenes/:id', () => {
     mockResolveSession.mockResolvedValue(null);
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'If-Match': '"5"' },
         body: JSON.stringify({ nodes: [] }),
@@ -303,7 +305,7 @@ describe('PUT /scenes/:id', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ version: 5 })]));
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1', {
+      makeRequest('/api/scenes/scene-1', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -336,7 +338,7 @@ describe('POST /scenes', () => {
     });
 
     const res = await app.request(
-      makeRequest('/scenes', {
+      makeRequest('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'New Scene', body: { nodes: [] } }),
@@ -348,7 +350,7 @@ describe('POST /scenes', () => {
     const body = await res.json() as Record<string, unknown>;
     expect(typeof body.id).toBe('string');
     expect(body.version).toBe(0);
-    expect(res.headers.get('Location')).toMatch(/^\/scenes\//);
+    expect(res.headers.get('Location')).toMatch(/^\/api\/scenes\//);
     expect(res.headers.get('ETag')).toBe('"0"');
   });
 
@@ -356,7 +358,7 @@ describe('POST /scenes', () => {
     mockResolveSession.mockResolvedValue(null);
 
     const res = await app.request(
-      makeRequest('/scenes', {
+      makeRequest('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'New Scene', body: { nodes: [] } }),
@@ -367,7 +369,7 @@ describe('POST /scenes', () => {
 
   it('returns 400 when name is missing', async () => {
     const res = await app.request(
-      makeRequest('/scenes', {
+      makeRequest('/api/scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: { nodes: [] } }),
@@ -393,7 +395,7 @@ describe('PATCH /scenes/:id/visibility', () => {
     mockUpdate.mockReturnValue(updateChain());
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/visibility', {
+      makeRequest('/api/scenes/scene-1/visibility', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: 'private' }),
@@ -410,7 +412,7 @@ describe('PATCH /scenes/:id/visibility', () => {
     mockResolveSession.mockResolvedValue(null);
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/visibility', {
+      makeRequest('/api/scenes/scene-1/visibility', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: 'public' }),
@@ -424,7 +426,7 @@ describe('PATCH /scenes/:id/visibility', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene()]));
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/visibility', {
+      makeRequest('/api/scenes/scene-1/visibility', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: 'public' }),
@@ -436,7 +438,7 @@ describe('PATCH /scenes/:id/visibility', () => {
 
   it('returns 400 for invalid visibility value', async () => {
     const res = await app.request(
-      makeRequest('/scenes/scene-1/visibility', {
+      makeRequest('/api/scenes/scene-1/visibility', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visibility: 'unlisted' }),
@@ -467,7 +469,7 @@ describe('POST /scenes/:id/fork', () => {
     });
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/fork', {
+      makeRequest('/api/scenes/scene-1/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'My Fork' }),
@@ -480,7 +482,7 @@ describe('POST /scenes/:id/fork', () => {
     expect(typeof body.id).toBe('string');
     expect(body.version).toBe(0);
     expect(body.forked_from).toBe('scene-1');
-    expect(res.headers.get('Location')).toMatch(/^\/scenes\//);
+    expect(res.headers.get('Location')).toMatch(/^\/api\/scenes\//);
     expect(res.headers.get('ETag')).toBe('"0"');
   });
 
@@ -496,7 +498,7 @@ describe('POST /scenes/:id/fork', () => {
     });
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/fork', {
+      makeRequest('/api/scenes/scene-1/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -510,7 +512,7 @@ describe('POST /scenes/:id/fork', () => {
     mockResolveSession.mockResolvedValue(null);
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/fork', {
+      makeRequest('/api/scenes/scene-1/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -526,7 +528,7 @@ describe('POST /scenes/:id/fork', () => {
     );
 
     const res = await app.request(
-      makeRequest('/scenes/scene-1/fork', {
+      makeRequest('/api/scenes/scene-1/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -540,7 +542,7 @@ describe('POST /scenes/:id/fork', () => {
     mockSelect.mockReturnValue(selectChain([]));
 
     const res = await app.request(
-      makeRequest('/scenes/nonexistent/fork', {
+      makeRequest('/api/scenes/nonexistent/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -568,7 +570,7 @@ describe('POST /scenes/:id/fork', () => {
     });
 
     await app.request(
-      makeRequest('/scenes/scene-1/fork', {
+      makeRequest('/api/scenes/scene-1/fork', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}), // no name
