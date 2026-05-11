@@ -18,6 +18,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { db } from '../db.js';
 import { users } from '../db/schema.js';
 import { resolveSession, createSession, deleteSession } from '../auth.js';
+import { counters } from '../counters.js';
 
 export const authRoutes = new Hono();
 
@@ -249,6 +250,7 @@ authRoutes.get('/github/callback', async (c) => {
     if (!userId) throw new Error('Failed to upsert user');
 
     await createSession(c, userId);
+    counters.auth_signin_total += 1;
 
     // Always redirect to root after successful OAuth.
     // We do NOT honor `?redirect=` from query — it would be an open-redirect surface.
@@ -262,5 +264,6 @@ authRoutes.get('/github/callback', async (c) => {
 // POST /auth/signout
 authRoutes.post('/signout', async (c) => {
   await deleteSession(c);
+  counters.auth_signout_total += 1;
   return c.json({ ok: true });
 });
