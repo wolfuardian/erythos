@@ -46,8 +46,8 @@
   真 2-3 device 測 sync + conflict resolution UI + fork
 - [x] **Performance / Lighthouse audit** → #950 / PR #954 ✅
   baseline **Perf 0.62 / LCP 6.5s** → after **Perf 0.94 / LCP 2.6s**(超目標)。透過 bundle visualizer + 移 `MathUtils` import + 拆 chunk。Full three.js dynamic import 留 follow-up(Editor 同步 contract 需 refactor)
-- [x] **DB backup + recovery** → #947 / PR #951 ✅
-  daily pg_dump → Linode Object Storage(`backup.sh` + crontab Phase 13)+ `restore.md` stream-restore + 維運提示。Prod 啟用前先開 Linode bucket + access key + 設 4 個 S3_* env var
+- [x] **DB backup + recovery** → #947 / PR #951 ✅ + prod deploy 2026-05-12 ✅
+  daily pg_dump → Linode Object Storage(`backup.sh` + crontab `0 3 * * *`)+ `restore.md` stream-restore。Prod ops 已落地:Tokyo 3 bucket `erythos-backups`,`.env` 設好,manual 試跑 OK,cron 已排。Doc 補:`S3_ENDPOINT` region-only 格式(非 virtual-hosted)+ AWS CLI v2.34 checksum workaround(refs decisions log 2026-05-12)
 
 ## 🩺 Quality / hygiene(隨時)
 

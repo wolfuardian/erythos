@@ -597,16 +597,21 @@ aws --version   # 應印 aws-cli/2.x.x
 sudo -u erythos nano /opt/erythos/server/.env
 ```
 
-新增以下三行(值填入 Linode dashboard 取得的資訊):
+新增以下幾行(值填入 Linode dashboard 取得的資訊):
 
 ```
-S3_ENDPOINT=https://ap-south-1.linodeobjects.com
+S3_ENDPOINT=https://jp-tyo-1.linodeobjects.com
 S3_BUCKET=erythos-backups
+AWS_REGION=jp-tyo-1
 AWS_ACCESS_KEY_ID=<Linode access key>
 AWS_SECRET_ACCESS_KEY=<Linode secret key>
+AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 ```
 
-> `S3_ENDPOINT` 的 region 需與建 bucket 時選的 region 一致。Linode endpoint 格式:`https://<region>.linodeobjects.com`。
+> **`S3_ENDPOINT`** 必須是 **region-only 格式** `https://<region>.linodeobjects.com`,**不能**用 Linode dashboard 顯示的 virtual-hosted URL `https://<bucket>.<region>.linodeobjects.com`(會造成 bucket 名重複解析 → `NoneType` upload error)。Linode region slug 範例:Tokyo 3 = `jp-tyo-1` / Singapore = `ap-south-1` / Frankfurt = `eu-central-1`。
+>
+> **`AWS_REQUEST_CHECKSUM_CALCULATION` / `AWS_RESPONSE_CHECKSUM_VALIDATION`** 是 AWS CLI v2.34+ / boto3 對 Linode 的 workaround。新版 boto3 default 啟用 S3 checksum header,Linode response 缺對應 header → `argument of type 'NoneType' is not a container or iterable`。設 `when_required` 改回 opt-in 行為。
 
 ### 步驟 13-c:設腳本執行權限 + 手動測試
 
