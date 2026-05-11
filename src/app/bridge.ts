@@ -10,6 +10,7 @@ import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import type { AssetPath, NodeUUID } from '../utils/branded';
 import type { SceneId } from '../core/sync/SyncEngine';
 import type { SceneDocument } from '../core/scene/SceneDocument';
+import type { User } from '../core/auth/AuthClient';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -83,6 +84,17 @@ export interface EditorBridge {
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
   /** Scene ID currently tracked in the SyncEngine; null until first loadScene completes. */
   currentSceneId: Accessor<SceneId | null>;
+  /**
+   * Currently authenticated user.
+   * undefined = unresolved (getCurrentUser() still in flight → render skeleton)
+   * null      = resolved, anonymous / guest
+   * User      = resolved, signed in
+   */
+  currentUser: Accessor<User | null | undefined>;
+  /** Sign the current user out; clears currentUser signal on success. */
+  signOut: () => Promise<void>;
+  /** Returns the URL that starts the OAuth flow for the given provider. */
+  getOAuthStartUrl: (provider: 'github') => string;
   dispose: () => void;
 }
 
@@ -92,6 +104,14 @@ export interface EditorBridgeDeps {
   openProjectById: (id: string) => Promise<void>;
   autosaveFlush: () => Promise<void>;
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
+  /** Auth: current user signal accessor — undefined until resolved */
+  currentUser?: Accessor<User | null | undefined>;
+  /** Auth: setter to clear the currentUser signal after signOut */
+  setCurrentUser?: (user: User | null | undefined) => void;
+  /** Auth: signOut method (from AuthClient instance) */
+  authSignOut?: () => Promise<void>;
+  /** Auth: getOAuthStartUrl method (from AuthClient instance) */
+  authGetOAuthStartUrl?: (provider: 'github') => string;
 }
 
 export function createEditorBridge(
@@ -122,6 +142,12 @@ export function createEditorBridge(
   );
   const [syncConflict, setSyncConflict] = createSignal<SyncConflictPayload | null>(null);
   const [currentSceneId, setCurrentSceneId] = createSignal<SceneId | null>(null);
+
+  // Auth state — may be injected by App.tsx (which owns the single AuthClient instance)
+  // If not injected (e.g. in tests), falls back to a local signal that stays undefined.
+  const [_localCurrentUser, _setLocalCurrentUser] = createSignal<User | null | undefined>(undefined);
+  const currentUser: Accessor<User | null | undefined> = deps?.currentUser ?? _localCurrentUser;
+  const _setCurrentUser = deps?.setCurrentUser ?? _setLocalCurrentUser;
 
   // 非同步初始化（fire-and-forget）
   void editor.projectManager.getRecentProjects().then(setRecentProjects);
@@ -269,6 +295,12 @@ export function createEditorBridge(
     syncConflict,
     resolveSyncConflict: deps?.resolveSyncConflict ?? ((_choice: 'keep-local' | 'use-cloud') => Promise.resolve()),
     currentSceneId,
+    currentUser,
+    signOut: async () => {
+      await (deps?.authSignOut ?? (() => Promise.resolve()))();
+      _setCurrentUser(null);
+    },
+    getOAuthStartUrl: deps?.authGetOAuthStartUrl ?? ((_provider: 'github') => ''),
     dispose,
   };
 }
