@@ -1,28 +1,57 @@
 # Erythos sync server — Caddy reverse proxy site block
 #
-# Append the block below to /etc/caddy/Caddyfile, then:
-#   sudo caddy fmt --overwrite /etc/caddy/Caddyfile
-#   sudo caddy validate --config /etc/caddy/Caddyfile
-#   sudo systemctl reload caddy
+# SNIPPET CONCEPT
+# ---------------
+# This file exports a (common_security_headers) snippet and the erythos site
+# block. When a host runs multiple sites (e.g. gridbot / backlog / erythos),
+# declare the snippet once at the top of /etc/caddy/Caddyfile and have each
+# site block call `import common_security_headers`. This ensures all sites
+# receive the same security response headers from a single source of truth.
+# (Inventory audit 2026-05-10: only erythos had security headers; gridbot and
+# backlog were missing them — snippet unifies coverage.)
 #
-# Caddy auto-issues a Let's Encrypt cert for the host on the site block on
-# the first request, and auto-renews ~30 days before expiry — no certbot,
-# no systemd timer, no renewal hook needed.
+# SPEC REFERENCE
+# --------------
+# Body limit 1 MB — spec § 194. Enforced at the Caddy layer as a coarse outer
+# fence; the Hono server-side check remains the authoritative limit.
+#
+# HOW TO USE THIS FILE ON THE HOST
+# ---------------------------------
+# 1. Copy the (common_security_headers) snippet to the top of
+#    /etc/caddy/Caddyfile (before any site blocks).
+# 2. Add `import common_security_headers` to every site block that should
+#    send these headers (gridbot / backlog / erythos).
+# 3. Append the erythos.eoswolf.com block below (or adapt to your domain).
+# 4. Then:
+#      sudo caddy fmt --overwrite /etc/caddy/Caddyfile
+#      sudo caddy validate --config /etc/caddy/Caddyfile
+#      sudo systemctl reload caddy
+#
+# Caddy auto-issues a Let's Encrypt cert on the first request and auto-renews
+# ~30 days before expiry — no certbot, no systemd timer, no renewal hook needed.
 #
 # Domain note: replace `erythos.eoswolf.com` if you swap domain. Also update
 # the GitHub OAuth callback URL and the client HttpSyncEngine baseUrl.
+#
+# /etc/caddy/Caddyfile (host) recommended structure:
+#
+#   (common_security_headers) { ... }   <- snippet declared once at file top
+#
+#   gridbot.eoswolf.com {
+#       import common_security_headers
+#       basicauth ...
+#       reverse_proxy 127.0.0.1:8080
+#   }
+#
+#   backlog.eoswolf.com {
+#       import common_security_headers
+#       encode gzip
+#       reverse_proxy 127.0.0.1:8001 { flush_interval -1 }
+#   }
+#
+#   erythos.eoswolf.com { ... }   <- content below
 
-erythos.eoswolf.com {
-	reverse_proxy 127.0.0.1:3000
-
-	# Body upper bound — aligns with spec line 194 / issue #897.
-	# Hono server-side enforce remains the authoritative limit;
-	# this is a coarse outer fence so abusive bodies never reach Node.
-	request_body {
-		max_size 1MB
-	}
-
-	# Security headers (mirror nginx legacy config — applied to every response)
+(common_security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options    "nosniff"
@@ -30,4 +59,17 @@ erythos.eoswolf.com {
 		Referrer-Policy           "strict-origin-when-cross-origin"
 		-Server
 	}
+}
+
+erythos.eoswolf.com {
+	reverse_proxy 127.0.0.1:3000
+
+	# Body upper bound — aligns with spec § 194 / issue #897.
+	# Hono server-side enforce remains the authoritative limit;
+	# this is a coarse outer fence so abusive bodies never reach Node.
+	request_body {
+		max_size 1MB
+	}
+
+	import common_security_headers
 }
