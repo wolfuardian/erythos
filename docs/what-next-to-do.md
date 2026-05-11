@@ -1,8 +1,8 @@
 # 下一步 todo / 本 session 完成盤點
 
-> **2026-05-11 session 收尾**
+> **2026-05-11 session 收尾**(updated after mid batch)
 > 圖例:✅ 已完成 / ⬜ 未開始 / ⏸️ deferred / ⏭️ skip(有理由)/ 🟦 進行中
-> main HEAD `1a96a7e` — Phase E + GDPR 全 land、build pass、prod live `https://erythos.eoswolf.com`
+> main HEAD `c750a83` — Phase E + GDPR + Quality 三連修 + Ops 四連修(DB backup / CI/CD / Observability / Performance)全 land、build pass、prod live `https://erythos.eoswolf.com`
 
 ---
 
@@ -40,19 +40,19 @@
   spec `docs/asset-sync-protocol.md` R2 / S3 content-addressed。範圍大(server + client + dedup + GC + 配額)
 - [ ] **Magic link + Resend** → Phase F-5,#938 ⬜
   spec v0.1 加題,Better Auth adapter 補齊
-- [ ] **CI/CD pipeline** → Phase F-2,#938 ⬜
-  GitHub Actions push → VPS 自動化,取代 manual scp + symlink flip
+- [x] **CI/CD pipeline** → #948 / PR #952 ✅
+  GitHub Actions `deploy.yml` push main → VPS scp + atomic symlink flip + 自動 prune > 5 release。install.md Phase 14 含 SSH key + secrets setup 步驟。Prod 啟用前先設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER 三個 secret
 - [ ] **Multi-device e2e** → Phase F-3,#938 ⬜
   真 2-3 device 測 sync + conflict resolution UI + fork
-- [x] **Performance / Lighthouse audit** ✅
-  prod baseline 取得:**Perf 0.62 / A11y 0.89 / BP 0.93 / SEO 0.82**。LCP 6.5s(three.js 首載重)/ FCP 6.3s / TBT 0ms / CLS 0;total transfer 1095 KiB。raw `.claude/scratch/lighthouse-2026-05-11.json`(janitor 14 天清,要保留 mv 走)
-- [ ] **DB backup + recovery** → #942 O2 ⬜
-  Postgres pg_dump cron → Linode Object Storage,配合 Phase F-4 ops
+- [x] **Performance / Lighthouse audit** → #950 / PR #954 ✅
+  baseline **Perf 0.62 / LCP 6.5s** → after **Perf 0.94 / LCP 2.6s**(超目標)。透過 bundle visualizer + 移 `MathUtils` import + 拆 chunk。Full three.js dynamic import 留 follow-up(Editor 同步 contract 需 refactor)
+- [x] **DB backup + recovery** → #947 / PR #951 ✅
+  daily pg_dump → Linode Object Storage(`backup.sh` + crontab Phase 13)+ `restore.md` stream-restore + 維運提示。Prod 啟用前先開 Linode bucket + access key + 設 4 個 S3_* env var
 
 ## 🩺 Quality / hygiene(隨時)
 
-- [ ] **Observability** → #938 F-4 + #942 O1 ⬜
-  server structured logs(pino / hono logger)/ error alerting(Sentry or 自家 webhook)/ p95 latency dashboard
+- [x] **Observability** → #949 / PR #953 ✅
+  pino structured logger(JSON prod / pretty dev)+ `GET /api/metrics`(in-memory counters + basic auth)+ `/health` DB connectivity check(degraded 仍回 200,給 uptime monitor 讀 body)+ `app.onError` 全局 handler + process unhandledRejection/uncaughtException sink。Prod 啟用前先設 METRICS_USER / METRICS_PASS
 - [x] **CSRF / XSS audit** → #940 ✅
   0 currently exploitable。4 個 quick win:CSP header / Permissions-Policy / Origin middleware / `Content-Disposition` filename sanitize
 - [x] **Test coverage 補** → #941 ✅
@@ -83,30 +83,53 @@
 |---|---:|---:|---:|---:|
 | 🟢 收尾 | 4 | 0 | 1 | 0 |
 | 🟡 中等 | 4 | 0 | 0 | 1 |
-| 🔴 大 | 1 | 5 | 0 | 0 |
-| 🩺 Quality | 3 | 1 | 0 | 1 |
+| 🔴 大 | 4 | 2 | 0 | 0 |
+| 🩺 Quality | 4 | 0 | 0 | 1 |
 | 🏗️ 規劃 | 3 | 1 | 0 | 0 |
-| **總計** | **15** | **7** | **1** | **2** |
+| **總計** | **19** | **3** | **1** | **2** |
 
-未完成的 7 項全部已建立 follow-up issue,不會掉。
+剩下 3 項未開始全是規模較大或需指揮家 input:**Asset sync (F-1)** / **Magic link (F-5)** / **Multi-device e2e (F-3)** + 規劃題 **產品定位**。
 
-## 本 session 新開 issue
+## 本 session 開出 + 收掉的 issue
 
-| # | 標題 | 規模 |
+### Short batch(4 PR all merged)
+
+| Issue | PR | 規模 | 狀態 |
+|---|---|---|---|
+| [#937](https://github.com/wolfuardian/erythos/issues/937) tech debt | #944 | 小 | ✅ merged(revert v0_to_v1 commit 後保 2/3 修)|
+| [#939](https://github.com/wolfuardian/erythos/issues/939) a11y WCAG AA | #945 | 小-中 | ✅ merged |
+| [#940](https://github.com/wolfuardian/erythos/issues/940) security hardening | #943 | 小 | ✅ merged |
+| [#941](https://github.com/wolfuardian/erythos/issues/941) test coverage | #946 | 中 | ✅ merged |
+
+### Mid batch(4 PR all merged)
+
+| Issue | PR | 規模 | 狀態 |
+|---|---|---|---|
+| [#947](https://github.com/wolfuardian/erythos/issues/947) DB backup | #951 | 小-中 | ✅ merged |
+| [#948](https://github.com/wolfuardian/erythos/issues/948) CI/CD auto-deploy | #952 | 中 | ✅ merged(install.md Phase 14 conflict resolved)|
+| [#949](https://github.com/wolfuardian/erythos/issues/949) Observability | #953 | 中 | ✅ merged(.env.example + lockfile conflict resolved)|
+| [#950](https://github.com/wolfuardian/erythos/issues/950) Performance | #954 | 中 | ✅ merged(Perf 0.62→0.94 / LCP 6.5s→2.6s)|
+
+### 仍 open(全長期 backlog / brainstorm)
+
+| # | 標題 | 性質 |
 |---|---|---|
-| [#937](https://github.com/wolfuardian/erythos/issues/937) | tech debt:`bridge.ts` event types / `workspaceStore` migration / `v0_to_v1` cast | 小 |
-| [#938](https://github.com/wolfuardian/erythos/issues/938) | Phase F brainstorm — 6 候選 phase | brainstorm |
-| [#939](https://github.com/wolfuardian/erythos/issues/939) | a11y WCAG AA gaps — Dialog / UserMenu / Toolbar / ViewerBanner | 小-中 |
-| [#940](https://github.com/wolfuardian/erythos/issues/940) | security hardening — CSP / Permissions-Policy / Origin check | 小 |
-| [#941](https://github.com/wolfuardian/erythos/issues/941) | test coverage gaps — `deleteAccount` / OAuth callback / DeleteAccountDialog | 中 |
-| [#942](https://github.com/wolfuardian/erythos/issues/942) | v0.1 backlog — GDPR 細部 / Audit log / Pricing / Observability / DB backup | brainstorm |
+| [#938](https://github.com/wolfuardian/erythos/issues/938) | Phase F brainstorm — 6 候選 phase(F-1/F-3/F-5 仍未做)| brainstorm |
+| [#942](https://github.com/wolfuardian/erythos/issues/942) | v0.1 backlog — 產品定位 / Audit log / GDPR 細部 | brainstorm |
+| [#785](https://github.com/wolfuardian/erythos/issues/785) | Adopt NodeUUID + PrefabId brands | 長期 |
+| [#783](https://github.com/wolfuardian/erythos/issues/783) | Adopt BlobURL brand on MeshComponent.url | 長期 |
 
-本 session 共 close 13 issue(11 stale + #912 + #935),open 6,淨 -7。
+本 session 共 close **21 issue**(11 stale + #912 GDPR + #935 + 4 short + 4 mid),open issue 從 16 → **4**。
 
 ## 下個 session 第一步
 
 讀 `.claude/session/current.md` 交接筆記 + `git status` / `gh pr list` / `gh issue list` 重建現況。然後挑下個方向:
 
-1. **Phase F 主軸**(#938)— 預設建議 **F-1 Asset sync**(spec 內最大缺口)
-2. **Quality 三連修**(#939 a11y + #940 security + #941 test)— 各一 PR、一週內可收
-3. **v0.1 治理 backlog**(#942)— 從 **O2 DB backup**(prod 越久 risk 越大)或 **G2 Audit log**(治理基石)起手
+1. **Phase F-1 Asset sync** — spec 內最大缺口(scene blob 完了 binary 該上)。範圍大,可 split 多 sub-issue。
+2. **Phase F-5 Magic link + Resend** — auth 第二條路徑,spec v0.1 加題。中等規模 1-2 週。
+3. **Phase F-3 Multi-device e2e** — 已有後端,只缺真實 2-3 device 跑通 + conflict UX 收尾。需指揮家手動測。
+4. **prod hardening 落地** — 本 session 4 個 ops PR 已合進 main,但 prod 還沒實際 apply:
+   - #952 CI/CD 需設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER GitHub secrets
+   - #951 DB backup 需開 Linode bucket + 設 S3 env vars + 跑 crontab
+   - #953 Observability 需設 METRICS_USER / METRICS_PASS env
+   - 都是 ops checklist,非 code,可一晚搞定。建議 prod hardening 落地 **優先於下個 phase 動工**。
