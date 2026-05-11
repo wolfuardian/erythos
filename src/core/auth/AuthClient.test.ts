@@ -164,3 +164,58 @@ describe('AuthClient.getOAuthStartUrl', () => {
     );
   });
 });
+
+// ─── deleteAccount ────────────────────────────────────────────────────────────
+
+describe('AuthClient.deleteAccount', () => {
+  it('204 → resolves without throwing', async () => {
+    mockFetch(204, null);
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.deleteAccount()).resolves.toBeUndefined();
+  });
+
+  it('401 → throws AuthError with status 401', async () => {
+    mockFetch(401, { error: 'Unauthorized' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.deleteAccount()).rejects.toThrow(AuthError);
+    await expect(client.deleteAccount()).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('403 → throws AuthError with status 403', async () => {
+    mockFetch(403, { error: 'Forbidden' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.deleteAccount()).rejects.toThrow(AuthError);
+    await expect(client.deleteAccount()).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('500 → throws AuthError with status 500', async () => {
+    mockFetch(500, { error: 'Internal Server Error' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.deleteAccount()).rejects.toThrow(AuthError);
+    await expect(client.deleteAccount()).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('network error → throws AuthError', async () => {
+    mockFetchNetworkError('Connection refused');
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.deleteAccount()).rejects.toThrow(AuthError);
+    await expect(client.deleteAccount()).rejects.toThrow('Network error');
+  });
+
+  it('calls DELETE /me with credentials: include', async () => {
+    mockFetch(204, null);
+
+    const client = new AuthClient(BASE_URL);
+    await client.deleteAccount();
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      `${BASE_URL}/me`,
+      expect.objectContaining({ method: 'DELETE', credentials: 'include' }),
+    );
+  });
+});
