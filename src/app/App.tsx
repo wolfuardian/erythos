@@ -323,7 +323,7 @@ const App: Component = () => {
       void (async () => {
         try {
           await syncEngine.fetch(route.sceneId);
-          // Scene found locally → owner path: auto-restore project if available, or show Welcome
+          // 200 — scene exists & is readable. Try owner path (resume local project).
           const lastId = getLastProjectId();
           if (lastId) {
             const handle = await projectManager.openRecent(lastId);
@@ -333,7 +333,10 @@ const App: Component = () => {
             }
             clearLastProjectId();
           }
-          // No local project: fall through to Welcome (owner can still open project)
+          // No local project — anonymous / non-owner viewing public scene.
+          // Enter viewer mode so they see ViewerShell with Fork prompt (spec § 294).
+          setViewerSceneId(route.sceneId);
+          setViewerSceneName(route.sceneId);
         } catch (err) {
           if (err instanceof NotFoundError || err instanceof AuthError) {
             // Not found locally / session-required → guest viewer mode.
