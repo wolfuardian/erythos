@@ -20,6 +20,8 @@ export interface User {
   githubLogin: string;
   email: string;
   avatarUrl: string | null;
+  /** Storage used in bytes, from server /api/auth/me (refs #957). */
+  storageUsed: number;
 }
 
 // ─── Error class ─────────────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ export class AuthClient {
       github_login: string;
       email: string;
       avatar_url: string | null;
+      storageUsed: number;
     };
 
     return {
@@ -84,6 +87,7 @@ export class AuthClient {
       githubLogin: data.github_login,
       email: data.email,
       avatarUrl: data.avatar_url,
+      storageUsed: data.storageUsed ?? 0,
     };
   }
 

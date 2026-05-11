@@ -1,8 +1,18 @@
-import { type Component, Show, createSignal, createEffect, onCleanup } from 'solid-js';
+import { type Component, Show, createSignal, createEffect, onCleanup, createMemo } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { User } from '../core/auth/AuthClient';
 import { DeleteAccountDialog } from './DeleteAccountDialog';
 import styles from './UserMenu.module.css';
+
+// Storage quota — free tier hard-coded per spec § Quota v0 (refs #957)
+const QUOTA_BYTES = 500 * 1024 * 1024; // 500 MB
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
 
 export interface UserMenuProps {
   user: User;
@@ -100,6 +110,18 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
 
   const avatarInitial = () => props.user.githubLogin[0]?.toUpperCase() ?? '?';
 
+  const storagePercent = createMemo(() => {
+    const pct = (props.user.storageUsed / QUOTA_BYTES) * 100;
+    return Math.min(pct, 100);
+  });
+
+  const quotaFillClass = createMemo(() => {
+    const pct = storagePercent();
+    if (pct >= 95) return styles.quotaFillDanger;
+    if (pct >= 80) return styles.quotaFillWarning;
+    return styles.quotaFillNormal;
+  });
+
   return (
     <>
       {/* Avatar chip trigger */}
@@ -155,6 +177,22 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
             <div class={styles.dropdownHeader}>
               <div class={styles.dropdownLogin}>{props.user.githubLogin}</div>
               <div class={styles.dropdownEmail}>{props.user.email}</div>
+            </div>
+
+            {/* Storage quota */}
+            <div class={styles.quotaSection}>
+              <div class={styles.quotaRow}>
+                <span class={styles.quotaLabel}>Storage</span>
+                <span class={styles.quotaValue}>
+                  {formatBytes(props.user.storageUsed)} / {formatBytes(QUOTA_BYTES)}
+                </span>
+              </div>
+              <div class={styles.quotaBar}>
+                <div
+                  class={`${styles.quotaFill} ${quotaFillClass()}`}
+                  style={{ width: `${storagePercent()}%` }}
+                />
+              </div>
             </div>
 
             {/* Export my data */}
