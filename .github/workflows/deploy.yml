@@ -1,0 +1,76 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS (atomic symlink flip)
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          RELEASE=$(date -u +%Y%m%d-%H%M%S)
+          RELEASE_DIR="/opt/erythos/client/releases/$RELEASE"
+
+          # Create release directory on VPS
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" "mkdir -p $RELEASE_DIR"
+
+          # Upload built files
+          scp -i ~/.ssh/deploy_key -r dist/* "$VPS_USER@$VPS_HOST:$RELEASE_DIR/"
+
+          # Atomic symlink flip: point current → new release
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
+            "ln -snf $RELEASE_DIR /opt/erythos/client/current"
+
+          # Prune old releases, keep latest 5
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
+            "ls -1t /opt/erythos/client/releases/ | tail -n +6 | xargs -r -I{} rm -rf /opt/erythos/client/releases/{}"
+
+          echo "Deployed release: $RELEASE"
+          echo "Live at: /opt/erythos/client/current -> $RELEASE_DIR"

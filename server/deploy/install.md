@@ -569,3 +569,111 @@ systemctl reload ssh
 
 - client `defaultBaseUrl()` 在 prod build 自動指 `https://erythos.eoswolf.com/api`(E7-2 已寫死,無需手動設 env)
 - 跑完 Phase 12 client deploy 後,**Phase 12-f** 完整 e2e smoke 才算 Phase E 收尾
+
+---
+
+## Phase 13 — CI/CD auto-deploy setup (F-2)
+
+GitHub Actions workflow (`.github/workflows/deploy.yml`) 在每次 push main 後自動 build + atomic symlink flip deploy。完成 Phase 12 manual deploy 後,設定以下 secrets 即可啟用自動化。
+
+> **重要**:secrets 設好前不要 push main,否則 workflow 觸發後因 secret 缺失會 fail。先完成 13-c 再 push。
+
+### 13-a:準備 deploy SSH key pair
+
+在**本機**產一對 deploy-only SSH key(不要用既有的個人 key):
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/erythos_deploy -N ""
+cat ~/.ssh/erythos_deploy.pub   # 這是 public key,下一步加到 VPS
+cat ~/.ssh/erythos_deploy       # 這是 private key,下一步設為 GitHub secret
+```
+
+### 13-b:把 public key 加到 VPS
+
+```bash
+ssh erythos@139.162.101.231
+```
+
+進 VPS 後:
+
+```bash
+echo "<貼上 ~/.ssh/erythos_deploy.pub 的內容>" >> /home/erythos/.ssh/authorized_keys
+```
+
+驗證(從本機另開 terminal):
+
+```bash
+ssh -i ~/.ssh/erythos_deploy erythos@139.162.101.231 "echo ok"
+```
+
+應回 `ok`。
+
+### 13-c:設定 GitHub Actions secrets
+
+在**本機** repo 根目錄跑(需已 `gh auth login`):
+
+```bash
+# Private key(整個檔案內容)
+gh secret set SSH_PRIVATE_KEY < ~/.ssh/erythos_deploy
+
+# VPS hostname 或 IP
+gh secret set VPS_HOST -b "139.162.101.231"
+
+# VPS deploy user
+gh secret set VPS_USER -b "erythos"
+```
+
+驗證 secrets 已建立:
+
+```bash
+gh secret list
+```
+
+應看到 `SSH_PRIVATE_KEY`、`VPS_HOST`、`VPS_USER` 三個。
+
+### 13-d:VPS releases 目錄確認(若 Phase 12-a 已跑則跳過)
+
+```bash
+ssh erythos@139.162.101.231
+sudo mkdir -p /opt/erythos/client/releases
+sudo chown -R erythos:erythos /opt/erythos/client
+exit
+```
+
+### 13-e:第一次 manual trigger
+
+Secrets 設好後手動觸發一次確認 workflow 通:
+
+```bash
+gh workflow run deploy.yml
+```
+
+看執行結果:
+
+```bash
+gh run list --workflow=deploy.yml --limit 5
+```
+
+等幾分鐘後:
+
+```bash
+gh run view --web   # 瀏覽器開最近一次 run
+```
+
+### 13-f:失敗策略與 rollback
+
+**build fail** → `deploy` job 因 `needs: build` 依賴不會執行,VPS 保持現有版本,網站不受影響。
+
+**deploy fail(scp / ssh 中途斷)** → symlink 尚未 flip,仍指舊 release,網站不 down。修復後重新 push 或手動 trigger。
+
+**rollback 手動步驟**(deploy 成功但新版有 bug):
+
+```bash
+# 查看 VPS 上有哪些 releases
+ssh erythos@139.162.101.231 "ls -1t /opt/erythos/client/releases/"
+
+# 切回上一個 release(替換 <previous-release> 為實際資料夾名稱)
+ssh erythos@139.162.101.231 "ln -snf /opt/erythos/client/releases/<previous-release> /opt/erythos/client/current"
+```
+
+> Caddy 直接讀 symlink 指向的目錄,`ln -snf` 是原子操作,切換後下個 request 立即生效,中間無停機視窗。
