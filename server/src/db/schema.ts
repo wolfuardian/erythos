@@ -113,3 +113,30 @@ export const scene_versions = pgTable(
   },
   (t) => [primaryKey({ columns: [t.scene_id, t.version] })],
 );
+
+// ---------------------------------------------------------------------------
+// magic_link_tokens  (unwired skeleton — refs #956; spec refs #955)
+// ---------------------------------------------------------------------------
+//
+// Pattern: opaque plaintext token held by client/email; DB stores SHA-256
+// hash only (refs #894).  one-time use enforced by used_at.  15-min TTL.
+//
+// onDelete: 'cascade' aligns with spec #955 GDPR § DELETE /api/me:
+// when a user row is deleted, their pending magic link tokens are removed too.
+
+export const magicLinkTokens = pgTable(
+  'magic_link_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tokenHash: text('token_hash').notNull().unique(),
+    email: text('email').notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('magic_link_tokens_email_idx').on(t.email),
+    index('magic_link_tokens_expires_idx').on(t.expiresAt),
+  ],
+);
