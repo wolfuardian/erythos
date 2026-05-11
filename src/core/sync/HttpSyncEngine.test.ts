@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SceneDocument } from '../scene/SceneDocument';
-import { ConflictError, NotFoundError } from './SyncEngine';
+import { ConflictError, NotFoundError, PreconditionRequiredError } from './SyncEngine';
 import { HttpSyncEngine } from './HttpSyncEngine';
 import { AuthError } from '../auth/AuthClient';
 
@@ -204,6 +204,18 @@ describe('HttpSyncEngine.push()', () => {
         err instanceof ConflictError &&
         err.sceneId === 'scene-1' &&
         err.currentVersion === 3, // falls back to baseVersion
+    );
+  });
+
+  it('throws PreconditionRequiredError on 428 (server requires If-Match)', async () => {
+    const engine = makeEngine();
+    const doc = new SceneDocument();
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(428, { error: 'If-Match header required' }));
+
+    await expect(engine.push('scene-1', doc, 5)).rejects.toSatisfy(
+      (err: unknown) =>
+        err instanceof PreconditionRequiredError && err.sceneId === 'scene-1',
     );
   });
 

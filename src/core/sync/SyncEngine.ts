@@ -51,3 +51,17 @@ export class ConflictError extends Error {
     this.name = 'ConflictError';
   }
 }
+
+/**
+ * Server returned 428 Precondition Required (RFC 6585).
+ *
+ * Means the client omitted the `If-Match` header on a PUT. The client `push()`
+ * always sets `If-Match`, so reaching this is a client bug — surface as a
+ * named error so the caller can log / alert rather than swallow as generic.
+ */
+export class PreconditionRequiredError extends Error {
+  constructor(public sceneId: SceneId) {
+    super(`Precondition Required: If-Match header missing on scene ${sceneId}`);
+    this.name = 'PreconditionRequiredError';
+  }
+}

@@ -5,6 +5,7 @@ import {
   type SyncEngine,
   ConflictError,
   NotFoundError,
+  PreconditionRequiredError,
 } from './SyncEngine';
 import { AuthError } from '../auth/AuthClient';
 import { defaultBaseUrl } from './baseUrl';
@@ -82,6 +83,11 @@ async function doFetch(
       const fallbackBody = callerBody ?? new SceneDocument();
       throw new ConflictError(id, fallbackVersion, fallbackBody);
     }
+
+    case 428:
+      // "If-Match header missing" — push() always sets it, so this is a client bug.
+      // Surface as a named error so callers can log / alert rather than swallow.
+      throw new PreconditionRequiredError(id);
 
     default:
       if (res.status >= 500) {
