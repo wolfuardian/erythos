@@ -36,10 +36,10 @@
 
 本 session 只規劃不實作。全部在 #938 phase F brainstorm:
 
-- [ ] **Asset sync** → Phase F-1,#938 ⬜
-  spec `docs/asset-sync-protocol.md` R2 / S3 content-addressed。範圍大(server + client + dedup + GC + 配額)
-- [ ] **Magic link + Resend** → Phase F-5,#938 ⬜
-  spec v0.1 加題,Better Auth adapter 補齊
+- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 規劃中
+  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。#957 epic 已切 4 sub-task(F-1a env / F-1b server endpoint / F-1c client AssetClient / F-1d rewrite + quota + GDPR),建議 F-1a + F-1b 並行起跑
+- [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 進行中
+  AD-1 跑 `docs/magic-link-spec.md`(spec from scratch),AD-2 跑 `server/src/auth/magic-link.ts` unwired stub + drizzle migration 0003。Resend 寄信 wire + endpoint mount 留下一輪
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅
   GitHub Actions `deploy.yml` push main → VPS scp + atomic symlink flip + 自動 prune > 5 release。install.md Phase 14 含 SSH key + secrets setup 步驟。Prod 啟用前先設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER 三個 secret
 - [ ] **Multi-device e2e** → Phase F-3,#938 ⬜
