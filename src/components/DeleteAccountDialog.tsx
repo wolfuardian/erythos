@@ -8,12 +8,18 @@ export interface DeleteAccountDialogProps {
   user: User;
   onConfirm: () => Promise<void>;
   onClose: () => void;
+  /** Optional ref to element that triggered the dialog; receives focus on close */
+  triggerRef?: HTMLElement | null;
 }
+
+const TITLE_ID = 'delete-account-dialog-title';
 
 const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
   const [input, setInput] = createSignal('');
   const [deleting, setDeleting] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  let cancelRef!: HTMLButtonElement;
+  let dialogRef!: HTMLDivElement;
 
   // Reset state when dialog opens/closes
   createEffect(() => {
@@ -24,12 +30,48 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
     }
   });
 
+  // Autofocus cancel button when dialog opens
+  createEffect(() => {
+    if (props.open) {
+      // Use requestAnimationFrame to ensure the Portal has rendered
+      requestAnimationFrame(() => {
+        cancelRef?.focus();
+      });
+    } else {
+      // Return focus to trigger element on close
+      props.triggerRef?.focus();
+    }
+  });
+
   // Close on Escape key — bound only while dialog is open
   createEffect(() => {
     if (!props.open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !deleting()) {
         props.onClose();
+        return;
+      }
+      // Focus trap: Tab cycles within dialog
+      if (e.key === 'Tab') {
+        const focusable = Array.from(
+          dialogRef.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
     document.addEventListener('keydown', onKeyDown);
@@ -64,10 +106,14 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
           }}
         >
           <div
+            ref={dialogRef}
             class={styles.dialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={TITLE_ID}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 class={styles.title}>Delete account</h3>
+            <h3 id={TITLE_ID} class={styles.title}>Delete account</h3>
             <p class={styles.warning}>
               This will permanently delete your account, scenes, and revision history.
               This cannot be undone.
@@ -93,6 +139,8 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
               <p
                 data-testid="delete-account-error"
                 class={styles.error}
+                role="alert"
+                aria-live="assertive"
               >
                 {error()}
               </p>
@@ -101,6 +149,7 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
             <div class={styles.actions}>
               <button
                 data-testid="delete-account-cancel"
+                ref={cancelRef}
                 type="button"
                 class={`${styles.button} ${styles.cancelButton}`}
                 disabled={deleting()}
