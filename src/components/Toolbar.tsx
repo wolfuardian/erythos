@@ -102,6 +102,7 @@ export const Toolbar: Component = () => {
           type="button"
           onClick={() => mutate(s => addWorkspace(s))}
           title="Duplicate current workspace"
+          aria-label="Duplicate current workspace"
           class={styles.addWorkspaceButton}
         >
           +
@@ -127,6 +128,7 @@ export const Toolbar: Component = () => {
         data-testid="toolbar-reset-layout"
         onClick={() => { clearSavedLayout(); location.reload(); }}
         title="Reset panel layout to default"
+        aria-label="Reset panel layout"
         class={styles.resetLayoutButton}
       >
         ↺

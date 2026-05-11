@@ -23,6 +23,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
 
   let chipRef!: HTMLButtonElement;
   let dropdownRef!: HTMLDivElement;
+  let firstMenuItemRef!: HTMLButtonElement;
 
   const calcPos = () => {
     const rect = chipRef.getBoundingClientRect();
@@ -33,6 +34,11 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     return { right, top, visibility: 'visible' as const };
   };
 
+  const closeMenu = () => {
+    setOpen(false);
+    chipRef?.focus();
+  };
+
   const toggleOpen = () => {
     if (!open()) {
       // Render hidden first, measure, then show
@@ -40,9 +46,11 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
       setOpen(true);
       requestAnimationFrame(() => {
         setDropdownPos(calcPos());
+        // Focus first menu item after dropdown is visible
+        firstMenuItemRef?.focus();
       });
     } else {
-      setOpen(false);
+      closeMenu();
     }
   };
 
@@ -52,7 +60,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     const target = e.target as Node;
     if (chipRef && chipRef.contains(target)) return;
     if (dropdownRef && dropdownRef.contains(target)) return;
-    setOpen(false);
+    closeMenu();
   };
 
   document.addEventListener('pointerdown', onPointerDown);
@@ -63,7 +71,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     if (!open()) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setOpen(false);
+        closeMenu();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -76,17 +84,17 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
       await props.onSignOut();
     } finally {
       setSigningOut(false);
-      setOpen(false);
+      closeMenu();
     }
   };
 
   const handleExportData = () => {
     props.onExportData();
-    setOpen(false);
+    closeMenu();
   };
 
   const handleOpenDeleteDialog = () => {
-    setOpen(false);
+    closeMenu();
     setDeleteDialogOpen(true);
   };
 
@@ -103,6 +111,8 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
         classList={{ [styles.avatarChipOpen]: open() }}
         onClick={toggleOpen}
         title={`Signed in as ${props.user.githubLogin}`}
+        aria-haspopup="menu"
+        aria-expanded={open()}
       >
         <Show
           when={props.user.avatarUrl}
@@ -133,6 +143,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
             data-testid="toolbar-user-menu-dropdown"
             ref={dropdownRef}
             class={styles.dropdown}
+            role="menu"
             // inline-allowed: computed offset from getBoundingClientRect + visibility toggle for measurement
             style={{
               top: dropdownPos().top !== undefined ? `${dropdownPos().top}px` : undefined,
@@ -149,7 +160,9 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
             {/* Export my data */}
             <button
               data-testid="toolbar-user-menu-export"
+              ref={firstMenuItemRef}
               type="button"
+              role="menuitem"
               class={styles.dropdownItem}
               onClick={handleExportData}
             >
@@ -160,6 +173,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
             <button
               data-testid="toolbar-user-menu-delete"
               type="button"
+              role="menuitem"
               class={styles.dropdownItem}
               classList={{ [styles.dropdownItemDanger]: true }}
               onClick={handleOpenDeleteDialog}
@@ -174,6 +188,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
             <button
               data-testid="toolbar-user-menu-sign-out"
               type="button"
+              role="menuitem"
               class={styles.dropdownItem}
               classList={{ [styles.dropdownItemDanger]: true, [styles.dropdownItemDisabled]: signingOut() }}
               disabled={signingOut()}
@@ -190,6 +205,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
         user={props.user}
         onConfirm={props.onDeleteAccount}
         onClose={() => setDeleteDialogOpen(false)}
+        triggerRef={chipRef}
       />
     </>
   );

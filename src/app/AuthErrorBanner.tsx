@@ -1,4 +1,4 @@
-import { type Component, Show } from 'solid-js';
+import { type Component, Show, onMount } from 'solid-js';
 import styles from './AuthErrorBanner.module.css';
 
 export type AuthErrorCode = 'missing_code' | 'invalid_state' | 'oauth_failed';
@@ -24,10 +24,17 @@ interface AuthErrorBannerProps {
 
 /** Top-of-screen fixed banner shown when OAuth callback returns an error code. */
 export const AuthErrorBanner: Component<AuthErrorBannerProps> = (props) => {
+  let dismissRef!: HTMLButtonElement;
+
+  onMount(() => {
+    dismissRef?.focus();
+  });
+
   return (
     <div class={styles.banner} role="alert" aria-live="assertive" data-testid="auth-error-banner">
       <span class={styles.message}>{AUTH_ERROR_MESSAGES[props.code]}</span>
       <button
+        ref={dismissRef}
         class={styles.dismiss}
         aria-label="Dismiss"
         onClick={props.onDismiss}

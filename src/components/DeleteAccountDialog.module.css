@@ -60,6 +60,7 @@
 
 .confirmInput:focus {
   border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--accent-primary, #4a9eff);
 }
 
 .error {

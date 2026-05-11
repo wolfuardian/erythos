@@ -52,10 +52,10 @@ export const ViewerBanner: Component<ViewerBannerProps> = (props) => {
       <span class={styles.viewingLabel}>Viewing</span>
       <span class={styles.sceneNameEmphasis}>{props.sceneName}</span>
       <Show when={forkError()}>
-        <span class={styles.sceneName}>&nbsp;— {forkError()}</span>
+        <span class={styles.sceneName} role="alert" aria-live="polite">&nbsp;— {forkError()}</span>
       </Show>
       <Show when={needsAuth()}>
-        <span class={styles.sceneName}>&nbsp;— Sign in to fork to your account</span>
+        <span class={styles.sceneName} role="alert" aria-live="polite">&nbsp;— Sign in to fork to your account</span>
       </Show>
       <div class={styles.spacer} />
       <Show
@@ -66,7 +66,7 @@ export const ViewerBanner: Component<ViewerBannerProps> = (props) => {
             disabled={forking()}
             onClick={() => void handleEdit()}
           >
-            {forking() ? 'Forking…' : 'Edit'}
+            <span aria-live="polite">{forking() ? 'Forking…' : 'Edit'}</span>
           </button>
         }
       >
