@@ -14,6 +14,7 @@
  *   10. No prefab subtree expansion
  */
 
+/// <reference types="node" />
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -26,7 +27,6 @@ import {
   SceneInvariantError,
   CURRENT_VERSION,
 } from '../SceneInvariants';
-import type { InvariantViolation } from '../SceneInvariants';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -86,10 +86,6 @@ function makePrefabNode(id: string) {
     nodeType: 'prefab' as const,
     asset: 'prefabs://tree-pine',
   };
-}
-
-function pathsOf(violations: InvariantViolation[]): string[] {
-  return violations.map(v => v.path);
 }
 
 // ── checkRawVersion tests ──────────────────────────────────────────────────────

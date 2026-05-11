@@ -50,8 +50,8 @@ describe('MoveNodeCommand', () => {
   });
 
   it('insert between two siblings produces a fractional order between them', () => {
-    const a = addNode(editor, { ...editor.sceneDocument.createNode('A'), order: 0 });
-    const b = addNode(editor, { ...editor.sceneDocument.createNode('B'), order: 2 });
+    addNode(editor, { ...editor.sceneDocument.createNode('A'), order: 0 });
+    addNode(editor, { ...editor.sceneDocument.createNode('B'), order: 2 });
     const c = addNode(editor, { ...editor.sceneDocument.createNode('C'), order: 10 });
 
     // Insert C between A (order=0) and B (order=2) → expect order in (0, 2).

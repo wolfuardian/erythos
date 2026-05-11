@@ -16,7 +16,6 @@ import { SceneDocument } from '../../scene/SceneDocument';
 import { PrefabRegistry } from '../../scene/PrefabRegistry';
 import type { PrefabAsset } from '../../scene/PrefabFormat';
 import type { SceneNode } from '../../scene/SceneFormat';
-import type { NodeUUID } from '../../../utils/branded';
 import { asNodeUUID, asAssetPath, asPrefabId } from '../../../utils/branded';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -74,7 +73,7 @@ function makeEditorStub(doc: SceneDocument, registry: PrefabRegistry) {
     // Minimal stubs for other Editor properties not used by BakeCommand:
     selection: { select: () => {}, clear: () => {} },
     execute(cmd: { execute(): void }) { cmd.execute(); },
-  } as unknown as Parameters<typeof BakeCommand.prototype.constructor>[0];
+  } as unknown as ConstructorParameters<typeof BakeCommand>[0];
 }
 
 /**

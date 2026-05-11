@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { asAssetPath } from '../../../utils/branded';
 
 // ── Helpers to build mock FileSystem handles ──────────────────────────────────
 
@@ -92,15 +93,15 @@ describe('ProjectManager.currentScenePath signal', () => {
 
   it('setCurrentScenePath updates the accessor', () => {
     const pm = new ProjectManager();
-    pm.setCurrentScenePath('scenes/level-2.erythos');
+    pm.setCurrentScenePath(asAssetPath('scenes/level-2.erythos'));
     expect(pm.currentScenePath()).toBe('scenes/level-2.erythos');
   });
 
   it('signal switching: multiple updates reflect latest value', () => {
     const pm = new ProjectManager();
-    pm.setCurrentScenePath('scenes/a.erythos');
-    pm.setCurrentScenePath('scenes/b.erythos');
-    pm.setCurrentScenePath('scenes/c.erythos');
+    pm.setCurrentScenePath(asAssetPath('scenes/a.erythos'));
+    pm.setCurrentScenePath(asAssetPath('scenes/b.erythos'));
+    pm.setCurrentScenePath(asAssetPath('scenes/c.erythos'));
     expect(pm.currentScenePath()).toBe('scenes/c.erythos');
   });
 });
@@ -164,14 +165,14 @@ describe('ProjectManager.deleteFile', () => {
     dirHandle.getDirectoryHandle.mockResolvedValue(scenesDir);
     (pm as any)._handle = dirHandle;
 
-    await pm.deleteFile('scenes/old.erythos');
+    await pm.deleteFile(asAssetPath('scenes/old.erythos'));
 
     expect(scenesDir.removeEntry).toHaveBeenCalledWith('old.erythos');
   });
 
   it('throws when no project is open', async () => {
     const pm = new ProjectManager();
-    await expect(pm.deleteFile('scenes/x.erythos')).rejects.toThrow('No project open');
+    await expect(pm.deleteFile(asAssetPath('scenes/x.erythos'))).rejects.toThrow('No project open');
   });
 });
 
@@ -222,7 +223,7 @@ async function simulateWriteFileCacheLogic(pm: ProjectManager, path: string) {
     const old = urlCache.get(path)!;
     URL.revokeObjectURL(old);
     urlCache.delete(path);
-    const file = await pm.readFile(path);
+    const file = await pm.readFile(asAssetPath(path));
     const newURL = URL.createObjectURL(file);
     urlCache.set(path, newURL);
     (pm as any)._emitFileChanged(path, newURL);
@@ -237,14 +238,14 @@ describe('ProjectManager.urlFor', () => {
 
   it('returns a blob URL for a valid path', async () => {
     const { pm } = makeOpenPM();
-    const url = await pm.urlFor('models/cube.glb');
+    const url = await pm.urlFor(asAssetPath('models/cube.glb'));
     expect(url).toMatch(/^blob:test\//);
   });
 
   it('returns the same URL for repeated calls (cache hit)', async () => {
     const { pm, readFileSpy } = makeOpenPM();
-    const url1 = await pm.urlFor('models/cube.glb');
-    const url2 = await pm.urlFor('models/cube.glb');
+    const url1 = await pm.urlFor(asAssetPath('models/cube.glb'));
+    const url2 = await pm.urlFor(asAssetPath('models/cube.glb'));
     expect(url1).toBe(url2);
     // readFile should only be called once
     expect(readFileSpy).toHaveBeenCalledTimes(1);
@@ -252,14 +253,14 @@ describe('ProjectManager.urlFor', () => {
 
   it('returns different URLs for different paths', async () => {
     const { pm } = makeOpenPM();
-    const url1 = await pm.urlFor('models/cube.glb');
-    const url2 = await pm.urlFor('textures/wood.png');
+    const url1 = await pm.urlFor(asAssetPath('models/cube.glb'));
+    const url2 = await pm.urlFor(asAssetPath('textures/wood.png'));
     expect(url1).not.toBe(url2);
   });
 
   it('throws when no project is open', async () => {
     const pm = new ProjectManager(); // _handle is null
-    await expect(pm.urlFor('models/cube.glb')).rejects.toThrow('No project open');
+    await expect(pm.urlFor(asAssetPath('models/cube.glb'))).rejects.toThrow('No project open');
   });
 });
 
@@ -271,8 +272,8 @@ describe('ProjectManager — project close revokes cached URLs', () => {
 
   it('revokes all cached URLs on close()', async () => {
     const { pm } = makeOpenPM();
-    const url1 = await pm.urlFor('models/cube.glb');
-    const url2 = await pm.urlFor('textures/wood.png');
+    const url1 = await pm.urlFor(asAssetPath('models/cube.glb'));
+    const url2 = await pm.urlFor(asAssetPath('textures/wood.png'));
 
     pm.close();
 
@@ -282,14 +283,14 @@ describe('ProjectManager — project close revokes cached URLs', () => {
 
   it('clears the cache after close() so urlFor can re-cache on reopen', async () => {
     const { pm } = makeOpenPM();
-    await pm.urlFor('models/cube.glb');
+    await pm.urlFor(asAssetPath('models/cube.glb'));
     pm.close();
 
     // Re-open (set handle again)
     (pm as any)._handle = { name: 'test-project' } as FileSystemDirectoryHandle;
     vi.spyOn(pm, 'readFile').mockResolvedValue(new File(['new'], 'file.glb'));
 
-    await pm.urlFor('models/cube.glb');
+    await pm.urlFor(asAssetPath('models/cube.glb'));
     expect((pm as any)._urlCache.size).toBe(1);
   });
 });
@@ -303,7 +304,7 @@ describe('ProjectManager.fileChanged event', () => {
   it('emits fileChanged with new URL when a cached path is written', async () => {
     const { pm, writeFileSpy } = makeOpenPM();
 
-    const oldURL = await pm.urlFor('models/cube.glb');
+    const oldURL = await pm.urlFor(asAssetPath('models/cube.glb'));
 
     const listener = vi.fn();
     pm.onFileChanged(listener);
@@ -312,7 +313,7 @@ describe('ProjectManager.fileChanged event', () => {
       await simulateWriteFileCacheLogic(pm, path);
     });
 
-    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+    await pm.writeFile(asAssetPath('models/cube.glb'), new ArrayBuffer(0));
 
     expect(listener).toHaveBeenCalledTimes(1);
     const [emittedPath, emittedURL] = listener.mock.calls[0] as [string, string];
@@ -332,7 +333,7 @@ describe('ProjectManager.fileChanged event', () => {
     });
 
     // Write a path that was never passed to urlFor
-    await pm.writeFile('models/new-file.glb', new ArrayBuffer(0));
+    await pm.writeFile(asAssetPath('models/new-file.glb'), new ArrayBuffer(0));
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -340,13 +341,13 @@ describe('ProjectManager.fileChanged event', () => {
   it('revokes old URL when a cached path is written', async () => {
     const { pm, writeFileSpy } = makeOpenPM();
 
-    const oldURL = await pm.urlFor('models/cube.glb');
+    const oldURL = await pm.urlFor(asAssetPath('models/cube.glb'));
 
     writeFileSpy.mockImplementation(async (path: string) => {
       await simulateWriteFileCacheLogic(pm, path);
     });
 
-    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+    await pm.writeFile(asAssetPath('models/cube.glb'), new ArrayBuffer(0));
 
     expect(revokedURLs).toContain(oldURL);
   });
@@ -354,7 +355,7 @@ describe('ProjectManager.fileChanged event', () => {
   it('unsubscribe from fileChanged works', async () => {
     const { pm, writeFileSpy } = makeOpenPM();
 
-    await pm.urlFor('models/cube.glb');
+    await pm.urlFor(asAssetPath('models/cube.glb'));
 
     const listener = vi.fn();
     const unsub = pm.onFileChanged(listener);
@@ -364,7 +365,7 @@ describe('ProjectManager.fileChanged event', () => {
       await simulateWriteFileCacheLogic(pm, path);
     });
 
-    await pm.writeFile('models/cube.glb', new ArrayBuffer(0));
+    await pm.writeFile(asAssetPath('models/cube.glb'), new ArrayBuffer(0));
     expect(listener).not.toHaveBeenCalled();
   });
 });

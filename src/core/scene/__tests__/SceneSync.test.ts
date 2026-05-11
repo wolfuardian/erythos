@@ -4,10 +4,11 @@ import { SceneDocument } from '../SceneDocument';
 import { SceneSync } from '../SceneSync';
 import type { SceneNode } from '../SceneFormat';
 import type { ResourceCache } from '../ResourceCache';
+import { asNodeUUID } from '../../../utils/branded';
 
 function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
   return {
-    id: 'uuid-default',
+    id: asNodeUUID('uuid-default'),
     name: 'node',
     parent: null,
     order: 0,
@@ -35,50 +36,50 @@ describe('SceneSync', () => {
 
   describe('addNode → getObject3D', () => {
     it('creates Object3D and maps by UUID', () => {
-      doc.addNode(makeNode({ id: 'a', name: 'Alpha' }));
-      const obj = sync.getObject3D('a');
+      doc.addNode(makeNode({ id: asNodeUUID('a'), name: 'Alpha' }));
+      const obj = sync.getObject3D(asNodeUUID('a'));
       expect(obj).not.toBeNull();
       expect(obj!.name).toBe('Alpha');
     });
 
     it('adds root node to scene', () => {
-      doc.addNode(makeNode({ id: 'a' }));
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
       expect(scene.children).toHaveLength(1);
     });
 
     it('applies position / rotation / scale', () => {
       doc.addNode(makeNode({
-        id: 'a',
+        id: asNodeUUID('a'),
         position: [1, 2, 3],
         rotation: [0.1, 0.2, 0.3],
         scale: [2, 2, 2],
       }));
-      const obj = sync.getObject3D('a')!;
+      const obj = sync.getObject3D(asNodeUUID('a'))!;
       expect(obj.position.toArray()).toEqual([1, 2, 3]);
       expect(obj.rotation.toArray().slice(0, 3)).toEqual([0.1, 0.2, 0.3]);
       expect(obj.scale.toArray()).toEqual([2, 2, 2]);
     });
 
     it('parent-child: parent added first', () => {
-      doc.addNode(makeNode({ id: 'p', name: 'Parent' }));
-      doc.addNode(makeNode({ id: 'c', name: 'Child', parent: 'p' }));
+      doc.addNode(makeNode({ id: asNodeUUID('p'), name: 'Parent' }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'Child', parent: asNodeUUID('p') }));
 
-      const parentObj = sync.getObject3D('p')!;
-      const childObj = sync.getObject3D('c')!;
+      const parentObj = sync.getObject3D(asNodeUUID('p'))!;
+      const childObj = sync.getObject3D(asNodeUUID('c'))!;
       expect(childObj.parent).toBe(parentObj);
       expect(parentObj.children).toContain(childObj);
     });
 
     it('orphan: child added before parent → auto-reparent on parent add', () => {
       // Child first — parent does not exist yet
-      doc.addNode(makeNode({ id: 'c', name: 'Child', parent: 'p' }));
-      const childObj = sync.getObject3D('c')!;
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'Child', parent: asNodeUUID('p') }));
+      const childObj = sync.getObject3D(asNodeUUID('c'))!;
       // Temporarily parked at scene root
       expect(childObj.parent).toBe(scene);
 
       // Now add parent
-      doc.addNode(makeNode({ id: 'p', name: 'Parent' }));
-      const parentObj = sync.getObject3D('p')!;
+      doc.addNode(makeNode({ id: asNodeUUID('p'), name: 'Parent' }));
+      const parentObj = sync.getObject3D(asNodeUUID('p'))!;
       // Child should have been moved under parent
       expect(childObj.parent).toBe(parentObj);
       expect(parentObj.children).toContain(childObj);
@@ -92,14 +93,14 @@ describe('SceneSync', () => {
 
   describe('removeNode', () => {
     it('removes Object3D from maps', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      doc.removeNode('a');
-      expect(sync.getObject3D('a')).toBeNull();
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      doc.removeNode(asNodeUUID('a'));
+      expect(sync.getObject3D(asNodeUUID('a'))).toBeNull();
     });
 
     it('removes Object3D from scene', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      doc.removeNode('a');
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      doc.removeNode(asNodeUUID('a'));
       expect(scene.children).toHaveLength(0);
     });
   });
@@ -108,52 +109,52 @@ describe('SceneSync', () => {
 
   describe('updateNode', () => {
     it('updates position', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      doc.updateNode('a', { position: [5, 6, 7] });
-      expect(sync.getObject3D('a')!.position.toArray()).toEqual([5, 6, 7]);
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      doc.updateNode(asNodeUUID('a'), { position: [5, 6, 7] });
+      expect(sync.getObject3D(asNodeUUID('a'))!.position.toArray()).toEqual([5, 6, 7]);
     });
 
     it('updates rotation', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      doc.updateNode('a', { rotation: [0.5, 0.6, 0.7] });
-      expect(sync.getObject3D('a')!.rotation.toArray().slice(0, 3))
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      doc.updateNode(asNodeUUID('a'), { rotation: [0.5, 0.6, 0.7] });
+      expect(sync.getObject3D(asNodeUUID('a'))!.rotation.toArray().slice(0, 3))
         .toEqual([0.5, 0.6, 0.7]);
     });
 
     it('updates scale', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      doc.updateNode('a', { scale: [3, 3, 3] });
-      expect(sync.getObject3D('a')!.scale.toArray()).toEqual([3, 3, 3]);
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      doc.updateNode(asNodeUUID('a'), { scale: [3, 3, 3] });
+      expect(sync.getObject3D(asNodeUUID('a'))!.scale.toArray()).toEqual([3, 3, 3]);
     });
 
     it('updates name', () => {
-      doc.addNode(makeNode({ id: 'a', name: 'old' }));
-      doc.updateNode('a', { name: 'new' });
-      expect(sync.getObject3D('a')!.name).toBe('new');
+      doc.addNode(makeNode({ id: asNodeUUID('a'), name: 'old' }));
+      doc.updateNode(asNodeUUID('a'), { name: 'new' });
+      expect(sync.getObject3D(asNodeUUID('a'))!.name).toBe('new');
     });
 
     it('reparents on parent change', () => {
-      doc.addNode(makeNode({ id: 'p1', name: 'P1' }));
-      doc.addNode(makeNode({ id: 'p2', name: 'P2' }));
-      doc.addNode(makeNode({ id: 'c', name: 'Child', parent: 'p1' }));
+      doc.addNode(makeNode({ id: asNodeUUID('p1'), name: 'P1' }));
+      doc.addNode(makeNode({ id: asNodeUUID('p2'), name: 'P2' }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'Child', parent: asNodeUUID('p1') }));
 
-      const p1 = sync.getObject3D('p1')!;
-      const p2 = sync.getObject3D('p2')!;
-      const child = sync.getObject3D('c')!;
+      const p1 = sync.getObject3D(asNodeUUID('p1'))!;
+      const p2 = sync.getObject3D(asNodeUUID('p2'))!;
+      const child = sync.getObject3D(asNodeUUID('c'))!;
       expect(child.parent).toBe(p1);
 
-      doc.updateNode('c', { parent: 'p2' });
+      doc.updateNode(asNodeUUID('c'), { parent: asNodeUUID('p2') });
       expect(child.parent).toBe(p2);
       expect(p1.children).not.toContain(child);
       expect(p2.children).toContain(child);
     });
 
     it('moves to scene root when parent set to null', () => {
-      doc.addNode(makeNode({ id: 'p' }));
-      doc.addNode(makeNode({ id: 'c', parent: 'p' }));
+      doc.addNode(makeNode({ id: asNodeUUID('p') }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), parent: asNodeUUID('p') }));
 
-      doc.updateNode('c', { parent: null });
-      const child = sync.getObject3D('c')!;
+      doc.updateNode(asNodeUUID('c'), { parent: null });
+      const child = sync.getObject3D(asNodeUUID('c'))!;
       expect(child.parent).toBe(scene);
     });
   });
@@ -162,39 +163,39 @@ describe('SceneSync', () => {
 
   describe('rebuild', () => {
     it('reconstructs the full tree from document', () => {
-      doc.addNode(makeNode({ id: 'a', name: 'A' }));
-      doc.addNode(makeNode({ id: 'b', name: 'B', parent: 'a' }));
+      doc.addNode(makeNode({ id: asNodeUUID('a'), name: 'A' }));
+      doc.addNode(makeNode({ id: asNodeUUID('b'), name: 'B', parent: asNodeUUID('a') }));
 
       // Mess up the maps manually (simulate stale state)
       sync.rebuild();
 
-      expect(sync.getObject3D('a')).not.toBeNull();
-      expect(sync.getObject3D('b')).not.toBeNull();
-      expect(sync.getObject3D('a')!.name).toBe('A');
-      expect(sync.getObject3D('b')!.parent).toBe(sync.getObject3D('a'));
+      expect(sync.getObject3D(asNodeUUID('a'))).not.toBeNull();
+      expect(sync.getObject3D(asNodeUUID('b'))).not.toBeNull();
+      expect(sync.getObject3D(asNodeUUID('a'))!.name).toBe('A');
+      expect(sync.getObject3D(asNodeUUID('b'))!.parent).toBe(sync.getObject3D(asNodeUUID('a')));
     });
 
     it('clears previous objects', () => {
-      doc.addNode(makeNode({ id: 'a' }));
-      const oldObj = sync.getObject3D('a');
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
+      const oldObj = sync.getObject3D(asNodeUUID('a'));
 
       sync.rebuild();
-      const newObj = sync.getObject3D('a');
+      const newObj = sync.getObject3D(asNodeUUID('a'));
       // Object3D instance should be different after rebuild
       expect(newObj).not.toBe(oldObj);
     });
 
     it('handles unordered nodes (child before parent in getAllNodes)', () => {
       // Directly add nodes so they exist in document
-      doc.addNode(makeNode({ id: 'p', name: 'Parent' }));
-      doc.addNode(makeNode({ id: 'c', name: 'Child', parent: 'p' }));
+      doc.addNode(makeNode({ id: asNodeUUID('p'), name: 'Parent' }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'Child', parent: asNodeUUID('p') }));
 
       // rebuild re-traverses — since getAllNodes order is not guaranteed,
       // the orphan logic inside onNodeAdded handles any ordering
       sync.rebuild();
 
-      const parentObj = sync.getObject3D('p')!;
-      const childObj = sync.getObject3D('c')!;
+      const parentObj = sync.getObject3D(asNodeUUID('p'))!;
+      const childObj = sync.getObject3D(asNodeUUID('c'))!;
       expect(childObj.parent).toBe(parentObj);
     });
   });
@@ -203,17 +204,17 @@ describe('SceneSync', () => {
 
   describe('sceneReplaced', () => {
     it('rebuilds on deserialize', () => {
-      doc.addNode(makeNode({ id: 'old', name: 'Old' }));
-      expect(sync.getObject3D('old')).not.toBeNull();
+      doc.addNode(makeNode({ id: asNodeUUID('old'), name: 'Old' }));
+      expect(sync.getObject3D(asNodeUUID('old'))).not.toBeNull();
 
       doc.deserialize({
         version: 1,
-        nodes: [makeNode({ id: 'new', name: 'New' })],
+        nodes: [makeNode({ id: asNodeUUID('new'), name: 'New' })],
       });
 
-      expect(sync.getObject3D('old')).toBeNull();
-      expect(sync.getObject3D('new')).not.toBeNull();
-      expect(sync.getObject3D('new')!.name).toBe('New');
+      expect(sync.getObject3D(asNodeUUID('old'))).toBeNull();
+      expect(sync.getObject3D(asNodeUUID('new'))).not.toBeNull();
+      expect(sync.getObject3D(asNodeUUID('new'))!.name).toBe('New');
     });
   });
 
@@ -221,8 +222,8 @@ describe('SceneSync', () => {
 
   describe('getUUID', () => {
     it('returns UUID for known Object3D', () => {
-      doc.addNode(makeNode({ id: 'xyz' }));
-      const obj = sync.getObject3D('xyz')!;
+      doc.addNode(makeNode({ id: asNodeUUID('xyz') }));
+      const obj = sync.getObject3D(asNodeUUID('xyz'))!;
       expect(sync.getUUID(obj)).toBe('xyz');
     });
 
@@ -238,14 +239,14 @@ describe('SceneSync', () => {
     it('stops listening after dispose', () => {
       sync.dispose();
 
-      doc.addNode(makeNode({ id: 'after-dispose' }));
-      expect(sync.getObject3D('after-dispose')).toBeNull();
+      doc.addNode(makeNode({ id: asNodeUUID('after-dispose') }));
+      expect(sync.getObject3D(asNodeUUID('after-dispose'))).toBeNull();
     });
 
     it('clears maps', () => {
-      doc.addNode(makeNode({ id: 'a' }));
+      doc.addNode(makeNode({ id: asNodeUUID('a') }));
       sync.dispose();
-      expect(sync.getObject3D('a')).toBeNull();
+      expect(sync.getObject3D(asNodeUUID('a'))).toBeNull();
     });
   });
 
@@ -267,11 +268,11 @@ describe('SceneSync', () => {
     it('cache hit: attaches cloned subtree as child of node Object3D', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
       doc.addNode(makeNode({
-        id: 'mesh-node',
+        id: asNodeUUID('mesh-node'),
         nodeType: 'mesh',
         asset: 'blob:test/1',
       }));
-      const obj = syncWithCache.getObject3D('mesh-node')!;
+      const obj = syncWithCache.getObject3D(asNodeUUID('mesh-node'))!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0].name).toBe('cloned-mesh');
     });
@@ -279,41 +280,41 @@ describe('SceneSync', () => {
         it('cache miss: falls back to empty Object3D (no children)', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
       doc.addNode(makeNode({
-        id: 'mesh-node',
+        id: asNodeUUID('mesh-node'),
         nodeType: 'mesh',
         asset: 'blob:test/missing',
       }));
-      const obj = syncWithCache.getObject3D('mesh-node')!;
+      const obj = syncWithCache.getObject3D(asNodeUUID('mesh-node'))!;
       expect(obj.children).toHaveLength(0);
     });
 
     it('asset not in cache (hydrate soft-fail): falls back to empty Object3D', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(false));
       doc.addNode(makeNode({
-        id: 'mesh-node',
+        id: asNodeUUID('mesh-node'),
         // asset not in cache — hydrate soft-fail
         nodeType: 'mesh',
         asset: 'project://models/missing.glb',
       }));
-      const obj = syncWithCache.getObject3D('mesh-node')!;
+      const obj = syncWithCache.getObject3D(asNodeUUID('mesh-node'))!;
       expect(obj.children).toHaveLength(0);
     });
 
     it('no mesh component: Object3D has no extra children', () => {
       const syncWithCache = new SceneSync(doc, scene, makeMockCache(true));
-      doc.addNode(makeNode({ id: 'plain-node' }));
-      const obj = syncWithCache.getObject3D('plain-node')!;
+      doc.addNode(makeNode({ id: asNodeUUID('plain-node') }));
+      const obj = syncWithCache.getObject3D(asNodeUUID('plain-node'))!;
       expect(obj.children).toHaveLength(0);
     });
 
     it('no resourceCache: node with mesh component still creates Object3D', () => {
       // sync (no cache) is the default created in beforeEach
       doc.addNode(makeNode({
-        id: 'mesh-node',
+        id: asNodeUUID('mesh-node'),
         nodeType: 'mesh',
         asset: 'blob:test/1',
       }));
-      const obj = sync.getObject3D('mesh-node');
+      const obj = sync.getObject3D(asNodeUUID('mesh-node'));
       expect(obj).not.toBeNull();
       expect(obj!.children).toHaveLength(0);
     });
@@ -324,12 +325,12 @@ describe('SceneSync', () => {
   describe('nodeType mesh (primitives)', () => {
     it('attaches a Mesh child to the entity Object3D', () => {
       doc.addNode(makeNode({
-        id: 'geo-node',
+        id: asNodeUUID('geo-node'),
         nodeType: 'mesh',
         asset: 'project://primitives/box',
         mat: { color: 0xff0000 },
       }));
-      const obj = sync.getObject3D('geo-node')!;
+      const obj = sync.getObject3D(asNodeUUID('geo-node'))!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0]).toBeInstanceOf(Mesh);
     });
@@ -337,12 +338,12 @@ describe('SceneSync', () => {
     it('supports all geometry types without throwing', () => {
       for (const type of ['box', 'sphere', 'plane', 'cylinder'] as const) {
         doc.addNode(makeNode({
-          id: `geo-${type}`,
+          id: asNodeUUID(`geo-${type}`),
           nodeType: 'mesh',
           asset: 'project://primitives/' + type,
           mat: { color: 0xffffff },
         }));
-        const obj = sync.getObject3D(`geo-${type}`)!;
+        const obj = sync.getObject3D(asNodeUUID(`geo-${type}`))!;
         expect(obj.children).toHaveLength(1);
       }
     });
@@ -353,11 +354,11 @@ describe('SceneSync', () => {
   describe('nodeType light', () => {
     it('attaches DirectionalLight for type directional', () => {
       doc.addNode(makeNode({
-        id: 'dir-light',
+        id: asNodeUUID('dir-light'),
         nodeType: 'light',
         light: { type: 'directional', color: 0xffffff, intensity: 1 },
       }));
-      const obj = sync.getObject3D('dir-light')!;
+      const obj = sync.getObject3D(asNodeUUID('dir-light'))!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0]).toBeInstanceOf(DirectionalLight);
       expect((obj.children[0] as DirectionalLight).intensity).toBe(1);
@@ -365,11 +366,11 @@ describe('SceneSync', () => {
 
     it('attaches AmbientLight for type ambient', () => {
       doc.addNode(makeNode({
-        id: 'amb-light',
+        id: asNodeUUID('amb-light'),
         nodeType: 'light',
         light: { type: 'ambient', color: 0x404040, intensity: 0.5 },
       }));
-      const obj = sync.getObject3D('amb-light')!;
+      const obj = sync.getObject3D(asNodeUUID('amb-light'))!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0]).toBeInstanceOf(AmbientLight);
     });
@@ -380,11 +381,11 @@ describe('SceneSync', () => {
   describe('nodeType camera', () => {
     it('attaches PerspectiveCamera with correct fov', () => {
       doc.addNode(makeNode({
-        id: 'cam-node',
+        id: asNodeUUID('cam-node'),
         nodeType: 'camera',
         camera: { type: 'perspective', fov: 50, near: 0.1, far: 100 },
       }));
-      const obj = sync.getObject3D('cam-node')!;
+      const obj = sync.getObject3D(asNodeUUID('cam-node'))!;
       expect(obj.children).toHaveLength(1);
       expect(obj.children[0]).toBeInstanceOf(PerspectiveCamera);
       expect((obj.children[0] as PerspectiveCamera).fov).toBe(50);

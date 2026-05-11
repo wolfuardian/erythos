@@ -40,7 +40,6 @@ function makeGuestEngine(sceneId: SceneId): SyncEngine {
 
 /** Create a mock SyncEngine that resolves on fetch (owner) */
 function makeOwnerEngine(): SyncEngine {
-  const fakeDoc = {} as ReturnType<SyncEngine['fetch']> extends Promise<infer T> ? T : never;
   return {
     fetch: vi.fn().mockResolvedValue({ body: {}, version: 0 }),
     push: vi.fn(),

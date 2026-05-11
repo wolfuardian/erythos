@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { EventEmitter } from '../EventEmitter';
 import { Selection } from '../Selection';
+import { asNodeUUID } from '../../utils/branded';
 
 describe('Selection — UUID-based API', () => {
   let emitter: EventEmitter;
@@ -17,30 +18,30 @@ describe('Selection — UUID-based API', () => {
     it('select(uuid) stores uuid and emits selectionChanged', () => {
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
-      sel.select('uuid-a');
+      sel.select(asNodeUUID('uuid-a'));
       expect([...sel.all]).toEqual(['uuid-a']);
       expect(received).toEqual([['uuid-a']]);
     });
 
     it('select(uuid) replaces any existing selection', () => {
-      sel.select('uuid-a');
+      sel.select(asNodeUUID('uuid-a'));
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
-      sel.select('uuid-b');
+      sel.select(asNodeUUID('uuid-b'));
       expect([...sel.all]).toEqual(['uuid-b']);
       expect(received).toEqual([['uuid-b']]);
     });
 
     it('select(same uuid) when already sole selection is a no-op', () => {
-      sel.select('uuid-a');
+      sel.select(asNodeUUID('uuid-a'));
       let count = 0;
       emitter.on('selectionChanged', () => { count++; });
-      sel.select('uuid-a');
+      sel.select(asNodeUUID('uuid-a'));
       expect(count).toBe(0);
     });
 
     it('select(null) clears selection and emits selectionChanged with []', () => {
-      sel.select('uuid-a');
+      sel.select(asNodeUUID('uuid-a'));
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
       sel.select(null);
@@ -53,26 +54,26 @@ describe('Selection — UUID-based API', () => {
 
   describe('add()', () => {
     it('add() appends uuid to selection', () => {
-      sel.add('uuid-a');
-      sel.add('uuid-b');
-      expect(sel.has('uuid-a')).toBe(true);
-      expect(sel.has('uuid-b')).toBe(true);
+      sel.add(asNodeUUID('uuid-a'));
+      sel.add(asNodeUUID('uuid-b'));
+      expect(sel.has(asNodeUUID('uuid-a'))).toBe(true);
+      expect(sel.has(asNodeUUID('uuid-b'))).toBe(true);
     });
 
     it('add() emits selectionChanged with all current uuids', () => {
-      sel.add('uuid-a');
+      sel.add(asNodeUUID('uuid-a'));
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
-      sel.add('uuid-b');
+      sel.add(asNodeUUID('uuid-b'));
       expect(received[0]).toContain('uuid-a');
       expect(received[0]).toContain('uuid-b');
     });
 
     it('add() duplicate is no-op — no event emitted', () => {
-      sel.add('uuid-a');
+      sel.add(asNodeUUID('uuid-a'));
       let count = 0;
       emitter.on('selectionChanged', () => { count++; });
-      sel.add('uuid-a');
+      sel.add(asNodeUUID('uuid-a'));
       expect(count).toBe(0);
     });
   });
@@ -81,19 +82,19 @@ describe('Selection — UUID-based API', () => {
 
   describe('remove()', () => {
     it('remove() deletes uuid and emits selectionChanged', () => {
-      sel.add('uuid-a');
-      sel.add('uuid-b');
+      sel.add(asNodeUUID('uuid-a'));
+      sel.add(asNodeUUID('uuid-b'));
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
-      sel.remove('uuid-a');
-      expect(sel.has('uuid-a')).toBe(false);
+      sel.remove(asNodeUUID('uuid-a'));
+      expect(sel.has(asNodeUUID('uuid-a'))).toBe(false);
       expect(received).toHaveLength(1);
     });
 
     it('remove() non-existent uuid is no-op — no event emitted', () => {
       let count = 0;
       emitter.on('selectionChanged', () => { count++; });
-      sel.remove('not-here');
+      sel.remove(asNodeUUID('not-here'));
       expect(count).toBe(0);
     });
   });
@@ -102,21 +103,21 @@ describe('Selection — UUID-based API', () => {
 
   describe('toggle()', () => {
     it('toggle() adds uuid when not present', () => {
-      sel.toggle('uuid-a');
-      expect(sel.has('uuid-a')).toBe(true);
+      sel.toggle(asNodeUUID('uuid-a'));
+      expect(sel.has(asNodeUUID('uuid-a'))).toBe(true);
     });
 
     it('toggle() removes uuid when already present', () => {
-      sel.add('uuid-a');
-      sel.toggle('uuid-a');
-      expect(sel.has('uuid-a')).toBe(false);
+      sel.add(asNodeUUID('uuid-a'));
+      sel.toggle(asNodeUUID('uuid-a'));
+      expect(sel.has(asNodeUUID('uuid-a'))).toBe(false);
     });
 
     it('toggle() emits selectionChanged each time', () => {
       let count = 0;
       emitter.on('selectionChanged', () => { count++; });
-      sel.toggle('uuid-a'); // add
-      sel.toggle('uuid-a'); // remove
+      sel.toggle(asNodeUUID('uuid-a')); // add
+      sel.toggle(asNodeUUID('uuid-a')); // remove
       expect(count).toBe(2);
     });
   });
@@ -125,12 +126,12 @@ describe('Selection — UUID-based API', () => {
 
   describe('has()', () => {
     it('returns true for a selected uuid', () => {
-      sel.select('uuid-a');
-      expect(sel.has('uuid-a')).toBe(true);
+      sel.select(asNodeUUID('uuid-a'));
+      expect(sel.has(asNodeUUID('uuid-a'))).toBe(true);
     });
 
     it('returns false for an unselected uuid', () => {
-      expect(sel.has('not-selected')).toBe(false);
+      expect(sel.has(asNodeUUID('not-selected'))).toBe(false);
     });
   });
 
@@ -138,8 +139,8 @@ describe('Selection — UUID-based API', () => {
 
   describe('clear()', () => {
     it('clears all and emits selectionChanged with []', () => {
-      sel.add('uuid-a');
-      sel.add('uuid-b');
+      sel.add(asNodeUUID('uuid-a'));
+      sel.add(asNodeUUID('uuid-b'));
       const received: string[][] = [];
       emitter.on('selectionChanged', (uuids) => received.push([...uuids]));
       sel.clear();
@@ -163,14 +164,14 @@ describe('Selection — UUID-based API', () => {
     });
 
     it('returns the last added uuid', () => {
-      sel.add('uuid-a');
-      sel.add('uuid-b');
-      sel.add('uuid-c');
+      sel.add(asNodeUUID('uuid-a'));
+      sel.add(asNodeUUID('uuid-b'));
+      sel.add(asNodeUUID('uuid-c'));
       expect(sel.primary).toBe('uuid-c');
     });
 
     it('returns the uuid from select()', () => {
-      sel.select('uuid-x');
+      sel.select(asNodeUUID('uuid-x'));
       expect(sel.primary).toBe('uuid-x');
     });
   });
@@ -181,13 +182,13 @@ describe('Selection — UUID-based API', () => {
     it('hover(uuid) sets hovered and emits hoverChanged', () => {
       const received: Array<string | null> = [];
       emitter.on('hoverChanged', (u) => received.push(u));
-      sel.hover('uuid-a');
+      sel.hover(asNodeUUID('uuid-a'));
       expect(sel.hovered).toBe('uuid-a');
       expect(received).toEqual(['uuid-a']);
     });
 
     it('hover(null) clears hovered and emits hoverChanged with null', () => {
-      sel.hover('uuid-a');
+      sel.hover(asNodeUUID('uuid-a'));
       const received: Array<string | null> = [];
       emitter.on('hoverChanged', (u) => received.push(u));
       sel.hover(null);
@@ -196,10 +197,10 @@ describe('Selection — UUID-based API', () => {
     });
 
     it('hover with same uuid is no-op — no event emitted', () => {
-      sel.hover('uuid-a');
+      sel.hover(asNodeUUID('uuid-a'));
       let count = 0;
       emitter.on('hoverChanged', () => { count++; });
-      sel.hover('uuid-a');
+      sel.hover(asNodeUUID('uuid-a'));
       expect(count).toBe(0);
     });
   });
@@ -212,8 +213,8 @@ describe('Selection — UUID-based API', () => {
     });
 
     it('count reflects number of selected uuids', () => {
-      sel.add('uuid-a');
-      sel.add('uuid-b');
+      sel.add(asNodeUUID('uuid-a'));
+      sel.add(asNodeUUID('uuid-b'));
       expect(sel.count).toBe(2);
     });
 
@@ -228,7 +229,7 @@ describe('Selection — UUID-based API', () => {
     it('payload is string[] not Object3D[]', () => {
       const received: unknown[] = [];
       emitter.on('selectionChanged', (uuids) => received.push(uuids));
-      sel.select('some-uuid');
+      sel.select(asNodeUUID('some-uuid'));
       expect(Array.isArray(received[0])).toBe(true);
       expect(typeof (received[0] as string[])[0]).toBe('string');
     });
@@ -240,12 +241,12 @@ describe('Selection — UUID-based API', () => {
     it('payload is string when hovering', () => {
       const received: unknown[] = [];
       emitter.on('hoverChanged', (u) => received.push(u));
-      sel.hover('uuid-hover');
+      sel.hover(asNodeUUID('uuid-hover'));
       expect(typeof received[0]).toBe('string');
     });
 
     it('payload is null when hover cleared', () => {
-      sel.hover('uuid-hover');
+      sel.hover(asNodeUUID('uuid-hover'));
       const received: unknown[] = [];
       emitter.on('hoverChanged', (u) => received.push(u));
       sel.hover(null);

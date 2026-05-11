@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createAutoSave } from './AutoSave';
 import { SceneDocument } from './SceneDocument';
 import { ConflictError } from '../sync/SyncEngine';

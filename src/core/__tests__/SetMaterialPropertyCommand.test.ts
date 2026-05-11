@@ -3,6 +3,7 @@ import { Editor } from '../Editor';
 import { SetMaterialPropertyCommand } from '../commands/SetMaterialPropertyCommand';
 import type { MaterialOverride } from '../scene/SceneFormat';
 import { ProjectManager } from '../project/ProjectManager';
+import type { NodeUUID } from '../../utils/branded';
 
 describe('SetMaterialPropertyCommand', () => {
   let editor: Editor;
@@ -27,7 +28,7 @@ describe('SetMaterialPropertyCommand', () => {
     return editor.sceneDocument.getNode(node.id)!;
   }
 
-  function getMaterial(id: string) {
+  function getMaterial(id: NodeUUID) {
     return editor.sceneDocument.getNode(id)?.mat as MaterialOverride;
   }
 

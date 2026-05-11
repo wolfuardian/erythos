@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { inferNodeType } from '../inferNodeType';
 import type { SceneNode } from '../SceneFormat';
+import { asNodeUUID } from '../../../utils/branded';
 
 const makeNode = (nodeType: SceneNode['nodeType']): SceneNode => ({
-  id: 'test-id',
+  id: asNodeUUID('test-id'),
   name: 'test',
   parent: null,
   order: 0,

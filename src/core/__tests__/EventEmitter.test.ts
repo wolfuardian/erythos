@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventEmitter } from '../EventEmitter';
 import { Editor } from '../Editor';
 import { ProjectManager } from '../project/ProjectManager';
+import { asNodeUUID } from '../../utils/branded';
 
 // ── Unit tests: new UUID-based events ────────────────────────────────────────
 
@@ -15,21 +16,21 @@ describe('EventEmitter — new UUID-based events', () => {
   it('nodeAdded: on receives the emitted uuid', () => {
     const received: string[] = [];
     emitter.on('nodeAdded', (uuid) => received.push(uuid));
-    emitter.emit('nodeAdded', 'abc-123');
+    emitter.emit('nodeAdded', asNodeUUID('abc-123'));
     expect(received).toEqual(['abc-123']);
   });
 
   it('nodeRemoved: on receives the emitted uuid', () => {
     const received: string[] = [];
     emitter.on('nodeRemoved', (uuid) => received.push(uuid));
-    emitter.emit('nodeRemoved', 'def-456');
+    emitter.emit('nodeRemoved', asNodeUUID('def-456'));
     expect(received).toEqual(['def-456']);
   });
 
   it('hoverChanged: on receives uuid string', () => {
     const received: Array<string | null> = [];
     emitter.on('hoverChanged', (uuid) => received.push(uuid));
-    emitter.emit('hoverChanged', 'jkl-000');
+    emitter.emit('hoverChanged', asNodeUUID('jkl-000'));
     expect(received).toEqual(['jkl-000']);
   });
 
@@ -92,7 +93,7 @@ describe('Selection — emits hoverChanged', () => {
   });
 
   it('hover(uuid) emits hoverChanged with that uuid', () => {
-    const uuid = 'test-uuid-hover-1';
+    const uuid = asNodeUUID('test-uuid-hover-1');
     const received: Array<string | null> = [];
     editor.events.on('hoverChanged', (u) => received.push(u));
     editor.selection.hover(uuid);
@@ -100,7 +101,7 @@ describe('Selection — emits hoverChanged', () => {
   });
 
   it('hover(null) emits hoverChanged with null', () => {
-    editor.selection.hover('some-uuid');
+    editor.selection.hover(asNodeUUID('some-uuid'));
 
     const received: Array<string | null> = [];
     editor.events.on('hoverChanged', (u) => received.push(u));
@@ -109,7 +110,7 @@ describe('Selection — emits hoverChanged', () => {
   });
 
   it('hover with same uuid does not emit again', () => {
-    const uuid = 'test-uuid-hover-2';
+    const uuid = asNodeUUID('test-uuid-hover-2');
     editor.selection.hover(uuid);
     let count = 0;
     editor.events.on('hoverChanged', () => { count++; });

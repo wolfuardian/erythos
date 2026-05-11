@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAutoSave } from '../AutoSave';
 import type { ErythosSceneV3 } from '../io/types';
+import { asNodeUUID, asAssetPath } from '../../../utils/branded';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ function makeValidScene(): ErythosSceneV3 {
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [
       {
-        id: 'mesh-001',
+        id: asNodeUUID('mesh-001'),
         name: 'Mesh',
         parent: null,
         order: 0,
@@ -71,7 +72,7 @@ function makeValidScene(): ErythosSceneV3 {
         position: [0, 0, 0],
         rotation: [0, 0, 0],
         scale: [1, 1, 1],
-        asset: 'project://box.glb',
+        asset: asAssetPath('project://box.glb'),
         userData: {},
       },
     ],
@@ -140,9 +141,9 @@ describe('AutoSave — pre-write validation gate', () => {
     const autosave = createAutoSave(editor);
     await autosave.flushNow();
 
-    const calls = (editor.events.emit as ReturnType<typeof vi.fn>).mock.calls;
+    const calls = (editor.events.emit as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
     const savedCalls = calls.filter(
-      ([evt, status]: [string, string]) => evt === 'autosaveStatusChanged' && status === 'saved',
+      ([evt, status]) => evt === 'autosaveStatusChanged' && status === 'saved',
     );
     expect(savedCalls).toHaveLength(0);
     autosave.dispose();
