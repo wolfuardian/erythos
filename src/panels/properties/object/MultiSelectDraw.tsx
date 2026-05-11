@@ -1,5 +1,4 @@
 import { createMemo, type Component } from 'solid-js';
-import { MathUtils } from 'three';
 import { useEditor } from '../../../app/EditorContext';
 import type { SceneNode } from '../../../core/scene/SceneFormat';
 import FoldableSection from '../components/FoldableSection';
@@ -47,9 +46,9 @@ const MultiSelectDraw: Component<MultiSelectDrawProps> = (props) => {
       px: commonNum(nodes, (n) => n.position[0]),
       py: commonNum(nodes, (n) => n.position[1]),
       pz: commonNum(nodes, (n) => n.position[2]),
-      rx: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[0])),
-      ry: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[1])),
-      rz: commonNum(nodes, (n) => MathUtils.radToDeg(n.rotation[2])),
+      rx: commonNum(nodes, (n) => n.rotation[0] * (180 / Math.PI)),
+      ry: commonNum(nodes, (n) => n.rotation[1] * (180 / Math.PI)),
+      rz: commonNum(nodes, (n) => n.rotation[2] * (180 / Math.PI)),
       sx: commonNum(nodes, (n) => n.scale[0]),
       sy: commonNum(nodes, (n) => n.scale[1]),
       sz: commonNum(nodes, (n) => n.scale[2]),
