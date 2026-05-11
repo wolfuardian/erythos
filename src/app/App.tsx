@@ -335,8 +335,11 @@ const App: Component = () => {
           }
           // No local project: fall through to Welcome (owner can still open project)
         } catch (err) {
-          if (err instanceof NotFoundError) {
-            // Not found locally → guest / viewer mode
+          if (err instanceof NotFoundError || err instanceof AuthError) {
+            // Not found locally / session-required → guest viewer mode.
+            // (Server returns 404 for private scenes to anonymous, so AuthError
+            // here is rare — typically an expired session; user can re-sign-in
+            // via the Fork prompt inside the viewer.)
             setViewerSceneId(route.sceneId);
             setViewerSceneName(route.sceneId);
           }
@@ -384,6 +387,7 @@ const App: Component = () => {
             sceneId={viewerSceneId()!}
             sceneName={viewerSceneName()}
             syncEngine={syncEngine}
+            onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
           />
         }
       >
