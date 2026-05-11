@@ -113,13 +113,21 @@ export function loadStore(): WorkspaceStore {
         const viewportMigratedWorkspaces = migratedWorkspaces.map(w => {
           if (!w.viewportState) return w;
           const newViewportState: Record<string, ViewportPanelState> = {};
+          // OldViewportState: flat shape introduced in #587, before ViewportPanelState wrapper.
+          type OldViewportState = { position: [number, number, number]; target: [number, number, number] };
           for (const [areaId, state] of Object.entries(w.viewportState)) {
             // 偵測舊結構：直接含 position 欄位（#587 引入的 ViewportSnapshot 格式）
-            const anyState = state as any;
-            if (Array.isArray(anyState.position)) {
+            const maybeOld = state as unknown;
+            if (
+              typeof maybeOld === 'object' &&
+              maybeOld !== null &&
+              'position' in maybeOld &&
+              Array.isArray((maybeOld as OldViewportState).position)
+            ) {
               // 舊格式 → 包成 ViewportPanelState.camera
+              const oldState = maybeOld as OldViewportState;
               newViewportState[areaId] = {
-                camera: { position: anyState.position, target: anyState.target },
+                camera: { position: oldState.position, target: oldState.target },
               };
             } else {
               // 新格式，直接保留

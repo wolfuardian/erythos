@@ -193,9 +193,12 @@ export function createEditorBridge(
   };
 
   // Subscribe to editor events
-  for (const [event, handler] of Object.entries(editorHandlers)) {
-    editor.events.on(event as any, handler as any);
-  }
+  editor.events.on('selectionChanged', editorHandlers.selectionChanged);
+  editor.events.on('hoverChanged', editorHandlers.hoverChanged);
+  editor.events.on('interactionModeChanged', editorHandlers.interactionModeChanged);
+  editor.events.on('transformModeChanged', editorHandlers.transformModeChanged);
+  editor.events.on('historyChanged', editorHandlers.historyChanged);
+  editor.events.on('autosaveStatusChanged', editorHandlers.autosaveStatusChanged);
 
   // Subscribe to SceneDocument events
   editor.sceneDocument.events.on('nodeAdded', onNodeAdded);
@@ -246,9 +249,12 @@ export function createEditorBridge(
   const unsubProject = editor.projectManager.onChange(onProjectChanged);
 
   const dispose = () => {
-    for (const [event, handler] of Object.entries(editorHandlers)) {
-      editor.events.off(event as any, handler as any);
-    }
+    editor.events.off('selectionChanged', editorHandlers.selectionChanged);
+    editor.events.off('hoverChanged', editorHandlers.hoverChanged);
+    editor.events.off('interactionModeChanged', editorHandlers.interactionModeChanged);
+    editor.events.off('transformModeChanged', editorHandlers.transformModeChanged);
+    editor.events.off('historyChanged', editorHandlers.historyChanged);
+    editor.events.off('autosaveStatusChanged', editorHandlers.autosaveStatusChanged);
     editor.sceneDocument.events.off('nodeAdded', onNodeAdded);
     editor.sceneDocument.events.off('nodeRemoved', onNodeRemoved);
     editor.sceneDocument.events.off('nodeChanged', onNodeChanged);
