@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { SceneDocument } from '../scene/SceneDocument';
 import { ConflictError, NotFoundError, PreconditionRequiredError } from './SyncEngine';
 import { HttpSyncEngine } from './HttpSyncEngine';
@@ -38,10 +38,10 @@ function mockResponse(
 
 // ── Setup / teardown ──────────────────────────────────────────────────────────
 
-let fetchSpy: ReturnType<typeof vi.fn>;
+let fetchSpy: Mock<typeof fetch>;
 
 beforeEach(() => {
-  fetchSpy = vi.fn();
+  fetchSpy = vi.fn<typeof fetch>();
   globalThis.fetch = fetchSpy;
 });
 
