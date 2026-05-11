@@ -2,7 +2,8 @@ import { type Component, createEffect, createSignal, onCleanup, onMount, Show } 
 import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
-import { LocalSyncEngine } from '../core/sync/LocalSyncEngine';
+import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
+import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
@@ -32,8 +33,13 @@ import styles from './App.module.css';
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
   const projectManager = new ProjectManager();
-  // Singleton SyncEngine — IndexedDB-backed; persists across page reloads.
-  const syncEngine = new LocalSyncEngine();
+  // Singleton SyncEngine — HTTP-backed; routes to server API.
+  const syncEngine = new HttpSyncEngine();
+  // Singleton AuthClient — session via HttpOnly cookie; no token storage in JS.
+  const authClient = new AuthClient();
+
+  // currentUser signal: undefined = unresolved, null = guest, User = signed in
+  const [currentUser, setCurrentUser] = createSignal<User | null | undefined>(undefined);
 
   const [editor, setEditor] = createSignal<Editor | null>(null);
   const [bridge, setBridge] = createSignal<EditorBridge | null>(null);
@@ -211,6 +217,10 @@ const App: Component = () => {
       openProjectById,
       autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
       resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
+      currentUser,
+      setCurrentUser,
+      authSignOut: () => authClient.signOut(),
+      authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
     });
 
     e.keybindings.registerMany([
@@ -280,6 +290,20 @@ const App: Component = () => {
 
   // Auto-restore last opened project on page reload, or enter viewer mode if URL is /scenes/{uuid}
   onMount(() => {
+    // Resolve auth state on mount (fire-and-forget, parallel to route logic)
+    void (async () => {
+      try {
+        const user = await authClient.getCurrentUser();
+        setCurrentUser(user); // User | null
+      } catch (err) {
+        if (err instanceof AuthError) {
+          setCurrentUser(null); // 降級訪客
+        } else {
+          throw err;
+        }
+      }
+    })();
+
     const route = currentRoute();
 
     if (route.kind === 'scene') {
