@@ -14,10 +14,11 @@
  *
  * Session cookie spec (§ 認證實作):
  *   httpOnly; Secure (prod); SameSite=Lax
- *   Value = opaque random token stored as sessions.id in Postgres
+ *   Value = opaque random token (client-held); DB stores SHA-256(token) only.
+ *   This ensures a DB dump cannot be used to replay sessions (refs #894).
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import type { Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { db } from './db.js';
@@ -32,6 +33,14 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /** Generate a cryptographically random session token */
 export function generateSessionToken(): string {
   return randomBytes(32).toString('hex');
+}
+
+/**
+ * Hash a plaintext session token for safe storage at rest.
+ * Client always holds the plaintext token; DB only stores the hash.
+ */
+export function hashSessionToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }
 
 /** Write session cookie onto the response */
@@ -71,6 +80,7 @@ export async function resolveSession(c: Context): Promise<AuthUser | null> {
   if (!token) return null;
 
   const now = new Date();
+  const tokenHash = hashSessionToken(token);
 
   const rows = await db
     .select({
@@ -85,7 +95,7 @@ export async function resolveSession(c: Context): Promise<AuthUser | null> {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.user_id, users.id))
-    .where(eq(sessions.id, token))
+    .where(eq(sessions.id, tokenHash))
     .limit(1);
 
   const row = rows[0];
@@ -112,7 +122,7 @@ export async function createSession(c: Context, userId: string): Promise<string>
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
   await db.insert(sessions).values({
-    id: token,
+    id: hashSessionToken(token),
     user_id: userId,
     expires_at: expiresAt,
   });
@@ -128,7 +138,7 @@ export async function createSession(c: Context, userId: string): Promise<string>
 export async function deleteSession(c: Context): Promise<void> {
   const token = getCookie(c, SESSION_COOKIE);
   if (token) {
-    await db.delete(sessions).where(eq(sessions.id, token));
+    await db.delete(sessions).where(eq(sessions.id, hashSessionToken(token)));
   }
   clearSessionCookie(c);
 }
