@@ -225,6 +225,8 @@ const App: Component = () => {
       setCurrentUser,
       authSignOut: () => authClient.signOut(),
       authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
+      authGetExportUrl: () => authClient.getExportUrl(),
+      authDeleteAccount: () => authClient.deleteAccount(),
     });
 
     e.keybindings.registerMany([
