@@ -3,6 +3,7 @@ import { BrandMark } from './BrandMark';
 import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
 import { ShareDialog, type SceneVisibility } from './ShareDialog';
+import { UserMenu } from './UserMenu';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
 import { store, mutate, addWorkspace } from '../app/workspaceStore';
@@ -130,6 +131,31 @@ export const Toolbar: Component = () => {
       >
         ↺
       </button>
+
+      {/* Auth section — three-state: undefined (loading) / null (guest) / User (signed in) */}
+      <Show when={bridge.currentUser() !== undefined}>
+        <div class={styles.divider} />
+        <Show
+          when={bridge.currentUser()}
+          fallback={
+            /* null → Sign in button */
+            <button
+              data-testid="toolbar-sign-in"
+              type="button"
+              class={styles.shareButton}
+              onClick={() => { window.location.href = bridge.getOAuthStartUrl('github'); }}
+              title="Sign in with GitHub"
+            >
+              Sign in
+            </button>
+          }
+        >
+          {(user) => (
+            /* User → avatar chip + dropdown */
+            <UserMenu user={user()} onSignOut={bridge.signOut} />
+          )}
+        </Show>
+      </Show>
 
       <ShareDialog
         open={shareOpen()}
