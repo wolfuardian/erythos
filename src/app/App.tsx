@@ -1,6 +1,7 @@
 import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
+import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
@@ -162,7 +163,7 @@ const App: Component = () => {
   };
 
   const openProject = async (handle: FileSystemDirectoryHandle) => {
-    const e = new Editor(projectManager);
+    const e = new Editor(projectManager, new HttpAssetClient());
     e.syncEngine = syncEngine;
     // Order matters: openHandle MUST precede init() so that init's IDB→file migration
     // and PrefabRegistry hydration see isOpen=true. Reversing this guard-skips both,
