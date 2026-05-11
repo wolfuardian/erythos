@@ -150,6 +150,35 @@ function migrateNode(raw: V0Node): SceneNode {
   return node;
 }
 
+// ── Pass-through for already-v1 nodes ─────────────────────────────────────────
+
+/**
+ * Constructs a typed SceneNode from a raw Record that is already in v1 shape
+ * (i.e. it has a `nodeType` field). Uses the same defensive field-by-field reads
+ * as `migrateNode` so the shape is verified rather than blindly cast.
+ */
+function passthroughV1Node(raw: Record<string, unknown>): SceneNode {
+  const nodeType = raw['nodeType'] as NodeType;
+  const node: SceneNode = {
+    id:       asNodeUUID(String(raw['id'])) as NodeId,
+    name:     typeof raw['name']   === 'string' ? raw['name']   : '',
+    parent:   raw['parent'] !== null && raw['parent'] !== undefined
+                ? asNodeUUID(String(raw['parent'])) as NodeId
+                : null,
+    order:    typeof raw['order']  === 'number' ? raw['order']  : 0,
+    nodeType,
+    position: Array.isArray(raw['position']) ? raw['position'] as Vec3 : [0, 0, 0],
+    rotation: Array.isArray(raw['rotation']) ? raw['rotation'] as Vec3 : [0, 0, 0],
+    scale:    Array.isArray(raw['scale'])    ? raw['scale']    as Vec3 : [1, 1, 1],
+    userData: {},
+  };
+  if (typeof raw['asset'] === 'string') node.asset = raw['asset'];
+  if (raw['light'] !== undefined) node.light = raw['light'] as LightProps;
+  if (raw['camera'] !== undefined) node.camera = raw['camera'] as CameraProps;
+  if (raw['mat'] !== undefined) node.mat = raw['mat'] as MaterialOverride;
+  return node;
+}
+
 // ── Top-level migration ────────────────────────────────────────────────────────
 
 /**
@@ -182,7 +211,7 @@ export function v0_to_v1(raw: unknown): ErythosSceneV1 {
       const node = n as Record<string, unknown>;
       // If the node already has nodeType (already v1 shape), pass through directly.
       if (typeof node['nodeType'] === 'string') {
-        return node as unknown as SceneNode;
+        return passthroughV1Node(node);
       }
       return migrateNode(n as V0Node);
     }),
