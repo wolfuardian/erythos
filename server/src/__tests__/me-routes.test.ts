@@ -299,3 +299,78 @@ describe('DELETE /api/me', () => {
     expect(mockDeleteSession).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /me/export — filename sanitization (refs #940)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/me/export — Content-Disposition filename sanitization', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('sanitizes special characters in github_login to underscores', async () => {
+    // Simulate a DB value that somehow contains characters outside [a-zA-Z0-9-]
+    // (not normally possible via GitHub OAuth, but defense-in-depth covers
+    // future DB writes from other paths).
+    const suspiciousLogin = 'alice\r\nX-Injected: evil';
+
+    mockResolveSession.mockResolvedValue({
+      ...FAKE_USER,
+      github_login: suspiciousLogin,
+    });
+
+    const fakeUserRecord = {
+      id: FAKE_USER.id,
+      github_login: suspiciousLogin,
+      email: FAKE_USER.email,
+      avatar_url: FAKE_USER.avatar_url,
+      created_at: new Date('2025-01-01T00:00:00Z'),
+    };
+
+    mockSelect
+      .mockReturnValueOnce(selectChain([fakeUserRecord]))
+      .mockReturnValueOnce(selectChainNoLimit([]));
+
+    const res = await app.request(
+      makeRequest('/api/me/export', { cookie: 'session=valid-token' }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const disposition = res.headers.get('content-disposition') ?? '';
+    // The filename must not contain \r, \n, or any header-unsafe characters
+    expect(disposition).not.toMatch(/\r/);
+    expect(disposition).not.toMatch(/\n/);
+    // Special chars replaced with underscores — colon, newlines, spaces → _
+    expect(disposition).toMatch(/filename="erythos-export-/);
+    // No raw colon or newline in the value
+    expect(disposition).not.toContain(':');
+  });
+
+  it('keeps normal github_login unchanged in filename', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+
+    const fakeUserRecord = {
+      id: FAKE_USER.id,
+      github_login: FAKE_USER.github_login, // 'alice'
+      email: FAKE_USER.email,
+      avatar_url: FAKE_USER.avatar_url,
+      created_at: new Date('2025-01-01T00:00:00Z'),
+    };
+
+    mockSelect
+      .mockReturnValueOnce(selectChain([fakeUserRecord]))
+      .mockReturnValueOnce(selectChainNoLimit([]));
+
+    const res = await app.request(
+      makeRequest('/api/me/export', { cookie: 'session=valid-token' }),
+    );
+
+    expect(res.status).toBe(200);
+    const disposition = res.headers.get('content-disposition') ?? '';
+    // Normal alphanumeric login should appear unchanged
+    expect(disposition).toMatch(/filename="erythos-export-alice-/);
+    expect(disposition).toMatch(/\.json"/);
+  });
+});

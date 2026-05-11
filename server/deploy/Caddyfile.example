@@ -57,6 +57,14 @@
 		X-Content-Type-Options    "nosniff"
 		X-Frame-Options           "DENY"
 		Referrer-Policy           "strict-origin-when-cross-origin"
+		# CSP: baseline for SPA with no inline scripts. img-src includes GitHub
+		# avatar CDN (used for user profile images). connect-src 'self' covers
+		# all /api/* fetch calls. style-src 'unsafe-inline' required for Vite
+		# runtime CSS injection (can be nonce-ified in a future pass).
+		Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		# Permissions-Policy: disable browser features that the app never uses.
+		# Prevents XSS from weaponising camera/mic/location even if CSP is bypassed.
+		Permissions-Policy        "camera=(), microphone=(), geolocation=(), payment=()"
 		-Server
 	}
 }
