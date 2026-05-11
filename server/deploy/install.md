@@ -452,6 +452,7 @@ journalctl -u caddy -n 50    # 看 renewal 行為
 | `ssh erythos@host` prompt 要密碼 | public key 沒通:authorized_keys 沒建、perm 錯、或 PasswordAuthentication 已關。LISH 內 `ls -la /home/erythos/.ssh` 確認檔案存在 + perm 700/600 |
 | `sudo` prompt 要密碼(且不知道密碼) | user 沒設密碼又沒加 NOPASSWD。LISH 內用 root 跑 `passwd erythos` 設密碼,或 `visudo` 加 NOPASSWD 行 |
 | `bash -s` 收到亂碼 + `\r: command not found` | 在 PowerShell 用 `Get-Content \| ssh` 傳了 CRLF。改用 git-bash:`ssh user@host 'bash -s' < script.sh`,或見下方「LF/CRLF 雷」節 |
+| 本機跑 `rsync` 噴 `rsync: command not found`(Windows git-bash) | git-bash 預設不帶 rsync。臨時改用 `scp -r dist/* host:/path/`(注意 glob 是 `dist/*` 不是 `dist/.`,把內容直接放到目標 dir 不要多一層)。長期方案:裝 cwRsync 或在 WSL 內跑 rsync。scp 沒有 `--delete`,舊 release 目錄要手動清 |
 
 ## 推 script 上 host 的 LF/CRLF 雷
 
