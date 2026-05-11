@@ -36,8 +36,8 @@
 
 本 session 只規劃不實作。全部在 #938 phase F brainstorm:
 
-- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 進行中(server 端完成,client 端待做)
-  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962(HEAD/POST/GET + multipart + SHA-256 verify + S3 stream + quota 50MB/500MB free + DB transaction + 11 test 全綠)。**剩** F-1d client AssetClient + AssetResolver + scheme rewrite + SceneLoader 整合 + Quota UI(GDPR 端 schema FK 已 `ON DELETE SET NULL` 自動處理,server code 無需另寫)。Linode `erythos-assets` bucket 需在 deploy 前 ready
+- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 進行中(剩 upload trigger,download path 已就緒)
+  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962(三 endpoint + multipart + SHA-256 + S3 stream + quota + 11 test)+ ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972(`/auth/me` 加 storageUsed + UserMenu 進度條 80%/95% 警示)。**剩 F-1d-2b** Upload trigger + URL rewrite(SyncEngine pre-push hook,scene 內 `project://` walk + binary upload + 改寫 `assets://`,dragon-level 高風險需 QC)。Linode `erythos-assets` bucket 需在 deploy 前 ready
 - [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成
   ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub + schema + migration 0003(PR #959 merged)。**剩 Phase C** Resend SDK wire + endpoint mount + rate limit + `github_id nullable` migration + **Phase D** client UI(`auth_error` banner reuse E4 pattern)
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅
