@@ -96,10 +96,15 @@ meRoutes.get('/export', async (c) => {
   }));
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `erythos-export-${userRecord.github_login}-${timestamp}.json`;
+  const rawFilename = `erythos-export-${userRecord.github_login}-${timestamp}.json`;
+  // Defense-in-depth: strip any character that could escape the Content-Disposition
+  // header value. GitHub login allows only [a-zA-Z0-9-], but if the DB value
+  // were ever written via a different path, unsanitized input could enable
+  // header injection. Stripping to [a-zA-Z0-9._-] is the safe baseline.
+  const safeName = rawFilename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
   c.header('Content-Type', 'application/json');
-  c.header('Content-Disposition', `attachment; filename="${filename}"`);
+  c.header('Content-Disposition', `attachment; filename="${safeName}"`);
 
   return c.json({
     exported_at: new Date().toISOString(),
