@@ -55,9 +55,22 @@ export function setSessionCookie(c: Context, token: string): void {
   });
 }
 
-/** Clear session cookie */
+/**
+ * Clear session cookie.
+ *
+ * Browsers only overwrite the existing cookie when the clear `Set-Cookie`
+ * mirrors the original attributes exactly (Path/Secure/HttpOnly/SameSite).
+ * Mismatched attributes create a *second* cookie alongside the original,
+ * leaving the stale session valid in the user agent.
+ */
 export function clearSessionCookie(c: Context): void {
-  deleteCookie(c, SESSION_COOKIE, { path: '/' });
+  const isProduction = process.env.NODE_ENV === 'production';
+  deleteCookie(c, SESSION_COOKIE, {
+    path: '/',
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'Lax',
+  });
 }
 
 /** Resolved authenticated user (subset returned by /auth/me) */
