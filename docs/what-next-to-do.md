@@ -36,8 +36,8 @@
 
 本 session 只規劃不實作。全部在 #938 phase F brainstorm:
 
-- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 進行中(剩 upload trigger,download path 已就緒)
-  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962(三 endpoint + multipart + SHA-256 + S3 stream + quota + 11 test)+ ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972(`/auth/me` 加 storageUsed + UserMenu 進度條 80%/95% 警示)。**剩 F-1d-2b** Upload trigger + URL rewrite(SyncEngine pre-push hook,scene 內 `project://` walk + binary upload + 改寫 `assets://`,dragon-level 高風險需 QC)。Linode `erythos-assets` bucket 需在 deploy 前 ready
+- [x] **Asset sync** → Phase F-1,epic #957 ✅ code-complete(deploy 前需 ops)
+  spec `docs/asset-sync-protocol.md` 凍。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962 + ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972 + ✅ F-1d-2b Upload binaries pre-push hook + URL rewrite #973(QC PASS,dragon)。778/778 tests + build pass。**deploy 前需** Linode `erythos-assets` bucket + access key + `S3_ASSETS_BUCKET` env var。Follow-up:#974 fix v1_to_v2 migration / #975 spec drift `SceneEnv.hdri`
 - [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成
   ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub + schema + migration 0003(PR #959 merged)。**剩 Phase C** Resend SDK wire + endpoint mount + rate limit + `github_id nullable` migration + **Phase D** client UI(`auth_error` banner reuse E4 pattern)
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅
@@ -83,12 +83,12 @@
 |---|---:|---:|---:|---:|
 | 🟢 收尾 | 4 | 0 | 1 | 0 |
 | 🟡 中等 | 4 | 0 | 0 | 1 |
-| 🔴 大 | 4 | 2 | 0 | 0 |
+| 🔴 大 | 5 | 1 | 0 | 0 |
 | 🩺 Quality | 4 | 0 | 0 | 1 |
 | 🏗️ 規劃 | 3 | 1 | 0 | 0 |
-| **總計** | **19** | **3** | **1** | **2** |
+| **總計** | **20** | **2** | **1** | **2** |
 
-剩下 3 項未開始全是規模較大或需指揮家 input:**Asset sync (F-1)** / **Magic link (F-5)** / **Multi-device e2e (F-3)** + 規劃題 **產品定位**。
+剩下 2 項未開始:**Magic link Phase C+D(F-5)** code 端 / **Multi-device e2e (F-3)** 需指揮家手測 + 規劃題 **產品定位**。F-1 Asset sync code-complete,等 Linode ops 落地。
 
 ## 本 session 開出 + 收掉的 issue
 
