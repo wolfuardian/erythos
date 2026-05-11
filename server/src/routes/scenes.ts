@@ -17,6 +17,7 @@ import { db } from '../db.js';
 import { scenes, scene_versions } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
 import { bodyLimitMiddleware } from '../middleware/body-limit.js';
+import { counters } from '../counters.js';
 import type { Context, Next } from 'hono';
 
 // ---------------------------------------------------------------------------
@@ -175,6 +176,7 @@ sceneRoutes.put('/:id', bodyLimitMiddleware, authMiddleware, async (c) => {
   });
 
   c.header('ETag', `"${newVersion}"`);
+  counters.scene_push_total += 1;
   return c.json({ version: newVersion });
 });
 
@@ -227,6 +229,7 @@ sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
 
   c.header('Location', `/api/scenes/${id}`);
   c.header('ETag', `"${version}"`);
+  counters.scene_create_total += 1;
   return c.json({ id, version }, 201);
 });
 
@@ -320,5 +323,6 @@ sceneRoutes.post('/:id/fork', bodyLimitMiddleware, authMiddleware, async (c) => 
 
   c.header('Location', `/api/scenes/${newId}`);
   c.header('ETag', `"${version}"`);
+  counters.scene_fork_total += 1;
   return c.json({ id: newId, version, forked_from: source.id }, 201);
 });

@@ -1,14 +1,64 @@
 import 'dotenv/config';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { sql } from 'drizzle-orm';
 import { authRoutes } from './routes/auth.js';
 import { sceneRoutes } from './routes/scenes.js';
 import { meRoutes } from './routes/me.js';
+import { metricsRoutes } from './routes/metrics.js';
+import { loggerMiddleware, logger } from './middleware/logger.js';
+import { db } from './db.js';
 
 const app = new Hono();
 
-app.get('/health', (c) => {
-  return c.json({ status: 'ok' }, 200);
+// ---------------------------------------------------------------------------
+// Global structured logger — applied before all routes
+// ---------------------------------------------------------------------------
+app.use('*', loggerMiddleware);
+
+// ---------------------------------------------------------------------------
+// Global error handler — catches unhandled errors, logs stack, hides from client
+// ---------------------------------------------------------------------------
+app.onError((err, c) => {
+  logger.error({ err, method: c.req.method, path: c.req.path }, 'Unhandled error');
+  return c.json({ error: 'Internal error' }, 500);
+});
+
+// ---------------------------------------------------------------------------
+// Process-level error sinks (v0 — log to stderr; v0.1 add Sentry/GlitchTip)
+// ---------------------------------------------------------------------------
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'unhandledRejection');
+});
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'uncaughtException');
+  // Give pino a moment to flush before exiting
+  setTimeout(() => process.exit(1), 500);
+});
+
+// ---------------------------------------------------------------------------
+// Health endpoint — DB connectivity check, no auth required (uptime monitor)
+// ---------------------------------------------------------------------------
+app.get('/health', async (c) => {
+  const t0 = Date.now();
+  let dbStatus: 'up' | 'down' = 'down';
+
+  try {
+    // Abort if DB takes more than 1 second
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('DB health check timeout')), 1000),
+    );
+    await Promise.race([db.execute(sql`SELECT 1`), timeout]);
+    dbStatus = 'up';
+  } catch (err) {
+    logger.warn({ err }, 'health check: db unreachable');
+  }
+
+  const response_ms = Date.now() - t0;
+  const status = dbStatus === 'up' ? 'ok' : 'degraded';
+
+  // Always 200 — uptime monitors read body to detect degraded state
+  return c.json({ status, db: dbStatus, response_ms }, 200);
 });
 
 // ---------------------------------------------------------------------------
@@ -47,12 +97,13 @@ api.use('*', async (c, next) => {
 api.route('/auth', authRoutes);
 api.route('/scenes', sceneRoutes);
 api.route('/me', meRoutes);
+api.route('/metrics', metricsRoutes);
 app.route('/api', api);
 
 const port = Number(process.env.PORT ?? 3000);
 
 serve({ fetch: app.fetch, port }, () => {
-  console.log(`Server listening on http://localhost:${port}`);
+  logger.info(`Server listening on http://localhost:${port}`);
 });
 
 export default app;
