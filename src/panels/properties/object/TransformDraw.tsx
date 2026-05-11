@@ -1,5 +1,4 @@
 import { createSignal, createEffect, type Component } from 'solid-js';
-import { MathUtils } from 'three';
 import { useEditor } from '../../../app/EditorContext';
 import { SetTransformCommand } from '../../../core/commands/SetTransformCommand';
 import type { Vec3 } from '../../../core/scene/SceneFormat';
@@ -28,7 +27,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     setPos({ x: round(node.position[0]), y: round(node.position[1]), z: round(node.position[2]) });
-    setRot({ x: round(MathUtils.radToDeg(node.rotation[0])), y: round(MathUtils.radToDeg(node.rotation[1])), z: round(MathUtils.radToDeg(node.rotation[2])) });
+    setRot({ x: round(node.rotation[0] * (180 / Math.PI)), y: round(node.rotation[1] * (180 / Math.PI)), z: round(node.rotation[2] * (180 / Math.PI)) });
     setScale({ x: round(node.scale[0]), y: round(node.scale[1]), z: round(node.scale[2]) });
   });
 
@@ -44,7 +43,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     const newVec: Vec3 = [...node.rotation];
-    newVec[axisToIndex[axis]] = MathUtils.degToRad(valueDeg);
+    newVec[axisToIndex[axis]] = valueDeg * (Math.PI / 180);
     editor.execute(new SetTransformCommand(editor, props.uuid, 'rotation', newVec, node.rotation));
   };
 

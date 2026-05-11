@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
 
@@ -11,7 +12,10 @@ function gitHash(): string {
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
-  plugins: [solidPlugin()],
+  plugins: [
+    solidPlugin(),
+    visualizer({ filename: 'stats.html', open: false, gzipSize: true, brotliSize: true }),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitHash()}`),
     __GIT_HASH__: JSON.stringify(gitHash()),
