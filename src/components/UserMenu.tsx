@@ -1,11 +1,14 @@
 import { type Component, Show, createSignal, createEffect, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { User } from '../core/auth/AuthClient';
+import { DeleteAccountDialog } from './DeleteAccountDialog';
 import styles from './UserMenu.module.css';
 
 export interface UserMenuProps {
   user: User;
   onSignOut: () => Promise<void>;
+  onExportData: () => void;
+  onDeleteAccount: () => Promise<void>;
 }
 
 export const UserMenu: Component<UserMenuProps> = (props) => {
@@ -16,6 +19,7 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     visibility: 'hidden' | 'visible';
   }>({ visibility: 'hidden' });
   const [signingOut, setSigningOut] = createSignal(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = createSignal(false);
 
   let chipRef!: HTMLButtonElement;
   let dropdownRef!: HTMLDivElement;
@@ -76,6 +80,16 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     }
   };
 
+  const handleExportData = () => {
+    props.onExportData();
+    setOpen(false);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setOpen(false);
+    setDeleteDialogOpen(true);
+  };
+
   const avatarInitial = () => props.user.githubLogin[0]?.toUpperCase() ?? '?';
 
   return (
@@ -132,8 +146,33 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
               <div class={styles.dropdownEmail}>{props.user.email}</div>
             </div>
 
+            {/* Export my data */}
+            <button
+              data-testid="toolbar-user-menu-export"
+              type="button"
+              class={styles.dropdownItem}
+              onClick={handleExportData}
+            >
+              Export my data
+            </button>
+
+            {/* Delete account */}
+            <button
+              data-testid="toolbar-user-menu-delete"
+              type="button"
+              class={styles.dropdownItem}
+              classList={{ [styles.dropdownItemDanger]: true }}
+              onClick={handleOpenDeleteDialog}
+            >
+              Delete account
+            </button>
+
+            {/* Separator before Sign out */}
+            <div class={styles.dropdownSeparator} />
+
             {/* Sign out */}
             <button
+              data-testid="toolbar-user-menu-sign-out"
               type="button"
               class={styles.dropdownItem}
               classList={{ [styles.dropdownItemDanger]: true, [styles.dropdownItemDisabled]: signingOut() }}
@@ -145,6 +184,13 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
           </div>
         </Portal>
       </Show>
+
+      <DeleteAccountDialog
+        open={deleteDialogOpen()}
+        user={props.user}
+        onConfirm={props.onDeleteAccount}
+        onClose={() => setDeleteDialogOpen(false)}
+      />
     </>
   );
 };

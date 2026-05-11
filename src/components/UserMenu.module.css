@@ -122,3 +122,9 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+.dropdownSeparator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}

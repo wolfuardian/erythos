@@ -95,6 +95,10 @@ export interface EditorBridge {
   signOut: () => Promise<void>;
   /** Returns the URL that starts the OAuth flow for the given provider. */
   getOAuthStartUrl: (provider: 'github') => string;
+  /** Returns the URL for downloading the current user's data export. */
+  getExportUrl: () => string;
+  /** Permanently deletes the current user's account (GDPR). */
+  deleteAccount: () => Promise<void>;
   dispose: () => void;
 }
 
@@ -112,6 +116,10 @@ export interface EditorBridgeDeps {
   authSignOut?: () => Promise<void>;
   /** Auth: getOAuthStartUrl method (from AuthClient instance) */
   authGetOAuthStartUrl?: (provider: 'github') => string;
+  /** Auth: getExportUrl method (from AuthClient instance) */
+  authGetExportUrl?: () => string;
+  /** Auth: deleteAccount method (from AuthClient instance) */
+  authDeleteAccount?: () => Promise<void>;
 }
 
 export function createEditorBridge(
@@ -301,6 +309,8 @@ export function createEditorBridge(
       _setCurrentUser(null);
     },
     getOAuthStartUrl: deps?.authGetOAuthStartUrl ?? ((_provider: 'github') => ''),
+    getExportUrl: deps?.authGetExportUrl ?? (() => ''),
+    deleteAccount: deps?.authDeleteAccount ?? (() => Promise.resolve()),
     dispose,
   };
 }

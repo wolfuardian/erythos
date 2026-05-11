@@ -123,4 +123,44 @@ export class AuthClient {
   getOAuthStartUrl(provider: 'github'): string {
     return `${this.baseUrl}/auth/${provider}/start`;
   }
+
+  /**
+   * Returns the URL for downloading the current user's data export.
+   * The browser navigates directly to this URL; the server sets
+   * Content-Disposition: attachment so the browser triggers a download.
+   *
+   * GET /api/me/export
+   */
+  getExportUrl(): string {
+    return `${this.baseUrl}/me/export`;
+  }
+
+  /**
+   * Permanently deletes the current user's account, all scenes, and revision
+   * history. The server clears the session cookie on success.
+   *
+   * DELETE /api/me
+   *   204 → resolves
+   *   non-204 → throws AuthError
+   *
+   * Spec refs: docs/sync-protocol.md § GDPR, #932
+   */
+  async deleteAccount(): Promise<void> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/me`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch (err) {
+      throw new AuthError(`Network error: ${(err as Error).message}`);
+    }
+
+    if (response.status !== 204) {
+      throw new AuthError(
+        `Unexpected response from DELETE /api/me: ${response.status}`,
+        response.status,
+      );
+    }
+  }
 }
