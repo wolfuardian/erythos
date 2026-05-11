@@ -9,6 +9,9 @@ import {
 } from './SyncEngine';
 import { AuthError } from '../auth/AuthClient';
 import { defaultBaseUrl } from './baseUrl';
+import type { AssetSyncClient } from './asset/AssetSyncClient';
+import type { ProjectManagerLike } from './asset/uploadSceneBinaries';
+import { uploadSceneBinaries } from './asset/uploadSceneBinaries';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -115,7 +118,21 @@ async function doFetch(
 export class HttpSyncEngine implements SyncEngine {
   private readonly baseUrl: string;
 
-  constructor(baseUrl: string = defaultBaseUrl()) {
+  /**
+   * @param baseUrl        Base URL for the sync API.  Defaults to `defaultBaseUrl()`.
+   * @param projectManager Optional local ProjectManager.  When provided together with
+   *                       `assetClient`, all `project://` URLs in a pushed/created scene
+   *                       are uploaded to the cloud and rewritten to `assets://` before
+   *                       the scene body is sent to the server.
+   *                       Pass `undefined` for anonymous / test mode (no uploads).
+   * @param assetClient    Optional AssetSyncClient.  Must be paired with `projectManager`
+   *                       to activate the pre-push binary upload hook.
+   */
+  constructor(
+    baseUrl: string = defaultBaseUrl(),
+    private readonly projectManager?: ProjectManagerLike,
+    private readonly assetClient?: AssetSyncClient,
+  ) {
     // Strip trailing slash for safe concatenation
     this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
@@ -159,6 +176,13 @@ export class HttpSyncEngine implements SyncEngine {
     body: SceneDocument,
     baseVersion: number,
   ): Promise<{ version: number }> {
+    // Pre-push binary upload: walk scene for project:// URLs, upload to cloud,
+    // rewrite to assets://, and get back a new SceneDocument for the server payload.
+    // Skip if either projectManager or assetClient is absent (anonymous / test mode).
+    if (this.projectManager && this.assetClient) {
+      body = await uploadSceneBinaries(body, this.projectManager, this.assetClient);
+    }
+
     const url = `${this.baseUrl}/scenes/${encodeURIComponent(id)}`;
 
     // If-Match must use RFC 7232 quoted form: "5"
@@ -184,6 +208,12 @@ export class HttpSyncEngine implements SyncEngine {
     name: string,
     body: SceneDocument,
   ): Promise<{ id: SceneId; version: number }> {
+    // Pre-create binary upload: same hook as push() — upload project:// assets first.
+    // Skip if either projectManager or assetClient is absent (anonymous / test mode).
+    if (this.projectManager && this.assetClient) {
+      body = await uploadSceneBinaries(body, this.projectManager, this.assetClient);
+    }
+
     const url = `${this.baseUrl}/scenes`;
 
     const res = await doFetch(
