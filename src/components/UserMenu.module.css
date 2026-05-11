@@ -128,3 +128,56 @@
   background: var(--border-subtle);
   margin: 4px 0;
 }
+
+/* ── Storage quota ───────────────────────────────────────────────────────── */
+
+.quotaSection {
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+
+.quotaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.quotaLabel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quotaValue {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.quotaBar {
+  height: 3px;
+  background: var(--bg-hover);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.quotaFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.quotaFillNormal {
+  background: var(--accent-blue, #4a9eff);
+}
+
+.quotaFillWarning {
+  background: var(--text-warning, #d4a017);
+}
+
+.quotaFillDanger {
+  background: var(--text-error, #e07070);
+}

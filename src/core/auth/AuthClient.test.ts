@@ -34,6 +34,7 @@ describe('AuthClient.getCurrentUser', () => {
       github_login: 'octocat',
       email: 'octocat@github.com',
       avatar_url: 'https://avatars.githubusercontent.com/u/1',
+      storageUsed: 1024,
     };
     mockFetch(200, serverPayload);
 
@@ -45,6 +46,7 @@ describe('AuthClient.getCurrentUser', () => {
       githubLogin: 'octocat',
       email: 'octocat@github.com',
       avatarUrl: 'https://avatars.githubusercontent.com/u/1',
+      storageUsed: 1024,
     };
     expect(user).toEqual(expected);
   });
@@ -55,6 +57,7 @@ describe('AuthClient.getCurrentUser', () => {
       github_login: 'ghost',
       email: 'ghost@example.com',
       avatar_url: null,
+      storageUsed: 0,
     });
 
     const client = new AuthClient(BASE_URL);

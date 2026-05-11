@@ -105,7 +105,7 @@ describe('GET /auth/me', () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body).toMatchObject({
       id: 'user-uuid-1',
       github_login: 'alice',
@@ -115,6 +115,9 @@ describe('GET /auth/me', () => {
     expect(body).not.toHaveProperty('github_id');
     expect(body).not.toHaveProperty('handle');
     expect(body).not.toHaveProperty('storage_used');
+    // storage quota field — exposed as camelCase (refs #957)
+    expect(body['storageUsed']).toBeTypeOf('number');
+    expect(body['storageUsed']).toBeGreaterThanOrEqual(0);
   });
 
   it('returns 401 when no session cookie is present', async () => {
