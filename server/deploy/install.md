@@ -231,7 +231,7 @@ GitHub → Settings → Developer settings → OAuth Apps → **New OAuth App**:
 
 - **Application name**: `Erythos sync server`
 - **Homepage URL**: `https://erythos.eoswolf.com`
-- **Authorization callback URL**: `https://erythos.eoswolf.com/auth/github/callback`
+- **Authorization callback URL**: `https://erythos.eoswolf.com/api/auth/github/callback`
 - **Enable Device Flow**: 不勾(我們用 web auth code 流程)
 
 建好後拿到 `Client ID` 與 `Client secret`,回到 VPS 填進 `/opt/erythos/server/.env`:
@@ -291,9 +291,111 @@ curl https://erythos.eoswolf.com/health  # {"status":"ok"}
 curl https://erythos.eoswolf.com/health
 ```
 
-OAuth flow:**瀏覽器**開 `https://erythos.eoswolf.com/auth/github/start`,應跳到 GitHub 授權頁。授權後跳回 `/`(會 404 — 預期,前端尚未 deploy),但 cookie 已 set。再開 `https://erythos.eoswolf.com/auth/me`,應回 200 + user 資料。
+OAuth flow(完整 e2e 需先跑 Phase 12 部 client SPA;Phase 11 階段只驗 server endpoint):
+
+```bash
+# server-only smoke:
+curl -I --ssl-no-revoke https://erythos.eoswolf.com/api/auth/github/start   # 應回 302 → github.com/login/oauth/authorize
+curl -i --ssl-no-revoke https://erythos.eoswolf.com/api/auth/me              # 無 cookie → 401(預期)
+```
+
+**瀏覽器**開 `https://erythos.eoswolf.com/api/auth/github/start`,應跳 GitHub 授權頁。若還沒部 client(Phase 12 未跑),授權後 server 302 回 `/` 會看到 Caddy 預設 404 — 這是預期的,需要 Phase 12 把 client SPA 接上才看得到 UI。cookie 仍會 set,可直接 curl `/api/auth/me` 驗到 200 + user 資料。
+
+## Phase 12 — Deploy client SPA
+
+Server 跑通後(Phase 11 smoke pass)部 client。Caddyfile.example 已含 `handle /api/*` → reverse_proxy + `handle` SPA fallback,Caddy 把 root + non-API path serve `dist/index.html`,client router 接手 `/scenes/:id` 等 SPA route。
+
+### 步驟 12-a:第一次部署準備(只跑一次)
+
+```bash
+ssh erythos@139.162.101.231
+sudo mkdir -p /opt/erythos/client/releases
+sudo chown -R erythos:erythos /opt/erythos/client
+exit
+```
+
+### 步驟 12-b:本機 build
+
+```bash
+# 本地專案根(不在 VPS 上)
+cd /path/to/erythos
+npm install
+npm run build
+ls dist/        # 應有 index.html + assets/ 等
+```
+
+> 若 client 連的 server domain 不是 `erythos.eoswolf.com`,build 前設 env(注意 **必須含 `/api`**):
+>
+> ```bash
+> VITE_SYNC_BASE_URL=https://your-host/api npm run build
+> ```
+
+### 步驟 12-c:rsync 上 VPS + atomic symlink flip
+
+```bash
+# 本機 — timestamp 標 release
+RELEASE=$(date +%Y%m%d-%H%M%S)
+
+ssh erythos@139.162.101.231 "mkdir -p /opt/erythos/client/releases/$RELEASE"
+rsync -avz --delete dist/ erythos@139.162.101.231:/opt/erythos/client/releases/$RELEASE/
+
+# 原子切換 symlink — 瀏覽器拿到的是完整舊版或完整新版,絕不半新半舊
+ssh erythos@139.162.101.231 "ln -snf releases/$RELEASE /opt/erythos/client/current"
+```
+
+> **為什麼 atomic swap**:rsync 上傳途中 Caddy 仍在 serve 舊版檔案。`ln -snf` 是原子 syscall,Caddy 下個 request 就指向新版,中間沒有「半新半舊」視窗。
+>
+> **保留舊 release 多久**:預設留 5 個 release,手動清:
+>
+> ```bash
+> ssh erythos@139.162.101.231 'cd /opt/erythos/client/releases && ls -t | tail -n +6 | xargs -r rm -rf'
+> ```
+
+### 步驟 12-d:Caddy reload(只在 Caddyfile 改過才需要)
+
+```bash
+ssh erythos@139.162.101.231 "sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy"
+```
+
+第一次部 client 時,Caddyfile 還沒含 SPA fallback block,須先把 `server/deploy/Caddyfile.example` 內新版 site block 貼進 `/etc/caddy/Caddyfile` 後 reload。
+
+### 步驟 12-e:GitHub OAuth callback URL 對齊 `/api` prefix
+
+E7-1 後 server endpoint 全在 `/api/` 下,GitHub OAuth App callback URL 必須改:
+
+GitHub → Settings → Developer settings → OAuth Apps → Erythos sync server → **Authorization callback URL** 改成:
+
+```
+https://erythos.eoswolf.com/api/auth/github/callback
+```
+
+存檔。下一次 sign in 會用新 callback URL。
+
+### 步驟 12-f:完整 e2e smoke
+
+瀏覽器開 `https://erythos.eoswolf.com/`(根),應看到 Erythos UI(Welcome panel)。Toolbar 右側點 `Sign in` → GitHub 授權頁 → 跳回 `/` → Toolbar 出現 user avatar chip + dropdown。
+
+兩瀏覽器(隔離 / 私密模式)各別 sign in 同帳號:在 A 建 scene → reload → B 開同 scene URL → 看到內容。
 
 ## 維運速查
+
+### 更新 client(部新 release)
+
+```bash
+# 本機
+cd /path/to/erythos
+git pull
+npm install
+npm run build
+
+# 上傳 + symlink flip(同 Phase 12-c)
+RELEASE=$(date +%Y%m%d-%H%M%S)
+ssh erythos@139.162.101.231 "mkdir -p /opt/erythos/client/releases/$RELEASE"
+rsync -avz --delete dist/ erythos@139.162.101.231:/opt/erythos/client/releases/$RELEASE/
+ssh erythos@139.162.101.231 "ln -snf releases/$RELEASE /opt/erythos/client/current"
+```
+
+不必 reload Caddy(它讀 symlink path,內容換了就換)。
 
 ### 更新 server code
 
@@ -462,7 +564,7 @@ nano /etc/ssh/sshd_config
 systemctl reload ssh
 ```
 
-## 下一步(Phase D D6 / Phase E)
+## 下一步(Phase E 收尾)
 
-- client `HttpSyncEngine` 的 `baseUrl` 設 `https://erythos.eoswolf.com`
-- 跑端到端 smoke:client signin → create scene → reload → 看到 scene
+- client `defaultBaseUrl()` 在 prod build 自動指 `https://erythos.eoswolf.com/api`(E7-2 已寫死,無需手動設 env)
+- 跑完 Phase 12 client deploy 後,**Phase 12-f** 完整 e2e smoke 才算 Phase E 收尾

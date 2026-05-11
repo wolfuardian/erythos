@@ -62,13 +62,43 @@
 }
 
 erythos.eoswolf.com {
-	reverse_proxy 127.0.0.1:3000
+	# ── API namespace — Phase E E7 path split ───────────────────────────────
+	# Hono mounts all routes under `/api`; Caddy reverse-proxies them.
+	# The /api prefix isolates the API namespace from the client SPA route
+	# `/scenes/:id`, so Caddy can route them apart at the edge.
+	handle /api/* {
+		# Body upper bound — aligns with spec § 194 / issue #897.
+		# Hono server-side enforce remains the authoritative limit;
+		# this is a coarse outer fence so abusive bodies never reach Node.
+		request_body {
+			max_size 1MB
+		}
 
-	# Body upper bound — aligns with spec § 194 / issue #897.
-	# Hono server-side enforce remains the authoritative limit;
-	# this is a coarse outer fence so abusive bodies never reach Node.
-	request_body {
-		max_size 1MB
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Health endpoint kept at root (container/LB probe convention,
+	# Hono also mounts /health outside the /api group).
+	handle /health {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# ── Client SPA — file_server with index.html fallback ───────────────────
+	# Static client build deployed via atomic symlink at /opt/erythos/client/current
+	# (see install.md Phase 12). All non-API non-asset paths fall back to
+	# index.html so client-side router can pick up `/scenes/:id` and friends.
+	handle {
+		root * /opt/erythos/client/current
+		try_files {path} /index.html
+		file_server
+
+		# Hashed asset bundles — long-lived immutable cache.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# index.html — no-store so users get the latest deploy on next load.
+		@html path / /index.html
+		header @html Cache-Control "no-store"
 	}
 
 	import common_security_headers
