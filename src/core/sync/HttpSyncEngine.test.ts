@@ -3,6 +3,9 @@ import { SceneDocument } from '../scene/SceneDocument';
 import { ConflictError, NotFoundError, PreconditionRequiredError } from './SyncEngine';
 import { HttpSyncEngine } from './HttpSyncEngine';
 import { AuthError } from '../auth/AuthClient';
+import { MockAssetServer } from './asset/MockAssetServer';
+import type { ProjectManagerLike } from './asset/uploadSceneBinaries';
+import { asAssetPath } from '../../utils/branded';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -395,5 +398,132 @@ describe('Serialization round-trip', () => {
     expect(roundTripped.env.rotation).toBe(0.5);
     expect(result.visibility).toBe('private');
     expect(result.forkedFrom).toBeNull();
+  });
+});
+
+// ── Binary upload integration (F-1d-2b, refs #957) ────────────────────────────
+
+/**
+ * Build an in-memory ProjectManagerLike for tests.
+ * Files keyed by project-relative path (e.g. "models/cube.glb").
+ */
+function makeMockPm(files: Record<string, Uint8Array>): ProjectManagerLike {
+  return {
+    readFile: vi.fn(async (path: ReturnType<typeof asAssetPath>) => {
+      const key = path as string;
+      const data = files[key];
+      if (!data) throw new Error(`MockPM: file not found: ${path}`);
+      const name = key.split('/').pop() ?? key;
+      return new File([data], name);
+    }),
+  };
+}
+
+describe('HttpSyncEngine.push() — binary upload hook (F-1d-2b)', () => {
+  it('rewrites project:// to assets:// in server push body when projectManager + assetClient are injected', async () => {
+    const fileData = new Uint8Array([1, 2, 3]);
+    const pm = makeMockPm({ 'models/cube.glb': fileData });
+    const assetClient = new MockAssetServer();
+
+    const engine = new HttpSyncEngine(BASE, pm, assetClient);
+
+    // Build a scene with a mesh node using project://
+    const doc = new SceneDocument();
+    const node = doc.createNode('Cube');
+    (node as any).nodeType = 'mesh';
+    (node as any).asset = 'project://models/cube.glb';
+    doc.addNode(node);
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(200, { version: 6 }));
+
+    await engine.push('scene-1', doc, 5);
+
+    // Capture the serialized body sent to the server
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(init.body as string) as {
+      version: number;
+      nodes: Array<{ asset?: string }>;
+    };
+
+    // The asset URL sent to the server must be assets://, not project://
+    expect(sentBody.nodes[0].asset).toMatch(/^assets:\/\//);
+    expect(sentBody.nodes[0].asset).not.toContain('project://');
+
+    // Original doc is NOT mutated
+    const originalNodes = doc.getAllNodes();
+    expect(originalNodes[0].asset).toBe('project://models/cube.glb');
+  });
+
+  it('anonymous mode (no client): sends original project:// URL unchanged', async () => {
+    // Engine created without projectManager / assetClient
+    const engine = new HttpSyncEngine(BASE);
+
+    const doc = new SceneDocument();
+    const node = doc.createNode('Cube');
+    (node as any).nodeType = 'mesh';
+    (node as any).asset = 'project://models/cube.glb';
+    doc.addNode(node);
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(200, { version: 2 }));
+
+    await engine.push('scene-anon', doc, 1);
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(init.body as string) as {
+      nodes: Array<{ asset?: string }>;
+    };
+
+    // project:// passed through unchanged (no upload hook)
+    expect(sentBody.nodes[0].asset).toBe('project://models/cube.glb');
+  });
+});
+
+describe('HttpSyncEngine.create() — binary upload hook (F-1d-2b)', () => {
+  it('rewrites project:// to assets:// in server create body when assetClient injected', async () => {
+    const fileData = new Uint8Array([7, 8, 9]);
+    const pm = makeMockPm({ 'models/box.glb': fileData });
+    const assetClient = new MockAssetServer();
+
+    const engine = new HttpSyncEngine(BASE, pm, assetClient);
+
+    const doc = new SceneDocument();
+    const node = doc.createNode('Box');
+    (node as any).nodeType = 'mesh';
+    (node as any).asset = 'project://models/box.glb';
+    doc.addNode(node);
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(201, { id: 'new-scene', version: 0 }));
+
+    await engine.create('My Scene', doc);
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(init.body as string) as {
+      name: string;
+      body: { nodes: Array<{ asset?: string }> };
+    };
+
+    expect(sentBody.body.nodes[0].asset).toMatch(/^assets:\/\//);
+    expect(sentBody.body.nodes[0].asset).not.toContain('project://');
+  });
+
+  it('anonymous mode (no client): sends original project:// URL unchanged in create', async () => {
+    const engine = new HttpSyncEngine(BASE);
+
+    const doc = new SceneDocument();
+    const node = doc.createNode('Box');
+    (node as any).nodeType = 'mesh';
+    (node as any).asset = 'project://models/box.glb';
+    doc.addNode(node);
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(201, { id: 'new-scene', version: 0 }));
+
+    await engine.create('My Scene', doc);
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const sentBody = JSON.parse(init.body as string) as {
+      body: { nodes: Array<{ asset?: string }> };
+    };
+
+    expect(sentBody.body.nodes[0].asset).toBe('project://models/box.glb');
   });
 });

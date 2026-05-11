@@ -36,7 +36,11 @@ const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
   const projectManager = new ProjectManager();
   // Singleton SyncEngine — HTTP-backed; routes to server API.
-  const syncEngine = new HttpSyncEngine();
+  // Inject projectManager + HttpAssetClient so push/create upload project:// binaries
+  // to S3 and rewrite URLs to assets:// before sending the scene to the server (F-1d-2b).
+  // Note: HttpAssetClient instance is separate from the one injected into Editor/AssetResolver
+  // (stateless client, fine to have two; follow-up: consider shared instance).
+  const syncEngine = new HttpSyncEngine(undefined, projectManager, new HttpAssetClient());
   // Singleton AuthClient — session via HttpOnly cookie; no token storage in JS.
   const authClient = new AuthClient();
 
