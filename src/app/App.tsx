@@ -28,6 +28,7 @@ import {
 } from './projectSession';
 import { currentRoute } from './router';
 import { ViewerShell } from './ViewerBanner';
+import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import styles from './App.module.css';
 
 const App: Component = () => {
@@ -50,6 +51,9 @@ const App: Component = () => {
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
   const [viewerSceneName, setViewerSceneName] = createSignal<string>('Untitled Scene');
+
+  // auth_error banner: set from URL query on mount, dismissed by user
+  const [authError, setAuthError] = createSignal<AuthErrorCode | null>(null);
 
   // 地雷 2：保存 listener ref 以便 closeProject 時 off
   let onSceneReplaced: (() => void) | null = null;
@@ -290,6 +294,14 @@ const App: Component = () => {
 
   // Auto-restore last opened project on page reload, or enter viewer mode if URL is /scenes/{uuid}
   onMount(() => {
+    // Detect auth_error from OAuth callback redirect and clean URL immediately
+    const rawAuthError = new URLSearchParams(window.location.search).get('auth_error');
+    const parsedAuthError = parseAuthErrorCode(rawAuthError);
+    if (parsedAuthError !== null) {
+      setAuthError(parsedAuthError);
+      history.replaceState({}, '', '/');
+    }
+
     // Resolve auth state on mount (fire-and-forget, parallel to route logic)
     void (async () => {
       try {
@@ -363,51 +375,54 @@ const App: Component = () => {
   const isViewerMode = () => viewerSceneId() !== null;
 
   return (
-    <Show
-      when={!isViewerMode()}
-      fallback={
-        <ViewerShell
-          sceneId={viewerSceneId()!}
-          sceneName={viewerSceneName()}
-          syncEngine={syncEngine}
-        />
-      }
-    >
-      <Show when={projectOpen() && editor() && bridge()} fallback={
-        <Welcome projectManager={projectManager} onOpenProject={openProject} />
-      }>
-        <EditorProvider bridge={bridge()!} editors={editors}>
-          <div class={styles.root}>
-            <Toolbar />
-            <div class={styles.contentArea}>
-              <AreaTreeRenderer />
+    <>
+      <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
+      <Show
+        when={!isViewerMode()}
+        fallback={
+          <ViewerShell
+            sceneId={viewerSceneId()!}
+            sceneName={viewerSceneName()}
+            syncEngine={syncEngine}
+          />
+        }
+      >
+        <Show when={projectOpen() && editor() && bridge()} fallback={
+          <Welcome projectManager={projectManager} onOpenProject={openProject} />
+        }>
+          <EditorProvider bridge={bridge()!} editors={editors}>
+            <div class={styles.root}>
+              <Toolbar />
+              <div class={styles.contentArea}>
+                <AreaTreeRenderer />
+              </div>
+              <StatusBar bridge={bridge()!} />
             </div>
-            <StatusBar bridge={bridge()!} />
-          </div>
-          <SyncConflictDialog
-            conflict={bridge()!.syncConflict()}
-            onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
-            onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
-          />
-          <CopyAsJsonModal
-            open={copyAsJsonOpen()}
-            json={copyAsJsonContent()}
-            onClose={() => setCopyAsJsonOpen(false)}
-          />
-          <PasteFromJsonModal
-            open={pasteFromJsonOpen()}
-            onImport={handlePasteImport}
-            onClose={() => setPasteFromJsonOpen(false)}
-          />
-          <ErrorDialog
-            open={pasteErrorOpen()}
-            title={pasteErrorTitle()}
-            message={pasteErrorMessage()}
-            onClose={() => setPasteErrorOpen(false)}
-          />
-        </EditorProvider>
+            <SyncConflictDialog
+              conflict={bridge()!.syncConflict()}
+              onKeepLocal={() => void bridge()!.resolveSyncConflict('keep-local')}
+              onUseCloud={() => void bridge()!.resolveSyncConflict('use-cloud')}
+            />
+            <CopyAsJsonModal
+              open={copyAsJsonOpen()}
+              json={copyAsJsonContent()}
+              onClose={() => setCopyAsJsonOpen(false)}
+            />
+            <PasteFromJsonModal
+              open={pasteFromJsonOpen()}
+              onImport={handlePasteImport}
+              onClose={() => setPasteFromJsonOpen(false)}
+            />
+            <ErrorDialog
+              open={pasteErrorOpen()}
+              title={pasteErrorTitle()}
+              message={pasteErrorMessage()}
+              onClose={() => setPasteErrorOpen(false)}
+            />
+          </EditorProvider>
+        </Show>
       </Show>
-    </Show>
+    </>
   );
 };
 
