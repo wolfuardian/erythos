@@ -7,7 +7,8 @@
  *   prefabs://  → ProjectManager file at prefabs/<name>.prefab → blob URL
  *   blob://     → IndexedDB / direct blob URL pass-through
  *   assets://   → Cloud content-addressed asset (Phase B PR2, refs #843).
- *                 throws sentinel until AssetSyncClient is implemented.
+ *                 Downloads via AssetSyncClient; blob URLs are cached by hash
+ *                 with LRU eviction (cap = 100) and URL.revokeObjectURL on eviction.
  *   materials://→ reserved (佔位); throws clearly if called (not yet implemented)
  *
  * See docs/erythos-format.md § URI Scheme
@@ -17,6 +18,9 @@ import type { ProjectManager } from '../project/ProjectManager';
 import { asAssetPath, asBlobURL } from '../../utils/branded';
 import type { BlobURL, AssetPath } from '../../utils/branded';
 import type { AssetSyncClient } from '../sync/asset/AssetSyncClient';
+
+// Default LRU cap for the assets:// blob URL cache
+const DEFAULT_BLOB_CACHE_CAP = 100;
 
 export type AssetScheme = 'project' | 'assets' | 'prefabs' | 'blob' | 'materials';
 
@@ -45,10 +49,22 @@ export function parseAssetUrl(url: string): { scheme: AssetScheme; rest: string 
 }
 
 export class AssetResolver {
+  /**
+   * In-memory LRU cache for assets:// → blob URL mappings.
+   * Keyed by sha256 hash (not full URL — same content + different filename hits cache).
+   * Uses Map insertion order for LRU: oldest entry = first key.
+   */
+  private readonly blobCache: Map<string, BlobURL>;
+  private readonly blobCacheCap: number;
+
   constructor(
     private readonly projectManager: ProjectManager,
     private readonly assetClient?: AssetSyncClient,
-  ) {}
+    blobCacheCap: number = DEFAULT_BLOB_CACHE_CAP,
+  ) {
+    this.blobCache = new Map();
+    this.blobCacheCap = blobCacheCap;
+  }
 
   /**
    * Resolve an AssetUrl to a blob URL for loading.
@@ -99,8 +115,34 @@ export class AssetResolver {
         // rest = "<hash>/<filename>" — split on first "/" to extract hash
         const slashIdx = parsed.rest.indexOf('/');
         const hash = slashIdx >= 0 ? parsed.rest.slice(0, slashIdx) : parsed.rest;
+
+        // Cache hit — re-use existing blob URL (avoid duplicate download + URL leak)
+        const cached = this.blobCache.get(hash);
+        if (cached !== undefined) {
+          // LRU refresh: delete + re-insert to move to most-recent position
+          this.blobCache.delete(hash);
+          this.blobCache.set(hash, cached);
+          return cached;
+        }
+
+        // Cache miss — download and create a new blob URL
         const blob = await this.assetClient.download(hash);
-        return asBlobURL(URL.createObjectURL(blob));
+        const blobUrl = asBlobURL(URL.createObjectURL(blob));
+
+        // LRU eviction: if over cap, revoke and remove the oldest entry (first key)
+        if (this.blobCache.size >= this.blobCacheCap) {
+          const oldestHash = this.blobCache.keys().next().value;
+          if (oldestHash !== undefined) {
+            const oldUrl = this.blobCache.get(oldestHash);
+            if (oldUrl !== undefined) {
+              URL.revokeObjectURL(oldUrl);
+            }
+            this.blobCache.delete(oldestHash);
+          }
+        }
+
+        this.blobCache.set(hash, blobUrl);
+        return blobUrl;
       }
 
       case 'materials': {
@@ -112,6 +154,36 @@ export class AssetResolver {
         );
       }
     }
+  }
+
+  /**
+   * Release a single cached blob URL by its `assets://` URL.
+   * Calls URL.revokeObjectURL and removes the entry from cache.
+   * No-op if the URL is not in cache or is not an assets:// URL.
+   */
+  release(assetsUrl: string): void {
+    const parsed = parseAssetUrl(assetsUrl);
+    if (!parsed || parsed.scheme !== 'assets') return;
+
+    const slashIdx = parsed.rest.indexOf('/');
+    const hash = slashIdx >= 0 ? parsed.rest.slice(0, slashIdx) : parsed.rest;
+
+    const blobUrl = this.blobCache.get(hash);
+    if (blobUrl !== undefined) {
+      URL.revokeObjectURL(blobUrl);
+      this.blobCache.delete(hash);
+    }
+  }
+
+  /**
+   * Revoke all cached blob URLs and clear the cache.
+   * Call on app teardown or user logout to avoid memory / object-URL leaks.
+   */
+  dispose(): void {
+    for (const blobUrl of this.blobCache.values()) {
+      URL.revokeObjectURL(blobUrl);
+    }
+    this.blobCache.clear();
   }
 
   /**
