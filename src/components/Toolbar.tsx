@@ -152,7 +152,12 @@ export const Toolbar: Component = () => {
         >
           {(user) => (
             /* User → avatar chip + dropdown */
-            <UserMenu user={user()} onSignOut={bridge.signOut} />
+            <UserMenu
+              user={user()}
+              onSignOut={bridge.signOut}
+              onExportData={() => { window.location.href = bridge.getExportUrl(); }}
+              onDeleteAccount={bridge.deleteAccount}
+            />
           )}
         </Show>
       </Show>

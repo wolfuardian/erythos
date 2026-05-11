@@ -1,0 +1,108 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  max-width: 440px;
+  width: 90%;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-well-outer);
+}
+
+.title {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-size-lg);
+}
+
+.warning {
+  margin: 0 0 var(--space-md) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.confirmLabel {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.confirmLogin {
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+.confirmInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: monospace;
+  margin-bottom: var(--space-md);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.confirmInput:focus {
+  border-color: var(--border-strong);
+}
+
+.error {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-danger, #e07070);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.button {
+  padding: 4px 16px;
+  height: 28px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+}
+
+.cancelButton {
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.cancelButton:hover {
+  background: var(--bg-hover);
+}
+
+.deleteButton {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: var(--accent-red-hover);
+}
+
+.deleteButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
