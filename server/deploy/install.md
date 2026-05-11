@@ -569,3 +569,84 @@ systemctl reload ssh
 
 - client `defaultBaseUrl()` 在 prod build 自動指 `https://erythos.eoswolf.com/api`(E7-2 已寫死,無需手動設 env)
 - 跑完 Phase 12 client deploy 後,**Phase 12-f** 完整 e2e smoke 才算 Phase E 收尾
+
+## Phase 13 — Daily DB backup to Linode Object Storage
+
+### Ops checklist(在 Linode dashboard 完成,不在 VPS 上)
+
+- [ ] 登入 Linode Cloud Manager → **Object Storage** → **Create Bucket**
+  - Region: 選與 VPS 同 region(e.g. AP South = `ap-south-1`)
+  - Bucket label: `erythos-backups`
+- [ ] **Access Keys** → **Create Access Key**
+  - Label: `erythos-backup`
+  - **Limited Access**: 選 `erythos-backups` bucket → 開 `Read/Write`(不必給其他 bucket 存取)
+  - 存下 `Access Key` 與 `Secret Key`(頁面關掉後 secret 就看不到)
+
+### 步驟 13-a:安裝 aws CLI(若尚未裝)
+
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip /tmp/awscliv2.zip -d /tmp/
+sudo /tmp/aws/install
+aws --version   # 應印 aws-cli/2.x.x
+```
+
+### 步驟 13-b:填 backup 相關 env var 至 .env
+
+```bash
+sudo -u erythos nano /opt/erythos/server/.env
+```
+
+新增以下三行(值填入 Linode dashboard 取得的資訊):
+
+```
+S3_ENDPOINT=https://ap-south-1.linodeobjects.com
+S3_BUCKET=erythos-backups
+AWS_ACCESS_KEY_ID=<Linode access key>
+AWS_SECRET_ACCESS_KEY=<Linode secret key>
+```
+
+> `S3_ENDPOINT` 的 region 需與建 bucket 時選的 region 一致。Linode endpoint 格式:`https://<region>.linodeobjects.com`。
+
+### 步驟 13-c:設腳本執行權限 + 手動測試
+
+```bash
+chmod +x /opt/erythos/server/deploy/backup.sh
+
+# 手動跑一次驗通(需 DATABASE_URL 等 env var 已在 .env 裡)
+bash /opt/erythos/server/deploy/backup.sh
+```
+
+若成功,終端機應看到 `[backup] Done at ...`;並在 Linode bucket 看到 `erythos-backup-<timestamp>.sql.gz`。
+
+### 步驟 13-d:設 crontab
+
+```bash
+crontab -e
+```
+
+在 crontab 末尾加一行(每日凌晨 3 點跑,prod load 低):
+
+```
+0 3 * * * /opt/erythos/server/deploy/backup.sh >> /var/log/erythos-backup.log 2>&1
+```
+
+儲存離開。驗證 crontab 已設:
+
+```bash
+crontab -l
+```
+
+### 步驟 13-e:確認 log 位置可寫入
+
+```bash
+sudo touch /var/log/erythos-backup.log
+sudo chown erythos:erythos /var/log/erythos-backup.log
+```
+
+### 維運提示
+
+- Backup 保留 rolling 7 天;第 8 天起舊檔自動被 `backup.sh` prune
+- Alternative:在 Linode bucket 設 **Lifecycle Rule** — expiry 7 days;如此腳本的 prune 步驟備援亦可
+- 還原步驟見 `server/deploy/restore.md`
+- 若 cron mail 設好,backup 失敗時 `set -euo pipefail` 確保 stderr 輸出,郵件通知到 root 或 MAILTO 指定地址
