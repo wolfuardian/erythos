@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PrefabRegistry } from '../PrefabRegistry';
 import type { PrefabAsset } from '../PrefabFormat';
+import { asAssetPath, asPrefabId } from '../../../utils/branded';
 
 function makeAsset(overrides: Partial<PrefabAsset> = {}): PrefabAsset {
   return {
     version: 1,
-    id: 'asset-uuid-1',
+    id: asPrefabId('asset-uuid-1'),
     name: 'Chair',
     modified: '2024-01-01T00:00:00.000Z',
     nodes: [],
@@ -56,8 +57,8 @@ describe('PrefabRegistry', () => {
     });
 
     it('stores path→url mapping when path provided', () => {
-      registry.set('blob:test/1', makeAsset(), 'prefabs/chair.prefab');
-      expect(registry.getURLForPath('prefabs/chair.prefab')).toBe('blob:test/1');
+      registry.set('blob:test/1', makeAsset(), asAssetPath('prefabs/chair.prefab'));
+      expect(registry.getURLForPath(asAssetPath('prefabs/chair.prefab'))).toBe('blob:test/1');
     });
   });
 
@@ -107,8 +108,8 @@ describe('PrefabRegistry', () => {
     it('stores path→url mapping when path provided', async () => {
       const asset = makeAsset();
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => asset }));
-      await registry.loadFromURL('blob:test/1', 'prefabs/chair.prefab');
-      expect(registry.getURLForPath('prefabs/chair.prefab')).toBe('blob:test/1');
+      await registry.loadFromURL('blob:test/1', asAssetPath('prefabs/chair.prefab'));
+      expect(registry.getURLForPath(asAssetPath('prefabs/chair.prefab'))).toBe('blob:test/1');
     });
 
     it('emits changed event after successful load', async () => {
@@ -150,15 +151,15 @@ describe('PrefabRegistry', () => {
 
   describe('evictByPath', () => {
     it('removes entry by path and returns true', () => {
-      registry.set('blob:test/1', makeAsset(), 'prefabs/chair.prefab');
-      const result = registry.evictByPath('prefabs/chair.prefab');
+      registry.set('blob:test/1', makeAsset(), asAssetPath('prefabs/chair.prefab'));
+      const result = registry.evictByPath(asAssetPath('prefabs/chair.prefab'));
       expect(result).toBe(true);
       expect(registry.get('blob:test/1')).toBeNull();
-      expect(registry.getURLForPath('prefabs/chair.prefab')).toBeNull();
+      expect(registry.getURLForPath(asAssetPath('prefabs/chair.prefab'))).toBeNull();
     });
 
     it('returns false for unknown path', () => {
-      expect(registry.evictByPath('prefabs/unknown.prefab')).toBe(false);
+      expect(registry.evictByPath(asAssetPath('prefabs/unknown.prefab'))).toBe(false);
     });
   });
 
@@ -166,8 +167,8 @@ describe('PrefabRegistry', () => {
 
   describe('clear', () => {
     it('removes all entries', () => {
-      registry.set('blob:1', makeAsset({ id: 'a' }));
-      registry.set('blob:2', makeAsset({ id: 'b' }));
+      registry.set('blob:1', makeAsset({ id: asPrefabId('a') }));
+      registry.set('blob:2', makeAsset({ id: asPrefabId('b') }));
       registry.clear();
       expect(registry.getAllAssets()).toHaveLength(0);
     });
@@ -184,8 +185,8 @@ describe('PrefabRegistry', () => {
 
   describe('getAllAssets', () => {
     it('returns all cached assets', () => {
-      const a1 = makeAsset({ id: 'a1', name: 'A1' });
-      const a2 = makeAsset({ id: 'a2', name: 'A2' });
+      const a1 = makeAsset({ id: asPrefabId('a1'), name: 'A1' });
+      const a2 = makeAsset({ id: asPrefabId('a2'), name: 'A2' });
       registry.set('blob:1', a1);
       registry.set('blob:2', a2);
       const all = registry.getAllAssets();
@@ -203,7 +204,7 @@ describe('PrefabRegistry', () => {
       registry.on('changed', listener);
       registry.set('blob:1', makeAsset());
       registry.off('changed', listener);
-      registry.set('blob:2', makeAsset({ id: 'b' }));
+      registry.set('blob:2', makeAsset({ id: asPrefabId('b') }));
       expect(listener).toHaveBeenCalledOnce(); // only from the first set
     });
   });

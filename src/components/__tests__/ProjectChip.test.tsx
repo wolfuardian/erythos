@@ -9,7 +9,6 @@
  *   - autosave error path shows danger variant in confirm dialog
  */
 import { render, screen, fireEvent, cleanup } from '@solidjs/testing-library';
-import { createSignal } from 'solid-js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectChip } from '../ProjectChip';
 import type { ProjectEntry } from '../../core/project/ProjectHandleStore';
@@ -135,8 +134,8 @@ describe('ProjectChip — autosave error path (spec §7.1)', () => {
 
 describe('ProjectChip — recent projects', () => {
   const recent: ProjectEntry[] = [
-    { id: 'proj-1', name: 'Alpha', lastOpened: Date.now() - 60000 },
-    { id: 'proj-2', name: 'Beta', lastOpened: Date.now() - 3600000 },
+    { id: 'proj-1', name: 'Alpha', lastOpened: Date.now() - 60000, handle: null as unknown as FileSystemDirectoryHandle },
+    { id: 'proj-2', name: 'Beta', lastOpened: Date.now() - 3600000, handle: null as unknown as FileSystemDirectoryHandle },
   ];
 
   it('shows recent project rows in dropdown', () => {

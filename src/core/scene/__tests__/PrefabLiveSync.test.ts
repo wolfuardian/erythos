@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PrefabRegistry } from '../PrefabRegistry';
 import type { PrefabAsset } from '../PrefabFormat';
+import { asAssetPath, asPrefabId } from '../../../utils/branded';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,7 @@ function makeAsset(name: string, childNames: string[] = []): PrefabAsset {
   // root's children under the existing instance root (root itself is skipped).
   return {
     version: 1,
-    id: `asset-${name}`,
+    id: asPrefabId(`asset-${name}`),
     name,
     modified: new Date().toISOString(),
     nodes: [
@@ -93,7 +94,7 @@ describe('PrefabRegistry.attach — fileChanged → prefabChanged chain', () => 
 
     // Pre-populate registry so it knows about the path
     const originalAsset = makeAsset('Chair', ['Seat', 'Legs']);
-    registry.set('blob:original', originalAsset, 'prefabs/chair.prefab');
+    registry.set('blob:original', originalAsset, asAssetPath('prefabs/chair.prefab'));
 
     // Attach to mock ProjectManager
     registry.attach(pm as any);
@@ -137,7 +138,7 @@ describe('PrefabRegistry.attach — fileChanged → prefabChanged chain', () => 
   it('evicts old URL and caches new URL after refetch', async () => {
     const { pm, triggerFileChanged } = makeProjectManagerMock();
     const originalAsset = makeAsset('Table', ['Top']);
-    registry.set('blob:original', originalAsset, 'prefabs/table.prefab');
+    registry.set('blob:original', originalAsset, asAssetPath('prefabs/table.prefab'));
 
     registry.attach(pm as any);
 
@@ -153,12 +154,12 @@ describe('PrefabRegistry.attach — fileChanged → prefabChanged chain', () => 
     expect(registry.has('blob:original')).toBe(false);
     expect(registry.has('blob:updated')).toBe(true);
     expect(registry.get('blob:updated')).toEqual(updatedAsset);
-    expect(registry.getURLForPath('prefabs/table.prefab')).toBe('blob:updated');
+    expect(registry.getURLForPath(asAssetPath('prefabs/table.prefab'))).toBe('blob:updated');
   });
 
   it('soft-fails and does not emit prefabChanged when fetch errors', async () => {
     const { pm, triggerFileChanged } = makeProjectManagerMock();
-    registry.set('blob:original', makeAsset('Bad'), 'prefabs/bad.prefab');
+    registry.set('blob:original', makeAsset('Bad'), asAssetPath('prefabs/bad.prefab'));
     registry.attach(pm as any);
 
     const prefabChangedSpy = vi.fn();
@@ -176,7 +177,7 @@ describe('PrefabRegistry.attach — fileChanged → prefabChanged chain', () => 
 
   it('detach() stops receiving fileChanged events', async () => {
     const { pm, triggerFileChanged } = makeProjectManagerMock();
-    registry.set('blob:original', makeAsset('Test'), 'prefabs/test.prefab');
+    registry.set('blob:original', makeAsset('Test'), asAssetPath('prefabs/test.prefab'));
     registry.attach(pm as any);
 
     const prefabChangedSpy = vi.fn();

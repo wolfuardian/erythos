@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { AssetResolver } from './AssetResolver';
 import { MockAssetServer } from '../sync/asset/MockAssetServer';
 import { sha256 } from '../sync/asset/sha256';

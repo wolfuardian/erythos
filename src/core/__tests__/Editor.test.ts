@@ -3,7 +3,6 @@ import { Scene } from 'three';
 import { Editor } from '../Editor';
 import { ProjectManager } from '../project/ProjectManager';
 import type { PrefabAsset } from '../scene/PrefabFormat';
-import type { AssetPath } from '../../utils/branded';
 
 describe('Editor', () => {
   let editor: Editor;
@@ -131,9 +130,8 @@ describe('Editor', () => {
 
     it('registerPrefab sync-caches asset by path before async write completes', () => {
       // Stall the async writeFile so the IIFE is suspended mid-await
-      let resolveWrite!: () => void;
       vi.spyOn(editor.projectManager, 'writeFile').mockReturnValue(
-        new Promise<void>(res => { resolveWrite = res; }),
+        new Promise<void>(() => { /* intentionally never resolves */ }),
       );
 
       const asset = minimalPrefab('chair');
@@ -178,7 +176,7 @@ describe('Editor', () => {
       vi.spyOn(editor.projectManager, 'writeFile').mockReturnValue(new Promise(() => {}));
 
       const asset = minimalPrefab('chair');
-      const path = editor.registerPrefab(asset) as AssetPath;
+      editor.registerPrefab(asset);
       // "prefabs/chair.prefab" → "prefabs://chair"
       const prefabUrl = 'prefabs://chair';
 

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SceneDocument } from '../SceneDocument';
 import type { SceneNode } from '../SceneFormat';
+import { asNodeUUID } from '../../../utils/branded';
 
 function makeNode(overrides: Partial<SceneNode> = {}): SceneNode {
   return {
-    id: 'uuid-default',
+    id: asNodeUUID('uuid-default'),
     name: 'node',
     parent: null,
     order: 0,
@@ -21,14 +22,14 @@ describe('SceneDocument', () => {
   describe('addNode / getNode', () => {
     it('stores and retrieves a node by UUID', () => {
       const doc = new SceneDocument();
-      const node = makeNode({ id: 'abc' });
+      const node = makeNode({ id: asNodeUUID('abc') });
       doc.addNode(node);
-      expect(doc.getNode('abc')).toBe(node);
+      expect(doc.getNode(asNodeUUID('abc'))).toBe(node);
     });
 
     it('emits nodeAdded', () => {
       const doc = new SceneDocument();
-      const node = makeNode({ id: 'abc' });
+      const node = makeNode({ id: asNodeUUID('abc') });
       const spy = vi.fn();
       doc.events.on('nodeAdded', spy);
       doc.addNode(node);
@@ -37,25 +38,25 @@ describe('SceneDocument', () => {
 
     it('getNode returns null for unknown UUID', () => {
       const doc = new SceneDocument();
-      expect(doc.getNode('unknown')).toBeNull();
+      expect(doc.getNode(asNodeUUID('unknown'))).toBeNull();
     });
   });
 
   describe('removeNode', () => {
     it('removes node — getNode returns null', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'abc' }));
-      doc.removeNode('abc');
-      expect(doc.getNode('abc')).toBeNull();
+      doc.addNode(makeNode({ id: asNodeUUID('abc') }));
+      doc.removeNode(asNodeUUID('abc'));
+      expect(doc.getNode(asNodeUUID('abc'))).toBeNull();
     });
 
     it('emits nodeRemoved with the original node', () => {
       const doc = new SceneDocument();
-      const node = makeNode({ id: 'abc' });
+      const node = makeNode({ id: asNodeUUID('abc') });
       doc.addNode(node);
       const spy = vi.fn();
       doc.events.on('nodeRemoved', spy);
-      doc.removeNode('abc');
+      doc.removeNode(asNodeUUID('abc'));
       expect(spy).toHaveBeenCalledWith(node);
     });
 
@@ -63,7 +64,7 @@ describe('SceneDocument', () => {
       const doc = new SceneDocument();
       const spy = vi.fn();
       doc.events.on('nodeRemoved', spy);
-      doc.removeNode('nonexistent');
+      doc.removeNode(asNodeUUID('nonexistent'));
       expect(spy).not.toHaveBeenCalled();
     });
   });
@@ -71,17 +72,17 @@ describe('SceneDocument', () => {
   describe('updateNode', () => {
     it('applies patch to node', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'abc', name: 'original' }));
-      doc.updateNode('abc', { name: 'updated' });
-      expect(doc.getNode('abc')?.name).toBe('updated');
+      doc.addNode(makeNode({ id: asNodeUUID('abc'), name: 'original' }));
+      doc.updateNode(asNodeUUID('abc'), { name: 'updated' });
+      expect(doc.getNode(asNodeUUID('abc'))?.name).toBe('updated');
     });
 
     it('emits nodeChanged with uuid and patch', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'abc' }));
+      doc.addNode(makeNode({ id: asNodeUUID('abc') }));
       const spy = vi.fn();
       doc.events.on('nodeChanged', spy);
-      doc.updateNode('abc', { name: 'new-name' });
+      doc.updateNode(asNodeUUID('abc'), { name: 'new-name' });
       expect(spy).toHaveBeenCalledWith('abc', { name: 'new-name' });
     });
 
@@ -89,7 +90,7 @@ describe('SceneDocument', () => {
       const doc = new SceneDocument();
       const spy = vi.fn();
       doc.events.on('nodeChanged', spy);
-      doc.updateNode('nonexistent', { name: 'x' });
+      doc.updateNode(asNodeUUID('nonexistent'), { name: 'x' });
       expect(spy).not.toHaveBeenCalled();
     });
   });
@@ -97,26 +98,26 @@ describe('SceneDocument', () => {
   describe('getChildren', () => {
     it('returns children sorted by order', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'p' }));
-      doc.addNode(makeNode({ id: 'c1', parent: 'p', order: 2 }));
-      doc.addNode(makeNode({ id: 'c2', parent: 'p', order: 0 }));
-      doc.addNode(makeNode({ id: 'c3', parent: 'p', order: 1 }));
-      expect(doc.getChildren('p').map(n => n.id)).toEqual(['c2', 'c3', 'c1']);
+      doc.addNode(makeNode({ id: asNodeUUID('p') }));
+      doc.addNode(makeNode({ id: asNodeUUID('c1'), parent: asNodeUUID('p'), order: 2 }));
+      doc.addNode(makeNode({ id: asNodeUUID('c2'), parent: asNodeUUID('p'), order: 0 }));
+      doc.addNode(makeNode({ id: asNodeUUID('c3'), parent: asNodeUUID('p'), order: 1 }));
+      expect(doc.getChildren(asNodeUUID('p')).map(n => n.id)).toEqual(['c2', 'c3', 'c1']);
     });
 
     it('returns empty array when no children', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'lonely' }));
-      expect(doc.getChildren('lonely')).toHaveLength(0);
+      doc.addNode(makeNode({ id: asNodeUUID('lonely') }));
+      expect(doc.getChildren(asNodeUUID('lonely'))).toHaveLength(0);
     });
   });
 
   describe('getRoots', () => {
     it('returns only nodes with parent === null', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r1', parent: null }));
-      doc.addNode(makeNode({ id: 'r2', parent: null }));
-      doc.addNode(makeNode({ id: 'c',  parent: 'r1' }));
+      doc.addNode(makeNode({ id: asNodeUUID('r1'), parent: null }));
+      doc.addNode(makeNode({ id: asNodeUUID('r2'), parent: null }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'),  parent: asNodeUUID('r1') }));
       expect(doc.getRoots().map(n => n.id).sort()).toEqual(['r1', 'r2']);
     });
   });
@@ -124,42 +125,42 @@ describe('SceneDocument', () => {
   describe('getPath', () => {
     it('returns single name for root node', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r', name: 'Scene' }));
-      expect(doc.getPath('r')).toBe('Scene');
+      doc.addNode(makeNode({ id: asNodeUUID('r'), name: 'Scene' }));
+      expect(doc.getPath(asNodeUUID('r'))).toBe('Scene');
     });
 
     it('returns slash-separated ancestor path', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r', name: 'Scene', parent: null }));
-      doc.addNode(makeNode({ id: 'p', name: 'props', parent: 'r' }));
-      doc.addNode(makeNode({ id: 'c', name: 'chair', parent: 'p' }));
-      expect(doc.getPath('c')).toBe('Scene/props/chair');
+      doc.addNode(makeNode({ id: asNodeUUID('r'), name: 'Scene', parent: null }));
+      doc.addNode(makeNode({ id: asNodeUUID('p'), name: 'props', parent: asNodeUUID('r') }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'chair', parent: asNodeUUID('p') }));
+      expect(doc.getPath(asNodeUUID('c'))).toBe('Scene/props/chair');
     });
 
     it('returns empty string for unknown UUID', () => {
       const doc = new SceneDocument();
-      expect(doc.getPath('unknown')).toBe('');
+      expect(doc.getPath(asNodeUUID('unknown'))).toBe('');
     });
   });
 
   describe('findByPath', () => {
     it('finds a node by full path', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r', name: 'Scene', parent: null }));
-      doc.addNode(makeNode({ id: 'p', name: 'props', parent: 'r' }));
-      doc.addNode(makeNode({ id: 'c', name: 'chair', parent: 'p' }));
+      doc.addNode(makeNode({ id: asNodeUUID('r'), name: 'Scene', parent: null }));
+      doc.addNode(makeNode({ id: asNodeUUID('p'), name: 'props', parent: asNodeUUID('r') }));
+      doc.addNode(makeNode({ id: asNodeUUID('c'), name: 'chair', parent: asNodeUUID('p') }));
       expect(doc.findByPath('Scene/props/chair')?.id).toBe('c');
     });
 
     it('finds a root node by name', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r', name: 'Scene' }));
+      doc.addNode(makeNode({ id: asNodeUUID('r'), name: 'Scene' }));
       expect(doc.findByPath('Scene')?.id).toBe('r');
     });
 
     it('returns null if path not found', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'r', name: 'Scene' }));
+      doc.addNode(makeNode({ id: asNodeUUID('r'), name: 'Scene' }));
       expect(doc.findByPath('Scene/missing')).toBeNull();
     });
   });
@@ -167,8 +168,8 @@ describe('SceneDocument', () => {
   describe('serialize / deserialize', () => {
     it('round-trips nodes correctly', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'a', name: 'Alpha' }));
-      doc.addNode(makeNode({ id: 'b', name: 'Beta', parent: 'a' }));
+      doc.addNode(makeNode({ id: asNodeUUID('a'), name: 'Alpha' }));
+      doc.addNode(makeNode({ id: asNodeUUID('b'), name: 'Beta', parent: asNodeUUID('a') }));
 
       const file = doc.serialize();
       expect(file.version).toBe(3);
@@ -177,8 +178,8 @@ describe('SceneDocument', () => {
 
       const doc2 = new SceneDocument();
       doc2.deserialize(file);
-      expect(doc2.getNode('a')?.name).toBe('Alpha');
-      expect(doc2.getNode('b')?.parent).toBe('a');
+      expect(doc2.getNode(asNodeUUID('a'))?.name).toBe('Alpha');
+      expect(doc2.getNode(asNodeUUID('b'))?.parent).toBe('a');
     });
 
     it('emits sceneReplaced on deserialize', () => {
@@ -191,7 +192,7 @@ describe('SceneDocument', () => {
 
     it('clears existing nodes on deserialize', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'old' }));
+      doc.addNode(makeNode({ id: asNodeUUID('old') }));
       doc.deserialize({ version: 1, nodes: [] });
       expect(doc.getAllNodes()).toHaveLength(0);
     });
@@ -215,7 +216,7 @@ describe('SceneDocument', () => {
 
     it('sets parent when provided', () => {
       const doc = new SceneDocument();
-      const node = doc.createNode('Child', 'parent-uuid');
+      const node = doc.createNode('Child', asNodeUUID('parent-uuid'));
       expect(node.parent).toBe('parent-uuid');
     });
   });
@@ -223,13 +224,13 @@ describe('SceneDocument', () => {
   describe('hasNode', () => {
     it('returns true for existing node', () => {
       const doc = new SceneDocument();
-      doc.addNode(makeNode({ id: 'abc' }));
-      expect(doc.hasNode('abc')).toBe(true);
+      doc.addNode(makeNode({ id: asNodeUUID('abc') }));
+      expect(doc.hasNode(asNodeUUID('abc'))).toBe(true);
     });
 
     it('returns false for missing node', () => {
       const doc = new SceneDocument();
-      expect(doc.hasNode('abc')).toBe(false);
+      expect(doc.hasNode(asNodeUUID('abc'))).toBe(false);
     });
   });
 });
