@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { authRoutes } from './routes/auth.js';
 import { sceneRoutes } from './routes/scenes.js';
+import { meRoutes } from './routes/me.js';
 
 const app = new Hono();
 
@@ -13,6 +14,7 @@ app.get('/health', (c) => {
 const api = new Hono();
 api.route('/auth', authRoutes);
 api.route('/scenes', sceneRoutes);
+api.route('/me', meRoutes);
 app.route('/api', api);
 
 const port = Number(process.env.PORT ?? 3000);

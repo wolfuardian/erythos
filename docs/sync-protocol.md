@@ -130,7 +130,7 @@ CREATE TABLE scene_versions (    -- append-only 歷史,給「scene history = git
   body        BYTEA NOT NULL,
   body_size   INTEGER NOT NULL,
   saved_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  saved_by    UUID NOT NULL REFERENCES users(id),
+  saved_by    UUID REFERENCES users(id) ON DELETE SET NULL,  -- NULL after user deletion; forward-looking: SET NULL fires only for shared-edit scenarios (v0: saved_by ≡ owner_id, versions cascade-deleted via scene_id first)
   PRIMARY KEY (scene_id, version)
 );
 ```
@@ -265,6 +265,72 @@ Response 404 Not Found:               # 來源不存在,或來源 visibility='pr
 ```
 
 server 行為:複製來源 `body` + `name` → 寫新 row,`owner_id = caller`、`version = 0`、`forked_from = source.id`、`visibility = 'private'`(fork 永遠先私有,owner 自己決定是否再分享)。
+
+## GDPR — 使用者資料導出 + 帳號刪除
+
+### `GET /api/me/export`
+
+導出登入使用者的全部資料。Auth required。
+
+```
+Response 200:
+  Headers:
+    Content-Type: application/json
+    Content-Disposition: attachment; filename="erythos-export-<github_login>-<timestamp>.json"
+  Body:
+    {
+      "exported_at": "<ISO timestamp>",
+      "user": {
+        "id": "...",
+        "github_login": "...",
+        "email": "...",
+        "avatar_url": "...",
+        "created_at": "..."
+      },
+      "scenes": [
+        {
+          "id": "...",
+          "name": "...",
+          "visibility": "public",
+          "forked_from": null,
+          "created_at": "...",
+          "updated_at": "...",
+          "scene_versions": [
+            { "version": 1, "saved_by": "<user_id or null>", "saved_at": "..." }
+          ]
+        }
+      ]
+    }
+
+Response 401 Unauthorized:  # 未登入
+```
+
+注意:
+- `body` bytes 不導出(非人類可讀 binary blob,v0.1+ 可加 JSON 導出)
+- `sessions` 不導出(只有過期 hash,non-actionable)
+- `saved_by` 若為 `null` 表示對應使用者已刪除(shared-editing 場景,v0 不觸發)
+- v0 無分頁 / 串流;大帳號 v0.1+ 補
+
+### `DELETE /api/me`
+
+刪除帳號與所有關聯資料。Auth required。
+
+```
+Response 204 No Content  # 刪除成功,session cookie 已清除
+  Set-Cookie: session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax  # Secure 僅 prod
+
+Response 401 Unauthorized:  # 未登入
+Response 404 Not Found:      # race condition(session 有效但 user row 不存在),client 重新登入
+```
+
+刪除 cascade 順序:
+1. `DELETE FROM users WHERE id = $1`
+2. `sessions.user_id ON DELETE CASCADE` → session rows 刪
+3. `scenes.owner_id ON DELETE CASCADE` → scene rows 刪
+4. `scene_versions.scene_id ON DELETE CASCADE` → version rows 刪(via scenes,優先於 saved_by FK check)
+5. `scene_versions.saved_by ON DELETE SET NULL` — 在 v0 write model 永不觸發(saved_by ≡ owner_id);shared-editing 上線後才有效
+
+Out-of-scope:30-day grace period、soft delete、audit log(v0.1+)。
 
 ## 分享連結 + Fork
 

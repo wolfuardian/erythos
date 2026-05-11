@@ -8,6 +8,13 @@
       "when": 1778255390367,
       "tag": "0000_high_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778488936299,
+      "tag": "0002_saved_by_set_null",
+      "breakpoints": true
     }
   ]
 }

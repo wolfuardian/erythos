@@ -105,9 +105,11 @@ export const scene_versions = pgTable(
     body: bytea('body').notNull(),
     body_size: integer('body_size').notNull(),
     saved_at: timestamp('saved_at', { withTimezone: true }).notNull().default(sql`now()`),
+    // Forward-looking: under current write model, saved_by ≡ owner_id, so
+    // versions are cascade-deleted via scene_id before this SET NULL fires.
+    // SET NULL activates only if shared-editing lands (other users save versions).
     saved_by: uuid('saved_by')
-      .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: 'set null' }),
   },
   (t) => [primaryKey({ columns: [t.scene_id, t.version] })],
 );
