@@ -36,8 +36,8 @@
 
 本 session 只規劃不實作。全部在 #938 phase F brainstorm:
 
-- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 規劃中
-  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。#957 epic 已切 4 sub-task(F-1a env / F-1b server endpoint / F-1c client AssetClient / F-1d rewrite + quota + GDPR),建議 F-1a + F-1b 並行起跑
+- [ ] **Asset sync** → Phase F-1,#938 / epic #957 🟦 進行中(輪 1 完成)
+  spec `docs/asset-sync-protocol.md`(195 行,Phase A 凍)。輪 1 ✅ F-1a S3 storage module(#960)+ ✅ F-1b assets table schema + migration 0004(#961)。**剩** F-1c server endpoint(HEAD/POST/GET /api/assets,需 multipart parsing + S3 stream pipe + hash verify + dedup logic)+ F-1d client AssetClient + scheme rewrite + quota + GDPR。Linode `erythos-assets` bucket 需在 F-1c deploy 前 ready
 - [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成
   ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub + schema + migration 0003(PR #959 merged)。**剩 Phase C** Resend SDK wire + endpoint mount + rate limit + `github_id nullable` migration + **Phase D** client UI(`auth_error` banner reuse E4 pattern)
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅

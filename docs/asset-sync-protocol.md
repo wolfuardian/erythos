@@ -68,7 +68,7 @@ CREATE TABLE assets (
   mime_type    TEXT NOT NULL,
   size         BIGINT NOT NULL,             -- byte
   storage_url  TEXT NOT NULL,               -- Object Storage 真實 URL(後台用)
-  uploaded_by  UUID NOT NULL REFERENCES users(id),
+  uploaded_by  UUID REFERENCES users(id) ON DELETE SET NULL,  -- nullable: spec § Open Questions 推薦 GDPR 刪帳號改 NULL,refs PR #961
   uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   ref_count    INTEGER NOT NULL DEFAULT 0   -- 給未來 GC,v0 不啟用
 );
