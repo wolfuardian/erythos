@@ -29,6 +29,13 @@
       "when": 1747008000000,
       "tag": "0003_magic_link_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778507903818,
+      "tag": "0004_assets",
+      "breakpoints": true
     }
   ]
 }
