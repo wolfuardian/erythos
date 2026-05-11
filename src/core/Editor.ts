@@ -19,6 +19,7 @@ import { AssetResolver } from './io/AssetResolver';
 import { PrefabGraph } from './io/PrefabGraph';
 import { prefabPathForName } from '../utils/prefabPath';
 import type { SyncEngine, SceneId } from './sync/SyncEngine';
+import type { AssetSyncClient } from './sync/asset/AssetSyncClient';
 
 export class Editor {
   readonly scene: Scene;
@@ -43,14 +44,17 @@ export class Editor {
   /** Last version returned by syncEngine.create / syncEngine.push for the current scene. */
   syncBaseVersion: number | null = null;
 
-  constructor(public readonly projectManager: ProjectManager) {
+  constructor(
+    public readonly projectManager: ProjectManager,
+    assetClient?: AssetSyncClient,
+  ) {
     this.scene = new Scene();
     this.scene.name = 'Scene';
     this.sceneDocument = new SceneDocument();
     this.resourceCache = new ResourceCache();
     this.prefabGraph = new PrefabGraph();
     this.prefabRegistry = new PrefabRegistry(this.prefabGraph);
-    this.assetResolver = new AssetResolver(projectManager);
+    this.assetResolver = new AssetResolver(projectManager, assetClient);
     this.sceneSync = new SceneSync(this.sceneDocument, this.scene, this.resourceCache);
     this.events = new EventEmitter();
     this.history = new History(this.events);
