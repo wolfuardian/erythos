@@ -65,7 +65,7 @@ const PRO_TOTAL_QUOTA = 50 * 1024 * 1024 * 1024;
 type Variables = {
   user: {
     id: string;
-    github_id: number;
+    github_id: number | null;
     handle: string | null;
     storage_used: number;
     plan?: string;

@@ -76,7 +76,8 @@ export function clearSessionCookie(c: Context): void {
 /** Resolved authenticated user (subset returned by /auth/me) */
 export interface AuthUser {
   id: string;
-  github_id: number;
+  // Nullable: magic-link sign-in creates users without a GitHub account.
+  github_id: number | null;
   github_login: string;
   email: string;
   avatar_url: string | null;
