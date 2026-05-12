@@ -128,9 +128,9 @@
 1. **Phase F-1 Asset sync** — spec 內最大缺口(scene blob 完了 binary 該上)。範圍大,可 split 多 sub-issue。
 2. **Phase F-5 Magic link + Resend** — auth 第二條路徑,spec v0.1 加題。中等規模 1-2 週。
 3. **Phase F-3 Multi-device e2e** — 已有後端,只缺真實 2-3 device 跑通 + conflict UX 收尾。需指揮家手動測。
-4. **prod hardening 落地** — 2026-05-12 已落 2 / 4:
+4. **prod hardening 落地** — 2026-05-12 已落 4 / 4(只剩 #953):
    - ✅ #951 DB backup — Tokyo 3 `erythos-backups` bucket、`.env` S3 全填、`backup.sh` 從 github raw 抓進 prod、crontab `0 3 * * *` daily 排好(decisions log 2026-05-12 [ops])
    - ✅ F-1 asset bucket — Tokyo 3 `erythos-assets`、`S3_ASSETS_BUCKET` 補完、server restart、prod smoke 404(decisions log 2026-05-12 [phase-f])
-   - ⬜ #952 CI/CD 需設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER GitHub secrets ← **此即所有 prod deploy 卡點**(2026-05-12 多次 push 觸發 deploy.yml 全 fail 在 Setup SSH step,因 secrets 未設;設好後既有 client deploy + 新加的 server/deploy sync 都會自動跑)
-   - ✅ #980 deploy.yml 帶 `server/deploy/` 全目錄到 prod(PR #981 merged,等 secrets 設好生效)
+   - ✅ #952 CI/CD — 3 secrets 設好(`SSH_PRIVATE_KEY` 用新生 ed25519 deploy key、`VPS_HOST` / `VPS_USER`),deploy.yml workflow_dispatch run `25711495857` 通 54s,push main 自動 deploy 路徑活化(decisions log 2026-05-12 [ops])
+   - ✅ #980 deploy.yml 帶 `server/deploy/` 全目錄到 prod(PR #981 merged + CI 第一次 run sync 後 prod 5 檔齊)
    - ⬜ #953 Observability 需設 METRICS_USER / METRICS_PASS env
