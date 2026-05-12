@@ -1,15 +1,40 @@
 import { type Component, Show, onMount } from 'solid-js';
 import styles from './AuthErrorBanner.module.css';
 
-export type AuthErrorCode = 'missing_code' | 'invalid_state' | 'oauth_failed';
+// NOTE: auth_error code namespace is shared between OAuth and magic-link flows.
+// Current strings happen to be method-specific (missing_code/invalid_state/
+// oauth_failed are OAuth; expired/used/invalid/rate_limited are magic-link),
+// but if a future OAuth refactor needs e.g. `expired`, factor out the message
+// strings by flow rather than aliasing codes.
+export type AuthErrorCode =
+  | 'missing_code'
+  | 'invalid_state'
+  | 'oauth_failed'
+  // Magic link verify error codes (refs docs/magic-link-spec.md § 錯誤處理)
+  | 'expired'
+  | 'used'
+  | 'invalid'
+  | 'rate_limited';
 
 const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   missing_code: "GitHub didn't return an authorization code, please retry",
   invalid_state: 'Login state verification failed, please retry',
   oauth_failed: 'Login error occurred, please try again later',
+  expired: 'This sign-in link has expired. Please request a new one.',
+  used: 'This sign-in link has already been used. Please request a new one.',
+  invalid: 'This sign-in link is invalid. Please request a new one.',
+  rate_limited: 'Too many sign-in attempts. Please wait a minute and try again.',
 };
 
-const KNOWN_CODES = new Set<string>(['missing_code', 'invalid_state', 'oauth_failed']);
+const KNOWN_CODES = new Set<string>([
+  'missing_code',
+  'invalid_state',
+  'oauth_failed',
+  'expired',
+  'used',
+  'invalid',
+  'rate_limited',
+]);
 
 /** Parse a raw URL param into a typed AuthErrorCode, or null if unrecognized. */
 export function parseAuthErrorCode(raw: string | null): AuthErrorCode | null {

@@ -3,6 +3,7 @@ import { BrandMark } from './BrandMark';
 import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
 import { ShareDialog, type SceneVisibility } from './ShareDialog';
+import { SignInDialog } from './SignInDialog';
 import { UserMenu } from './UserMenu';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
@@ -16,6 +17,8 @@ export const Toolbar: Component = () => {
   const [shareOpen, setShareOpen] = createSignal(false);
   const [shareVisibility, setShareVisibility] = createSignal<SceneVisibility>('private');
   const [shareError, setShareError] = createSignal<string | null>(null);
+  const [signInOpen, setSignInOpen] = createSignal(false);
+  let signInTriggerRef: HTMLButtonElement | undefined;
 
   // When dialog opens, fetch current visibility from SyncEngine
   createEffect(() => {
@@ -140,13 +143,14 @@ export const Toolbar: Component = () => {
         <Show
           when={bridge.currentUser()}
           fallback={
-            /* null → Sign in button */
+            /* null → Sign in button — opens dialog with GitHub + magic-link options */
             <button
+              ref={(el) => { signInTriggerRef = el; }}
               data-testid="toolbar-sign-in"
               type="button"
               class={styles.shareButton}
-              onClick={() => { window.location.href = bridge.getOAuthStartUrl('github'); }}
-              title="Sign in with GitHub"
+              onClick={() => setSignInOpen(true)}
+              title="Sign in"
             >
               Sign in
             </button>
@@ -176,6 +180,14 @@ export const Toolbar: Component = () => {
           {shareError()}
         </div>
       </Show>
+
+      <SignInDialog
+        open={signInOpen()}
+        onOpenOAuth={() => { window.location.href = bridge.getOAuthStartUrl('github'); }}
+        onRequestMagicLink={bridge.requestMagicLink}
+        onClose={() => setSignInOpen(false)}
+        triggerRef={signInTriggerRef ?? null}
+      />
     </div>
   );
 };
