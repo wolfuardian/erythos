@@ -9,7 +9,7 @@ import type { SceneDocument } from './SceneDocument';
 import type { ResourceCache } from './ResourceCache';
 import type { PrefabRegistry } from './PrefabRegistry';
 import type { PrefabAsset } from './PrefabFormat';
-import { asAssetPath, type NodeUUID } from '../../utils/branded';
+import { asAssetPath, type BlobURL, type NodeUUID } from '../../utils/branded';
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ export class SceneSync {
    * Populated by Editor.loadScene after asset resolution.
    * SceneSync uses this to find the loaded blob URL without node.asset being mutated.
    */
-  private readonly _resolvedBlobUrls = new Map<string, string>();
+  private readonly _resolvedBlobUrls = new Map<string, BlobURL>();
 
   /**
    * Runtime-only set of node UUIDs whose asset reference failed to resolve.
@@ -174,7 +174,7 @@ export class SceneSync {
    * Called by Editor.loadScene after AssetResolver resolves project:// or assets:// to blob URL.
    * SceneSync uses this mapping in hydrateMesh — node.asset stays as project:// or assets:// (persistent).
    */
-  setResolvedBlobUrl(assetUrl: string, blobUrl: string): void {
+  setResolvedBlobUrl(assetUrl: string, blobUrl: BlobURL): void {
     this._resolvedBlobUrls.set(assetUrl, blobUrl);
   }
 
