@@ -156,3 +156,51 @@
    - ✅ #952 CI/CD — 3 secrets 設好(`SSH_PRIVATE_KEY` 用新生 ed25519 deploy key、`VPS_HOST` / `VPS_USER`),deploy.yml workflow_dispatch run `25711495857` 通 54s,push main 自動 deploy 路徑活化(decisions log 2026-05-12 [ops])
    - ✅ #980 deploy.yml 帶 `server/deploy/` 全目錄到 prod(PR #981 merged + CI 第一次 run sync 後 prod 5 檔齊)
    - ⬜ #953 Observability 需設 METRICS_USER / METRICS_PASS env
+
+---
+
+## 2026-05-12 session 補篇 — 7 issue batch land + F-5 D1 wire
+
+main HEAD `c408a62`,prod live `https://erythos.eoswolf.com`(a4aa199 → c408a62 一輪 deploy 跑著)
+
+### F-5 Phase C+D(magic link)
+
+| | 標題 | PR | 狀態 |
+|---|---|---|---|
+| C1 | schema relax `users.github_id` nullable + migration 0005 | #987 + hotfix `4f19cf5` | ✅ merged + prod |
+| C2 | endpoint + rate limit + stub email + 12 tests | #989 | ✅ merged + prod |
+| D1 | client UI SignInDialog + AuthClient.requestMagicLink + AuthErrorBanner extend + 11 tests | #993 | ✅ merged + prod |
+| C3 | Resend SDK + email template + replace stub | ⬜ 等指揮家 Resend account / DNS / key | not started |
+
+C2 揭露 prod `.env` 漂移 4 條(ALLOWED_ORIGIN / S3_*)+ table ownership 1 條(magic_link_tokens 被 sudo postgres 建走 owner)— 全 ssh 修。
+
+### Backlog batch(全 go — 6+1 並行 worktree)
+
+| Issue | PR | Diff | 狀態 |
+|---|---|---|---|
+| [#988](https://github.com/wolfuardian/erythos/issues/988) deploy.yml migrate trap | #994 | +15/-1 | ✅ merged |
+| [#991](https://github.com/wolfuardian/erythos/issues/991) Caddyfile XFF strip | #995 | +6/-1 | ✅ merged + prod Caddy synced + reload |
+| [#986](https://github.com/wolfuardian/erythos/issues/986) drizzle 0003+0004 snapshot backfill | #996 | +1148/-1 | ✅ merged |
+| [#937](https://github.com/wolfuardian/erythos/issues/937) tech debt v0_to_v1 single cast | #997 | +2/-1 | ✅ merged(audit drift — 2/3 sites 已修)|
+| [#783](https://github.com/wolfuardian/erythos/issues/783) BlobURL brand SceneSync | #998 | +3/-3 | ✅ merged(audit drift — schema 已 refactor)|
+| [#990](https://github.com/wolfuardian/erythos/issues/990) magic-link atomic UPDATE | #999 | +200/-47 | ✅ merged(4-phase pattern + 16 tests)|
+| [#785](https://github.com/wolfuardian/erythos/issues/785) NodeUUID + PrefabId brands | #1000 | +9/-13 | ✅ merged(audit drift — ~95% 已 brand)|
+
+派工:4 server/infra worktree 真並行(#986/#988/#990/#991)+ #783 / #937 同時並行 + #785 等 #783 merge 後派(SceneFormat.ts 衝突避開)。1 hour wall-clock 全 land + 全 close + prod deploy ok。
+
+**Audit drift 教訓**:`#937 / #783 / #785` 三個 issue spec 全 outdated,實際 diff 比 spec 小 1-2 個數量級。AD dispatch prompt 必須含「Step 1 audit current state」段,別盲做 spec 範圍。
+
+**ref ownership 教訓**:deploy.yml `sudo -u erythos git fetch` 失敗在 `Permission denied` cannot lock ref `fix/*` — root cause prod `.git/refs/remotes/origin/{fix,dependabot}` + 對應 logs 為 root-owned(早期 manual ssh debug 用 sudo 跑 git fetch 留下)。修法 `chown -R erythos:erythos` + rm stale `worktree-agent-*` refs。Decisions log 已記。後續可考慮 deploy.yml 加一步 defensive chown。
+
+### 仍 open(不依賴本 session)
+
+- [#938](https://github.com/wolfuardian/erythos/issues/938) Phase F brainstorm — 仍 open
+- [#942](https://github.com/wolfuardian/erythos/issues/942) v0.1 backlog — 仍 open
+
+### 下個 session 第一步候選
+
+1. **F-5 C3 Resend SDK wire** — 等指揮家準備好 Resend account + DNS(SPF/DKIM/DMARC)+ key
+2. **F-3 multi-device e2e** — 需指揮家手測
+3. **B2 產品定位** — 需指揮家設計 input
+4. **Deploy.yml defensive chown** — 防 ref ownership 再踩(小,~10 行,可順手)
+5. **#938 / #942 brainstorm 落地** — 但 backlog 已大幅消化,可重新評估 priority
