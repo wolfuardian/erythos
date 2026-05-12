@@ -59,6 +59,23 @@ assets://<sha256>/<filename>
 
 一個 namespace 表「兩種語意」會撞 parser:`assets://abc123/sphere.glb` 既能 parse 成 `hash=abc123 / file=sphere.glb`,也能 parse 成 `path=abc123/sphere.glb`。早期 spec 草案嘗試用「first segment 是不是 64 hex chars」啟發式 disambiguate,被推翻(違反 URL 自證身份哲學;且 64 hex chars 的合法 filename 會誤判)。**scheme 一刀分明,parser 不依靠啟發式**。
 
+## Scene 內承載 asset URL 的欄位
+
+upload + URL rewrite 流程(Phase B `uploadSceneBinaries`)需要走訪 scene 取出所有 asset URL。當前 v2 SceneFormat 對齊 `src/core/scene/SceneFormat.ts`,以下欄位承載 asset URL:
+
+| 欄位 | 型別 | 承載 scheme | 備註 |
+|------|------|-------------|------|
+| `SceneNode.asset` | `string \| undefined` | `project://` / `assets://` / `prefabs://` / `blob://` / `materials://` | mesh / prefab nodeType 必填;light / camera / group 無 |
+| `SceneEnv.hdri` | `string \| null` | `project://` / `assets://` / `blob://` | scene 環境 HDRI;`null` = 無環境 |
+
+未來新增 asset 欄位(spec 演進)時必須同步更新:
+
+- 本 spec 此表
+- `src/core/sync/asset/uploadSceneBinaries.ts`(pre-push walk 範圍 + URL rewrite)
+- `src/core/io/AssetResolver.ts`(runtime blob URL resolve 範圍)
+
+漏一處 = 該 asset 永遠不上傳 / 永遠不解析,直到下次有人 grep `SceneFormat.ts` 抓到才修。
+
 ## 資料模型
 
 ```sql
