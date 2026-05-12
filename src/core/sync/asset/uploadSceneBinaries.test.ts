@@ -96,7 +96,8 @@ describe('uploadSceneBinaries', () => {
   it('passes through pre-existing assets:// URL unchanged (idempotent)', async () => {
     const pm = makeMockPm({}); // no files needed
     const client = new MockAssetServer();
-    const existingUrl = 'assets://abc123hash/texture.png';
+    // Must be a valid 64-hex sha256 so v1_to_v2.rewriteAssetScheme passes it through
+    const existingUrl = `assets://${'a'.repeat(64)}/texture.png`;
 
     const scene = makeSceneWithNode(existingUrl);
     const result = await uploadSceneBinaries(scene, pm, client);
@@ -222,6 +223,28 @@ describe('uploadSceneBinaries', () => {
 
     // Different instances
     expect(result).not.toBe(scene);
+  });
+
+  it('round-trip: assets://<sha256>/<filename> survives serialize → deserialize unchanged (PR #978 guard)', async () => {
+    // Simulate a doc that already has a cloud-form URL (e.g. written by a previous push).
+    // The v1_to_v2 migration must NOT downgrade it back to project://.
+    const pm = makeMockPm({}); // no uploads needed — URL is already hash-form
+    const client = new MockAssetServer();
+
+    const hash = 'b'.repeat(64); // 64 lowercase hex chars — valid sha256 form
+    const cloudUrl = `assets://${hash}/dragon.glb`;
+
+    const scene = makeSceneWithNode(cloudUrl);
+    const result = await uploadSceneBinaries(scene, pm, client);
+
+    const nodes = result.getAllNodes();
+    expect(nodes).toHaveLength(1);
+    // URL must be identical — v1_to_v2 regex guard must have passed it through
+    expect(nodes[0].asset).toBe(cloudUrl);
+
+    // Confirm no files were read or uploaded
+    expect(pm.readFile).not.toHaveBeenCalled();
+    expect(client.size).toBe(0);
   });
 
 });
