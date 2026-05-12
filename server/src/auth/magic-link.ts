@@ -14,7 +14,7 @@
  */
 
 import { randomBytes, createHash } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db.js';
 import { magicLinkTokens, users } from '../db/schema.js';
 
@@ -74,9 +74,23 @@ export type VerifyMagicLinkResult =
 /**
  * Verify a magic link token.
  *
- * Hashes plaintext, looks up by token_hash, validates TTL + one-time-use,
- * find-or-creates a user by email (with github_id=null for new users —
- * nullable since C1), marks the token used, returns userId.
+ * Uses an atomic UPDATE … WHERE used_at IS NULL RETURNING to prevent the
+ * SELECT-then-UPDATE race condition: only one concurrent request can claim
+ * the row; all others see 0 rows and receive { error: 'used' } or
+ * { error: 'invalid' } depending on whether the token exists at all.
+ *
+ * Phase 1 — atomic claim (race barrier):
+ *   UPDATE magic_link_tokens SET used_at = now()
+ *   WHERE token_hash = $hash AND used_at IS NULL RETURNING *
+ *   0 rows → token already used or never existed; disambiguate via SELECT.
+ *   1 row → this request won the race.
+ *
+ * Phase 2 — expiry check (post-claim):
+ *   Expired tokens are consumed and burned; no session is issued.
+ *
+ * Phase 3 — find-or-create user using the claimed email.
+ *
+ * Phase 4 — bookkeeping: write user_id back to the token row.
  *
  * Caller (route handler) wraps in createSession() + 302 redirect on
  * success, or redirects with ?auth_error=<code> on error.
@@ -86,21 +100,42 @@ export async function verifyMagicLink(
 ): Promise<VerifyMagicLinkResult> {
   const tokenHash = hashMagicLinkToken(tokenPlaintext);
 
-  const [row] = await db
-    .select()
-    .from(magicLinkTokens)
-    .where(eq(magicLinkTokens.tokenHash, tokenHash))
-    .limit(1);
+  // Phase 1 — atomic UPDATE: only one concurrent request claims the row.
+  // We set only usedAt here; userId is filled in Phase 4 after find-or-create.
+  const [claimed] = await db
+    .update(magicLinkTokens)
+    .set({ usedAt: new Date() })
+    .where(
+      and(
+        eq(magicLinkTokens.tokenHash, tokenHash),
+        isNull(magicLinkTokens.usedAt),
+      ),
+    )
+    .returning();
 
-  if (!row) return { error: 'invalid' };
-  if (row.usedAt) return { error: 'used' };
-  if (row.expiresAt <= new Date()) return { error: 'expired' };
+  if (!claimed) {
+    // 0 rows returned — distinguish 'used' from 'invalid'
+    const [exists] = await db
+      .select()
+      .from(magicLinkTokens)
+      .where(eq(magicLinkTokens.tokenHash, tokenHash))
+      .limit(1);
+    if (!exists) return { error: 'invalid' };
+    // Row exists but used_at was already set — another request claimed it.
+    return { error: 'used' };
+  }
 
+  // Phase 2 — expiry check (after claim so the token is burned regardless)
+  if (claimed.expiresAt <= new Date()) {
+    return { error: 'expired' };
+  }
+
+  // Phase 3 — find-or-create user using email from the claimed row
   let userId: string;
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, row.email))
+    .where(eq(users.email, claimed.email))
     .limit(1);
 
   if (existing) {
@@ -110,16 +145,17 @@ export async function verifyMagicLink(
       .insert(users)
       .values({
         github_id: null,
-        email: row.email,
+        email: claimed.email,
         github_login: '',
       })
       .returning({ id: users.id });
     userId = created.id;
   }
 
+  // Phase 4 — bookkeeping: record user_id on the token row
   await db
     .update(magicLinkTokens)
-    .set({ usedAt: new Date(), userId })
+    .set({ userId })
     .where(eq(magicLinkTokens.tokenHash, tokenHash));
 
   return { userId };

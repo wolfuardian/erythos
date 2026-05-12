@@ -13,11 +13,11 @@
  *     - 200 silently absorbed on per-email rate-limit (anti-enumeration)
  *     - 429 rate_limited on per-IP rate-limit (>10/h)
  *
- *   GET /api/auth/magic-link/verify
+ *   GET /api/auth/magic-link/verify  (atomic UPDATE pattern — refs #990)
  *     - 302 /?auth_error=invalid when no token query
- *     - 302 /?auth_error=invalid when token hash not in DB
- *     - 302 /?auth_error=expired when expires_at past
- *     - 302 /?auth_error=used when used_at set
+ *     - 302 /?auth_error=invalid when token hash not in DB (0-row UPDATE + 0-row SELECT)
+ *     - 302 /?auth_error=expired when expires_at past (claimed atomically, burned)
+ *     - 302 /?auth_error=used when used_at already set (0-row UPDATE + row found with usedAt)
  *     - 302 / + Set-Cookie session on success (existing user)
  *     - 302 / + new user INSERT (github_id=null) when email new
  *     - 302 /?auth_error=rate_limited on per-IP verify limit (>20/min)
@@ -82,12 +82,23 @@ function insertReturningChain(returnRows: unknown[]) {
   };
 }
 
-/** Build an update chain that resolves */
+/** Build an update chain that resolves (no returning — used for bookkeeping Phase 4) */
 function updateChain() {
   return {
     set: vi
       .fn()
       .mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+  };
+}
+
+/** Build an update chain with .returning() — used for Phase 1 atomic claim */
+function updateReturningChain(rows: unknown[]) {
+  return {
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
   };
 }
 
@@ -242,7 +253,10 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('redirects to /?auth_error=invalid when token hash not found in DB', async () => {
-    mockSelect.mockReturnValue(selectChain([])); // token lookup empty
+    // Phase 1: atomic UPDATE returns 0 rows (hash unknown)
+    mockUpdate.mockReturnValue(updateReturningChain([]));
+    // Phase 1 fallback SELECT: also 0 rows → 'invalid'
+    mockSelect.mockReturnValue(selectChain([]));
 
     const res = await app.request(
       makeRequest('/api/auth/magic-link/verify?token=fakehex', {
@@ -254,15 +268,17 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('redirects to /?auth_error=expired when expires_at is past', async () => {
-    mockSelect.mockReturnValue(
-      selectChain([
+    // Phase 1: atomic UPDATE claims the token (returns it), but expiresAt is past.
+    // Token is burned (used_at set) even though no session is issued.
+    mockUpdate.mockReturnValue(
+      updateReturningChain([
         {
           id: 'token-id-1',
           tokenHash: 'somehex',
           email: 'expired@example.com',
           userId: null,
           expiresAt: past(),
-          usedAt: null,
+          usedAt: new Date(),
           createdAt: new Date(),
         },
       ]),
@@ -278,6 +294,9 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('redirects to /?auth_error=used when used_at is set', async () => {
+    // Phase 1: atomic UPDATE returns 0 rows — another request already claimed it.
+    mockUpdate.mockReturnValue(updateReturningChain([]));
+    // Phase 1 fallback SELECT: row exists with usedAt set → 'used'
     mockSelect.mockReturnValue(
       selectChain([
         {
@@ -302,29 +321,31 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('redirects to / + Set-Cookie session on success with existing user', async () => {
-    let selectCalls = 0;
-    mockSelect.mockImplementation(() => {
-      selectCalls++;
-      if (selectCalls === 1) {
-        // First select — token lookup
-        return selectChain([
+    // Phase 1: atomic UPDATE claims the token
+    let updateCalls = 0;
+    mockUpdate.mockImplementation(() => {
+      updateCalls++;
+      if (updateCalls === 1) {
+        // Phase 1 — atomic claim, returns the claimed row
+        return updateReturningChain([
           {
             id: 'token-id-1',
             tokenHash: 'somehex',
             email: 'existing@example.com',
             userId: null,
             expiresAt: future(),
-            usedAt: null,
+            usedAt: new Date(),
             createdAt: new Date(),
           },
         ]);
       }
-      // Second select — user lookup (found)
-      return selectChain([{ id: 'user-uuid-1' }]);
+      // Phase 4 — bookkeeping update (no returning)
+      return updateChain();
     });
-    // Two inserts will happen: createSession (sessions table)
+    // Phase 3: SELECT user lookup (found)
+    mockSelect.mockReturnValue(selectChain([{ id: 'user-uuid-1' }]));
+    // createSession INSERT
     mockInsert.mockReturnValue(insertChain());
-    mockUpdate.mockReturnValue(updateChain());
 
     const res = await app.request(
       makeRequest('/api/auth/magic-link/verify?token=hex', {
@@ -337,28 +358,31 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('INSERTs new user with github_id=null when email is new', async () => {
-    let selectCalls = 0;
-    mockSelect.mockImplementation(() => {
-      selectCalls++;
-      if (selectCalls === 1) {
-        return selectChain([
+    // Phase 1: atomic UPDATE claims the token
+    let updateCalls = 0;
+    mockUpdate.mockImplementation(() => {
+      updateCalls++;
+      if (updateCalls === 1) {
+        // Phase 1 — atomic claim
+        return updateReturningChain([
           {
             id: 'token-id-2',
             tokenHash: 'newhex',
             email: 'new@example.com',
             userId: null,
             expiresAt: future(),
-            usedAt: null,
+            usedAt: new Date(),
             createdAt: new Date(),
           },
         ]);
       }
-      // User lookup — empty (new user path)
-      return selectChain([]);
+      // Phase 4 — bookkeeping update (no returning)
+      return updateChain();
     });
+    // Phase 3: SELECT user lookup — empty (new user path)
+    mockSelect.mockReturnValue(selectChain([]));
 
-    // First insert: INSERT users with .returning()
-    // Second insert: createSession (no .returning)
+    // Phase 3: INSERT users with .returning(); createSession INSERT (no .returning)
     let insertCalls = 0;
     const userInsertValuesSpy = vi.fn().mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ id: 'new-user-uuid' }]),
@@ -370,7 +394,6 @@ describe('GET /api/auth/magic-link/verify', () => {
       }
       return insertChain();
     });
-    mockUpdate.mockReturnValue(updateChain());
 
     const res = await app.request(
       makeRequest('/api/auth/magic-link/verify?token=hex', {
@@ -391,7 +414,10 @@ describe('GET /api/auth/magic-link/verify', () => {
   });
 
   it('redirects to /?auth_error=rate_limited on per-IP verify limit (>20/min)', async () => {
-    mockSelect.mockReturnValue(selectChain([])); // every verify lookup empty (invalid)
+    // Phase 1: atomic UPDATE returns 0 rows (unknown token hash)
+    mockUpdate.mockReturnValue(updateReturningChain([]));
+    // Phase 1 fallback SELECT: also 0 rows → 'invalid'
+    mockSelect.mockReturnValue(selectChain([]));
 
     const sameIP = '20.20.20.20';
     // Saturate 20 attempts
@@ -409,5 +435,96 @@ describe('GET /api/auth/magic-link/verify', () => {
     );
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/?auth_error=rate_limited');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// verifyMagicLink() unit tests — atomic UPDATE race semantics (refs #990)
+// ---------------------------------------------------------------------------
+// These tests exercise verifyMagicLink() directly (not via HTTP) to verify
+// the atomic claim logic and 0-row fallback branches in isolation.
+// Dynamic import is required here because vi.mock() is hoisted and the mock
+// vars are not yet initialised at static import time.
+
+const { verifyMagicLink } = await import('../auth/magic-link.js');
+
+describe('verifyMagicLink() — atomic UPDATE race semantics', () => {
+  const future = () => new Date(Date.now() + 60_000);
+
+  it('returns { error: "used" } for the second caller when first already claimed the token', async () => {
+    // Simulate: first caller already ran Phase 1 UPDATE → used_at set.
+    // Second caller: Phase 1 UPDATE returns 0 rows; Phase 1 fallback SELECT
+    // returns row with usedAt set.
+    mockUpdate.mockReturnValue(updateReturningChain([]));
+    mockSelect.mockReturnValue(
+      selectChain([
+        {
+          id: 'token-id-race',
+          tokenHash: 'racehex',
+          email: 'race@example.com',
+          userId: 'user-uuid-winner',
+          expiresAt: future(),
+          usedAt: new Date(), // already claimed by first caller
+          createdAt: new Date(),
+        },
+      ]),
+    );
+
+    const result = await verifyMagicLink('any-plaintext-token');
+    expect(result).toEqual({ error: 'used' });
+  });
+
+  it('returns { error: "invalid" } when token never existed (0-row UPDATE + 0-row SELECT)', async () => {
+    mockUpdate.mockReturnValue(updateReturningChain([]));
+    mockSelect.mockReturnValue(selectChain([]));
+
+    const result = await verifyMagicLink('nonexistent-token');
+    expect(result).toEqual({ error: 'invalid' });
+  });
+
+  it('returns { error: "expired" } when atomic claim succeeds but token is past expiresAt', async () => {
+    // Token claimed atomically but expiresAt is in the past — burned, no session.
+    mockUpdate.mockReturnValue(
+      updateReturningChain([
+        {
+          id: 'token-id-exp',
+          tokenHash: 'exphex',
+          email: 'exp@example.com',
+          userId: null,
+          expiresAt: new Date(Date.now() - 60_000),
+          usedAt: new Date(),
+          createdAt: new Date(),
+        },
+      ]),
+    );
+
+    const result = await verifyMagicLink('expired-plaintext-token');
+    expect(result).toEqual({ error: 'expired' });
+  });
+
+  it('returns { userId } on happy path (atomic claim + existing user + bookkeeping)', async () => {
+    let updateCalls = 0;
+    mockUpdate.mockImplementation(() => {
+      updateCalls++;
+      if (updateCalls === 1) {
+        return updateReturningChain([
+          {
+            id: 'token-id-ok',
+            tokenHash: 'okhex',
+            email: 'ok@example.com',
+            userId: null,
+            expiresAt: future(),
+            usedAt: new Date(),
+            createdAt: new Date(),
+          },
+        ]);
+      }
+      return updateChain(); // Phase 4 bookkeeping
+    });
+    mockSelect.mockReturnValue(selectChain([{ id: 'user-uuid-ok' }]));
+    mockInsert.mockReturnValue(insertChain());
+
+    const result = await verifyMagicLink('valid-plaintext-token');
+    expect(result).toEqual({ userId: 'user-uuid-ok' });
   });
 });
