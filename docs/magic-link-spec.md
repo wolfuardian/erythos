@@ -124,23 +124,34 @@ Response 302 (失敗):
 
 ## Resend Integration
 
+> **Status**: production — C3 landed (2026-05-12). `RESEND_API_KEY` set → sends via Resend SDK; unset → console.log stub (dev / CI). Delivery failures are caught + logged; endpoint still returns 200 (anti-enumeration).
+
 **必填 env vars**:
 
 | 變數 | 說明 |
 |------|------|
-| `RESEND_API_KEY` | Resend API key,必填 |
+| `RESEND_API_KEY` | Resend API key;set → production email delivery via Resend SDK;unset → console.log stub(dev / CI) |
 | `MAGIC_LINK_FROM_EMAIL` | 寄件人,預設 `noreply@erythos.eoswolf.com` |
-| `MAGIC_LINK_BASE_URL` | 連結 base;prod = `https://erythos.eoswolf.com`,dev = `http://localhost:3000`(伺服器端口,Caddy 反代後同 5173) |
+| `MAGIC_LINK_BASE_URL` | 連結 base;prod = `https://erythos.eoswolf.com`,dev = `http://localhost:5173`(Vite dev server,Caddy 反代 /api → :3000) |
 | `MAGIC_LINK_TTL_MS` | TTL(毫秒),選填,預設 `900000`(15 min) |
 
-> `MAGIC_LINK_BASE_URL` dev 值的歧義:Vite dev 是 :5173,Hono server 是 :3000。email link 需打 server 端口或由 Caddy 統一代理。確認部署設定前留為 Open Question。
+**實作檔案(C3 landed)**:
+
+| 檔案 | 職責 |
+|------|------|
+| `server/src/auth/email-template.ts` | `magicLinkEmail({ link, validMinutes })` → `{ subject, html, text }` |
+| `server/src/auth/resend-client.ts` | `sendMagicLinkEmail(opts)` — env-gated send + error catch |
+| `server/src/routes/magic-link.ts` | POST /request handler — calls `sendMagicLinkEmail` after token INSERT |
 
 **Email template 規格**:
 
-- `Content-Type: text/html` + `text/plain` fallback(避 spam filter)
+- `Content-Type: text/html` + `text/plain` fallback(避 spam filter;Gmail / Outlook deliverability)
 - 主旨:`Your Erythos sign-in link`
-- 內文:magic link 按鈕/超連結 + TTL 提示(`Valid for 15 minutes`) + 免責行 `If you didn't request this, please ignore this email.`
+- 內文:magic link CTA button + plaintext fallback link + TTL 提示(`Valid for 15 minutes`) + 免責行 `If you didn't request this, please ignore this email.`
 - link = `${MAGIC_LINK_BASE_URL}/api/auth/magic-link/verify?token=${plaintext}`
+- 無外部圖片 URL(deliverability 加分);inline styles only(Outlook compat);max-width 600px
+
+**Anti-enumeration trade-off**:Resend SDK 拋錯時 endpoint 仍回 200。寄信失敗不會讓 client 知道(delivery-failure signal 不得外洩)。prod ops 監控:`journalctl -u erythos-server | grep "send failed"`
 
 ## OAuth 並存策略
 
@@ -224,7 +235,9 @@ WHERE user_id = $1 AND used_at IS NULL;
 
 ## 實作里程碑
 
-- **Phase A** — Spec 凍結(本文件 review,refs #955)
-- **Phase B** — server skeleton:DB migration 加 `magic_link_tokens` 表 + 處理 `github_id nullable`(refs #956)
-- **Phase C** — Resend SDK 接入 + `/api/auth/magic-link/request` / `/api/auth/magic-link/verify` endpoint mount + rate limit 實作
-- **Phase D** — client UI:登入頁加 email input + 發送成功畫面 + auth_error banner(reuse E4 #920 pattern)
+- **Phase A** — Spec 凍結(本文件 review,refs #955) ✅
+- **Phase B** — server skeleton:DB migration 加 `magic_link_tokens` 表 + 處理 `github_id nullable`(refs #956) ✅
+- **Phase C1** — `/api/auth/magic-link/request` / `/api/auth/magic-link/verify` endpoint mount ✅
+- **Phase C2** — rate limit middleware + console.log stub ✅
+- **Phase C3** — Resend SDK wire + email template,replace stub(refs #938) ✅
+- **Phase D1** — client UI:登入頁加 email input + 發送成功畫面 + auth_error banner(reuse E4 #920 pattern) ✅

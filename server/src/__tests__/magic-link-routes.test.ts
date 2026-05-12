@@ -12,6 +12,9 @@
  *     - 400 on malformed JSON body
  *     - 200 silently absorbed on per-email rate-limit (anti-enumeration)
  *     - 429 rate_limited on per-IP rate-limit (>10/h)
+ *     - 200 + Resend .emails.send called when RESEND_API_KEY is set (C3)
+ *     - 200 + console.log stub when RESEND_API_KEY is unset (C3)
+ *     - 200 even when Resend .emails.send throws (anti-enumeration, C3)
  *
  *   GET /api/auth/magic-link/verify  (atomic UPDATE pattern — refs #990)
  *     - 302 /?auth_error=invalid when no token query
@@ -25,6 +28,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Hono } from 'hono';
+import { Resend } from 'resend';
 
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
@@ -39,6 +43,15 @@ vi.mock('../db.js', () => ({
     delete: mockDelete,
   },
   pool: {},
+}));
+
+// Mock Resend SDK so tests don't make real HTTP calls.
+// mockResendSend is the spy on emails.send; we restore the Resend constructor
+// implementation after each vi.resetAllMocks() call in beforeEach.
+const mockResendSend = vi.fn().mockResolvedValue({ id: 'mock-email-id' });
+
+vi.mock('resend', () => ({
+  Resend: vi.fn(),
 }));
 
 const { magicLinkRoutes } = await import('../routes/magic-link.js');
@@ -105,6 +118,12 @@ function updateReturningChain(rows: unknown[]) {
 beforeEach(() => {
   vi.resetAllMocks();
   _resetRateLimit();
+  // vi.resetAllMocks() clears the Resend constructor mock implementation.
+  // Re-apply it so tests that set RESEND_API_KEY get a proper mock instance.
+  mockResendSend.mockResolvedValue({ id: 'mock-email-id' });
+  vi.mocked(Resend).mockImplementation(
+    () => ({ emails: { send: mockResendSend } }) as unknown as Resend,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -233,6 +252,91 @@ describe('POST /api/auth/magic-link/request', () => {
     );
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: 'rate_limited' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/magic-link/request — Resend SDK integration (C3)
+// ---------------------------------------------------------------------------
+
+describe('POST /api/auth/magic-link/request — Resend SDK (C3)', () => {
+  /** Shared helper: issue one valid request from a fresh IP. */
+  async function requestFor(email: string, ip: string) {
+    mockSelect.mockReturnValue(selectChain([]));
+    mockInsert.mockReturnValue(insertChain());
+    return app.request(
+      makeRequest('/api/auth/magic-link/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        ip,
+      }),
+    );
+  }
+
+  it('calls Resend .emails.send when RESEND_API_KEY is set', async () => {
+    const originalKey = process.env.RESEND_API_KEY;
+    process.env.RESEND_API_KEY = 'test-resend-key';
+    try {
+      const res = await requestFor('resend-user@example.com', '30.30.30.30');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+      const sendArgs = mockResendSend.mock.calls[0][0] as {
+        to: string;
+        subject: string;
+        html: string;
+        text: string;
+      };
+      expect(sendArgs.to).toBe('resend-user@example.com');
+      expect(sendArgs.subject).toBe('Your Erythos sign-in link');
+      expect(sendArgs.html).toContain('href=');
+      expect(sendArgs.text).toContain('http');
+    } finally {
+      if (originalKey === undefined) {
+        delete process.env.RESEND_API_KEY;
+      } else {
+        process.env.RESEND_API_KEY = originalKey;
+      }
+    }
+  });
+
+  it('does NOT call Resend when RESEND_API_KEY is unset (console.log stub)', async () => {
+    const originalKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const res = await requestFor('stub-user@example.com', '31.31.31.31');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(mockResendSend).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[magic-link][STUB]'),
+      );
+    } finally {
+      consoleSpy.mockRestore();
+      if (originalKey !== undefined) {
+        process.env.RESEND_API_KEY = originalKey;
+      }
+    }
+  });
+
+  it('returns 200 even when Resend .emails.send throws (anti-enumeration)', async () => {
+    const originalKey = process.env.RESEND_API_KEY;
+    process.env.RESEND_API_KEY = 'test-resend-key-fail';
+    mockResendSend.mockRejectedValue(new Error('Resend network error'));
+    try {
+      const res = await requestFor('fail-user@example.com', '32.32.32.32');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+    } finally {
+      if (originalKey === undefined) {
+        delete process.env.RESEND_API_KEY;
+      } else {
+        process.env.RESEND_API_KEY = originalKey;
+      }
+    }
   });
 });
 

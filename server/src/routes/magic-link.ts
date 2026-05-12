@@ -11,8 +11,9 @@
  * The /request endpoint always returns 200 on per-email rate-limit hits to
  * prevent email enumeration (spec § REST API). Per-IP limits return 429.
  *
- * Email delivery is stubbed in C2 — token plaintext is logged to stdout.
- * C3 follow-up wires the Resend SDK behind an env-gate on RESEND_API_KEY.
+ * Email delivery is env-gated via Resend SDK (C3): RESEND_API_KEY set → send
+ * via Resend; unset → log to stdout (dev/CI stub). Delivery errors are caught
+ * and logged; the endpoint still returns 200 (anti-enumeration).
  */
 
 import { Hono, type Context } from 'hono';
@@ -22,6 +23,8 @@ import {
   verifyMagicLink,
   MAGIC_LINK_BASE_URL,
 } from '../auth/magic-link.js';
+import { magicLinkEmail } from '../auth/email-template.js';
+import { sendMagicLinkEmail } from '../auth/resend-client.js';
 import { createSession } from '../auth.js';
 import { checkRateLimit } from '../middleware/rate-limit.js';
 
@@ -86,21 +89,16 @@ magicLinkRoutes.post('/request', async (c) => {
   const { tokenPlaintext } = await requestMagicLink(email);
   const link = `${MAGIC_LINK_BASE_URL}/api/auth/magic-link/verify?token=${tokenPlaintext}`;
 
-  // SECURITY: stub mode logs plaintext token to stdout. C3 must replace
-  // both branches with a real Resend send (no plaintext to journal).
-  // Acceptable for C2 because the endpoint has no client UI yet (D1
-  // pending) and prod log access is restricted to root SSH.
-  if (process.env.RESEND_API_KEY) {
-    console.warn(
-      '[magic-link] RESEND_API_KEY is set but Resend SDK is not yet wired (C3 pending);',
-      `logging plaintext link to ${email} instead of sending email`,
-    );
-    console.log(`[magic-link] ${email} → ${link}`);
-  } else {
-    console.log(
-      `[magic-link] (no RESEND_API_KEY, dev mode) ${email} → ${link}`,
-    );
-  }
+  // sendMagicLinkEmail is env-gated internally:
+  //   RESEND_API_KEY set   → sends via Resend SDK (C3 production path)
+  //   RESEND_API_KEY unset → logs plaintext link to stdout (dev / CI stub)
+  // Send failures are caught inside sendMagicLinkEmail; this await never
+  // throws, so the 200 response is always returned (anti-enumeration).
+  await sendMagicLinkEmail({
+    to: email,
+    link,
+    ...magicLinkEmail({ link, validMinutes: 15 }),
+  });
 
   return c.json({ ok: true }, 200);
 });
