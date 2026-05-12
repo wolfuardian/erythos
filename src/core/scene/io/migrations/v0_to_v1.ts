@@ -181,8 +181,9 @@ export function v0_to_v1(raw: unknown): ErythosSceneV1 {
     nodes: rawNodes.map((n) => {
       const node = n as Record<string, unknown>;
       // If the node already has nodeType (already v1 shape), pass through directly.
+      // Single cast: Record<string, unknown> overlaps structurally with SceneNode (both objects).
       if (typeof node['nodeType'] === 'string') {
-        return node as unknown as SceneNode;
+        return node as SceneNode;
       }
       return migrateNode(n as V0Node);
     }),
