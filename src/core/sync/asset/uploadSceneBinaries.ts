@@ -92,13 +92,10 @@ async function resolveAndUpload(
  * - Other schemes (blob://, prefabs://, materials://) are not touched.
  * - Does NOT mutate the original scene — returns a new instance.
  *
- * Implementation note: the new SceneDocument is built by directly copying the
- * runtime SceneNode objects (via getAllNodes) and patching asset fields, rather
- * than going through serialize() → deserialize().  The reason: deserialize()
- * runs the full v0→v1→v2→v3 migration chain, and v1_to_v2 rewrites any
- * `assets://` URL back to `project://`, which would undo our rewrite.
- * Directly constructing the document from runtime nodes skips the migration
- * and preserves the assets:// URLs we just wrote.
+ * Implementation: serialize() → patch raw JSON URL fields → deserialize().
+ * v1_to_v2.rewriteAssetScheme now guards hash-form `assets://<sha256>/` with a
+ * 64-hex regex, so the cloud URLs we write survive the migration chain intact
+ * (PR #978 / refs #974).
  *
  * @throws if ProjectManager.readFile fails (asset file missing from local project)
  * @throws if AssetSyncClient.upload fails (quota exceeded, network error, etc.)
@@ -111,48 +108,32 @@ export async function uploadSceneBinaries(
   // Per-invocation cache: project:// URL → assets:// URL (avoids duplicate IO/upload)
   const uploadCache = new Map<string, string>();
 
-  // ── 1. SceneEnv.hdri ──────────────────────────────────────────────────────
+  // ── 1. Serialize current SceneDocument → raw v3 JSON ─────────────────────
 
-  const origEnv = scene.env;
-  let newHdri = origEnv.hdri;
-  if (typeof newHdri === 'string' && newHdri.startsWith('project://')) {
-    newHdri = await resolveAndUpload(newHdri, pm, client, uploadCache);
-  }
+  const raw = scene.serialize();
 
-  // ── 2. SceneNode.asset (mesh / prefab nodes) ──────────────────────────────
-
-  // Work with runtime SceneNode objects directly to avoid the deserialize()
-  // migration chain (v1_to_v2 would re-convert assets:// → project://).
-  const origNodes = scene.getAllNodes();
-  const newNodes: typeof origNodes = [];
+  // ── 2. Upload and rewrite project:// URLs in the raw JSON ─────────────────
 
   // Sequential upload via for-loop (not Promise.all — conservative MVP; see module doc)
-  for (const node of origNodes) {
+
+  // Rewrite env.hdri
+  if (typeof raw.env.hdri === 'string' && raw.env.hdri.startsWith('project://')) {
+    raw.env.hdri = await resolveAndUpload(raw.env.hdri, pm, client, uploadCache);
+  }
+
+  // Rewrite node.asset (mesh / prefab nodes)
+  for (const node of raw.nodes) {
     if (typeof node.asset === 'string' && node.asset.startsWith('project://')) {
-      const assetsUrl = await resolveAndUpload(node.asset, pm, client, uploadCache);
-      newNodes.push({ ...node, asset: assetsUrl });
-    } else {
-      newNodes.push({ ...node });
+      node.asset = await resolveAndUpload(node.asset, pm, client, uploadCache);
     }
   }
 
-  // ── 3. Build new SceneDocument from patched runtime objects ───────────────
+  // ── 3. Deserialize back into a new SceneDocument ──────────────────────────
 
+  // v1_to_v2.rewriteAssetScheme skips hash-form `assets://<sha256 64-hex>/` URLs,
+  // so the cloud URLs written above survive the migration chain unchanged.
   const newDoc = new SceneDocument();
-
-  // Set env (only hdri may have changed; intensity and rotation are copied as-is)
-  newDoc.setEnv({
-    hdri:      newHdri,
-    intensity: origEnv.intensity,
-    rotation:  origEnv.rotation,
-  });
-
-  // Add all nodes.  SceneDocument.addNode() does not emit nodeAdded on the new
-  // doc listeners that concern the live editor — this is a transient doc used
-  // only as the server push payload, so events are harmless no-ops.
-  for (const node of newNodes) {
-    newDoc.addNode(node);
-  }
+  newDoc.deserialize(raw);
 
   return newDoc;
 }
