@@ -37,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download dist artifact
         uses: actions/download-artifact@v4
         with:
@@ -74,3 +76,14 @@ jobs:
 
           echo "Deployed release: $RELEASE"
           echo "Live at: /opt/erythos/client/current -> $RELEASE_DIR"
+
+      - name: Sync server/deploy/ ops scripts
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          scp -i ~/.ssh/deploy_key -r server/deploy/. \
+            "$VPS_USER@$VPS_HOST:/opt/erythos/server/deploy/"
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
+            "chmod +x /opt/erythos/server/deploy/*.sh"
+          echo "Synced server/deploy/ scripts to /opt/erythos/server/deploy/"
