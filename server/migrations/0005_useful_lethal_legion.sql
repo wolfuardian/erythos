@@ -1,0 +1,15 @@
+-- 0005: users.github_id NOT NULL → nullable
+--
+-- Required by F-5 magic link spec § OAuth 並存:magic-link sign-in can create
+-- users without a GitHub account (github_id IS NULL). UNIQUE constraint
+-- continues to enforce uniqueness; PostgreSQL treats multiple NULLs as
+-- distinct in unique indexes.
+--
+-- NOTE: drizzle-kit generate produced a noisy diff because
+-- meta/0003_snapshot.json + meta/0004_snapshot.json were missing (PR #959
+-- and #961 omitted snapshots). The auto-generated SQL included CREATE TABLE
+-- for magic_link_tokens / assets, which already exist in prod from 0003 /
+-- 0004 — would fail with "relation already exists". Hand-trimmed to keep
+-- only the actual diff: DROP NOT NULL on users.github_id. Follow-up issue
+-- tracks backfill of missing snapshots.
+ALTER TABLE "users" ALTER COLUMN "github_id" DROP NOT NULL;
