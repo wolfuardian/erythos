@@ -7,6 +7,7 @@ import { sceneRoutes } from './routes/scenes.js';
 import { assetRoutes } from './routes/assets.js';
 import { meRoutes } from './routes/me.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { magicLinkRoutes } from './routes/magic-link.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
 
@@ -96,6 +97,7 @@ api.use('*', async (c, next) => {
 });
 
 api.route('/auth', authRoutes);
+api.route('/auth/magic-link', magicLinkRoutes);
 api.route('/scenes', sceneRoutes);
 api.route('/assets', assetRoutes);
 api.route('/me', meRoutes);
