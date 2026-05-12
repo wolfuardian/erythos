@@ -1,6 +1,6 @@
 {
-  "id": "a2a8ee31-b1dc-410e-81c6-abfbc0497a91",
-  "prevId": "cc080a8c-a4d4-4099-b3dc-882b5af4202d",
+  "id": "cc080a8c-a4d4-4099-b3dc-882b5af4202d",
+  "prevId": "58e2ba0b-3c37-4a3b-8d23-b4f9d5b0d458",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -527,7 +527,7 @@
           "name": "github_id",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "email": {
           "name": "email",
