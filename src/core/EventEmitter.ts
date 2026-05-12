@@ -38,6 +38,11 @@ export interface EditorEventMap {
   syncConflict:           [payload: { sceneId: SceneId; scenePath: AssetPath; baseVersion: number; currentVersion: number; localBody: SceneDocument; cloudBody: SceneDocument }];
   /** Fired by Editor.loadScene after syncEngine.create completes (or fails). Null = sync disabled. */
   syncSceneIdChanged:     [id: SceneId | null];
+  /**
+   * Fired by AutoSave when a non-conflict sync error occurs (413/412/500/network).
+   * Bridge listens and updates the syncError signal → SyncErrorBanner renders.
+   */
+  syncError:              [payload: { kind: 'payload-too-large' | 'sync-failed-local-saved' | 'client-bug' | 'network-offline'; message: string }];
 
 }
 

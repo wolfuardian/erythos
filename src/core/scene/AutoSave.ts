@@ -2,9 +2,18 @@ import type { Editor } from '../Editor';
 import { SceneDocument } from './SceneDocument';
 import { asAssetPath } from '../../utils/branded';
 import { validateScene } from './io/SceneInvariants';
-import { ConflictError, NotFoundError } from '../sync/SyncEngine';
+import {
+  ConflictError,
+  NotFoundError,
+  PayloadTooLargeError,
+  PreconditionError,
+  PreconditionRequiredError,
+  ServerError,
+  NetworkError,
+} from '../sync/SyncEngine';
 
 const DEBOUNCE_DELAY = 2000;
+const RETRY_DELAY_MS = 1000;
 
 interface PendingConflict {
   sceneId: string;
@@ -33,6 +42,9 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
    * and on ConflictError: writes .bak, sets pendingConflict, emits syncConflict.
    * Does NOT throw ConflictError — caller is responsible for whatever needs to happen
    * after (e.g. suppressing flushNow's legacy path).
+   *
+   * Network / server errors are retried once after RETRY_DELAY_MS. On second failure
+   * (or any non-retryable error), emits syncError for the banner.
    *
    * @param json - The serialized scene JSON string to use for .bak
    */
@@ -83,6 +95,42 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
         });
       } else if (err instanceof NotFoundError) {
         console.warn(`[AutoSave] SyncEngine scene not found: "${editor.syncSceneId}"`, err);
+      } else if (err instanceof PayloadTooLargeError) {
+        // 413 — scene exceeds server size limit. No retry.
+        editor.events.emit('syncError', {
+          kind: 'payload-too-large',
+          message: 'Scene exceeds size limit',
+        });
+      } else if (err instanceof PreconditionError || err instanceof PreconditionRequiredError) {
+        // 412 / 428 — client bug: malformed or missing If-Match header.
+        // TODO: replace console.error with telemetry when infra is available.
+        console.error('[F-3] If-Match precondition failed — client bug', err);
+        editor.events.emit('syncError', {
+          kind: 'client-bug',
+          message: 'Sync error (client bug) — please reload',
+        });
+      } else if (err instanceof ServerError || err instanceof NetworkError) {
+        // Transient failure — retry once after a short delay.
+        const kind = err instanceof NetworkError ? 'network-offline' : 'sync-failed-local-saved';
+        await new Promise<void>((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+
+        if (!editor.syncEngine || editor.syncSceneId === null || editor.syncBaseVersion === null) {
+          return;
+        }
+        try {
+          const { version } = await editor.syncEngine.push(
+            editor.syncSceneId,
+            editor.sceneDocument,
+            editor.syncBaseVersion,
+          );
+          editor.syncBaseVersion = version;
+        } catch {
+          // Second attempt also failed — local is already saved, show banner.
+          editor.events.emit('syncError', {
+            kind,
+            message: 'Sync failed, local is saved',
+          });
+        }
       } else {
         console.warn('[AutoSave] syncEngine.push failed:', err);
       }

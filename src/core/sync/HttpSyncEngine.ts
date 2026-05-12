@@ -6,6 +6,10 @@ import {
   ConflictError,
   NotFoundError,
   PreconditionRequiredError,
+  PayloadTooLargeError,
+  PreconditionError,
+  ServerError,
+  NetworkError,
 } from './SyncEngine';
 import { AuthError } from '../auth/AuthClient';
 import { defaultBaseUrl } from './baseUrl';
@@ -39,14 +43,12 @@ async function doFetch(
   url: string,
   init: RequestInit,
   id: SceneId,
-  baseVersion?: number,
-  callerBody?: SceneDocument,
 ): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(url, { ...init, credentials: 'include' });
   } catch (err) {
-    throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`);
+    throw new NetworkError(`Network error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   if (res.ok) return res;
@@ -77,15 +79,14 @@ async function doFetch(
       throw new ConflictError(id, payload.current_version, doc);
     }
 
-    case 412: {
-      // "If-Match format wrong" — this is a client bug, not a real conflict.
-      // No current_version / current_body in response body.
-      // Fall back to caller-supplied values so we always satisfy ConflictError constructor.
-      // Note: caller should treat this as an unexpected client error (logged, telemetry).
-      const fallbackVersion = baseVersion ?? 0;
-      const fallbackBody = callerBody ?? new SceneDocument();
-      throw new ConflictError(id, fallbackVersion, fallbackBody);
-    }
+    case 412:
+      // "If-Match format wrong" — this is a client bug (we generated the If-Match header).
+      // Do NOT treat as a conflict — surface as PreconditionError for telemetry.
+      throw new PreconditionError(id);
+
+    case 413:
+      // Payload Too Large — scene body exceeds server limit (1 MB).
+      throw new PayloadTooLargeError(id);
 
     case 428:
       // "If-Match header missing" — push() always sets it, so this is a client bug.
@@ -94,7 +95,7 @@ async function doFetch(
 
     default:
       if (res.status >= 500) {
-        throw new Error(`Server error ${res.status} on scene ${id}`);
+        throw new ServerError(res.status, id);
       }
       throw new Error(`Unexpected HTTP ${res.status} on scene ${id}`);
   }
@@ -194,8 +195,6 @@ export class HttpSyncEngine implements SyncEngine {
         body: JSON.stringify(body.serialize()),
       },
       id,
-      baseVersion,
-      body,
     );
 
     const payload = await res.json() as { version: number };

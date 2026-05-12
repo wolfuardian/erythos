@@ -1,7 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createAutoSave } from './AutoSave';
 import { SceneDocument } from './SceneDocument';
-import { ConflictError } from '../sync/SyncEngine';
+import {
+  ConflictError,
+  PayloadTooLargeError,
+  PreconditionError,
+  PreconditionRequiredError,
+  ServerError,
+  NetworkError,
+} from '../sync/SyncEngine';
 import { EventEmitter } from '../EventEmitter';
 import type { Editor } from '../Editor';
 import type { AssetPath } from '../../utils/branded';
@@ -196,6 +203,167 @@ describe('AutoSave conflict flow', () => {
     expect(bakCalls).toHaveLength(2);
     expect(String(bakCalls[0][0])).toBe('scenes/scene.erythos.bak.v1');
     expect(String(bakCalls[1][0])).toBe('scenes/scene.erythos.bak.v5');
+  });
+
+  // ── F-3 sync error tests ────────────────────────────────────────────────────
+
+  /**
+   * Test F3-1: 413 PayloadTooLargeError → emits syncError 'payload-too-large', no retry
+   */
+  it('F3-1. 413 PayloadTooLargeError → emits syncError payload-too-large', async () => {
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => Promise.reject(new PayloadTooLargeError('scene-1')),
+    });
+
+    const syncErrorEvents: { kind: string; message: string }[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    await handle.flushNow();
+
+    expect(syncErrorEvents).toHaveLength(1);
+    expect(syncErrorEvents[0].kind).toBe('payload-too-large');
+
+    // Verify push was only called once — no retry
+    const pushMock = (editor.syncEngine!.push as ReturnType<typeof vi.fn>);
+    expect(pushMock).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Test F3-2: 412 PreconditionError → emits syncError 'client-bug', does NOT emit syncConflict
+   */
+  it('F3-2. 412 PreconditionError → emits syncError client-bug, no conflict dialog', async () => {
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => Promise.reject(new PreconditionError('scene-1')),
+    });
+
+    const syncErrorEvents: { kind: string; message: string }[] = [];
+    const syncConflictEvents: unknown[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+    editor.events.on('syncConflict', (payload) => syncConflictEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    await handle.flushNow();
+
+    expect(syncErrorEvents).toHaveLength(1);
+    expect(syncErrorEvents[0].kind).toBe('client-bug');
+    // MUST NOT trigger the conflict dialog
+    expect(syncConflictEvents).toHaveLength(0);
+  });
+
+  /**
+   * Test F3-3: 428 PreconditionRequiredError → emits syncError 'client-bug', no conflict dialog
+   */
+  it('F3-3. 428 PreconditionRequiredError → emits syncError client-bug', async () => {
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => Promise.reject(new PreconditionRequiredError('scene-1')),
+    });
+
+    const syncErrorEvents: { kind: string }[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    await handle.flushNow();
+
+    expect(syncErrorEvents).toHaveLength(1);
+    expect(syncErrorEvents[0].kind).toBe('client-bug');
+  });
+
+  /**
+   * Test F3-4: 500 ServerError — retry once, second success → no syncError emitted
+   */
+  it('F3-4. 500 ServerError retry succeeds → no syncError emitted', async () => {
+    vi.useFakeTimers();
+    let pushCount = 0;
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => {
+        pushCount++;
+        if (pushCount === 1) return Promise.reject(new ServerError(500, 'scene-1'));
+        return Promise.resolve({ version: 2 });
+      },
+    });
+
+    const syncErrorEvents: unknown[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    const flushPromise = handle.flushNow();
+    // First push fails, then the 1s timer fires, then second push
+    await vi.runAllTimersAsync();
+    await flushPromise;
+
+    // Two attempts total
+    expect(pushCount).toBe(2);
+    // No error banner — second attempt succeeded
+    expect(syncErrorEvents).toHaveLength(0);
+    expect(editor.syncBaseVersion).toBe(2);
+    vi.useRealTimers();
+  });
+
+  /**
+   * Test F3-5: 500 ServerError — both attempts fail → emits syncError 'sync-failed-local-saved'
+   */
+  it('F3-5. 500 ServerError both attempts fail → emits syncError sync-failed-local-saved', async () => {
+    vi.useFakeTimers();
+    let pushCount = 0;
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => {
+        pushCount++;
+        return Promise.reject(new ServerError(500, 'scene-1'));
+      },
+    });
+
+    const syncErrorEvents: { kind: string }[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    const flushPromise = handle.flushNow();
+    await vi.runAllTimersAsync();
+    await flushPromise;
+
+    expect(pushCount).toBe(2);
+    expect(syncErrorEvents).toHaveLength(1);
+    expect(syncErrorEvents[0].kind).toBe('sync-failed-local-saved');
+    vi.useRealTimers();
+  });
+
+  /**
+   * Test F3-6: NetworkError — both attempts fail → emits syncError 'network-offline'
+   */
+  it('F3-6. NetworkError both attempts fail → emits syncError network-offline', async () => {
+    vi.useFakeTimers();
+    let pushCount = 0;
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => {
+        pushCount++;
+        return Promise.reject(new NetworkError('Failed to fetch'));
+      },
+    });
+
+    const syncErrorEvents: { kind: string }[] = [];
+    editor.events.on('syncError', (payload) => syncErrorEvents.push(payload));
+
+    const handle = createAutoSave(editor);
+    const flushPromise = handle.flushNow();
+    await vi.runAllTimersAsync();
+    await flushPromise;
+
+    expect(pushCount).toBe(2);
+    expect(syncErrorEvents).toHaveLength(1);
+    expect(syncErrorEvents[0].kind).toBe('network-offline');
+    vi.useRealTimers();
   });
 
   /**

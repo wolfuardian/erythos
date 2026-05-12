@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { SceneDocument } from '../scene/SceneDocument';
-import { ConflictError, NotFoundError, PreconditionRequiredError } from './SyncEngine';
+import {
+  ConflictError,
+  NotFoundError,
+  PreconditionRequiredError,
+  PreconditionError,
+  PayloadTooLargeError,
+  ServerError,
+  NetworkError,
+} from './SyncEngine';
 import { HttpSyncEngine } from './HttpSyncEngine';
 import { AuthError } from '../auth/AuthClient';
 import { MockAssetServer } from './asset/MockAssetServer';
@@ -118,18 +126,22 @@ describe('HttpSyncEngine.fetch()', () => {
     );
   });
 
-  it('throws generic Error on 500', async () => {
+  it('throws ServerError on 500', async () => {
     const engine = makeEngine();
     fetchSpy.mockResolvedValueOnce(mockResponse(500, {}));
 
-    await expect(engine.fetch('scene-1')).rejects.toThrow(/Server error 500/);
+    await expect(engine.fetch('scene-1')).rejects.toSatisfy(
+      (err: unknown) => err instanceof ServerError && err.status === 500,
+    );
   });
 
-  it('throws generic Error on network failure', async () => {
+  it('throws NetworkError on network failure', async () => {
     const engine = makeEngine();
     fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-    await expect(engine.fetch('scene-1')).rejects.toThrow(/Network error/);
+    await expect(engine.fetch('scene-1')).rejects.toSatisfy(
+      (err: unknown) => err instanceof NetworkError,
+    );
   });
 });
 
@@ -177,7 +189,7 @@ describe('HttpSyncEngine.push()', () => {
     );
   });
 
-  it('throws ConflictError on 412 (client-bug path) with fallback fields', async () => {
+  it('throws PreconditionError on 412 (client-bug: malformed If-Match)', async () => {
     const engine = makeEngine();
     const doc = new SceneDocument();
 
@@ -185,9 +197,46 @@ describe('HttpSyncEngine.push()', () => {
 
     await expect(engine.push('scene-1', doc, 3)).rejects.toSatisfy(
       (err: unknown) =>
-        err instanceof ConflictError &&
-        err.sceneId === 'scene-1' &&
-        err.currentVersion === 3, // falls back to baseVersion
+        err instanceof PreconditionError &&
+        err.sceneId === 'scene-1',
+    );
+  });
+
+  it('throws PayloadTooLargeError on 413', async () => {
+    const engine = makeEngine();
+    const doc = new SceneDocument();
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(413, {}));
+
+    await expect(engine.push('scene-1', doc, 3)).rejects.toSatisfy(
+      (err: unknown) =>
+        err instanceof PayloadTooLargeError &&
+        err.sceneId === 'scene-1',
+    );
+  });
+
+  it('throws ServerError on 500', async () => {
+    const engine = makeEngine();
+    const doc = new SceneDocument();
+
+    fetchSpy.mockResolvedValueOnce(mockResponse(500, {}));
+
+    await expect(engine.push('scene-1', doc, 3)).rejects.toSatisfy(
+      (err: unknown) =>
+        err instanceof ServerError &&
+        err.status === 500 &&
+        err.sceneId === 'scene-1',
+    );
+  });
+
+  it('throws NetworkError on fetch rejection', async () => {
+    const engine = makeEngine();
+    const doc = new SceneDocument();
+
+    fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    await expect(engine.push('scene-1', doc, 3)).rejects.toSatisfy(
+      (err: unknown) => err instanceof NetworkError,
     );
   });
 
