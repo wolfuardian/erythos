@@ -82,7 +82,12 @@ erythos.eoswolf.com {
 			max_size 1MB
 		}
 
-		reverse_proxy 127.0.0.1:3000
+		reverse_proxy 127.0.0.1:3000 {
+			# Defense-in-depth: overwrite XFF with the connecting socket IP so
+			# client-supplied fake entries are stripped before reaching Hono.
+			# Complements server-side last-entry read (PR #989). refs #991
+			header_up X-Forwarded-For {http.request.remote.host}
+		}
 	}
 
 	# Health endpoint kept at root (container/LB probe convention,
