@@ -24,12 +24,13 @@ import type { ErythosSceneV2 } from '../types';
  * Any other scheme (prefabs://, blob://, materials://) is returned unchanged.
  * Also leaves cloud-form `assets://<sha256>/<filename>` unchanged — that form
  * should not appear in v1 files but is future-safe to pass through.
+ * Now actually implemented via hex regex guard (64 lowercase hex chars).
  */
 function rewriteAssetScheme(url: string): string {
-  if (url.startsWith('assets://')) {
-    return 'project://' + url.slice('assets://'.length);
-  }
-  return url;
+  if (!url.startsWith('assets://')) return url;
+  // Cloud-form sha256 (64 hex chars) is content-addressed v2 — must NOT downgrade.
+  if (/^assets:\/\/[0-9a-f]{64}\//.test(url)) return url;
+  return 'project://' + url.slice('assets://'.length);
 }
 
 /**
