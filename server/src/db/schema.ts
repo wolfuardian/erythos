@@ -33,7 +33,9 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  github_id: bigint('github_id', { mode: 'number' }).unique().notNull(),
+  // Nullable: magic-link sign-in creates users without a GitHub account.
+  // UNIQUE still enforced; NULLs do not conflict in unique indexes (Postgres).
+  github_id: bigint('github_id', { mode: 'number' }).unique(),
   email: text('email').unique().notNull(),
   github_login: text('github_login').notNull(),
   avatar_url: text('avatar_url'),
