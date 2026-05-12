@@ -1,7 +1,6 @@
 import type { MaterialOverride } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
-import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
 type MatProp = keyof MaterialOverride;
@@ -16,9 +15,9 @@ export class SetMaterialPropertyCommand extends Command {
   private oldValue: MatVal;
   private newValue: MatVal;
 
-  constructor(editor: Editor, uuid: string, prop: MatProp, newValue: MatVal, oldValue: MatVal) {
+  constructor(editor: Editor, uuid: NodeUUID, prop: MatProp, newValue: MatVal, oldValue: MatVal) {
     super(editor);
-    this.uuid = asNodeUUID(uuid);
+    this.uuid = uuid;
     this.prop = prop;
     this.newValue = newValue;
     this.oldValue = oldValue;

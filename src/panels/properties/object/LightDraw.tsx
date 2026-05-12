@@ -6,17 +6,16 @@ import { NumberDrag } from '../../../components/NumberDrag';
 import FoldableSection from '../components/FoldableSection';
 import styles from './object.module.css';
 import type { NodeUUID } from '../../../utils/branded';
-import { asNodeUUID } from '../../../utils/branded';
 
 interface Props {
-  uuid: string;
+  uuid: NodeUUID;
 }
 
 const LightDraw: Component<Props> = (props) => {
   const bridge = useEditor();
   const { editor } = bridge;
 
-  const nodeUUID = (): NodeUUID => asNodeUUID(props.uuid);
+  const nodeUUID = (): NodeUUID => props.uuid;
 
   const isLight = createMemo(() => {
     bridge.objectVersion();

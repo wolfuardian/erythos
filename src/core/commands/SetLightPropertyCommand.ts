@@ -1,7 +1,6 @@
 import type { LightProps } from '../scene/SceneFormat';
 import { Command } from '../Command';
 import type { Editor } from '../Editor';
-import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
 
 type LightProp = keyof LightProps;
@@ -16,9 +15,9 @@ export class SetLightPropertyCommand extends Command {
   private oldValue: LightVal;
   private newValue: LightVal;
 
-  constructor(editor: Editor, uuid: string, prop: LightProp, newValue: LightVal, oldValue: LightVal) {
+  constructor(editor: Editor, uuid: NodeUUID, prop: LightProp, newValue: LightVal, oldValue: LightVal) {
     super(editor);
-    this.uuid = asNodeUUID(uuid);
+    this.uuid = uuid;
     this.prop = prop;
     this.newValue = newValue;
     this.oldValue = oldValue;

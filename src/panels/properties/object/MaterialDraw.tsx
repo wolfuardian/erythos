@@ -3,13 +3,12 @@ import { useEditor } from '../../../app/EditorContext';
 import { SetMaterialPropertyCommand } from '../../../core/commands/SetMaterialPropertyCommand';
 import type { MaterialOverride } from '../../../core/scene/SceneFormat';
 import type { NodeUUID } from '../../../utils/branded';
-import { asNodeUUID } from '../../../utils/branded';
 import FoldableSection from '../components/FoldableSection';
 import { ColorInput } from '../components/ColorInput';
 import { NumberDrag } from '../../../components/NumberDrag';
 import styles from './object.module.css';
 
-interface Props { uuid: string; }
+interface Props { uuid: NodeUUID; }
 
 const DEFAULTS: Required<MaterialOverride> = {
   color: 0xffffff,
@@ -26,7 +25,7 @@ const MaterialDraw: Component<Props> = (props) => {
   const bridge = useEditor();
   const { editor } = bridge;
 
-  const nodeUUID = (): NodeUUID => asNodeUUID(props.uuid);
+  const nodeUUID = (): NodeUUID => props.uuid;
 
   const hasMaterial = createMemo(() => {
     bridge.objectVersion();

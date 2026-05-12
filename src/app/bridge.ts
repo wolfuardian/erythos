@@ -186,7 +186,7 @@ export function createEditorBridge(
     setNodes(editor.sceneDocument.getAllNodes());
   };
   const onNodeRemoved = (_node: SceneNode) => setNodes(editor.sceneDocument.getAllNodes());
-  const onNodeChanged = (_uuid: string, _changed: Partial<SceneNode>) => {
+  const onNodeChanged = (_uuid: NodeUUID, _changed: Partial<SceneNode>) => {
     setNodes(editor.sceneDocument.getAllNodes());
     bump(setObjectVersion);
   };
