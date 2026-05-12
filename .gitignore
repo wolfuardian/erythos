@@ -22,6 +22,10 @@ projects/
 
 server/.env
 
+# Prod ops dir (`/opt/erythos/client/releases/...`) — gitignored so prod
+# `git status` doesn't noise on each deploy-server run.
+client/
+
 # Client env (Vite) — .env.example is tracked, actual secrets are not
 .env
 .env.*.local

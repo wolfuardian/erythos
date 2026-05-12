@@ -38,12 +38,10 @@ jobs:
           path: dist/
           retention-days: 1
 
-  # First-run safety: only manual trigger until verified.
-  # After successful workflow_dispatch run, follow-up PR removes the `if`
-  # gate and adds `needs: deploy-server` to the `deploy` job (server first,
-  # client second — so browsers loading new client get new server API).
+  # Server first, client second — browsers loading new client get new server API.
+  # Verified happy path in workflow_dispatch run 25713123618 before enabling
+  # on push trigger.
   deploy-server:
-    if: github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     environment: production
@@ -141,7 +139,7 @@ jobs:
           REMOTE
 
   deploy:
-    needs: build
+    needs: deploy-server
     runs-on: ubuntu-latest
     environment: production
     steps:
