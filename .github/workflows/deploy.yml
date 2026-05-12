@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# Queue concurrent deploys so a later push doesn't race with an earlier one
+# resetting prod to an older SHA mid-deploy.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,6 +37,108 @@ jobs:
           name: dist
           path: dist/
           retention-days: 1
+
+  # First-run safety: only manual trigger until verified.
+  # After successful workflow_dispatch run, follow-up PR removes the `if`
+  # gate and adds `needs: deploy-server` to the `deploy` job (server first,
+  # client second — so browsers loading new client get new server API).
+  deploy-server:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy server (pull + ci + build + migrate? + restart + health, auto-rollback on fail)
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          # TARGET_SHA passed as positional arg to remote bash to avoid
+          # quote-fragile env-in-ssh-command-string interpolation.
+          ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" bash -s "$TARGET_SHA" <<'REMOTE'
+          set -euo pipefail
+          TARGET_SHA="$1"
+
+          cd /opt/erythos
+          PREV_SHA=$(sudo -u erythos git rev-parse HEAD)
+          echo "[deploy-server] PREV=$PREV_SHA TARGET=$TARGET_SHA"
+
+          # Log untracked files — reset --hard preserves them, but new
+          # commits adding files at these paths would silently overwrite.
+          UNTRACKED=$(sudo -u erythos git ls-files --others --exclude-standard || true)
+          if [ -n "$UNTRACKED" ]; then
+            echo "[deploy-server] untracked files (preserved across reset):"
+            echo "$UNTRACKED" | sed 's/^/  /'
+          fi
+
+          sudo -u erythos git fetch origin
+          sudo -u erythos git reset --hard "$TARGET_SHA"
+          echo "[deploy-server] post-reset HEAD: $(sudo -u erythos git rev-parse HEAD)"
+
+          sudo -u erythos npm ci
+          sudo -u erythos npm run -w server build
+
+          # Migration gated by server/migrations/** diff. `|| true` keeps
+          # set -e + pipefail from tripping on empty grep / fetch oddities.
+          MIG_DIFF=$(sudo -u erythos git diff --name-only "$PREV_SHA" "$TARGET_SHA" -- server/migrations/ || true)
+          if [ -n "$MIG_DIFF" ]; then
+            echo "[deploy-server] migration diff detected — running db:migrate"
+            echo "$MIG_DIFF" | sed 's/^/  /'
+            sudo -u erythos npm run -w server db:migrate
+          else
+            echo "[deploy-server] no migration diff — skipping db:migrate"
+          fi
+
+          sudo systemctl restart erythos-server
+          sleep 4
+
+          # Health gate. `"status":"ok"` rejects degraded (db down still
+          # returns 200 with status=degraded — gate rejects).
+          HEALTH=$(curl -fsS http://localhost:3000/health || true)
+          if echo "$HEALTH" | grep -q '"status":"ok"'; then
+            echo "[deploy-server] health passed: $HEALTH"
+            exit 0
+          fi
+
+          echo "[deploy-server] HEALTH FAILED: $HEALTH" >&2
+
+          # ---------------------------------------------------------------
+          # Auto-rollback to PREV_SHA. Note: only safe for additive
+          # migrations (CREATE TABLE). Destructive migrations (DROP /
+          # ALTER TYPE) leave new schema + old code on rollback → silent
+          # breakage. Contract: destructive migrations must NOT go through
+          # CI auto-deploy — manual deploy with explicit migration plan.
+          #
+          # We do NOT re-run db:migrate on rollback — drizzle migrations
+          # are forward-only (no down() bodies). The additive-only contract
+          # above is what makes PREV-code-on-TARGET-schema safe.
+          # ---------------------------------------------------------------
+          echo "[deploy-server] rolling back to $PREV_SHA..." >&2
+          sudo -u erythos git reset --hard "$PREV_SHA"
+          sudo -u erythos npm ci
+          sudo -u erythos npm run -w server build
+          sudo systemctl restart erythos-server
+          sleep 4
+
+          ROLL_HEALTH=$(curl -fsS http://localhost:3000/health || true)
+          if echo "$ROLL_HEALTH" | grep -q '"status":"ok"'; then
+            echo "[deploy-server] rollback succeeded — prod on $PREV_SHA" >&2
+            exit 1   # still fail workflow so bad commit is visible
+          fi
+
+          echo "[deploy-server] ROLLBACK ALSO FAILED — MANUAL INTERVENTION" >&2
+          echo "[deploy-server] last 60 lines of server journal:" >&2
+          sudo journalctl -u erythos-server -n 60 --no-pager >&2 || true
+          exit 2
+          REMOTE
 
   deploy:
     needs: build
