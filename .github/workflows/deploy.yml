@@ -66,6 +66,14 @@ jobs:
           TARGET_SHA="$1"
 
           cd /opt/erythos
+
+          # Defensive: ensure .git is erythos-owned. Manual ssh debug
+          # using sudo / root for git operations leaves root-owned
+          # children under .git/refs and .git/logs, which then break
+          # `sudo -u erythos git fetch` with "cannot lock ref … Permission
+          # denied" on the next deploy. Cheap to run every time.
+          sudo chown -R erythos:erythos .git
+
           PREV_SHA=$(sudo -u erythos git rev-parse HEAD)
           echo "[deploy-server] PREV=$PREV_SHA TARGET=$TARGET_SHA"
 
