@@ -87,12 +87,26 @@ jobs:
           # Migration gated by server/migrations/** diff. `|| true` keeps
           # set -e + pipefail from tripping on empty grep / fetch oddities.
           MIG_DIFF=$(sudo -u erythos git diff --name-only "$PREV_SHA" "$TARGET_SHA" -- server/migrations/ || true)
+          MIGRATE_FAILED=
           if [ -n "$MIG_DIFF" ]; then
             echo "[deploy-server] migration diff detected — running db:migrate"
             echo "$MIG_DIFF" | sed 's/^/  /'
-            sudo -u erythos npm run -w server db:migrate
+            if ! sudo -u erythos npm run -w server db:migrate; then
+              echo "[deploy-server] MIGRATION FAILED — service still running PREV; rollback git only" >&2
+              MIGRATE_FAILED=1
+            fi
           else
             echo "[deploy-server] no migration diff — skipping db:migrate"
+          fi
+
+          # If migration failed: revert git to PREV and fail loudly.
+          # Do NOT restart the service — PREV binary is still running on PREV schema.
+          # DB may be partially migrated; manual DBA review is required.
+          if [ -n "${MIGRATE_FAILED:-}" ]; then
+            echo "[deploy-server] aborting deploy — reverting git to $PREV_SHA" >&2
+            sudo -u erythos git reset --hard "$PREV_SHA"
+            echo "::error::Migration failed — git reverted to $PREV_SHA, service untouched. DB may be partially migrated; manual DBA review needed." >&2
+            exit 1
           fi
 
           sudo systemctl restart erythos-server
