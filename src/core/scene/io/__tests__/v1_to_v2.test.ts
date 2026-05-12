@@ -142,4 +142,101 @@ describe('v1_to_v2', () => {
     expect(() => v1_to_v2('string')).toThrow(TypeError);
     expect(() => v1_to_v2(42)).toThrow(TypeError);
   });
+
+  // --- hash-form pass-through tests (fix for #974) ---
+
+  it('rewriteAssetScheme: legacy path-form assets:// is rewritten to project://', () => {
+    const v1 = {
+      version: 1,
+      env: { hdri: null, intensity: 1, rotation: 0 },
+      nodes: [
+        {
+          id: 'node-5',
+          name: 'Mesh',
+          parent: null,
+          order: 0,
+          nodeType: 'mesh',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          asset: 'assets://meshes/box.glb',
+          userData: {},
+        },
+      ],
+    };
+    const result = v1_to_v2(v1);
+    expect(result.nodes[0].asset).toBe('project://meshes/box.glb');
+  });
+
+  it('rewriteAssetScheme: hash-form assets://<64hex>/filename is NOT rewritten (v2 cloud pass-through)', () => {
+    const sha256 = '0'.repeat(64); // 64 hex chars, valid pattern
+    const v1 = {
+      version: 1,
+      env: { hdri: null, intensity: 1, rotation: 0 },
+      nodes: [
+        {
+          id: 'node-6',
+          name: 'Mesh',
+          parent: null,
+          order: 0,
+          nodeType: 'mesh',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          asset: `assets://${sha256}/foo.glb`,
+          userData: {},
+        },
+      ],
+    };
+    const result = v1_to_v2(v1);
+    expect(result.nodes[0].asset).toBe(`assets://${sha256}/foo.glb`);
+  });
+
+  it('v1_to_v2 round-trip: node.asset + env.hdri with path-form are both rewritten to project://', () => {
+    const v1 = {
+      version: 1,
+      env: { hdri: 'assets://hdrs/studio.hdr', intensity: 1, rotation: 0 },
+      nodes: [
+        {
+          id: 'node-7',
+          name: 'Mesh',
+          parent: null,
+          order: 0,
+          nodeType: 'mesh',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          asset: 'assets://meshes/box.glb',
+          userData: {},
+        },
+      ],
+    };
+    const result = v1_to_v2(v1);
+    expect(result.env.hdri).toBe('project://hdrs/studio.hdr');
+    expect(result.nodes[0].asset).toBe('project://meshes/box.glb');
+  });
+
+  it('v1_to_v2: hash-form assets:// in node.asset is left unchanged (future-safe)', () => {
+    const sha256 = 'a3b4c5d6e7f8'.padEnd(64, '0'); // 64 hex chars
+    const v1 = {
+      version: 1,
+      env: { hdri: null, intensity: 1, rotation: 0 },
+      nodes: [
+        {
+          id: 'node-8',
+          name: 'Mesh',
+          parent: null,
+          order: 0,
+          nodeType: 'mesh',
+          position: [0, 0, 0],
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          asset: `assets://${sha256}/foo.glb`,
+          userData: {},
+        },
+      ],
+    };
+    const result = v1_to_v2(v1);
+    expect(result.nodes[0].asset).toBe(`assets://${sha256}/foo.glb`);
+  });
 });
