@@ -17,6 +17,7 @@ import { Toolbar } from '../components/Toolbar';
 import { GridHelpers } from '../viewport/GridHelpers';
 import { Welcome } from './Welcome';
 import { SyncConflictDialog } from '../components/SyncConflictDialog';
+import { SyncErrorOverlay } from '../components/SyncErrorBanner';
 import { CopyAsJsonModal } from '../components/CopyAsJsonModal';
 import { PasteFromJsonModal } from '../components/PasteFromJsonModal';
 import { ErrorDialog } from '../components/ErrorDialog';
@@ -391,6 +392,12 @@ const App: Component = () => {
   return (
     <>
       <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
+      <Show when={bridge() !== null}>
+        <SyncErrorOverlay
+          error={bridge()!.syncError()}
+          onDismiss={() => bridge()!.dismissSyncError()}
+        />
+      </Show>
       <Show
         when={!isViewerMode()}
         fallback={
