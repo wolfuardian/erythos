@@ -1,0 +1,145 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  max-width: 420px;
+  width: 90%;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-well-outer);
+}
+
+.title {
+  margin: 0 0 var(--space-md) 0;
+  font-size: var(--font-size-lg);
+}
+
+.button {
+  padding: 6px 16px;
+  height: 32px;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.primaryButton {
+  background: var(--accent-primary, #4a9eff);
+  color: #fff;
+  width: 100%;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--accent-primary-hover, #3a8eef);
+}
+
+.primaryButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: var(--space-md) 0;
+  color: var(--text-tertiary, var(--text-secondary));
+  font-size: var(--font-size-xs);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.dividerText {
+  padding: 0 var(--space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.emailLabel {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.emailInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  margin-top: var(--space-xs);
+  margin-bottom: var(--space-md);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.emailInput:focus {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--accent-primary, #4a9eff);
+}
+
+.error {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-danger, #e07070);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  margin-top: var(--space-md);
+}
+
+.sentState {
+  display: block;
+}
+
+.sentMessage {
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.sentEmail {
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+.sentHint {
+  margin: 0 0 var(--space-md) 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}

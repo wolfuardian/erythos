@@ -222,3 +222,75 @@ describe('AuthClient.deleteAccount', () => {
     );
   });
 });
+
+// ─── requestMagicLink ────────────────────────────────────────────────────────
+
+describe('AuthClient.requestMagicLink', () => {
+  it('200 → resolves without error', async () => {
+    mockFetch(200, { ok: true });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(
+      client.requestMagicLink('alice@example.com'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('400 → throws AuthError with status 400 and invalid-email message', async () => {
+    mockFetch(400, { error: 'invalid_email' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(client.requestMagicLink('not-an-email')).rejects.toThrow(
+      AuthError,
+    );
+    await expect(client.requestMagicLink('not-an-email')).rejects.toMatchObject(
+      { status: 400, message: expect.stringContaining('valid email') },
+    );
+  });
+
+  it('429 → throws AuthError with status 429 and rate-limit message', async () => {
+    mockFetch(429, { error: 'rate_limited' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(
+      client.requestMagicLink('flood@example.com'),
+    ).rejects.toMatchObject({
+      status: 429,
+      message: expect.stringContaining('Too many'),
+    });
+  });
+
+  it('500 → throws AuthError with status 500', async () => {
+    mockFetch(500, { error: 'Internal Server Error' });
+
+    const client = new AuthClient(BASE_URL);
+    await expect(
+      client.requestMagicLink('alice@example.com'),
+    ).rejects.toMatchObject({ status: 500 });
+  });
+
+  it('network error → throws AuthError with network-error message', async () => {
+    mockFetchNetworkError('Connection refused');
+
+    const client = new AuthClient(BASE_URL);
+    await expect(
+      client.requestMagicLink('alice@example.com'),
+    ).rejects.toThrow('Network error');
+  });
+
+  it('POSTs to /auth/magic-link/request with email body + credentials include', async () => {
+    mockFetch(200, { ok: true });
+
+    const client = new AuthClient(BASE_URL);
+    await client.requestMagicLink('alice@example.com');
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      `${BASE_URL}/auth/magic-link/request`,
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'alice@example.com' }),
+      }),
+    );
+  });
+});

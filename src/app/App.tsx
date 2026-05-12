@@ -232,6 +232,7 @@ const App: Component = () => {
       authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
       authGetExportUrl: () => authClient.getExportUrl(),
       authDeleteAccount: () => authClient.deleteAccount(),
+      authRequestMagicLink: (email) => authClient.requestMagicLink(email),
     });
 
     e.keybindings.registerMany([

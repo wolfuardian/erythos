@@ -99,6 +99,8 @@ export interface EditorBridge {
   getExportUrl: () => string;
   /** Permanently deletes the current user's account (GDPR). */
   deleteAccount: () => Promise<void>;
+  /** Requests a magic-link sign-in email for the given address. */
+  requestMagicLink: (email: string) => Promise<void>;
   dispose: () => void;
 }
 
@@ -120,6 +122,8 @@ export interface EditorBridgeDeps {
   authGetExportUrl?: () => string;
   /** Auth: deleteAccount method (from AuthClient instance) */
   authDeleteAccount?: () => Promise<void>;
+  /** Auth: requestMagicLink method (from AuthClient instance) */
+  authRequestMagicLink?: (email: string) => Promise<void>;
 }
 
 export function createEditorBridge(
@@ -317,6 +321,8 @@ export function createEditorBridge(
     getOAuthStartUrl: deps?.authGetOAuthStartUrl ?? ((_provider: 'github') => ''),
     getExportUrl: deps?.authGetExportUrl ?? (() => ''),
     deleteAccount: deps?.authDeleteAccount ?? (() => Promise.resolve()),
+    requestMagicLink:
+      deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
     dispose,
   };
 }

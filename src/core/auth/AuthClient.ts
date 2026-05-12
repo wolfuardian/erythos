@@ -140,6 +140,51 @@ export class AuthClient {
   }
 
   /**
+   * Requests a magic-link sign-in email for the given address.
+   *
+   * Server always returns 200 on success regardless of whether the email
+   * is registered (anti-enumeration — see docs/magic-link-spec.md § REST API).
+   * The actual email is sent server-side via Resend (stub-logged in C2 / C3
+   * lands real send). Caller should show a generic "check your inbox"
+   * message to the user.
+   *
+   * POST /auth/magic-link/request   { email }
+   *   200 → resolves (link sent / silently absorbed on per-email rate limit)
+   *   400 → AuthError invalid_email
+   *   429 → AuthError rate_limited (per-IP only)
+   *   5xx → AuthError
+   */
+  async requestMagicLink(email: string): Promise<void> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/auth/magic-link/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+    } catch (err) {
+      throw new AuthError(`Network error: ${(err as Error).message}`);
+    }
+
+    if (response.status === 400) {
+      throw new AuthError('Please enter a valid email address', 400);
+    }
+    if (response.status === 429) {
+      throw new AuthError(
+        'Too many requests — please wait a minute and try again',
+        429,
+      );
+    }
+    if (!response.ok) {
+      throw new AuthError(
+        `Unexpected response from /auth/magic-link/request: ${response.status}`,
+        response.status,
+      );
+    }
+  }
+
+  /**
    * Permanently deletes the current user's account, all scenes, and revision
    * history. The server clears the session cookie on success.
    *
