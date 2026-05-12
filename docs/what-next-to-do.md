@@ -38,8 +38,30 @@
 
 - [x] **Asset sync** → Phase F-1,epic #957 ✅ **prod live 2026-05-12**
   spec `docs/asset-sync-protocol.md`(2026-05-12 補完 scene asset URL 欄位 §,PR #976 / closes #975)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962 + ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972 + ✅ F-1d-2b Upload binaries pre-push hook + URL rewrite #973(QC PASS,dragon)。783/783 tests + build pass。✅ Ops:Linode `erythos-assets` bucket Tokyo 3、access key 共用 backup 那把、`.env` 補 `S3_ASSETS_BUCKET=erythos-assets`、server restart、prod smoke `curl https://erythos.eoswolf.com/api/assets/<zero-hash>` 回 404(預期)。Follow-up 全 closed:✅ #974 v1_to_v2 hash-form guard (PR #978,QC PASS) / ✅ #975 closed by PR #976 / ✅ #979 uploadSceneBinaries round-trip cleanup (PR #982,QC PASS,F-1d-2b dragon 路徑現乾淨)。F-1 epic 完全收乾淨
-- [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成
-  ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub + schema + migration 0003(PR #959 merged)。**剩 Phase C** Resend SDK wire + endpoint mount + rate limit + `github_id nullable` migration + **Phase D** client UI(`auth_error` banner reuse E4 pattern)
+- [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成,**Phase C+D 為本 session 主待辦**
+  ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub(2 helper + 2 TODO function)+ `magic_link_tokens` schema + migration 0003(PR #959 merged,prod live)
+
+  **Phase C+D 切 4 PR 串行**(C1 → C2 → C3 並行 D1):
+
+  | PR | 內容 | 指揮家依賴 | 預估 LOC |
+  |---|------|----------|---------|
+  | **C1** | migration 0005 `users.github_id` 從 `BIGINT UNIQUE NOT NULL` 改 nullable + `schema.ts` type 對齊(spec § OAuth 並存:magic link 新 user 無 github_id) | 無 | ~20 |
+  | **C2** | `magic-link.ts` 核心邏輯展開(`requestMagicLink` 完整實作 INSERT token / `verifyMagicLink` 完整實作 SELECT+UPDATE+find-or-create user)+ `routes/magic-link.ts` 新增 `POST /api/auth/magic-link/request`(zod email 驗 + rate limit + 寄信)/ `GET /api/auth/magic-link/verify`(查 + `createSession` + 302 with `?auth_error=<code>` on fail)+ in-memory rate limit `Map<string, timestamp>`(per-email 60s 1 次 / per-IP request 1h 10 次 / per-IP verify 1min 20 次)+ mount 在 `index.ts` 的 `/api` router + `.env.example` 補 4 個 env var + tests(request 200/400/429 / verify 302 success+expired+used+invalid)。**寄信暫 stub**:`RESEND_API_KEY` unset 時 `console.log(plaintext)`,本地 dev 友善 | 無(等 C1 merge) | ~250-350 |
+  | **C3** | Resend SDK integrate(`npm install resend` 加 server workspace 依賴)+ email template(HTML 主 + `text/plain` fallback;主旨 `Your Erythos sign-in link`;內含 magic link button + `Valid for 15 minutes` 提示 + `If you didn't request this, please ignore` 免責)+ env-gated 替掉 C2 stub(`if (process.env.RESEND_API_KEY) sendViaResend() else console.log`)+ tests(template render + mock Resend client) | **指揮家**:Resend account + DNS + key | ~150-200 |
+  | **D1** | `AuthClient.requestMagicLink(email)` 方法 + 對應 tests + client UI(Toolbar Sign in 或 Welcome panel 加 email input form;送出後顯示「Check your inbox」狀態;form 送出 disable + loading)+ `?auth_error=` banner reuse #920 OAuth pattern(`expired` / `used` / `invalid` / `rate_limited` 文案)+ component tests | 無(D1 並行 C3,但需 C2 已 land 才能本地 e2e 串通) | ~200-300 |
+
+  **Open questions 已釘**(實作遵循,不再 review):
+  - `MAGIC_LINK_BASE_URL` dev = `http://localhost:5173`(Vite),需確認 `vite.config.ts` 有 proxy `/api → http://localhost:3000`(C2 PR 內順手 verify;沒設則加上)。Prod = `https://erythos.eoswolf.com`(Caddy 統一)
+  - Token 撤銷策略 = 用完保留 30 天 + reaper cron 清過期 token(reaper 留為 follow-up issue,**不在 C+D scope**;C2 階段 schema 允許 `used_at IS NOT NULL` row 留著即可)
+  - `users.github_id` nullable 走 migration 改 nullable(C1 做),不用 sentinel `-1`(anti-pattern + UNIQUE constraint 踩雷)
+
+  **指揮家準備清單**(C3 開工前 / 上線前):
+  - [ ] [Resend.com](https://resend.com) 帳號註冊 + 拿 API key(free tier 月 3000 封)
+  - [ ] Cloudflare DNS 加 SPF / DKIM / DMARC record(Resend dashboard 給確切 record 內容;否則寄出的信很容易進 spam folder)
+  - [ ] 確認寄件人 `noreply@erythos.eoswolf.com`(或要換別的 local part?)
+  - [ ] prod `.env` 補三條(C3 merge 後做):`RESEND_API_KEY=<key>` / `MAGIC_LINK_FROM_EMAIL=noreply@erythos.eoswolf.com` / `MAGIC_LINK_BASE_URL=https://erythos.eoswolf.com`,然後 push main 自動 deploy(`erythos-server` restart 帶起新 env)
+
+  **out-of-scope**(spec § 砍掉的東西,不要重提):SMS / WhatsApp / 多語 email / password 第三路徑 / Better Auth wire / 自架 SMTP / TOTP-2FA / reaper cron(留 follow-up)
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅
   GitHub Actions `deploy.yml` push main → VPS scp + atomic symlink flip + 自動 prune > 5 release。install.md Phase 14 含 SSH key + secrets setup 步驟。Prod 啟用前先設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER 三個 secret
 - [ ] **Multi-device e2e** → Phase F-3,#938 ⬜
