@@ -37,7 +37,7 @@
 本 session 只規劃不實作。全部在 #938 phase F brainstorm:
 
 - [x] **Asset sync** → Phase F-1,epic #957 ✅ **prod live 2026-05-12**
-  spec `docs/asset-sync-protocol.md`(2026-05-12 補完 scene asset URL 欄位 §,PR #976 / closes #975)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962 + ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972 + ✅ F-1d-2b Upload binaries pre-push hook + URL rewrite #973(QC PASS,dragon)。778/778 tests + build pass。✅ Ops:Linode `erythos-assets` bucket Tokyo 3、access key 共用 backup 那把、`.env` 補 `S3_ASSETS_BUCKET=erythos-assets`、server restart、prod smoke `curl https://erythos.eoswolf.com/api/assets/<zero-hash>` 回 404(預期)。Follow-up 全 closed:✅ #974 v1_to_v2 hash-form guard (PR #978,QC PASS) / ✅ #975 closed by PR #976。可選後續(已開):⬜ #979 `uploadSceneBinaries.ts` 改回 `serialize()/deserialize()` round-trip,屬 lint-grade cleanup
+  spec `docs/asset-sync-protocol.md`(2026-05-12 補完 scene asset URL 欄位 §,PR #976 / closes #975)。✅ F-1a S3 module #960 + ✅ F-1b schema + migration #961 + ✅ F-1c endpoints #962 + ✅ F-1d-1 HttpAssetClient + AssetResolver cache #963 + ✅ F-1d-2a Wire HttpAssetClient → Editor #964 + ✅ F-1d-2c Quota UI #972 + ✅ F-1d-2b Upload binaries pre-push hook + URL rewrite #973(QC PASS,dragon)。783/783 tests + build pass。✅ Ops:Linode `erythos-assets` bucket Tokyo 3、access key 共用 backup 那把、`.env` 補 `S3_ASSETS_BUCKET=erythos-assets`、server restart、prod smoke `curl https://erythos.eoswolf.com/api/assets/<zero-hash>` 回 404(預期)。Follow-up 全 closed:✅ #974 v1_to_v2 hash-form guard (PR #978,QC PASS) / ✅ #975 closed by PR #976 / ✅ #979 uploadSceneBinaries round-trip cleanup (PR #982,QC PASS,F-1d-2b dragon 路徑現乾淨)。F-1 epic 完全收乾淨
 - [ ] **Magic link + Resend** → Phase F-5,#938 / spec #955 / skeleton #956 🟦 Phase A+B 已完成
   ✅ `docs/magic-link-spec.md`(230 行 15 章節,PR #958 merged)+ ✅ `server/src/auth/magic-link.ts` unwired stub + schema + migration 0003(PR #959 merged)。**剩 Phase C** Resend SDK wire + endpoint mount + rate limit + `github_id nullable` migration + **Phase D** client UI(`auth_error` banner reuse E4 pattern)
 - [x] **CI/CD pipeline** → #948 / PR #952 ✅
@@ -131,6 +131,6 @@
 4. **prod hardening 落地** — 2026-05-12 已落 2 / 4:
    - ✅ #951 DB backup — Tokyo 3 `erythos-backups` bucket、`.env` S3 全填、`backup.sh` 從 github raw 抓進 prod、crontab `0 3 * * *` daily 排好(decisions log 2026-05-12 [ops])
    - ✅ F-1 asset bucket — Tokyo 3 `erythos-assets`、`S3_ASSETS_BUCKET` 補完、server restart、prod smoke 404(decisions log 2026-05-12 [phase-f])
-   - ⬜ #952 CI/CD 需設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER GitHub secrets
-   - ⬜ #980 deploy.yml 帶 `server/deploy/` 全目錄到 prod(本 session backup ops land 痛點根源)
+   - ⬜ #952 CI/CD 需設 SSH_PRIVATE_KEY / VPS_HOST / VPS_USER GitHub secrets ← **此即所有 prod deploy 卡點**(2026-05-12 多次 push 觸發 deploy.yml 全 fail 在 Setup SSH step,因 secrets 未設;設好後既有 client deploy + 新加的 server/deploy sync 都會自動跑)
+   - ✅ #980 deploy.yml 帶 `server/deploy/` 全目錄到 prod(PR #981 merged,等 secrets 設好生效)
    - ⬜ #953 Observability 需設 METRICS_USER / METRICS_PASS env
