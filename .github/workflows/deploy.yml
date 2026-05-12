@@ -116,6 +116,10 @@ jobs:
           # ALTER TYPE) leave new schema + old code on rollback → silent
           # breakage. Contract: destructive migrations must NOT go through
           # CI auto-deploy — manual deploy with explicit migration plan.
+          #
+          # We do NOT re-run db:migrate on rollback — drizzle migrations
+          # are forward-only (no down() bodies). The additive-only contract
+          # above is what makes PREV-code-on-TARGET-schema safe.
           # ---------------------------------------------------------------
           echo "[deploy-server] rolling back to $PREV_SHA..." >&2
           sudo -u erythos git reset --hard "$PREV_SHA"
