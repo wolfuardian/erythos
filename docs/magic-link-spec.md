@@ -153,6 +153,26 @@ Response 302 (失敗):
 
 **Anti-enumeration trade-off**:Resend SDK 拋錯時 endpoint 仍回 200。寄信失敗不會讓 client 知道(delivery-failure signal 不得外洩)。prod ops 監控:`journalctl -u erythos-server | grep "send failed"`
 
+## Token Lifecycle / Reaper
+
+`magic_link_tokens` row 不會在 verify 後立刻刪 — 取代為 atomic UPDATE 設 `used_at`(spec § verify race fix #990)。row 永久保留會讓表無限長,故 daily reaper cron 清舊 row。
+
+**保留 30 天**(rationale):
+- 遇 user 回報「沒收到 magic link」時,30 天內可 grep server log + DB row 比對(token 是否真寫進 DB / Resend 是否真送出)
+- 30 天後 ops 偵錯價值低,row 可清
+- 過期 token(`expires_at < NOW() - 30 days`)該清,不論 `used_at` 有無 set
+  - 已用:audit purpose 期限到
+  - 未用 expired:沒人 care
+
+**實作**:`server/deploy/reaper-magic-link-tokens.sh` + crontab `0 4 * * *` daily(install.md Phase 15)。
+
+```sql
+DELETE FROM magic_link_tokens
+WHERE expires_at < NOW() - INTERVAL '30 days';
+```
+
+保留期可調(改 INTERVAL),調短少 ops 偵錯窗,調長 row 累積快。v0 量級每日幾百 row,單表 + DELETE 夠用;若量級成長到萬級/日,改 `pg_partman` 月 partition + DROP 舊 partition。
+
 ## OAuth 並存策略
 
 magic link 進來的 email 與既有 GitHub OAuth users 共用同一 `users` 表。
