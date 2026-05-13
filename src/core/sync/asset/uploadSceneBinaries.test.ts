@@ -225,6 +225,25 @@ describe('uploadSceneBinaries', () => {
     expect(result).not.toBe(scene);
   });
 
+  it('skips project://primitives/* — built-in primitives have no backing file (T3 regression)', async () => {
+    // `project://primitives/box` is a synthetic URL; no readFile must happen.
+    // Reproduces T3: cloud autosave used to throw "No project open" because
+    // walker called LocalProjectManager.readFile on the primitive path.
+    const pm = makeMockPm({}); // empty — any readFile would throw "not found"
+    const client = new MockAssetServer();
+
+    const scene = makeSceneWithNode('project://primitives/box');
+    const result = await uploadSceneBinaries(scene, pm, client);
+
+    // URL must be passed through unchanged
+    const nodes = result.getAllNodes();
+    expect(nodes[0].asset).toBe('project://primitives/box');
+
+    // No IO whatsoever
+    expect(pm.readFile).not.toHaveBeenCalled();
+    expect(client.size).toBe(0);
+  });
+
   it('round-trip: assets://<sha256>/<filename> survives serialize → deserialize unchanged (PR #978 guard)', async () => {
     // Simulate a doc that already has a cloud-form URL (e.g. written by a previous push).
     // The v1_to_v2 migration must NOT downgrade it back to project://.
