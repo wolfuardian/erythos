@@ -1,4 +1,6 @@
 import { type Component, createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { useOfflineStatus } from '../core/network/useOfflineStatus';
+import { OfflineBanner } from '../components/OfflineBanner';
 import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
@@ -48,6 +50,12 @@ const App: Component = () => {
   const syncEngine = new HttpSyncEngine(undefined, projectManager, new HttpAssetClient());
   // Singleton AuthClient — session via HttpOnly cookie; no token storage in JS.
   const authClient = new AuthClient();
+
+  // Offline status — reactive boolean, true when client is offline.
+  // Disposed on component cleanup. See src/core/network/useOfflineStatus.ts.
+  // G6: used to show OfflineBanner for cloud projects.
+  const { isOffline, dispose: disposeOfflineStatus } = useOfflineStatus();
+  onCleanup(disposeOfflineStatus);
 
   // currentUser signal: undefined = unresolved, null = guest, User = signed in
   const [currentUser, setCurrentUser] = createSignal<User | null | undefined>(undefined);
@@ -621,6 +629,10 @@ const App: Component = () => {
   return (
     <>
       <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
+      {/* G6 — Offline banner: only for cloud projects, not local. Not dismissible. */}
+      <Show when={isOffline() && bridge() !== null && bridge()!.projectType() === 'cloud'}>
+        <OfflineBanner />
+      </Show>
       <Show when={bridge() !== null}>
         <SyncErrorOverlay
           error={bridge()!.syncError()}
