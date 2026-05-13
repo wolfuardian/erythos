@@ -93,7 +93,9 @@ class CloudProjectManager implements ProjectManager {
 }
 ```
 
-> **設計決定 D-1**:`ProjectIdentifier` discriminated union 不在介面層 unify。CloudProject 多型化分支以 `manager.type` 判別,call site 仍 type-narrow(類比 v0.1 `nodeType` 分支模式)。
+> **設計決定 D-1**:`ProjectIdentifier` discriminated union 不在介面層 unify。Polymorphic dispatch 邊界僅在 **app-level project entry layer**(`App.tsx` 的 active project state,Welcome / NewProjectModal 的 Local/Cloud 二選一,routing 層)做 `manager.type` narrow。Downstream LocalProject-only consumer(`Editor` / `AssetResolver` / `PrefabRegistry` / `bridge` 等)直接接 concrete `LocalProjectManager`,不在介面層 narrow — 因 CloudProject 走 `HttpSyncEngine` 獨立 sync 路徑,不過 `Editor.projectManager`。
+>
+> 反指標:全 codebase abstract `ProjectManager` + downstream narrow。Editor / AssetResolver / PrefabRegistry / bridge 用到 9+ LocalProject-only method(`urlFor` / `getFiles` / `onFileChanged` / `writeFile` / `isOpen` / `createScene` / `setCurrentScenePath` 等),這些不該進 minimal interface(否則 CloudProjectManager 要 stub 一堆 throw method,defeats minimal-interface 設計)。v0.1 `nodeType` 類比僅描述「discriminated union + narrow」pattern,**不**意味每個 consumer 都看 abstract Node — ProjectManager 的 narrow 點在 app entry layer,downstream 維持 concrete type。
 
 > **設計決定 D-2**:`SaveResult` 是 discriminated union,不抛 exception。v0.1 `HttpSyncEngine` 已是這個 pattern,CloudProjectManager 直接 reuse。LocalProjectManager `ok: false` 路徑罕見(FS handle 失效 / quota exceeded)— 仍走同形態。
 
