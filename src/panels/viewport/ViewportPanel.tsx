@@ -132,6 +132,9 @@ const ViewportPanel: Component = () => {
       e.preventDefault();
       setIsDragging(false);
 
+      // Read-only mode: reject all drops
+      if (bridge.editorReadOnly()) return;
+
       // 路徑 1：OS 檔案拖放
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find((f) => /\.(glb|gltf)$/i.test(f.name));
@@ -288,11 +291,13 @@ const ViewportPanel: Component = () => {
         }
       },
       onMultiTransformEnd: (objects, startTransforms) => {
+        if (bridge.editorReadOnly()) return;
         for (let i = 0; i < objects.length; i++) {
           emitTransformCommands(objects[i], startTransforms[i], editor);
         }
       },
       onTransformEnd: (obj, startPos, startRot, startScale) => {
+        if (bridge.editorReadOnly()) return;
         emitTransformCommands(obj, { pos: startPos, rot: startRot, scale: startScale }, editor);
       },
     });

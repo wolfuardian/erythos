@@ -13,13 +13,14 @@ const EnvironmentDraw: Component = () => {
   const env = () => bridge.environmentSettings();
 
   const handleClear = () => {
+    if (bridge.editorReadOnly()) return;
     editor.setEnvironmentSettings({ hdri: null });
   };
 
   const projectHdrFiles = () => bridge.projectFiles().filter((f) => f.type === 'hdr');
 
   const handleSelectFromProject = async (path: AssetPath) => {
-    if (!path) return;
+    if (!path || bridge.editorReadOnly()) return;
     // Store the project:// URL in SceneEnv.hdri for persistence
     // Viewport resolves it at render time
     editor.setEnvironmentSettings({ hdri: `project://${path}` });
@@ -63,6 +64,7 @@ const EnvironmentDraw: Component = () => {
           step={0.05}
           precision={2}
           onChange={(v) => {
+            if (bridge.editorReadOnly()) return;
             editor.execute(new SetEnvironmentCommand(editor, 'intensity', v, env().intensity));
           }}
           onDragEnd={() => editor.history.sealLast()}
@@ -79,6 +81,7 @@ const EnvironmentDraw: Component = () => {
           step={1}
           precision={0}
           onChange={(v) => {
+            if (bridge.editorReadOnly()) return;
             editor.execute(new SetEnvironmentCommand(editor, 'rotation', v, env().rotation));
           }}
           onDragEnd={() => editor.history.sealLast()}

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Scene } from 'three';
 import { Editor } from '../Editor';
 import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
+import { AddNodeCommand } from '../commands/AddNodeCommand';
 import type { PrefabAsset } from '../scene/PrefabFormat';
 
 describe('Editor', () => {
@@ -48,6 +49,64 @@ describe('Editor', () => {
     expect(editor.sceneSync.getObject3D(node.id)).toBeNull();
   });
 
+  // ── readOnly enforcement ──────────────────────────
+  describe('readOnly enforcement', () => {
+    it('readOnly defaults to false', () => {
+      expect(editor.readOnly()).toBe(false);
+    });
+
+    it('execute() runs command when readOnly=false', () => {
+      const node = editor.sceneDocument.createNode('Cube');
+      editor.execute(new AddNodeCommand(editor, node));
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+    });
+
+    it('execute() is a no-op and warns when readOnly=true', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      editor.setReadOnly(true);
+      const node = editor.sceneDocument.createNode('Cube');
+      editor.execute(new AddNodeCommand(editor, node));
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Editor is read-only — command rejected:',
+        'AddNodeCommand',
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('undo() is a no-op when readOnly=true', () => {
+      // Set up: add a node first
+      const node = editor.sceneDocument.createNode('Cube');
+      editor.execute(new AddNodeCommand(editor, node));
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+      // Now switch to readOnly and try to undo
+      editor.setReadOnly(true);
+      editor.undo();
+      // Node should still be there (undo was a no-op)
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+    });
+
+    it('redo() is a no-op when readOnly=true', () => {
+      const node = editor.sceneDocument.createNode('Cube');
+      editor.execute(new AddNodeCommand(editor, node));
+      editor.undo(); // undo while not readOnly so redo would be available
+      editor.setReadOnly(true);
+      editor.redo();
+      // Node should still be absent (redo was a no-op)
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
+    });
+
+    it('setReadOnly is reactive — can toggle back to false', () => {
+      editor.setReadOnly(true);
+      expect(editor.readOnly()).toBe(true);
+      editor.setReadOnly(false);
+      expect(editor.readOnly()).toBe(false);
+      // Command should work again
+      const node = editor.sceneDocument.createNode('Cube');
+      editor.execute(new AddNodeCommand(editor, node));
+      expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+    });
+  });
 
   describe('loadScene — asset URL round-trip (F-1)', () => {
     it('loadScene does not mutate node.asset — project:// stays as project:// (v1 assets:// migrated)', async () => {

@@ -1,3 +1,5 @@
+import { createSignal } from 'solid-js';
+import type { Accessor, Setter } from 'solid-js';
 import { Scene } from 'three';
 import { EventEmitter } from './EventEmitter';
 import type { TransformMode } from './EventEmitter';
@@ -36,6 +38,13 @@ export class Editor {
   readonly prefabGraph: PrefabGraph;
 
   private _transformMode: TransformMode = 'translate';
+
+  // ── Read-only mode ────────────────────────────────
+  private readonly _readOnlySignal: [Accessor<boolean>, Setter<boolean>] = createSignal(false);
+  /** Reactive accessor — true when the editor is in read-only (viewer) mode. */
+  readonly readOnly: Accessor<boolean> = this._readOnlySignal[0];
+  /** Enable or disable read-only mode (viewer mode). */
+  readonly setReadOnly: Setter<boolean> = this._readOnlySignal[1];
 
   /** Optional sync engine injected at app boot. null = sync disabled. */
   syncEngine: SyncEngine | null = null;
@@ -184,14 +193,20 @@ export class Editor {
   // ── Command execution ─────────────────────────────
 
   execute(cmd: Command): void {
+    if (this._readOnlySignal[0]()) {
+      console.warn('Editor is read-only — command rejected:', cmd.constructor.name);
+      return;
+    }
     this.history.execute(cmd);
   }
 
   undo(): void {
+    if (this._readOnlySignal[0]()) return;
     this.history.undo();
   }
 
   redo(): void {
+    if (this._readOnlySignal[0]()) return;
     this.history.redo();
   }
 

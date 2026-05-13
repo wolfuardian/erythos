@@ -237,6 +237,7 @@ const SceneTreePanel: Component = () => {
     const onDrop = async (e: DragEvent) => {
       e.preventDefault();
       setIsFileDragging(false);
+      if (bridge.editorReadOnly()) return;
       const files = Array.from(e.dataTransfer?.files ?? []);
       const gltfFile = files.find(f => /\.(glb|gltf)$/i.test(f.name));
       if (!gltfFile) return;
@@ -370,6 +371,7 @@ const SceneTreePanel: Component = () => {
             items={buildSceneTreeMenuItems({
               selected: bridge.selectedUUIDs,
               hasClipboard: bridge.hasClipboard,
+              readOnly: bridge.editorReadOnly(),
               onCreateEmpty: handleCreateEmpty,
               onCreatePrimitive: createPrimitive,
               onDelete: handleDelete,

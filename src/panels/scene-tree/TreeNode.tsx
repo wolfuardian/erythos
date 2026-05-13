@@ -87,6 +87,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
   const handleMouseLeave = () => editor.selection.hover(null);
 
   const onDragStart = (e: DragEvent) => {
+    if (bridge.editorReadOnly()) { e.preventDefault(); return; }
     e.stopPropagation();
     props.setDraggedId(props.node.id);
     e.dataTransfer!.effectAllowed = 'move';
@@ -129,6 +130,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     props.setDraggedId(null);
     props.setDropIndicator(null);
 
+    if (bridge.editorReadOnly()) return;
     if (!dragId || !ind || dragId === props.node.id) return;
 
     // Cycle check: walk target's ancestors; reject if dragged node is one of them.
@@ -184,7 +186,7 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
     <div>
       <div
         data-testid="scene-tree-row"
-        draggable={true}
+        draggable={!bridge.editorReadOnly()}
         onClick={handleClick}
         onContextMenu={(e) => {
           if (e.ctrlKey || e.metaKey) {
