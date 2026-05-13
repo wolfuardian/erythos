@@ -104,7 +104,7 @@ function updateChain() {
 
 function fakeScene(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'scene-1',
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11',
     owner_id: FAKE_USER.id,
     name: 'My Scene',
     version: 5,
@@ -121,7 +121,7 @@ function fakeScene(overrides: Record<string, unknown> = {}) {
 function fakeToken(overrides: Record<string, unknown> = {}) {
   return {
     token: 'abc123deadbeef00abc123deadbeef00',
-    scene_id: 'scene-1',
+    scene_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11',
     created_by: FAKE_USER.id,
     created_at: new Date(),
     revoked_at: null,
@@ -145,7 +145,7 @@ describe('POST /scenes/:id/share-tokens', () => {
     mockInsert.mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -157,7 +157,7 @@ describe('POST /scenes/:id/share-tokens', () => {
     expect(typeof body.token).toBe('string');
     expect((body.token as string).length).toBe(32); // 16 bytes = 32 hex chars
     expect(typeof body.url).toBe('string');
-    expect((body.url as string)).toContain('/scenes/scene-1?share_token=');
+    expect((body.url as string)).toContain('/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11?share_token=');
     expect(typeof body.created_at).toBe('string');
   });
 
@@ -165,7 +165,7 @@ describe('POST /scenes/:id/share-tokens', () => {
     mockResolveSession.mockResolvedValue(null);
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' },
       }),
@@ -177,7 +177,7 @@ describe('POST /scenes/:id/share-tokens', () => {
     mockSelect.mockReturnValue(selectChain([]));
 
     const res = await app.request(
-      makeRequest('/api/scenes/nonexistent/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa99/share-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -191,7 +191,7 @@ describe('POST /scenes/:id/share-tokens', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene()])); // owner is FAKE_USER.id
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' },
         cookie: 'session=other-token',
@@ -224,7 +224,7 @@ describe('GET /scenes/:id/share-tokens', () => {
       });
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens', {
         cookie: 'session=valid-token',
       }),
     );
@@ -238,7 +238,7 @@ describe('GET /scenes/:id/share-tokens', () => {
   it('returns 401 when not authenticated', async () => {
     mockResolveSession.mockResolvedValue(null);
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens'),
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens'),
     );
     expect(res.status).toBe(401);
   });
@@ -248,7 +248,7 @@ describe('GET /scenes/:id/share-tokens', () => {
     mockSelect.mockReturnValue(selectChain([fakeScene()]));
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens', {
         cookie: 'session=other-token',
       }),
     );
@@ -273,7 +273,7 @@ describe('DELETE /scenes/:id/share-tokens/:token', () => {
     mockUpdate.mockReturnValue(updateChain());
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens/abc123deadbeef00abc123deadbeef00', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens/abc123deadbeef00abc123deadbeef00', {
         method: 'DELETE',
         headers: { Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -290,7 +290,7 @@ describe('DELETE /scenes/:id/share-tokens/:token', () => {
     mockUpdate.mockReturnValue(updateChain());
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens/abc123deadbeef00abc123deadbeef00', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens/abc123deadbeef00abc123deadbeef00', {
         method: 'DELETE',
         headers: { Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -302,7 +302,7 @@ describe('DELETE /scenes/:id/share-tokens/:token', () => {
   it('returns 401 when not authenticated', async () => {
     mockResolveSession.mockResolvedValue(null);
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens/sometoken', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens/sometoken', {
         method: 'DELETE',
         headers: { Origin: 'http://localhost:5173' },
       }),
@@ -314,7 +314,7 @@ describe('DELETE /scenes/:id/share-tokens/:token', () => {
     mockSelect.mockReturnValue(selectChain([])); // scene not found
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens/sometoken', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens/sometoken', {
         method: 'DELETE',
         headers: { Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -329,7 +329,7 @@ describe('DELETE /scenes/:id/share-tokens/:token', () => {
       .mockReturnValueOnce(selectChain([]));            // token not found
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1/share-tokens/nosuchtoken', {
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11/share-tokens/nosuchtoken', {
         method: 'DELETE',
         headers: { Origin: 'http://localhost:5173' },
         cookie: 'session=valid-token',
@@ -355,12 +355,12 @@ describe('GET /scenes/:id?share_token', () => {
       .mockReturnValueOnce(selectChain([fakeToken()]));                           // token lookup
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1?share_token=abc123deadbeef00abc123deadbeef00'),
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11?share_token=abc123deadbeef00abc123deadbeef00'),
     );
 
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, unknown>;
-    expect(body.id).toBe('scene-1');
+    expect(body.id).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11');
     expect(body.visibility).toBe('private');
   });
 
@@ -370,7 +370,7 @@ describe('GET /scenes/:id?share_token', () => {
       .mockReturnValueOnce(selectChain([])); // token not found
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1?share_token=invalidtoken'),
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11?share_token=invalidtoken'),
     );
     expect(res.status).toBe(404);
   });
@@ -383,7 +383,7 @@ describe('GET /scenes/:id?share_token', () => {
       .mockReturnValueOnce(selectChain([])); // revoked token filtered out by isNull condition
 
     const res = await app.request(
-      makeRequest('/api/scenes/scene-1?share_token=revokedtoken'),
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11?share_token=revokedtoken'),
     );
     expect(res.status).toBe(404);
   });
@@ -391,7 +391,7 @@ describe('GET /scenes/:id?share_token', () => {
   it('returns 404 for private scene without share_token (existing behaviour preserved)', async () => {
     mockSelect.mockReturnValue(selectChain([fakeScene({ visibility: 'private' })]));
 
-    const res = await app.request(makeRequest('/api/scenes/scene-1'));
+    const res = await app.request(makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11'));
     expect(res.status).toBe(404);
   });
 });
