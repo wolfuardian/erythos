@@ -121,3 +121,31 @@
   padding: 4px 8px;
   font-size: 0.85em;
 }
+
+/* Cloud sync indicator — visible only in cloud project mode (G3) */
+.cloudSync {
+  font-size: var(--font-size-xs, 11px);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  background: transparent;
+  margin-left: 4px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.cloudSyncPending {
+  color: var(--accent-gold, #c9a227);
+  border-color: var(--accent-gold, #c9a227);
+}
+
+.cloudSyncSaved {
+  color: var(--accent-green, #4caf50);
+  border-color: var(--accent-green, #4caf50);
+}
+
+.cloudSyncError {
+  color: var(--accent-red, #e53935);
+  border-color: var(--accent-red, #e53935);
+}

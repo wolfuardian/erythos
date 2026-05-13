@@ -239,3 +239,9 @@
   color: var(--accent-red);
   margin-top: var(--space-sm);
 }
+
+.sectionDivider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-md) 0;
+}
