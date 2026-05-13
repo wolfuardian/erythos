@@ -2,11 +2,12 @@ import { type Component, createEffect, createSignal, onCleanup, onMount, Show } 
 import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
-import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
+import { createAutoSave, createCloudAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
 import { defaultBaseUrl } from '../core/sync/baseUrl';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
 import { LocalProjectManager } from '../core/project/LocalProjectManager';
+import { CloudProjectManager } from '../core/project/CloudProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import { MultiCmdsCommand } from '../core/commands/MultiCmdsCommand';
@@ -55,6 +56,8 @@ const App: Component = () => {
   const [projectOpen, setProjectOpen] = createSignal(false);
   let sharedGrid: GridHelpers | null = null;
   let autosaveHandle: AutoSaveHandle | null = null;
+  // Active CloudProjectManager — set by openCloudProject, null for local projects
+  let activeCloudManager: CloudProjectManager | null = null;
 
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
@@ -287,7 +290,15 @@ const App: Component = () => {
     sharedGrid?.dispose();
     sharedGrid = null;
     e.dispose();
-    projectManager.closeSync();
+
+    // Close cloud manager if active (cloud project lifecycle)
+    if (activeCloudManager) {
+      void activeCloudManager.close();
+      activeCloudManager = null;
+    } else {
+      projectManager.closeSync();
+    }
+
     setBridge(null);
     setEditor(null);
 
@@ -300,6 +311,89 @@ const App: Component = () => {
     if (!handle) throw new Error('Failed to open project (permission?)');
     await closeProject();
     await openProject(handle);
+  };
+
+  /**
+   * Open a cloud project by sceneId.
+   * Wires CloudProjectManager + createCloudAutoSave (no local file write).
+   * LocalProject path is 100% unaffected — this function is a parallel entry point.
+   *
+   * Spec: docs/cloud-project-spec.md § Client Flow § Open cloud project
+   */
+  const openCloudProject = async (sceneId: string) => {
+    await closeProject();
+
+    // CloudProjectManager owns the cloud scene lifecycle
+    const cloudManager = new CloudProjectManager(
+      sceneId,
+      syncEngine,
+      new HttpAssetClient(),
+    );
+    activeCloudManager = cloudManager;
+
+    // Load scene from server (with IndexedDB cache fallback on NetworkError)
+    const sceneDocument = await cloudManager.loadScene();
+
+    // Editor still uses LocalProjectManager for local-only concerns
+    // (PrefabRegistry, GridHelpers, key bindings) — D-1 constraint.
+    // We do NOT call editor.init() which would trigger local IDB→file migration.
+    const e = new Editor(projectManager, new HttpAssetClient());
+    e.syncEngine = syncEngine;
+    e.syncSceneId = sceneId;
+    e.syncBaseVersion = cloudManager.currentVersion ?? 0;
+
+    await e.loadScene(sceneDocument.serialize());
+
+    // Cloud AutoSave: debounced PUT via CloudProjectManager.saveScene
+    autosaveHandle = createCloudAutoSave(e, cloudManager);
+
+    sharedGrid = new GridHelpers();
+    e.threeScene.add(sharedGrid.grid);
+    e.threeScene.add(sharedGrid.axes);
+    const sharedGridObjects = [sharedGrid.grid, sharedGrid.axes];
+
+    onSceneReplaced = () => {
+      if (!sharedGrid) return;
+      e.threeScene.add(sharedGrid.grid);
+      e.threeScene.add(sharedGrid.axes);
+    };
+    e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
+
+    const b = createEditorBridge(e, sharedGridObjects, {
+      closeProject,
+      projectManager,
+      openProjectById,
+      autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
+      resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
+      currentUser,
+      setCurrentUser,
+      authSignOut: () => authClient.signOut(),
+      authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
+      authGetExportUrl: () => authClient.getExportUrl(),
+      authDeleteAccount: () => authClient.deleteAccount(),
+      authRequestMagicLink: (email) => authClient.requestMagicLink(email),
+    });
+
+    e.keybindings.registerMany([
+      { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
+      { key: 'y', ctrl: true, action: () => e.redo(), description: 'Redo' },
+      { key: 'z', ctrl: true, shift: true, action: () => e.redo(), description: 'Redo (alt)' },
+      { key: 'Delete', action: () => {
+        const uuid = e.selection.primary;
+        if (uuid) e.execute(new RemoveNodeCommand(e, uuid));
+      }, description: 'Delete selected' },
+      { key: 'w', action: () => e.setTransformMode('translate'), description: 'Translate mode' },
+      { key: 'e', action: () => e.setTransformMode('rotate'), description: 'Rotate mode' },
+      { key: 'r', action: () => e.setTransformMode('scale'), description: 'Scale mode' },
+    ]);
+    e.keybindings.attach();
+
+    setEditor(e);
+    setBridge(b);
+    setProjectOpen(true);
+
+    // Persist cloud project for cold-start auto-resume (spec § Cold start with active cloud project)
+    localStorage.setItem('activeProject', JSON.stringify({ kind: 'cloud', sceneId }));
   };
 
   // Persist active scene path per-project so reload resumes the right scene.
@@ -413,6 +507,29 @@ const App: Component = () => {
     }
 
     // Default: /  — auto-restore last opened project
+    // Check for active cloud project first (cold-start resume, spec § D-6)
+    const activeProjectRaw = localStorage.getItem('activeProject');
+    if (activeProjectRaw) {
+      try {
+        const activeProject = JSON.parse(activeProjectRaw) as { kind: string; sceneId?: string };
+        if (activeProject.kind === 'cloud' && activeProject.sceneId) {
+          // Cloud cold-start: resume if signed in
+          // (currentUser may still be resolving; fire-and-forget)
+          void (async () => {
+            try {
+              await openCloudProject(activeProject.sceneId!);
+            } catch {
+              // Failed (offline/unauth) — clear and show Welcome
+              localStorage.removeItem('activeProject');
+            }
+          })();
+          return;
+        }
+      } catch {
+        localStorage.removeItem('activeProject');
+      }
+    }
+
     const lastId = getLastProjectId();
     if (!lastId) return;
     void (async () => {

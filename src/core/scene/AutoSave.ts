@@ -13,6 +13,7 @@ import {
 } from '../sync/SyncEngine';
 import { createMultiTabCoord } from '../sync/MultiTabCoord';
 import type { MultiTabCoord } from '../sync/MultiTabCoord';
+import type { CloudProjectManager } from '../project/CloudProjectManager';
 
 const DEBOUNCE_DELAY = 2000;
 const RETRY_DELAY_MS = 1000;
@@ -254,6 +255,238 @@ export function createAutoSave(editor: Editor, coord?: MultiTabCoord): AutoSaveH
 
   // Subscribe to version updates for the currently loaded scene (if any).
   subscribeVersionUpdates(editor.syncSceneId ?? null);
+
+  return { flushNow, resolveConflict, dispose };
+}
+
+// ── Cloud AutoSave ────────────────────────────────────────────────────────────
+
+/**
+ * Cloud-specific AutoSave — replaces the local writeFile + syncEngine.push path
+ * with CloudProjectManager.saveScene (which handles PUT /api/scenes/:id internally).
+ *
+ * Differences from createAutoSave:
+ *  - No local file write (cloud is server-canonical; no FileSystemDirectoryHandle)
+ *  - No .bak file on conflict (no writable FS surface in CloudProject)
+ *  - Uses cloudManager.saveScene → SaveResult discriminated union
+ *  - baseVersion is tracked locally (initialised from editor.syncBaseVersion after loadScene)
+ *
+ * LocalProject path: 100% unchanged — this function is only called from openCloudProject.
+ *
+ * Spec: docs/cloud-project-spec.md § Phase G2 — AutoSave 切換
+ */
+export function createCloudAutoSave(
+  editor: Editor,
+  cloudManager: CloudProjectManager,
+): AutoSaveHandle {
+  const multiTabCoord: MultiTabCoord = createMultiTabCoord();
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pendingConflict: PendingConflict | null = null;
+  let versionUnsub: (() => void) | null = null;
+
+  // Track base version locally, seeded from editor.syncBaseVersion after loadScene.
+  let baseVersion = editor.syncBaseVersion ?? 0;
+
+  const subscribeVersionUpdates = (sceneId: string | null): void => {
+    if (versionUnsub) { versionUnsub(); versionUnsub = null; }
+    if (!sceneId) return;
+    versionUnsub = multiTabCoord.onVersionChanged(sceneId, (v) => {
+      if (v > baseVersion) {
+        baseVersion = v;
+        editor.syncBaseVersion = v;
+      }
+    });
+  };
+
+  const scheduleSnapshot = (): void => {
+    editor.events.emit('autosaveStatusChanged', 'pending');
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(() => { void flushNow(); }, DEBOUNCE_DELAY);
+  };
+
+  const flushNow = async (): Promise<void> => {
+    if (timer !== null) { clearTimeout(timer); timer = null; }
+
+    const scene = editor.sceneDocument.serialize();
+    const json = JSON.stringify(scene);
+
+    // Validate before sending: reject invariant-violating scenes
+    const violations = validateScene(scene, json);
+    if (violations.length > 0) {
+      console.error('[CloudAutoSave] Pre-write validation failed:');
+      for (const v of violations) {
+        console.error(`  [${v.path}] ${v.reason}`);
+      }
+      editor.events.emit('autosaveStatusChanged', 'error');
+      return;
+    }
+
+    // Suppress push when conflict dialog is open
+    if (pendingConflict !== null) return;
+
+    const sceneId = cloudManager.sceneId;
+    const currentBase = baseVersion;
+
+    let saveResult;
+    try {
+      saveResult = await multiTabCoord.withWriteLock(sceneId, async () => {
+        return cloudManager.saveScene(editor.sceneDocument, currentBase);
+      });
+    } catch (err) {
+      // Re-thrown errors from saveScene: PayloadTooLargeError / PreconditionError etc.
+      if (err instanceof PayloadTooLargeError) {
+        editor.events.emit('syncError', {
+          kind: 'payload-too-large',
+          message: 'Scene exceeds size limit',
+        });
+      } else if (err instanceof PreconditionError || err instanceof PreconditionRequiredError) {
+        console.error('[CloudAutoSave] If-Match precondition failed — client bug', err);
+        editor.events.emit('syncError', {
+          kind: 'client-bug',
+          message: 'Sync error (client bug) — please reload',
+        });
+      } else if (err instanceof ServerError || err instanceof NetworkError) {
+        // Transient — retry once
+        await new Promise<void>((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        try {
+          const retryResult = await cloudManager.saveScene(editor.sceneDocument, baseVersion);
+          if (retryResult.ok) {
+            baseVersion = retryResult.version;
+            editor.syncBaseVersion = retryResult.version;
+            multiTabCoord.broadcastVersion(sceneId, retryResult.version);
+            editor.events.emit('autosaveStatusChanged', 'saved');
+          } else {
+            editor.events.emit('syncError', {
+              kind: err instanceof NetworkError ? 'network-offline' : 'sync-failed-local-saved',
+              message: 'Sync failed',
+            });
+          }
+        } catch {
+          editor.events.emit('syncError', {
+            kind: err instanceof NetworkError ? 'network-offline' : 'sync-failed-local-saved',
+            message: 'Sync failed',
+          });
+        }
+      } else {
+        console.warn('[CloudAutoSave] saveScene threw unexpectedly:', err);
+        editor.events.emit('autosaveStatusChanged', 'error');
+      }
+      return;
+    }
+
+    if (!saveResult) return;
+
+    if (saveResult.ok) {
+      baseVersion = saveResult.version;
+      editor.syncBaseVersion = saveResult.version;
+      multiTabCoord.broadcastVersion(sceneId, saveResult.version);
+      editor.events.emit('autosaveStatusChanged', 'saved');
+    } else if (saveResult.reason === 'conflict') {
+      pendingConflict = {
+        sceneId,
+        currentVersion: saveResult.currentVersion,
+        remoteBody: saveResult.currentBody,
+      };
+
+      const localSnapshot = new SceneDocument();
+      localSnapshot.deserialize(editor.sceneDocument.serialize());
+
+      editor.events.emit('syncConflict', {
+        sceneId,
+        scenePath: asAssetPath('(cloud)'),
+        baseVersion: currentBase,
+        currentVersion: saveResult.currentVersion,
+        localBody: localSnapshot,
+        cloudBody: saveResult.currentBody,
+      });
+    } else if (saveResult.reason === 'offline') {
+      editor.events.emit('syncError', {
+        kind: 'network-offline',
+        message: 'Offline — changes will sync when reconnected',
+      });
+    } else if (saveResult.reason === 'unauthorized') {
+      editor.events.emit('syncError', {
+        kind: 'sync-failed-local-saved',
+        message: 'Session expired — please sign in again',
+      });
+    }
+  };
+
+  const resolveConflict = async (choice: 'keep-local' | 'use-cloud'): Promise<void> => {
+    const pc = pendingConflict;
+    if (!pc) return;
+
+    if (choice === 'keep-local') {
+      pendingConflict = null;
+      baseVersion = pc.currentVersion;
+      editor.syncBaseVersion = pc.currentVersion;
+
+      const sceneId = cloudManager.sceneId;
+      try {
+        const retryResult = await multiTabCoord.withWriteLock(sceneId, async () =>
+          cloudManager.saveScene(editor.sceneDocument, baseVersion),
+        );
+        if (retryResult.ok) {
+          baseVersion = retryResult.version;
+          editor.syncBaseVersion = retryResult.version;
+          multiTabCoord.broadcastVersion(sceneId, retryResult.version);
+        } else if (retryResult.reason === 'conflict') {
+          // Double-conflict — set new pendingConflict
+          pendingConflict = {
+            sceneId,
+            currentVersion: retryResult.currentVersion,
+            remoteBody: retryResult.currentBody,
+          };
+          const localSnapshot = new SceneDocument();
+          localSnapshot.deserialize(editor.sceneDocument.serialize());
+          editor.events.emit('syncConflict', {
+            sceneId,
+            scenePath: asAssetPath('(cloud)'),
+            baseVersion,
+            currentVersion: retryResult.currentVersion,
+            localBody: localSnapshot,
+            cloudBody: retryResult.currentBody,
+          });
+        }
+      } catch (err) {
+        console.warn('[CloudAutoSave] resolveConflict keep-local push failed:', err);
+      }
+    } else {
+      // use-cloud: restore remote body
+      editor.sceneDocument.deserialize(pc.remoteBody.serialize());
+      baseVersion = pc.currentVersion;
+      editor.syncBaseVersion = pc.currentVersion;
+      pendingConflict = null;
+    }
+  };
+
+  const onSyncSceneIdChanged = (id: string | null): void => {
+    subscribeVersionUpdates(id);
+  };
+
+  const dispose = (): void => {
+    if (timer !== null) { clearTimeout(timer); timer = null; }
+    pendingConflict = null;
+    if (versionUnsub) { versionUnsub(); versionUnsub = null; }
+    multiTabCoord.dispose();
+    editor.sceneDocument.events.off('nodeAdded', scheduleSnapshot);
+    editor.sceneDocument.events.off('nodeRemoved', scheduleSnapshot);
+    editor.sceneDocument.events.off('nodeChanged', scheduleSnapshot);
+    editor.sceneDocument.events.off('sceneReplaced', scheduleSnapshot);
+    editor.sceneDocument.events.off('envChanged', scheduleSnapshot);
+    editor.events.off('syncSceneIdChanged', onSyncSceneIdChanged);
+  };
+
+  // Attach listeners
+  editor.sceneDocument.events.on('nodeAdded', scheduleSnapshot);
+  editor.sceneDocument.events.on('nodeRemoved', scheduleSnapshot);
+  editor.sceneDocument.events.on('nodeChanged', scheduleSnapshot);
+  editor.sceneDocument.events.on('sceneReplaced', scheduleSnapshot);
+  editor.sceneDocument.events.on('envChanged', scheduleSnapshot);
+  editor.events.on('syncSceneIdChanged', onSyncSceneIdChanged);
+
+  subscribeVersionUpdates(cloudManager.sceneId);
 
   return { flushNow, resolveConflict, dispose };
 }
