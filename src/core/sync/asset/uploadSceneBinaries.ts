@@ -121,9 +121,21 @@ export async function uploadSceneBinaries(
     raw.env.hdri = await resolveAndUpload(raw.env.hdri, pm, client, uploadCache);
   }
 
-  // Rewrite node.asset (mesh / prefab nodes)
+  // Rewrite node.asset (mesh / prefab nodes).
+  //
+  // `project://primitives/*` is a synthetic URL for built-in primitive meshes
+  // (box / sphere / plane) — it has no backing file on disk. Editor.ts:260
+  // already short-circuits these at load time; mirror that here so cloud
+  // saves don't try to readFile them (which fails with "No project open"
+  // when the active project is a CloudProject — refs T3 release blocker).
+  // Long-term: a dedicated `primitives://` scheme would make this explicit
+  // (see follow-up issue).
   for (const node of raw.nodes) {
-    if (typeof node.asset === 'string' && node.asset.startsWith('project://')) {
+    if (
+      typeof node.asset === 'string' &&
+      node.asset.startsWith('project://') &&
+      !node.asset.startsWith('project://primitives/')
+    ) {
       node.asset = await resolveAndUpload(node.asset, pm, client, uploadCache);
     }
   }
