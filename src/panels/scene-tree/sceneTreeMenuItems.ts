@@ -5,6 +5,8 @@ export interface SceneTreeMenuCtx {
   selected: () => string[];
   /** Accessor returning whether the clipboard has content. */
   hasClipboard: () => boolean;
+  /** When true, all mutation actions are disabled (viewer mode). */
+  readOnly?: boolean;
   /** Create an empty node and add it to the scene. */
   onCreateEmpty: () => void;
   /** Create a primitive node of the given geometry type and name. */
@@ -29,15 +31,18 @@ export interface SceneTreeMenuCtx {
 export function buildSceneTreeMenuItems(ctx: SceneTreeMenuCtx): MenuItem[] {
   const selected = ctx.selected();
   const hasClip = ctx.hasClipboard();
+  const ro = ctx.readOnly ?? false;
 
   return [
     {
       label: 'Create Empty',
+      disabled: ro,
       action: () => ctx.onCreateEmpty(),
     },
     {
       label: 'Create Primitive',
-      children: [
+      disabled: ro,
+      children: ro ? [] : [
         { label: 'Box', action: () => ctx.onCreatePrimitive('box', 'Box') },
         { label: 'Sphere', action: () => ctx.onCreatePrimitive('sphere', 'Sphere') },
         { label: 'Plane', action: () => ctx.onCreatePrimitive('plane', 'Plane') },
@@ -46,12 +51,12 @@ export function buildSceneTreeMenuItems(ctx: SceneTreeMenuCtx): MenuItem[] {
     },
     {
       label: 'Delete',
-      disabled: selected.length === 0,
+      disabled: ro || selected.length === 0,
       action: () => ctx.onDelete(),
     },
     {
       label: 'Save as Prefab',
-      disabled: selected.length !== 1,
+      disabled: ro || selected.length !== 1,
       action: () => ctx.onSaveAsPrefab(),
     },
     {
@@ -61,12 +66,12 @@ export function buildSceneTreeMenuItems(ctx: SceneTreeMenuCtx): MenuItem[] {
     },
     {
       label: 'Cut',
-      disabled: selected.length === 0,
+      disabled: ro || selected.length === 0,
       action: () => ctx.onCut(),
     },
     {
       label: 'Paste',
-      disabled: !hasClip,
+      disabled: ro || !hasClip,
       action: () => ctx.onPaste(),
     },
   ];

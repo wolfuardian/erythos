@@ -32,6 +32,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   });
 
   const setPosition = (axis: 'x' | 'y' | 'z', value: number) => {
+    if (bridge.editorReadOnly()) return;
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     const newVec: Vec3 = [...node.position];
@@ -40,6 +41,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   };
 
   const setRotation = (axis: 'x' | 'y' | 'z', valueDeg: number) => {
+    if (bridge.editorReadOnly()) return;
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     const newVec: Vec3 = [...node.rotation];
@@ -48,6 +50,7 @@ const TransformDraw: Component<TransformDrawProps> = (props) => {
   };
 
   const applyScale = (axis: 'x' | 'y' | 'z', value: number) => {
+    if (bridge.editorReadOnly()) return;
     const node = bridge.getNode(props.uuid);
     if (!node) return;
     const newVec: Vec3 = [...node.scale];

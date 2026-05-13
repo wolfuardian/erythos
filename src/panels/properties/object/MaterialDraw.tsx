@@ -60,6 +60,7 @@ const MaterialDraw: Component<Props> = (props) => {
   };
 
   const exec = (prop: keyof MaterialOverride, val: MaterialOverride[keyof MaterialOverride]) => {
+    if (bridge.editorReadOnly()) return;
     editor.execute(new SetMaterialPropertyCommand(editor, props.uuid, prop, val, getOld(prop)));
   };
 

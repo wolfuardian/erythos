@@ -118,6 +118,8 @@ export interface EditorBridge {
   deleteAccount: () => Promise<void>;
   /** Requests a magic-link sign-in email for the given address. */
   requestMagicLink: (email: string) => Promise<void>;
+  /** Whether the editor is in read-only mode (viewer mode). Panels should disable all mutation UI when true. */
+  editorReadOnly: Accessor<boolean>;
   dispose: () => void;
 }
 
@@ -350,6 +352,7 @@ export function createEditorBridge(
     deleteAccount: deps?.authDeleteAccount ?? (() => Promise.resolve()),
     requestMagicLink:
       deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
+    editorReadOnly: editor.readOnly,
     dispose,
   };
 }

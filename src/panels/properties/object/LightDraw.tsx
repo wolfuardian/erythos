@@ -53,6 +53,7 @@ const LightDraw: Component<Props> = (props) => {
             step={0.05}
             precision={2}
             onChange={(v) => {
+              if (bridge.editorReadOnly()) return;
               editor.execute(new SetLightPropertyCommand(editor, props.uuid, 'intensity', v, getOldIntensity()));
             }}
             onDragEnd={() => editor.history.sealLast()}
