@@ -194,8 +194,8 @@ C2 揭露 prod `.env` 漂移 4 條(ALLOWED_ORIGIN / S3_*)+ table ownership 1 條
 
 ### 仍 open(不依賴本 session)
 
-- [#938](https://github.com/wolfuardian/erythos/issues/938) Phase F brainstorm — 仍 open
-- [#942](https://github.com/wolfuardian/erythos/issues/942) v0.1 backlog — 仍 open
+- ~~[#938](https://github.com/wolfuardian/erythos/issues/938) Phase F brainstorm~~ — **已 closed**(Phase F 全收尾,F-1/F-2/F-4/F-5/F-6 全 land,F-3 重定義單 device 範圍)
+- [#942](https://github.com/wolfuardian/erythos/issues/942) v0.1 backlog — 仍 open(B2 產品定位等指揮家設計)
 
 ### 下個 session 第一步候選
 
@@ -311,6 +311,28 @@ v0.2 scope 建議:
 Tech 風險(嚴重度高→低):AutoSave 雙模式 / ProjectManager 多型 refactor 範圍 / Asset model 重定義 / Prefab library 概念 / Offline UX / onboarding flow + free tier quota 假設 / Resend cost 非線性。
 
 v0.1 marketing 口徑(AA 建議):**不要**賣「Sign in for backup」(實際 client 不 pull,是 dead drop)。改成「Local-first 3D editor — your scenes live in your project folder. Cloud sync coming in v0.2.」Account 系統解釋為「early access — sign up to be first when cloud project lands」。
+
+### v0.2 release 時要改回的文案 checklist
+
+v0.2 cloud project land 後:
+- `src/app/Welcome.tsx` footer 從「v0.1 — Local-first 3D editor / Cloud sync coming in v0.2」改成 cloud-inclusive(e.g.「v0.2 — Local + cloud 3D editor」或視 v0.2 product positioning 決定)
+- SignInDialog / Toolbar Sign-in entry 文案視 v0.2 UX 改
+
+### 真實狀態 audit 2026-05-13(audit subagent 對照 ba68bcc)
+
+完整對照表 `.claude/scratch/audit-what-next-2026-05-13.md`。
+
+**結論:真實未動 code 工作 = 0 個。** 45 項中 45 項已完成 / skip / accepted。
+
+剩餘 v0.1 blocker 兩條都是指揮家行動:
+1. **F-3 單 device 4 場景手測** — ~1 小時操作(checklist `.claude/scratch/f3-handtest-checklist.md`)
+2. **B2 產品定位 / onboarding / landing** — 設計階段等指揮家 input
+
+本輪小掃尾(audit 抓的):
+- ✅ Welcome.tsx footer marketing 改 local-first 口徑
+- ✅ magic-link.ts L9 stale 「wired in C3 follow-up」comment 清掉(C3 已 land #1002)
+- ✅ what-next-to-do.md #938 狀態修正(已 closed,what-next 仍寫 open 是 audit drift)
+- ⏸️ 2 worktree dirs cleanup(audit 確認 still locked,等 IDE 重啟)
 
 ### 主 HEAD(本段結束時)
 

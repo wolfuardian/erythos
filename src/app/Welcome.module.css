@@ -119,6 +119,14 @@
   line-height: 1.6;
 }
 
+.footerSub {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 /* Right column */
 .rightCol {
   flex: 1;

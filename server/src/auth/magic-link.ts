@@ -6,7 +6,7 @@
  * enforced via used_at. 15-minute TTL.
  *
  * Email delivery is environment-gated:
- *   - With RESEND_API_KEY: send via Resend SDK (wired in C3 follow-up)
+ *   - With RESEND_API_KEY: send via Resend SDK
  *   - Without:             log plaintext token to stdout (dev / CI)
  *
  * Better Auth remains an unwired dependency (D3 decision; reserved for

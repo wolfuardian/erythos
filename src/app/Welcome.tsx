@@ -133,7 +133,8 @@ export const Welcome: Component<Props> = (props) => {
 
           {/* Footer */}
           <div class={styles.footer}>
-            <div class={styles.footerText}>v0.1 — Erythos 3D Editor</div>
+            <div class={styles.footerText}>v0.1 — Local-first 3D editor</div>
+            <div class={styles.footerSub}>Cloud sync coming in v0.2</div>
           </div>
         </div>
 
