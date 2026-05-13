@@ -60,7 +60,7 @@ describe('GET /api/users/:id', () => {
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([
             {
-              id: 'user-uuid-1',
+              id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
               github_login: 'octocat',
               avatar_url: 'https://github.com/octocat.png',
             },
@@ -69,10 +69,10 @@ describe('GET /api/users/:id', () => {
       }),
     });
 
-    const res = await app.request(makeRequest('/api/users/user-uuid-1'));
+    const res = await app.request(makeRequest('/api/users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'));
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, unknown>;
-    expect(body.id).toBe('user-uuid-1');
+    expect(body.id).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1');
     expect(body.github_login).toBe('octocat');
     expect(body.avatar_url).toBe('https://github.com/octocat.png');
   });
@@ -83,7 +83,7 @@ describe('GET /api/users/:id', () => {
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([
             {
-              id: 'user-uuid-2',
+              id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2',
               github_login: 'ghost',
               avatar_url: null,
             },
@@ -92,7 +92,7 @@ describe('GET /api/users/:id', () => {
       }),
     });
 
-    const res = await app.request(makeRequest('/api/users/user-uuid-2'));
+    const res = await app.request(makeRequest('/api/users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2'));
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, unknown>;
     expect(body.avatar_url).toBeNull();
@@ -107,10 +107,25 @@ describe('GET /api/users/:id', () => {
       }),
     });
 
-    const res = await app.request(makeRequest('/api/users/nonexistent-id'));
+    const res = await app.request(makeRequest('/api/users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa9'));
     expect(res.status).toBe(404);
     const body = await res.json() as Record<string, unknown>;
     expect(body.error).toBe('Not Found');
+  });
+
+  it('returns 400 with error code for non-UUID id (e.g. /users/me)', async () => {
+    // Regression: pre-fix, the Postgres uuid column threw on non-UUID input
+    // and surfaced as opaque 500 (refs prod observation 2026-05-13). Now 400
+    // with explicit code so callers can distinguish "bad input" from
+    // "server fault".
+    const res = await app.request(makeRequest('/api/users/me'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.error).toMatch(/UUID/i);
+    expect(body.code).toBe('E1001 ERR_USER_ID_FORMAT');
+
+    // DB query must not be reached when validation fails up-front
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 
   it('does NOT expose PII fields (email, storage_used, plan, handle, github_id)', async () => {
@@ -119,7 +134,7 @@ describe('GET /api/users/:id', () => {
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([
             {
-              id: 'user-uuid-3',
+              id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3',
               github_login: 'testuser',
               avatar_url: null,
             },
@@ -128,7 +143,7 @@ describe('GET /api/users/:id', () => {
       }),
     });
 
-    const res = await app.request(makeRequest('/api/users/user-uuid-3'));
+    const res = await app.request(makeRequest('/api/users/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3'));
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, unknown>;
 
