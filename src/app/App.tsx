@@ -33,6 +33,7 @@ import { currentRoute, navigateToScene } from './router';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import styles from './App.module.css';
+import viewerStyles from './ShareTokenViewer.module.css';
 
 const App: Component = () => {
   // Singleton ProjectManager — 跨 open/close 存活
@@ -588,33 +589,25 @@ const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', 'flex-direction': 'column', background: 'var(--bg-app)' }}>
+    <div class={viewerStyles.root}>
       {/* Viewer header */}
-      <div style={{
-        height: '36px', display: 'flex', 'align-items': 'center', gap: '8px',
-        padding: '0 12px', background: 'var(--bg-header)',
-        'border-bottom': '1px solid var(--border-subtle)', 'flex-shrink': '0',
-      }}>
-        <span style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)' }}>Viewing</span>
-        <span style={{ color: 'var(--text-default)', 'font-weight': '500', 'font-size': 'var(--font-size-sm)' }}>
-          {props.sceneName}
-        </span>
+      <div class={viewerStyles.header}>
+        <span class={viewerStyles.viewingLabel}>Viewing</span>
+        <span class={viewerStyles.sceneName}>{props.sceneName}</span>
         <Show when={props.sharedBy}>
-          <span style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
-            · Shared by {props.sharedBy}
-          </span>
+          <span class={viewerStyles.sharedBy}>· Shared by {props.sharedBy}</span>
         </Show>
         <Show when={forkError()}>
-          <span role="alert" aria-live="polite" style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-danger, #e05252)' }}>
+          <span role="alert" aria-live="polite" class={viewerStyles.errorText}>
             &nbsp;— {forkError()}
           </span>
         </Show>
-        <div style={{ flex: '1' }} />
+        <div class={viewerStyles.spacer} />
         <Show
           when={!needsAuth()}
           fallback={
             <button
-              style={{ 'font-size': 'var(--font-size-sm)', padding: '3px 10px', background: 'var(--accent-blue, #3b82f6)', color: '#fff', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}
+              class={viewerStyles.forkButton}
               onClick={props.onSignIn}
             >
               Sign in to fork
@@ -624,7 +617,7 @@ const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
           <button
             data-testid="share-viewer-fork"
             disabled={forking()}
-            style={{ 'font-size': 'var(--font-size-sm)', padding: '3px 10px', background: 'var(--accent-blue, #3b82f6)', color: '#fff', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}
+            class={viewerStyles.forkButton}
             onClick={() => void handleFork()}
           >
             <span aria-live="polite">{forking() ? 'Forking…' : 'Fork'}</span>
@@ -632,14 +625,14 @@ const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
         </Show>
       </div>
       {/* Viewer content placeholder */}
-      <div style={{ flex: '1', overflow: 'hidden', display: 'flex', 'align-items': 'center', 'justify-content': 'center', color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)', 'flex-direction': 'column', gap: '12px' }}>
+      <div class={viewerStyles.content}>
         <span>Loading scene…</span>
       </div>
       {/* Footer */}
-      <div style={{ padding: '8px 12px', 'border-top': '1px solid var(--border-subtle)', 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)', 'text-align': 'center' }}>
+      <div class={viewerStyles.footer}>
         Sign in to edit your own copy —{' '}
         <button
-          style={{ background: 'none', border: 'none', color: 'var(--text-link, #3b82f6)', cursor: 'pointer', 'font-size': 'inherit', padding: '0' }}
+          class={viewerStyles.footerLink}
           onClick={props.onSignIn}
         >
           Sign in
@@ -655,9 +648,9 @@ const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
 
 const ShareTokenInvalidView: Component = () => {
   return (
-    <div data-testid="share-token-invalid" style={{ width: '100%', height: '100%', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'flex-direction': 'column', gap: '12px', background: 'var(--bg-app)', color: 'var(--text-muted)' }}>
-      <p style={{ 'font-size': 'var(--font-size-lg)', color: 'var(--text-primary)' }}>Link not found</p>
-      <p style={{ 'font-size': 'var(--font-size-sm)' }}>
+    <div data-testid="share-token-invalid" class={viewerStyles.invalidRoot}>
+      <p class={viewerStyles.invalidTitle}>Link not found</p>
+      <p class={viewerStyles.invalidMessage}>
         This share link is invalid or revoked. Ask the owner for a new link.
       </p>
     </div>

@@ -96,6 +96,62 @@ describe('ShareDialog', () => {
     });
   });
 
+  describe('token section', () => {
+    it('hides token section when tokens prop is undefined', () => {
+      render(() => <ShareDialog {...defaultProps} tokens={undefined} />);
+      expect(screen.queryByTestId('share-dialog-generate')).toBeNull();
+    });
+
+    it('shows token section when tokens prop is an empty array', () => {
+      render(() => <ShareDialog {...defaultProps} tokens={[]} />);
+      expect(screen.getByTestId('share-dialog-generate')).toBeTruthy();
+    });
+
+    it('calls onGenerateToken when "Generate new link" button is clicked', async () => {
+      const onGenerateToken = vi.fn().mockResolvedValue(undefined);
+      render(() => (
+        <ShareDialog
+          {...defaultProps}
+          tokens={[]}
+          onGenerateToken={onGenerateToken}
+        />
+      ));
+      fireEvent.click(screen.getByTestId('share-dialog-generate'));
+      await waitFor(() => {
+        expect(onGenerateToken).toHaveBeenCalledOnce();
+      });
+    });
+
+    it('calls onRevokeToken with the correct token when Revoke is clicked', async () => {
+      const onRevokeToken = vi.fn().mockResolvedValue(undefined);
+      const tokens = [
+        { token: 'abc123def456789012345678901234567890', created_at: '2026-01-01T00:00:00Z', revoked_at: null },
+      ];
+      render(() => (
+        <ShareDialog
+          {...defaultProps}
+          tokens={tokens}
+          onRevokeToken={onRevokeToken}
+        />
+      ));
+      fireEvent.click(screen.getByTestId(`share-dialog-revoke-${tokens[0].token}`));
+      await waitFor(() => {
+        expect(onRevokeToken).toHaveBeenCalledWith(tokens[0].token);
+      });
+    });
+
+    it('displays tokenError when provided', () => {
+      render(() => (
+        <ShareDialog
+          {...defaultProps}
+          tokens={[]}
+          tokenError="Token generation failed"
+        />
+      ));
+      expect(screen.getByTestId('share-dialog-token-error').textContent).toBe('Token generation failed');
+    });
+  });
+
   describe('visibility toggle', () => {
     it('calls onVisibilityChange("public") when Public button clicked', () => {
       const onVisibilityChange = vi.fn();
