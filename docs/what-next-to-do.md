@@ -337,3 +337,30 @@ v0.2 cloud project land 後:
 ### 主 HEAD(本段結束時)
 
 `3ea83bb`(what-next 收尾)。v0.1.237 prod live。
+
+---
+
+## 2026-05-13 F-3 手測完成 + v0.1 release ready
+
+### F-3 手測結果(指揮家桌機,2026-05-13)
+
+| 場景 | 結果 | 備註 |
+|---|---|---|
+| 1. 單 tab autosave | ✅ pass | local file 持久化正常 |
+| 2. 多 tab 同 device(MultiTabCoord) | ✅ pass(UX gap) | sync version 同步 OK,但 tab2 需手動 reload 才看到 tab1 的 in-memory scene 改動 |
+| 3. 離線 retry banner | ⏭️ v0.1 不可觸發 | phantom — 未 sign in / scene 未綁 server → `syncSceneId=null` → autosave 不 push → 無 NetworkError → banner 不出。跟 F-3 audit 結論一致,#1003 是 v0.2 cloud project 地基 |
+| 4. Magic link | ⏭️ 跳過 | F-5 C3 e2e 已驗(2026-05-13 02:30 UTC Gmail 主收件匣) |
+
+### Follow-up issues
+
+| # | 標題 | milestone |
+|---|------|-----------|
+| #1006 | Multi-tab in-memory sync: tab2 needs reload to see tab1's scene changes | v0.2 |
+
+### v0.1 release readiness
+
+- ✅ F-3 v0.1 真實可測 code 全綠
+- ⬜ B2 產品定位 / landing — 等指揮家設計 input
+- ⏸️ 2 worktree dirs cleanup — 等 IDE 重啟
+
+**code 端無 blocker,可進入 v0.1 tag + CHANGELOG 階段。** B2 屬內容/設計工作不擋 release。
