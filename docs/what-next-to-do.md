@@ -279,15 +279,39 @@ decisions log `aa4ceb7` 已記。
 - `f3-multi-device-checklist.md` — 6 場景:單 tab autosave / 多 tab 同 device / cross-device 412 / 413 payload / 500 network / sign in-out
 - `f3-handtest-observability.md` — ssh prod `journalctl -u erythos-server -f` + 場景 ↔ log line 對照 + DB query + rollback 路徑
 
-### v0.1 release 剩餘 blocker
+### v0.1 release 剩餘 blocker(重定義 2026-05-13 後段)
+
+**F-3「multi-device 手測」blocker 改成「單 device 真實可測 4 場景」** — Erythos 是 local-first 架構（`openProject(FileSystemDirectoryHandle)` 從 local 目錄拉 scene,reload 從 local file 拉,sign-in 後 `syncEngine.push` 只是 backup 不是 source-of-truth）。多 device「同 scene 編輯」UX **不存在**,跨 device 共編留 v0.2 cloud project milestone。
 
 | | 等什麼 |
 |---|---|
-| F-3 multi-device 手測 e2e | **指揮家** 2-3 device(audit 4 🔴 全補完,checklist + observability cheatsheet 已備好)|
+| F-3 單 device 4 場景手測 | **指揮家** 桌機跑(checklist `.claude/scratch/f3-handtest-checklist.md` 已備好)|
 | B2 產品定位 / onboarding / landing | **指揮家** 設計 input |
 
-兩件都不是 AH 可代做,session 推進到此乾涸。下一步:`/handoff` 或等指揮家更新。
+可測範圍:單 tab autosave / 多 tab 同 device(MultiTabCoord)/ 離線 retry / magic-link sign in-out。
+
+### v0.2 milestone — Cloud project(AA 戰略審查 2026-05-13 land)
+
+戰略審查報告 `.claude/scratch/cloud-project-strategy-2026-05-13.md`(AA Opus 4.7 寫)。要點:
+
+**v0.1 不擋,cloud project 排 v0.2 first-class milestone。F-3 audit 修的 #1003/#999/#1004 在 v0.1 是 phantom code 但別 revert,是 v0.2 地基。**
+
+v0.2 scope 建議:
+- **L1**(必收)同 user 跨 device 同 scene — syncEngine.pull 接 client 啟動 flow + GET /api/scenes list + projectManager 多型
+- **半個 L2**(應收)share URL 唯讀 — anonymous-readable token,read-only viewer,不碰 ACL 寫權限
+- **L3** real-time co-edit + ACL + role — 排 v0.3,跟 If-Match last-writer-wins 差兩個 protocol generation
+
+關鍵設計決定:
+- AutoSave 雙模式 → server canonical + local file as throwaway cache(不雙寫)
+- LocalProject / CloudProject 兩條路徑並存,**不**統一成單一 handle 抽象
+- CloudProject asset 強制 cloud-only(無 hybrid)
+- Prefab 仍 project-scoped,cross-project library 排 v0.3
+- Offline = read-only(write disabled + 提示)
+
+Tech 風險(嚴重度高→低):AutoSave 雙模式 / ProjectManager 多型 refactor 範圍 / Asset model 重定義 / Prefab library 概念 / Offline UX / onboarding flow + free tier quota 假設 / Resend cost 非線性。
+
+v0.1 marketing 口徑(AA 建議):**不要**賣「Sign in for backup」(實際 client 不 pull,是 dead drop)。改成「Local-first 3D editor — your scenes live in your project folder. Cloud sync coming in v0.2.」Account 系統解釋為「early access — sign up to be first when cloud project lands」。
 
 ### 主 HEAD(本段結束時)
 
-`aa4ceb7`(decisions log F-5 reaper 啟用)。v0.1.237 prod live。
+`3ea83bb`(what-next 收尾)。v0.1.237 prod live。
