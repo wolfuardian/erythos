@@ -144,6 +144,15 @@ export class CloudProjectManager implements ProjectManager {
    *       all assets are uploaded before calling saveScene.
    */
   async saveScene(scene: SceneDocument, baseVersion: number): Promise<SaveResult> {
+    // Offline short-circuit: avoid an unnecessary network call when the client
+    // is known to be offline (spec § Offline 策略 + § G6).
+    // The existing NetworkError → 'offline' path handles cases where
+    // navigator.onLine is incorrect (e.g. captive portal); both paths produce
+    // the same SaveResult so the AutoSave layer handles them identically.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return { ok: false, reason: 'offline' };
+    }
+
     try {
       const { version } = await this._syncEngine.push(this._sceneId, scene, baseVersion);
       this._currentVersion = version;
