@@ -204,3 +204,52 @@ C2 揭露 prod `.env` 漂移 4 條(ALLOWED_ORIGIN / S3_*)+ table ownership 1 條
 3. **B2 產品定位** — 需指揮家設計 input
 4. **Deploy.yml defensive chown** — 防 ref ownership 再踩(小,~10 行,可順手)
 5. **#938 / #942 brainstorm 落地** — 但 backlog 已大幅消化,可重新評估 priority
+
+---
+
+## 2026-05-13 F-5 結案 + F-3 audit batch
+
+### F-5 Phase C+D 全 prod live + e2e 通過
+
+| | PR | 內容 |
+|---|---|---|
+| C1 | #987 | schema relax `github_id` nullable |
+| C2 | #989 | endpoint + rate limit + stub |
+| C3 | #1002 | Resend SDK + email template + env-gated |
+| D1 | #993 | SignInDialog + AuthClient.requestMagicLink + AuthErrorBanner extend |
+| #990 | #999 | atomic UPDATE verify race fix |
+
+**真實 e2e 通過(2026-05-13 02:30 UTC):** Resend ap-northeast-1 / SPF+DKIM+DMARC 全 verify / Gmail 主收件匣不進 spam / template 正確 / 點 link 302 + Set-Cookie 自動 sign in。TTL 15 分鐘 spec default 留著(replay protection 設計)。API key 換過一次(初次 leak in transcript 已 revoke)。
+
+### F-3 audit batch land(7 issue 已收)
+
+| Issue | PR | 規模 | 備註 |
+|---|---|---|---|
+| #988 | #994 | 15 行 | deploy.yml migrate trap |
+| #991 | #995 | 6 行 | Caddyfile XFF strip + prod synced |
+| #986 | #996 | 1148 行 | drizzle 0003+0004 snapshot backfill |
+| #937 | #997 | 2 行 | tech debt v0_to_v1 single cast |
+| #783 | #998 | 3 行 | BlobURL brand SceneSync |
+| #990 | #999 | 200 行 | magic-link atomic UPDATE |
+| #785 | #1000 | -4 行 | NodeUUID/PrefabId brand 5 sites cleanup |
+| (新) | #1001 | 8 行 | deploy.yml defensive chown(防 ref ownership 漂移)|
+| (新 F-3 audit) | #1003 | 698 行 | sync error handling 413/412/500/network 4 條 spec gap |
+
+dependabot 7 PR(#965~#971)全 merged:dotenv 17 / @hono/node-server 2.x(2.3x perf)/ actions v7/v8 / better-auth patch / @types/three / vite 等。
+
+### v0.1 release 剩餘 blocker
+
+| | 內容 | 等什麼 |
+|---|---|---|
+| F-3 | multi-device 手測 e2e | 指揮家 2-3 device 跑(audit 已補 4 🔴 缺口)|
+| B2 | 產品定位 / onboarding / landing | 指揮家設計 input |
+
+### F-3 audit 可後補(指揮家手測中遇到再 file issue)
+
+- 🟡 #5 同 device 多 tab 無協調(BroadcastChannel / Web Locks)
+- 🟡 #6 currentUser 變化不 refresh scene list
+- 🟢 #7 401/403 spec 文字 vs code drift(小 spec PR)
+
+### 主 HEAD
+
+`225f57e`(F-3 sync error handling)+ 後續 dependabot batch + #1001 chown + #1002 C3。
