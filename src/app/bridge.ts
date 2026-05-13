@@ -337,7 +337,15 @@ export function createEditorBridge(
     setCurrentScenePath: (path: AssetPath) => editor.projectManager.setCurrentScenePath(path),
     createScene: (name: string) => editor.projectManager.createScene(name),
     syncConflict,
-    resolveSyncConflict: deps?.resolveSyncConflict ?? ((_choice: 'keep-local' | 'use-cloud') => Promise.resolve()),
+    // Clear the syncConflict signal after the underlying autosave resolveConflict
+    // returns. Without this, the dialog stays mounted after the user clicks
+    // Keep local / Use cloud version — the autosave layer drops its internal
+    // pendingConflict state but the UI signal never gets notified.
+    resolveSyncConflict: async (choice: 'keep-local' | 'use-cloud') => {
+      const fn = deps?.resolveSyncConflict;
+      if (fn) await fn(choice);
+      setSyncConflict(null);
+    },
     syncError,
     dismissSyncError: () => setSyncError(null),
     currentSceneId,
