@@ -7,7 +7,7 @@ import { Selection } from './Selection';
 import { KeybindingManager } from './KeybindingManager';
 import { Clipboard } from './Clipboard';
 import type { Command } from './Command';
-import { ProjectManager } from './project/ProjectManager';
+import { LocalProjectManager } from './project/LocalProjectManager';
 import { SceneDocument } from './scene/SceneDocument';
 import { SceneSync } from './scene/SceneSync';
 import { ResourceCache } from './scene/ResourceCache';
@@ -45,7 +45,7 @@ export class Editor {
   syncBaseVersion: number | null = null;
 
   constructor(
-    public readonly projectManager: ProjectManager,
+    public readonly projectManager: LocalProjectManager,
     assetClient?: AssetSyncClient,
   ) {
     this.scene = new Scene();

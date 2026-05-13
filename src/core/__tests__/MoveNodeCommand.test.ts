@@ -3,7 +3,7 @@ import { Editor } from '../Editor';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { MoveNodeCommand } from '../commands/MoveNodeCommand';
 import type { SceneNode } from '../scene/SceneFormat';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 
 // Helper: add a node and return it.
 function addNode(editor: Editor, node: SceneNode): SceneNode {

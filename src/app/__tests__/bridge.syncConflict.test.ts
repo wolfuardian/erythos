@@ -17,7 +17,7 @@ vi.mock('../../core/project/ProjectHandleStore', () => ({
 }));
 
 import { Editor } from '../../core/Editor';
-import { ProjectManager } from '../../core/project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../../core/project/LocalProjectManager';
 import { SceneDocument } from '../../core/scene/SceneDocument';
 import type { AssetPath } from '../../utils/branded';
 import { createEditorBridge } from '../bridge';

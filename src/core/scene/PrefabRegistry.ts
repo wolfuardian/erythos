@@ -18,7 +18,7 @@
 
 import type { PrefabAsset } from './PrefabFormat';
 import { extractPrefabDeps } from './PrefabFormat';
-import type { ProjectManager } from '../project/ProjectManager';
+import type { LocalProjectManager } from '../project/LocalProjectManager';
 import type { AssetPath } from '../../utils/branded';
 import type { PrefabGraph } from '../io/PrefabGraph';
 
@@ -104,7 +104,7 @@ export class PrefabRegistry {
    *
    * @param projectManager - The app's ProjectManager instance.
    */
-  attach(projectManager: ProjectManager): void {
+  attach(projectManager: LocalProjectManager): void {
     // Detach any previous binding (idempotent re-attach guard)
     this._detachFileChanged?.();
 

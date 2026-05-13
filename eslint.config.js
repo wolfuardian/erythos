@@ -12,6 +12,46 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 
 export default [
+  // ── Rule 0: FileSystemDirectoryHandle must only appear in LocalProject* files ─
+  // Corresponds to: G1 refactor — FS handle surface confined to LocalProjectManager.ts
+  // and ProjectHandleStore.ts. Test files and the interface declaration (ProjectManager.ts
+  // itself, which defines ProjectIdentifier with the handle field) are allowed.
+  //
+  // Allow-list (glob patterns NOT in this rule's `files`):
+  //   src/core/project/LocalProjectManager.ts  — the impl class
+  //   src/core/project/ProjectManager.ts       — defines ProjectIdentifier.handle field
+  //   src/core/project/ProjectHandleStore.ts   — IDB store; holds handles by design
+  //   src/**/__tests__/**                      — test mocks cast to FSDH freely
+  {
+    files: [
+      'src/**/*.{ts,tsx}',
+    ],
+    ignores: [
+      'src/core/project/LocalProjectManager.ts',
+      'src/core/project/ProjectManager.ts',
+      'src/core/project/ProjectHandleStore.ts',
+      'src/**/__tests__/**',
+    ],
+    languageOptions: { parser: tsParser },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Match any TypeScript type reference to FileSystemDirectoryHandle
+          selector: 'TSTypeReference[typeName.name="FileSystemDirectoryHandle"]',
+          message:
+            '[G1] FileSystemDirectoryHandle must only appear in LocalProject* files and ProjectHandleStore — use LocalProjectManager instead (docs/cloud-project-spec.md § G1)',
+        },
+        {
+          // Also catch identifier references (e.g. global usage without type annotation)
+          selector: 'Identifier[name="FileSystemDirectoryHandle"]:not([parent.type="TSTypeReference"])',
+          message:
+            '[G1] FileSystemDirectoryHandle must only appear in LocalProject* files and ProjectHandleStore — use LocalProjectManager instead (docs/cloud-project-spec.md § G1)',
+        },
+      ],
+    },
+  },
+
   // ── Rule 1: src/core/** must not import UI layers ─────────────────────────
   // Corresponds to: "core/ 不依賴 UI"
   // Forbidden targets from core: components/, panels/, app/, viewport/

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 
 describe('AddNodeCommand', () => {
   let editor: Editor;

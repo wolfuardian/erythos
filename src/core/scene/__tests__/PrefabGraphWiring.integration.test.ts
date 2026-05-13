@@ -4,7 +4,7 @@ import { PrefabGraph, CircularReferenceError } from '../../io/PrefabGraph';
 import type { PrefabAsset } from '../PrefabFormat';
 import { serializeToPrefab } from '../PrefabSerializer';
 import { Editor } from '../../Editor';
-import { ProjectManager } from '../../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../../project/LocalProjectManager';
 import { InstantiatePrefabCommand } from '../../commands/InstantiatePrefabCommand';
 import type { AssetPath } from '../../../utils/branded';
 import type { SceneNode } from '../SceneFormat';

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { SetMaterialPropertyCommand } from '../commands/SetMaterialPropertyCommand';
 import type { MaterialOverride } from '../scene/SceneFormat';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 import type { NodeUUID } from '../../utils/branded';
 
 describe('SetMaterialPropertyCommand', () => {

@@ -5,7 +5,7 @@ import type { InteractionMode, TransformMode } from '../core/EventEmitter';
 import type { SceneNode } from '../core/scene/SceneFormat';
 import type { SceneEnv as EnvironmentSettings } from '../core/scene/SceneFormat';
 import type { ProjectFile } from '../core/project/ProjectFile';
-import type { ProjectManager } from '../core/project/ProjectManager';
+import type { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import type { AssetPath, NodeUUID } from '../utils/branded';
 import type { SceneId } from '../core/sync/SyncEngine';
@@ -117,7 +117,7 @@ export interface EditorBridge {
 
 export interface EditorBridgeDeps {
   closeProject: () => void;
-  projectManager: ProjectManager;
+  projectManager: LocalProjectManager;
   openProjectById: (id: string) => Promise<void>;
   autosaveFlush: () => Promise<void>;
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
