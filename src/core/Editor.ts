@@ -295,10 +295,13 @@ export class Editor {
     this.events.emit('brokenRefsChanged');
 
     // Seed the sync engine with the loaded scene so subsequent AutoSave pushes
-    // have a valid id + baseVersion. We always create a fresh entry here because
-    // the file-based load path has no pre-existing sync id (that changes in step 3
-    // when LocalSyncEngine gains persistence).
-    if (this.syncEngine) {
+    // have a valid id + baseVersion. Only runs when no syncSceneId is set yet —
+    // LocalProject path enters here with syncSceneId === null and gets a fresh
+    // server-side scene created; CloudProject path pre-populates syncSceneId +
+    // syncBaseVersion in App.tsx.openCloudProject before calling loadScene, so
+    // it must skip create() (calling create() would mint a second server scene
+    // and clobber the cloud sceneId).
+    if (this.syncEngine && this.syncSceneId === null) {
       const sceneName = this.projectManager.currentScenePath();
       try {
         const { id, version } = await this.syncEngine.create(sceneName, this.sceneDocument);
