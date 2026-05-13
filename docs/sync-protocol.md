@@ -396,8 +396,8 @@ client 收到 409 時,**永遠先把本機版本寫進 `.erythos.bak.v{base_vers
 |--------|------|-------------|
 | 200 | OK | 繼續 |
 | 201 | Created | 記下新 id |
-| 401 | Unauthorized(沒登入或 token 過期) | 跳登入 |
-| 403 | Forbidden(身份正確但無權) | 顯示「無權限」 |
+| 401 | Unauthorized(沒登入或 token 過期) | v0:`AuthClient.getCurrentUser()` 回 null(anonymous);非 auth 路徑由 caller 決定 UI(viewer mode 提示登入) |
+| 403 | Forbidden(身份正確但無權) | v0:`/auth/me` 同 401 走 anonymous 路徑(implementation 將 401/403 合併處理,因 v0 server 不單獨回 403);其他 endpoint owner check 統一回 404 不洩露存在性,故 403 v0 基本不觸發 |
 | 404 | Not Found(不存在或無權,故意混淆) | 顯示「找不到」 |
 | 409 | Conflict(base_version 過時) | 跳衝突對話框 |
 | 412 | Precondition Failed(If-Match 格式錯) | bug,回報 telemetry |
