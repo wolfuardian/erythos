@@ -1,5 +1,6 @@
-import { type Component, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { type Component, For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import type { ShareToken } from '../core/sync/ShareTokenClient';
 import styles from './ShareDialog.module.css';
 
 export type SceneVisibility = 'private' | 'public';
@@ -10,11 +11,23 @@ export interface ShareDialogProps {
   sceneId: string;
   visibility: SceneVisibility;
   onVisibilityChange: (vis: SceneVisibility) => void;
+  /** Share tokens — undefined = not loaded yet (owner-only; shown only when provided) */
+  tokens?: ShareToken[];
+  /** Called when user clicks "Generate new link" */
+  onGenerateToken?: () => Promise<void>;
+  /** Called when user clicks Revoke on a token */
+  onRevokeToken?: (token: string) => Promise<void>;
+  /** Error from token operations */
+  tokenError?: string | null;
 }
 
 const ShareDialog: Component<ShareDialogProps> = (props) => {
   const [copied, setCopied] = createSignal(false);
+  const [copiedToken, setCopiedToken] = createSignal<string | null>(null);
+  const [generating, setGenerating] = createSignal(false);
+  const [revokingToken, setRevokingToken] = createSignal<string | null>(null);
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  let copiedTokenTimer: ReturnType<typeof setTimeout> | undefined;
 
   createEffect(() => {
     if (!props.open) return;
@@ -27,10 +40,14 @@ const ShareDialog: Component<ShareDialogProps> = (props) => {
 
   onCleanup(() => {
     if (copiedTimer !== undefined) clearTimeout(copiedTimer);
+    if (copiedTokenTimer !== undefined) clearTimeout(copiedTokenTimer);
   });
 
   const shareUrl = () =>
     `${window.location.origin}/scenes/${props.sceneId}`;
+
+  const tokenShareUrl = (token: string) =>
+    `${window.location.origin}/scenes/${props.sceneId}?share_token=${token}`;
 
   const handleCopy = () => {
     if (props.visibility !== 'public') return;
@@ -43,6 +60,40 @@ const ShareDialog: Component<ShareDialogProps> = (props) => {
       }, 1500);
     });
   };
+
+  const handleCopyToken = (token: string) => {
+    if (copiedTokenTimer !== undefined) clearTimeout(copiedTokenTimer);
+    navigator.clipboard.writeText(tokenShareUrl(token)).then(() => {
+      setCopiedToken(token);
+      copiedTokenTimer = setTimeout(() => {
+        setCopiedToken(null);
+        copiedTokenTimer = undefined;
+      }, 1500);
+    });
+  };
+
+  const handleGenerate = async () => {
+    if (!props.onGenerateToken || generating()) return;
+    setGenerating(true);
+    try {
+      await props.onGenerateToken();
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRevoke = async (token: string) => {
+    if (!props.onRevokeToken || revokingToken() !== null) return;
+    setRevokingToken(token);
+    try {
+      await props.onRevokeToken(token);
+    } finally {
+      setRevokingToken(null);
+    }
+  };
+
+  const activeTokens = () =>
+    (props.tokens ?? []).filter((t) => t.revoked_at === null);
 
   return (
     <Show when={props.open}>
@@ -81,7 +132,7 @@ const ShareDialog: Component<ShareDialogProps> = (props) => {
               </div>
             </div>
 
-            {/* Copy Link area */}
+            {/* Copy Link area (public link) */}
             <div class={styles.copyRow}>
               <Show
                 when={props.visibility === 'public'}
@@ -101,6 +152,67 @@ const ShareDialog: Component<ShareDialogProps> = (props) => {
                 {copied() ? 'Copied' : 'Copy Link'}
               </button>
             </div>
+
+            {/* Share tokens section — only shown when tokens prop is provided (owner only) */}
+            <Show when={props.tokens !== undefined}>
+              <div class={styles.tokenSection}>
+                <div class={styles.tokenHeader}>
+                  <span class={styles.tokenSectionLabel}>Private share links</span>
+                  <button
+                    data-testid="share-dialog-generate"
+                    type="button"
+                    class={styles.generateButton}
+                    disabled={generating()}
+                    onClick={() => void handleGenerate()}
+                  >
+                    {generating() ? 'Generating…' : 'Generate new link'}
+                  </button>
+                </div>
+
+                <Show when={props.tokenError}>
+                  <p data-testid="share-dialog-token-error" class={styles.tokenError}>
+                    {props.tokenError}
+                  </p>
+                </Show>
+
+                <Show
+                  when={activeTokens().length > 0}
+                  fallback={
+                    <p class={styles.tokenEmptyHint}>
+                      No active links. Generate one above.
+                    </p>
+                  }
+                >
+                  <ul data-testid="share-dialog-token-list" class={styles.tokenList}>
+                    <For each={activeTokens()}>
+                      {(t) => (
+                        <li class={styles.tokenItem}>
+                          <span class={styles.tokenValue} title={tokenShareUrl(t.token)}>
+                            {t.token.slice(0, 8)}…
+                          </span>
+                          <button
+                            type="button"
+                            class={styles.copyButton}
+                            onClick={() => handleCopyToken(t.token)}
+                          >
+                            {copiedToken() === t.token ? 'Copied' : 'Copy'}
+                          </button>
+                          <button
+                            data-testid={`share-dialog-revoke-${t.token}`}
+                            type="button"
+                            class={styles.revokeButton}
+                            disabled={revokingToken() === t.token}
+                            onClick={() => void handleRevoke(t.token)}
+                          >
+                            {revokingToken() === t.token ? 'Revoking…' : 'Revoke'}
+                          </button>
+                        </li>
+                      )}
+                    </For>
+                  </ul>
+                </Show>
+              </div>
+            </Show>
 
             <div class={styles.actions}>
               <button

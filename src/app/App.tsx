@@ -4,6 +4,7 @@ import { Editor } from '../core/Editor';
 import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
+import { defaultBaseUrl } from '../core/sync/baseUrl';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
 import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
@@ -28,10 +29,11 @@ import {
   getLastProjectId, setLastProjectId, clearLastProjectId,
   getLastScenePath, setLastScenePath, clearLastScenePath,
 } from './projectSession';
-import { currentRoute } from './router';
+import { currentRoute, navigateToScene } from './router';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import styles from './App.module.css';
+import viewerStyles from './ShareTokenViewer.module.css';
 
 const App: Component = () => {
   // Singleton LocalProjectManager — 跨 open/close 存活
@@ -57,6 +59,10 @@ const App: Component = () => {
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
   const [viewerSceneName, setViewerSceneName] = createSignal<string>('Untitled Scene');
+  // Share token viewer — set when URL has ?share_token=<token>
+  const [viewerShareToken, setViewerShareToken] = createSignal<string | undefined>(undefined);
+  const [viewerSharedBy, setViewerSharedBy] = createSignal<string | undefined>(undefined);
+  const [viewerTokenInvalid, setViewerTokenInvalid] = createSignal(false);
 
   // auth_error banner: set from URL query on mount, dismissed by user
   const [authError, setAuthError] = createSignal<AuthErrorCode | null>(null);
@@ -330,7 +336,50 @@ const App: Component = () => {
     const route = currentRoute();
 
     if (route.kind === 'scene') {
-      // URL is /scenes/{uuid} — check if we own this scene locally
+      // URL has ?share_token=<token> — anonymous share viewer mode
+      if (route.shareToken) {
+        const { sceneId, shareToken } = route;
+        void (async () => {
+          try {
+            const apiBase = defaultBaseUrl();
+            const res = await fetch(
+              `${apiBase}/scenes/${encodeURIComponent(sceneId)}?share_token=${encodeURIComponent(shareToken)}`,
+              { credentials: 'include' },
+            );
+            if (!res.ok) {
+              // Invalid or revoked token → show error viewer
+              setViewerTokenInvalid(true);
+              setViewerSceneId(sceneId);
+              setViewerShareToken(shareToken);
+              return;
+            }
+            const data = await res.json() as {
+              id: string;
+              owner_id: string;
+              name: string;
+              version: number;
+              body: unknown;
+              visibility: string;
+            };
+            // owner_id is a UUID; we don't have a users endpoint to resolve
+            // github_login here. Display the UUID as placeholder;
+            // a follow-up can add owner resolution once GET /api/users/:id lands.
+            const sharedBy = data.owner_id;
+            setViewerSceneId(sceneId);
+            setViewerSceneName(data.name ?? sceneId);
+            setViewerShareToken(shareToken);
+            setViewerSharedBy(sharedBy);
+          } catch {
+            // Network error — show invalid page
+            setViewerTokenInvalid(true);
+            setViewerSceneId(sceneId);
+            setViewerShareToken(shareToken);
+          }
+        })();
+        return;
+      }
+
+      // URL is /scenes/{uuid} (no share_token) — check if we own this scene locally
       void (async () => {
         try {
           await syncEngine.fetch(route.sceneId);
@@ -403,12 +452,32 @@ const App: Component = () => {
       <Show
         when={!isViewerMode()}
         fallback={
-          <ViewerShell
-            sceneId={viewerSceneId()!}
-            sceneName={viewerSceneName()}
-            syncEngine={syncEngine}
-            onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
-          />
+          <Show
+            when={!viewerTokenInvalid()}
+            fallback={
+              <ShareTokenInvalidView />
+            }
+          >
+            <Show
+              when={viewerShareToken() !== undefined}
+              fallback={
+                <ViewerShell
+                  sceneId={viewerSceneId()!}
+                  sceneName={viewerSceneName()}
+                  syncEngine={syncEngine}
+                  onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
+                />
+              }
+            >
+              <ShareTokenViewerShell
+                sceneId={viewerSceneId()!}
+                sceneName={viewerSceneName()}
+                sharedBy={viewerSharedBy()}
+                syncEngine={syncEngine}
+                onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
+              />
+            </Show>
+          </Show>
         }
       >
         <Show when={projectOpen() && editor() && bridge()} fallback={
@@ -481,6 +550,111 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
           </button>
         </Show>
       </Show>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ShareTokenViewerShell — viewer mode for anonymous share URL
+// Shows "Shared by <owner>" badge + Fork button + "Sign in to edit" footer
+// ---------------------------------------------------------------------------
+
+interface ShareTokenViewerProps {
+  sceneId: string;
+  sceneName: string;
+  sharedBy?: string;
+  syncEngine: { fork(id: string, name?: string): Promise<{ id: string; version: number; forkedFrom: string }> };
+  onSignIn: () => void;
+}
+
+const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
+  const [forking, setForking] = createSignal(false);
+  const [forkError, setForkError] = createSignal<string | null>(null);
+  const [needsAuth, setNeedsAuth] = createSignal(false);
+
+  const handleFork = async () => {
+    if (forking()) return;
+    setForking(true);
+    setForkError(null);
+    setNeedsAuth(false);
+    try {
+      const result = await props.syncEngine.fork(props.sceneId);
+      navigateToScene(result.id);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        setNeedsAuth(true);
+      } else {
+        setForkError(err instanceof Error ? err.message : 'Fork failed');
+      }
+      setForking(false);
+    }
+  };
+
+  return (
+    <div class={viewerStyles.root}>
+      {/* Viewer header */}
+      <div class={viewerStyles.header}>
+        <span class={viewerStyles.viewingLabel}>Viewing</span>
+        <span class={viewerStyles.sceneName}>{props.sceneName}</span>
+        <Show when={props.sharedBy}>
+          <span class={viewerStyles.sharedBy}>· Shared by {props.sharedBy}</span>
+        </Show>
+        <Show when={forkError()}>
+          <span role="alert" aria-live="polite" class={viewerStyles.errorText}>
+            &nbsp;— {forkError()}
+          </span>
+        </Show>
+        <div class={viewerStyles.spacer} />
+        <Show
+          when={!needsAuth()}
+          fallback={
+            <button
+              class={viewerStyles.forkButton}
+              onClick={props.onSignIn}
+            >
+              Sign in to fork
+            </button>
+          }
+        >
+          <button
+            data-testid="share-viewer-fork"
+            disabled={forking()}
+            class={viewerStyles.forkButton}
+            onClick={() => void handleFork()}
+          >
+            <span aria-live="polite">{forking() ? 'Forking…' : 'Fork'}</span>
+          </button>
+        </Show>
+      </div>
+      {/* Viewer content placeholder */}
+      <div class={viewerStyles.content}>
+        <span>Loading scene…</span>
+      </div>
+      {/* Footer */}
+      <div class={viewerStyles.footer}>
+        Sign in to edit your own copy —{' '}
+        <button
+          class={viewerStyles.footerLink}
+          onClick={props.onSignIn}
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ShareTokenInvalidView — shown when share token is invalid or revoked
+// ---------------------------------------------------------------------------
+
+const ShareTokenInvalidView: Component = () => {
+  return (
+    <div data-testid="share-token-invalid" class={viewerStyles.invalidRoot}>
+      <p class={viewerStyles.invalidTitle}>Link not found</p>
+      <p class={viewerStyles.invalidMessage}>
+        This share link is invalid or revoked. Ask the owner for a new link.
+      </p>
     </div>
   );
 };

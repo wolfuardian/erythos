@@ -43,6 +43,13 @@
       "when": 1778571893255,
       "tag": "0005_useful_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778654669301,
+      "tag": "0006_round_iceman",
+      "breakpoints": true
     }
   ]
 }

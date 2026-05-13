@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server';
 import { sql } from 'drizzle-orm';
 import { authRoutes } from './routes/auth.js';
 import { sceneRoutes } from './routes/scenes.js';
+import { shareTokenRoutes } from './routes/share-tokens.js';
 import { assetRoutes } from './routes/assets.js';
 import { meRoutes } from './routes/me.js';
 import { metricsRoutes } from './routes/metrics.js';
@@ -99,6 +100,7 @@ api.use('*', async (c, next) => {
 api.route('/auth', authRoutes);
 api.route('/auth/magic-link', magicLinkRoutes);
 api.route('/scenes', sceneRoutes);
+api.route('/scenes', shareTokenRoutes);
 api.route('/assets', assetRoutes);
 api.route('/me', meRoutes);
 api.route('/metrics', metricsRoutes);
