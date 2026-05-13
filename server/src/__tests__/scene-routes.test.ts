@@ -1,10 +1,11 @@
 /**
- * Unit tests for scene routes (D4).
+ * Unit tests for scene routes (D4 + G3).
  *
  * Strategy: mock db module so no real Postgres connection is needed.
  * Hono app exercised via app.request() — no network required.
  *
  * Covered:
+ *   GET  /scenes         — happy 200 (caller-owned list), 401 (no auth) [G3]
  *   GET  /scenes/:id     — happy path (public), 404 (not found), 404 (private, not owner),
  *                          200 (private, owner), 401-not-applicable (GET is anonymous-friendly)
  *   PUT  /scenes/:id     — happy, 409 version mismatch, 412 format wrong, 428 missing header,
@@ -581,5 +582,69 @@ describe('POST /scenes/:id/fork', () => {
     // First insert is the scenes row — check its name field
     const scenesInsertArgs = insertedValues[0] as { name?: string };
     expect(scenesInsertArgs.name).toBe('Cool Scene (fork)');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /scenes — cloud project list (G3)
+// ---------------------------------------------------------------------------
+
+describe('GET /api/scenes', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns 200 with caller-owned scenes when authenticated', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+    const fakeNow = new Date().toISOString();
+    const fakeSceneRows = [
+      {
+        id: 'scene-1',
+        name: 'My Scene',
+        version: 3,
+        visibility: 'private',
+        forked_from: null,
+        created_at: fakeNow,
+        updated_at: fakeNow,
+      },
+    ];
+    // selectChain for list: from → where → resolves (no limit call)
+    mockSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(fakeSceneRows),
+      }),
+    });
+
+    const res = await app.request(
+      makeRequest('/api/scenes', { cookie: 'session=valid-token' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { scenes: unknown[] };
+    expect(Array.isArray(body.scenes)).toBe(true);
+    expect(body.scenes).toHaveLength(1);
+    expect((body.scenes[0] as Record<string, unknown>).id).toBe('scene-1');
+  });
+
+  it('returns 200 with empty array when user has no scenes', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+    mockSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    });
+
+    const res = await app.request(
+      makeRequest('/api/scenes', { cookie: 'session=valid-token' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { scenes: unknown[] };
+    expect(body.scenes).toHaveLength(0);
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    mockResolveSession.mockResolvedValue(null);
+
+    const res = await app.request(makeRequest('/api/scenes'));
+    expect(res.status).toBe(401);
   });
 });

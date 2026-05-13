@@ -455,14 +455,20 @@ const App: Component = () => {
               body: unknown;
               visibility: string;
             };
-            // owner_id is a UUID; we don't have a users endpoint to resolve
-            // github_login here. Display the UUID as placeholder;
-            // a follow-up can add owner resolution once GET /api/users/:id lands.
-            const sharedBy = data.owner_id;
+            // Start with owner_id as placeholder; resolve to github_login via #1017 endpoint.
             setViewerSceneId(sceneId);
             setViewerSceneName(data.name ?? sceneId);
             setViewerShareToken(shareToken);
-            setViewerSharedBy(sharedBy);
+            setViewerSharedBy(data.owner_id); // placeholder until resolved below
+
+            // Resolve owner_id → github_login (#1017: GET /api/users/:id)
+            void authClient.getUser(data.owner_id).then((publicUser) => {
+              if (publicUser) {
+                setViewerSharedBy(publicUser.githubLogin);
+              }
+            }).catch(() => {
+              // Leave as UUID placeholder on error — non-critical
+            });
           } catch {
             // Network error — show invalid page
             setViewerTokenInvalid(true);
@@ -598,7 +604,31 @@ const App: Component = () => {
         }
       >
         <Show when={projectOpen() && editor() && bridge()} fallback={
-          <Welcome projectManager={projectManager} onOpenProject={openProjectById} />
+          <Welcome
+            projectManager={projectManager}
+            onOpenProject={openProjectById}
+            currentUser={currentUser}
+            listCloudScenes={() => authClient.listCloudScenes()}
+            onOpenCloudProject={async (sceneId) => {
+              // G2 not yet landed — store intent and notify user.
+              // Once G2 merges, App.tsx will handle this via CloudProjectManager.
+              console.warn('[G3] openCloudProject stub — G2 CloudProjectManager not yet landed', sceneId);
+            }}
+            onCreateCloudProject={async (name) => {
+              // Create cloud scene via POST /api/scenes, then wire to CloudProjectManager (G2).
+              // For G3, we fire the POST and log the returned id — G2 will complete the flow.
+              const apiBase = defaultBaseUrl();
+              const res = await fetch(`${apiBase}/scenes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ name, body: {} }),
+              });
+              if (!res.ok) throw new Error(`Failed to create cloud project: ${res.status}`);
+              const data = await res.json() as { id: string };
+              console.warn('[G3] createCloudProject stub — G2 CloudProjectManager not yet landed', data.id);
+            }}
+          />
         }>
           <EditorProvider bridge={bridge()!} editors={editors}>
             <div class={styles.root}>

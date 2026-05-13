@@ -123,6 +123,26 @@ export const Toolbar: Component = () => {
           currentProjectId={bridge.currentProjectId()}
           onOpenProject={bridge.openProjectById}
         />
+        {/* Cloud sync indicator — shown in cloud project mode (G3) */}
+        <Show when={bridge.projectType() === 'cloud'}>
+          <div
+            data-testid="toolbar-cloud-sync"
+            class={styles.cloudSync}
+            classList={{
+              [styles.cloudSyncPending]: bridge.autosaveStatus() === 'pending',
+              [styles.cloudSyncSaved]: bridge.autosaveStatus() === 'saved',
+              [styles.cloudSyncError]: bridge.autosaveStatus() === 'error',
+            }}
+            title={
+              bridge.autosaveStatus() === 'pending' ? 'Syncing to cloud…'
+              : bridge.autosaveStatus() === 'saved' ? 'Synced to cloud'
+              : bridge.autosaveStatus() === 'error' ? 'Cloud sync error'
+              : 'Cloud project'
+            }
+          >
+            Cloud
+          </div>
+        </Show>
       </div>
 
       {/* Broken-ref warning chip — only renders when count > 0 (spec round 8). */}

@@ -24,6 +24,24 @@ export interface User {
   storageUsed: number;
 }
 
+/** Public-safe user info returned by GET /api/users/:id (#1017 owner resolver). */
+export interface PublicUser {
+  id: string;
+  githubLogin: string;
+  avatarUrl: string | null;
+}
+
+/** Cloud scene entry from GET /api/scenes (G3 cloud project list). */
+export interface CloudScene {
+  id: string;
+  name: string;
+  version: number;
+  visibility: string;
+  forked_from: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Error class ─────────────────────────────────────────────────────────────
 
 /**
@@ -211,5 +229,85 @@ export class AuthClient {
         response.status,
       );
     }
+  }
+
+  /**
+   * Lists the authenticated user's cloud scenes.
+   *
+   * GET /scenes
+   *   200 → CloudScene[]
+   *   401 → returns [] (caller not signed in)
+   *   5xx → throws AuthError
+   *
+   * Spec: cloud-project-spec.md § REST API § Cloud project list (G3)
+   */
+  async listCloudScenes(): Promise<CloudScene[]> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/scenes`, {
+        credentials: 'include',
+      });
+    } catch (err) {
+      throw new AuthError(`Network error: ${(err as Error).message}`);
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return [];
+    }
+
+    if (!response.ok) {
+      throw new AuthError(
+        `Unexpected response from GET /scenes: ${response.status}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as { scenes: CloudScene[] };
+    return data.scenes ?? [];
+  }
+
+  /**
+   * Resolves public-safe user info for the given user id.
+   * Used by ShareTokenViewerShell to display "Shared by <github_login>" (#1017).
+   *
+   * GET /users/:id
+   *   200 → PublicUser
+   *   404 → null (unknown user — caller falls back to UUID display)
+   *   5xx → throws AuthError
+   *
+   * Does NOT require auth — public endpoint (spec D-5).
+   */
+  async getUser(id: string): Promise<PublicUser | null> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/users/${encodeURIComponent(id)}`, {
+        credentials: 'include',
+      });
+    } catch (err) {
+      throw new AuthError(`Network error: ${(err as Error).message}`);
+    }
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new AuthError(
+        `Unexpected response from GET /users/${id}: ${response.status}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as {
+      id: string;
+      github_login: string;
+      avatar_url: string | null;
+    };
+
+    return {
+      id: data.id,
+      githubLogin: data.github_login,
+      avatarUrl: data.avatar_url,
+    };
   }
 }

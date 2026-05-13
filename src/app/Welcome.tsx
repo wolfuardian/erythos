@@ -3,11 +3,20 @@ import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { NewProjectModal } from './NewProjectModal';
 import { createSignal } from 'solid-js';
+import type { User, CloudScene } from '../core/auth/AuthClient';
 import styles from './Welcome.module.css';
 
 interface Props {
   projectManager: LocalProjectManager;
   onOpenProject: (id: string) => Promise<void>;
+  /** Current authenticated user — undefined = loading, null = guest, User = signed in. */
+  currentUser?: () => User | null | undefined;
+  /** Fetch the signed-in user's cloud scenes. */
+  listCloudScenes?: () => Promise<CloudScene[]>;
+  /** Open a cloud scene by its server-side scene id. */
+  onOpenCloudProject?: (sceneId: string) => Promise<void>;
+  /** Create a new cloud project with the given name. */
+  onCreateCloudProject?: (name: string) => Promise<void>;
 }
 
 function formatLastOpened(ts: number): string {
@@ -61,11 +70,32 @@ export const Welcome: Component<Props> = (props) => {
   const [showModal, setShowModal] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
 
+  // Cloud project list — only loaded when user is signed in
+  const [cloudScenes, setCloudScenes] = createSignal<CloudScene[]>([]);
+  const [cloudLoading, setCloudLoading] = createSignal(false);
+  const [cloudError, setCloudError] = createSignal('');
+
   const refresh = async () => setRecentProjects(await props.projectManager.getRecentProjects());
+
+  const refreshCloudScenes = async () => {
+    if (!props.listCloudScenes) return;
+    setCloudLoading(true);
+    setCloudError('');
+    try {
+      const scenes = await props.listCloudScenes();
+      setCloudScenes(scenes);
+    } catch {
+      setCloudError('Failed to load cloud projects');
+    } finally {
+      setCloudLoading(false);
+    }
+  };
 
   onMount(() => {
     void refresh();
     const unsub = props.projectManager.onChange(() => void refresh());
+    // Load cloud scenes if user is already signed in when Welcome mounts
+    void refreshCloudScenes();
     return unsub;
   });
 
@@ -135,13 +165,65 @@ export const Welcome: Component<Props> = (props) => {
 
           {/* Footer */}
           <div class={styles.footer}>
-            <div class={styles.footerText}>v0.1 — Local-first 3D editor</div>
-            <div class={styles.footerSub}>Cloud sync coming in v0.2</div>
+            <div class={styles.footerText}>v0.2 — Local + cloud 3D editor</div>
+            <div class={styles.footerSub}>Sign in to sync across devices</div>
           </div>
         </div>
 
         {/* Right column ~62% */}
         <div class={styles.rightCol}>
+          {/* Cloud Projects section — only visible when signed in */}
+          <Show when={props.currentUser && props.currentUser() != null}>
+            <div class={styles.recentHeader}>
+              <div class={styles.subHeader}>Your Cloud Projects</div>
+              <Show when={cloudScenes().length > 0}>
+                <div class={styles.recentCount}>{cloudScenes().length}</div>
+              </Show>
+            </div>
+
+            <div class={styles.projectList}>
+              <Show
+                when={!cloudLoading()}
+                fallback={
+                  <div class={styles.emptyState}>
+                    <span class={styles.emptyText}>Loading…</span>
+                  </div>
+                }
+              >
+                <For each={cloudScenes()} fallback={
+                  <div class={styles.emptyState}>
+                    <span class={styles.emptyText}>
+                      No cloud projects yet — create one or sign in elsewhere
+                    </span>
+                  </div>
+                }>
+                  {(scene) => (
+                    <div
+                      class={styles.projectRow}
+                      onClick={() => props.onOpenCloudProject?.(scene.id)}
+                    >
+                      <ThumbnailPlaceholder />
+                      <div class={styles.projectMeta}>
+                        <div class={styles.projectName}>{scene.name}</div>
+                        <div class={styles.projectId}>{scene.id}</div>
+                      </div>
+                      <div class={styles.projectDate}>
+                        {formatLastOpened(new Date(scene.updated_at).getTime())}
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Show>
+            </div>
+
+            <Show when={cloudError()}>
+              <div class={styles.errorMsg}>{cloudError()}</div>
+            </Show>
+
+            {/* Divider before local projects */}
+            <div class={styles.sectionDivider} />
+          </Show>
+
           {/* Recent Projects header */}
           <div class={styles.recentHeader}>
             <div class={styles.subHeader}>Recent Projects</div>
@@ -186,7 +268,9 @@ export const Welcome: Component<Props> = (props) => {
         onClose={() => setShowModal(false)}
         projectManager={props.projectManager}
         onOpenProject={props.onOpenProject}
-        onAfterCreate={() => void refresh()}
+        onAfterCreate={() => { void refresh(); void refreshCloudScenes(); }}
+        currentUser={props.currentUser}
+        onCreateCloudProject={props.onCreateCloudProject}
       />
     </div>
   );

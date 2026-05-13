@@ -9,6 +9,7 @@ import { assetRoutes } from './routes/assets.js';
 import { meRoutes } from './routes/me.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { magicLinkRoutes } from './routes/magic-link.js';
+import { userRoutes } from './routes/users.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
 
@@ -104,6 +105,7 @@ api.route('/scenes', shareTokenRoutes);
 api.route('/assets', assetRoutes);
 api.route('/me', meRoutes);
 api.route('/metrics', metricsRoutes);
+api.route('/users', userRoutes);
 app.route('/api', api);
 
 const port = Number(process.env.PORT ?? 3000);

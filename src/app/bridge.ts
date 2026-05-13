@@ -96,6 +96,12 @@ export interface EditorBridge {
   /** Scene ID currently tracked in the SyncEngine; null until first loadScene completes. */
   currentSceneId: Accessor<SceneId | null>;
   /**
+   * Type of the currently open project manager.
+   * 'local' = LocalProjectManager (v0.1 default)
+   * 'cloud' = CloudProjectManager (G2+)
+   */
+  projectType: Accessor<'local' | 'cloud'>;
+  /**
    * Currently authenticated user.
    * undefined = unresolved (getCurrentUser() still in flight → render skeleton)
    * null      = resolved, anonymous / guest
@@ -333,6 +339,7 @@ export function createEditorBridge(
     syncError,
     dismissSyncError: () => setSyncError(null),
     currentSceneId,
+    projectType: () => editor.projectManager.type as 'local' | 'cloud',
     currentUser,
     signOut: async () => {
       await (deps?.authSignOut ?? (() => Promise.resolve()))();

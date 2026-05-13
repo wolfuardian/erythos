@@ -1,5 +1,5 @@
 /**
- * Scene routes — 5 REST endpoints (D4)
+ * Scene routes — 6 REST endpoints (D4 + G3)
  *
  * Bytea wire format: scenes.body is stored as BYTEA in Postgres.
  * On write: JSON.stringify(bodyObject) → Buffer (utf-8).
@@ -7,7 +7,8 @@
  * This matches spec § REST API "body: { ... .erythos JSON ... }" (inline JSON object).
  *
  * Auth: GET /scenes/:id allows anonymous callers (spec § REST API: "匿名可呼叫公開場景").
- * All other 4 endpoints require auth via authMiddleware.
+ *       GET /scenes (list) requires auth — lists caller-owned scenes only.
+ * All other endpoints require auth via authMiddleware.
  */
 
 import { Hono } from 'hono';
@@ -49,6 +50,31 @@ export const sceneRoutes = new Hono<{ Variables: Variables }>();
 // ---------------------------------------------------------------------------
 // Helper: Buffer → JSON object for wire transport
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// GET /scenes — list caller-owned scenes (G3: cloud project list)
+// Requires auth. Returns all scenes owned by the authenticated user.
+// Spec: § REST API § Cloud project list
+// ---------------------------------------------------------------------------
+
+sceneRoutes.get('/', authMiddleware, async (c) => {
+  const user = c.get('user');
+
+  const rows = await db
+    .select({
+      id: scenes.id,
+      name: scenes.name,
+      version: scenes.version,
+      visibility: scenes.visibility,
+      forked_from: scenes.forked_from,
+      created_at: scenes.created_at,
+      updated_at: scenes.updated_at,
+    })
+    .from(scenes)
+    .where(eq(scenes.owner_id, user.id));
+
+  return c.json({ scenes: rows });
+});
 
 function bufferToJson(buf: Buffer): unknown {
   return JSON.parse(buf.toString('utf8'));
