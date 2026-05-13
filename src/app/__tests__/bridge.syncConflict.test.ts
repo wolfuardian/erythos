@@ -94,4 +94,81 @@ describe('bridge syncConflict signal', () => {
       expect(resolveFn).toHaveBeenCalledWith('keep-local');
     });
   });
+
+  /**
+   * Test 8: resolveSyncConflict('keep-local') clears the syncConflict signal
+   * so the SyncConflictDialog unmounts after the user clicks Keep local.
+   *
+   * Regression: without the clear, the autosave layer dropped pendingConflict
+   * but the bridge signal stayed set → dialog stayed mounted → buttons looked
+   * dead. (T5 / T6 release blocker手測 trigger.)
+   */
+  it('8. resolveSyncConflict(keep-local) clears syncConflict signal', async () => {
+    const resolveFn = vi.fn().mockResolvedValue(undefined);
+
+    await new Promise<void>((doneTest) => {
+      createRoot((dispose) => {
+        disposeRoot = dispose;
+        const bridge = createEditorBridge(editor, [], {
+          closeProject: () => {},
+          projectManager: editor.projectManager,
+          openProjectById: () => Promise.resolve(),
+          autosaveFlush: () => Promise.resolve(),
+          resolveSyncConflict: resolveFn,
+        });
+
+        editor.events.emit('syncConflict', {
+          sceneId: 'scene-abc',
+          scenePath: 'scenes/scene.erythos' as AssetPath,
+          baseVersion: 6,
+          currentVersion: 7,
+          localBody: new SceneDocument(),
+          cloudBody: new SceneDocument(),
+        });
+        expect(bridge.syncConflict()).not.toBeNull();
+
+        void bridge.resolveSyncConflict('keep-local').then(() => {
+          expect(bridge.syncConflict()).toBeNull();
+          doneTest();
+        });
+      });
+    });
+  });
+
+  /**
+   * Test 9: resolveSyncConflict('use-cloud') also clears the signal.
+   * Same root cause as test 8 — both Keep local and Use cloud version buttons
+   * route through resolveSyncConflict, so both paths must clear.
+   */
+  it('9. resolveSyncConflict(use-cloud) clears syncConflict signal', async () => {
+    const resolveFn = vi.fn().mockResolvedValue(undefined);
+
+    await new Promise<void>((doneTest) => {
+      createRoot((dispose) => {
+        disposeRoot = dispose;
+        const bridge = createEditorBridge(editor, [], {
+          closeProject: () => {},
+          projectManager: editor.projectManager,
+          openProjectById: () => Promise.resolve(),
+          autosaveFlush: () => Promise.resolve(),
+          resolveSyncConflict: resolveFn,
+        });
+
+        editor.events.emit('syncConflict', {
+          sceneId: 'scene-abc',
+          scenePath: 'scenes/scene.erythos' as AssetPath,
+          baseVersion: 6,
+          currentVersion: 7,
+          localBody: new SceneDocument(),
+          cloudBody: new SceneDocument(),
+        });
+        expect(bridge.syncConflict()).not.toBeNull();
+
+        void bridge.resolveSyncConflict('use-cloud').then(() => {
+          expect(bridge.syncConflict()).toBeNull();
+          doneTest();
+        });
+      });
+    });
+  });
 });
