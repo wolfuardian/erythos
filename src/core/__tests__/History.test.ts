@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { AddNodeCommand } from '../commands/AddNodeCommand';
 import { RemoveNodeCommand } from '../commands/RemoveNodeCommand';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 
 describe('History', () => {
   let editor: Editor;

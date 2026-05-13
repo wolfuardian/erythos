@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { InstantiatePrefabCommand } from '../commands/InstantiatePrefabCommand';
 import { CircularReferenceError } from '../commands/InstantiatePrefabCommand';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 import type { AssetPath } from '../../utils/branded';
 
 describe('InstantiatePrefabCommand cycle guard', () => {

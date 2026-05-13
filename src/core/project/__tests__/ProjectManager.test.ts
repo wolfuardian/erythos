@@ -81,7 +81,7 @@ vi.mock('../ProjectHandleStore', () => ({
   removeProject: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { ProjectManager } from '../ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../LocalProjectManager';
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Editor } from '../Editor';
 import { SaveAsPrefabCommand } from '../commands/SaveAsPrefabCommand';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 import type { SceneNode } from '../scene/SceneFormat';
 import type { NodeUUID } from '../../utils/branded';
 

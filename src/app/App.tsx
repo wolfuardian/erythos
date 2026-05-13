@@ -5,7 +5,7 @@ import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
-import { ProjectManager } from '../core/project/ProjectManager';
+import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import { MultiCmdsCommand } from '../core/commands/MultiCmdsCommand';
@@ -34,8 +34,8 @@ import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './Auth
 import styles from './App.module.css';
 
 const App: Component = () => {
-  // Singleton ProjectManager — 跨 open/close 存活
-  const projectManager = new ProjectManager();
+  // Singleton LocalProjectManager — 跨 open/close 存活
+  const projectManager = new LocalProjectManager();
   // Singleton SyncEngine — HTTP-backed; routes to server API.
   // Inject projectManager + HttpAssetClient so push/create upload project:// binaries
   // to S3 and rewrite URLs to assets:// before sending the scene to the server (F-1d-2b).
@@ -167,7 +167,9 @@ const App: Component = () => {
     setPasteFromJsonOpen(false);
   };
 
-  const openProject = async (handle: FileSystemDirectoryHandle) => {
+  // `handle` type inferred from LocalProjectManager.openRecent() — avoids direct
+  // FileSystemDirectoryHandle reference in non-LocalProject* file (ESLint rule G1).
+  const openProject = async (handle: NonNullable<Awaited<ReturnType<typeof projectManager.openRecent>>>) => {
     const e = new Editor(projectManager, new HttpAssetClient());
     e.syncEngine = syncEngine;
     // Order matters: openHandle MUST precede init() so that init's IDB→file migration
@@ -279,7 +281,7 @@ const App: Component = () => {
     sharedGrid?.dispose();
     sharedGrid = null;
     e.dispose();
-    projectManager.close();
+    projectManager.closeSync();
     setBridge(null);
     setEditor(null);
 
@@ -289,7 +291,7 @@ const App: Component = () => {
 
   const openProjectById = async (id: string) => {
     const handle = await projectManager.openRecent(id);
-    if (!handle) return;
+    if (!handle) throw new Error('Failed to open project (permission?)');
     await closeProject();
     await openProject(handle);
   };
@@ -410,7 +412,7 @@ const App: Component = () => {
         }
       >
         <Show when={projectOpen() && editor() && bridge()} fallback={
-          <Welcome projectManager={projectManager} onOpenProject={openProject} />
+          <Welcome projectManager={projectManager} onOpenProject={openProjectById} />
         }>
           <EditorProvider bridge={bridge()!} editors={editors}>
             <div class={styles.root}>

@@ -1,13 +1,13 @@
 import { type Component, onMount, Show, For } from 'solid-js';
-import { ProjectManager } from '../core/project/ProjectManager';
+import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { NewProjectModal } from './NewProjectModal';
 import { createSignal } from 'solid-js';
 import styles from './Welcome.module.css';
 
 interface Props {
-  projectManager: ProjectManager;
-  onOpenProject: (handle: FileSystemDirectoryHandle) => Promise<void>;
+  projectManager: LocalProjectManager;
+  onOpenProject: (id: string) => Promise<void>;
 }
 
 function formatLastOpened(ts: number): string {
@@ -70,9 +70,11 @@ export const Welcome: Component<Props> = (props) => {
   });
 
   const handleOpenRecent = async (id: string) => {
-    const handle = await props.projectManager.openRecent(id);
-    if (!handle) { setErrorMsg('Failed to open project (permission?)'); return; }
-    await props.onOpenProject(handle);
+    try {
+      await props.onOpenProject(id);
+    } catch {
+      setErrorMsg('Failed to open project (permission?)');
+    }
   };
 
   const handleAdd = async () => {

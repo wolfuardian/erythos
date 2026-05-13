@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EventEmitter } from '../EventEmitter';
 import { Editor } from '../Editor';
-import { ProjectManager } from '../project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../project/LocalProjectManager';
 import { asNodeUUID } from '../../utils/branded';
 
 // ── Unit tests: new UUID-based events ────────────────────────────────────────

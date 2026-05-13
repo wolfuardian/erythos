@@ -14,7 +14,7 @@
  * See docs/erythos-format.md § URI Scheme
  */
 
-import type { ProjectManager } from '../project/ProjectManager';
+import type { LocalProjectManager } from '../project/LocalProjectManager';
 import { asAssetPath, asBlobURL } from '../../utils/branded';
 import type { BlobURL, AssetPath } from '../../utils/branded';
 import type { AssetSyncClient } from '../sync/asset/AssetSyncClient';
@@ -58,7 +58,7 @@ export class AssetResolver {
   private readonly blobCacheCap: number;
 
   constructor(
-    private readonly projectManager: ProjectManager,
+    private readonly projectManager: LocalProjectManager,
     private readonly assetClient?: AssetSyncClient,
     blobCacheCap: number = DEFAULT_BLOB_CACHE_CAP,
   ) {

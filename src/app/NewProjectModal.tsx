@@ -1,27 +1,30 @@
 import { type Component, createSignal, Show } from 'solid-js';
-import { ProjectManager } from '../core/project/ProjectManager';
+import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import styles from './NewProjectModal.module.css';
 
-// Session-scoped memory for last picked Parent Location (cleared on page reload)
-let lastPickedParent: FileSystemDirectoryHandle | null = null;
+// Session-scoped memory for last picked parent location (cleared on page reload).
+// Typed via inference from pickDirectory() — no explicit FileSystemDirectoryHandle reference.
+let _lastPickedParent: Awaited<ReturnType<LocalProjectManager['pickDirectory']>> = null;
 
 interface NewProjectModalProps {
   show: () => boolean;
   onClose: () => void;
-  projectManager: ProjectManager;
-  onOpenProject: (handle: FileSystemDirectoryHandle) => Promise<void>;
+  projectManager: LocalProjectManager;
+  /** Called after successful project creation. Receives the new project's id. */
+  onOpenProject: (id: string) => Promise<void>;
   onAfterCreate?: () => void;
 }
 
 export const NewProjectModal: Component<NewProjectModalProps> = (props) => {
   const [newName, setNewName] = createSignal('');
-  const [parentHandle, setParentHandle] = createSignal<FileSystemDirectoryHandle | null>(lastPickedParent);
+  // Parent handle stored by inference — type follows LocalProjectManager.pickDirectory()
+  const [parentHandle, setParentHandle] = createSignal(_lastPickedParent);
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const handlePickLocation = async () => {
     try {
-      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      lastPickedParent = handle;
+      const handle = await props.projectManager.pickDirectory();
+      _lastPickedParent = handle;
       setParentHandle(handle);
     } catch (e: any) {
       if (e.name !== 'AbortError') setErrorMsg(e.message || String(e));
@@ -36,7 +39,7 @@ export const NewProjectModal: Component<NewProjectModalProps> = (props) => {
       props.onAfterCreate?.();
       const list = await props.projectManager.getRecentProjects();
       const fresh = list.find(e => e.name === newName().trim());
-      if (fresh?.handle) await props.onOpenProject(fresh.handle);
+      if (fresh?.id) await props.onOpenProject(fresh.id);
       props.onClose();
       setNewName('');
     } catch (e: any) {

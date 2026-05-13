@@ -18,7 +18,7 @@ vi.mock('../../core/project/ProjectHandleStore', () => ({
 }));
 
 import { Editor } from '../../core/Editor';
-import { ProjectManager } from '../../core/project/ProjectManager';
+import { LocalProjectManager as ProjectManager } from '../../core/project/LocalProjectManager';
 import { createEditorBridge } from '../bridge';
 import type { SyncErrorPayload } from '../bridge';
 

@@ -10,6 +10,7 @@ export * from './commands/index';
 export { createAutoSave } from './scene/AutoSave';
 export type { AutoSaveHandle } from './scene/AutoSave';
 export { ResourceCache } from './scene/ResourceCache';
-export { ProjectManager } from './project';
+export type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult } from './project';
+export { LocalProjectManager } from './project';
 export type { ProjectFile, ProjectEntry, ProjectStatus } from './project';
 export { inferFileType } from './project';
