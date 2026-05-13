@@ -268,7 +268,7 @@ export const Welcome: Component<Props> = (props) => {
         onClose={() => setShowModal(false)}
         projectManager={props.projectManager}
         onOpenProject={props.onOpenProject}
-        onAfterCreate={() => void refresh()}
+        onAfterCreate={() => { void refresh(); void refreshCloudScenes(); }}
         currentUser={props.currentUser}
         onCreateCloudProject={props.onCreateCloudProject}
       />
