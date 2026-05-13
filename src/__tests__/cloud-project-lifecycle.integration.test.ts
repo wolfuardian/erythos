@@ -240,6 +240,79 @@ describe('cloud project lifecycle — integration', () => {
     expect(s.cloudMgr.currentVersion).toBe(2);
   });
 
+  it('conflict + use-cloud: scene document replaced with cloud body + baseVersion follows server', async () => {
+    const s = await newCloudSession('test');
+
+    // Simulate another tab/device having pushed a different scene state ahead of us.
+    // Server now at version 1 with a different node set.
+    const serverScene = scenes.get(s.id)!;
+    serverScene.version = 1;
+    const cloudNodePersist = {
+      id: 'cloud-cube',
+      name: 'CloudCube',
+      parent: null,
+      order: 0,
+      nodeType: 'mesh',
+      position: [5, 5, 5],
+      rotation: [0, 0, 0],
+      scale: [1, 1, 1],
+      asset: 'project://primitives/box',
+      mat: { color: '#808080' },
+      userData: {},
+    };
+    serverScene.body = {
+      version: 3,
+      upAxis: 'Y',
+      env: { hdri: null, intensity: 1, rotation: 0 },
+      nodes: [cloudNodePersist],
+    };
+
+    // Client doesn't know yet — still at base 0 with a different local mutation.
+    s.editor.sceneDocument.addNode(makeCubeNode('local-cube', 'LocalCube'));
+
+    // Push → 409 with current_body = cloud version
+    await s.autoSave.flushNow();
+    expect(putCalls).toHaveLength(1);
+    expect(putCalls[0]!.baseVersion).toBe(0);
+
+    // resolveConflict('use-cloud') should replace the scene with the cloud body
+    // and align baseVersion to the cloud version (1).
+    await s.autoSave.resolveConflict('use-cloud');
+
+    const nodes = s.editor.sceneDocument.getAllNodes();
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]!.name).toBe('CloudCube');
+    expect(s.editor.syncBaseVersion).toBe(1);
+  });
+
+  it('conflict + use-cloud + new mutate: subsequent push uses post-resolve baseVersion (no stale 409)', async () => {
+    const s = await newCloudSession('test');
+
+    const serverScene = scenes.get(s.id)!;
+    serverScene.version = 1;
+    serverScene.body = {
+      version: 3,
+      upAxis: 'Y',
+      env: { hdri: null, intensity: 1, rotation: 0 },
+      nodes: [],
+    };
+
+    s.editor.sceneDocument.addNode(makeCubeNode('local-cube', 'LocalCube'));
+    await s.autoSave.flushNow();
+    expect(putCalls).toHaveLength(1);
+
+    await s.autoSave.resolveConflict('use-cloud');
+
+    // After use-cloud, baseVersion should be 1. A fresh mutation must push
+    // with baseVersion=1, not stale 0.
+    s.editor.sceneDocument.addNode(makeCubeNode('post-resolve', 'PostResolve'));
+    await s.autoSave.flushNow();
+
+    expect(putCalls).toHaveLength(2);
+    expect(putCalls[1]!.baseVersion).toBe(1);
+    expect(s.cloudMgr.currentVersion).toBe(2);
+  });
+
   it('race: second mutation during in-flight push — second flushNow must use the post-push baseVersion', async () => {
     const s = await newCloudSession('test');
 
