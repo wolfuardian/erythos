@@ -253,3 +253,41 @@ dependabot 7 PR(#965~#971)全 merged:dotenv 17 / @hono/node-server 2.x(2.3x perf
 ### 主 HEAD
 
 `225f57e`(F-3 sync error handling)+ 後續 dependabot batch + #1001 chown + #1002 C3。
+
+---
+
+### F-3 audit 三條後續(2026-05-13 後段)
+
+| 條 | 處理 | 備註 |
+|---|---|---|
+| 🟢 #7 401/403 spec drift | commit `1282330` | `docs/sync-protocol.md` 401/403 row 對齊 v0 anonymous(scenes endpoint 走 anonymous-or-owner pattern,401 不會在 v0 出現,403 改寫成「owner mismatch」)|
+| 🟡 #6 currentUser invalidate scene list | ⏭️ skip(不適用)| Erythos 無 scene list UI,sign-in 走 302 hard reload,audit 條件描述的 SPA 場景在 Erythos 架構不存在 |
+| 🟡 #5 多 tab BroadcastChannel/Web Locks | PR #1004 ✅ | `src/core/sync/MultiTabCoord.ts` 181 行,Factory + DI,Web Locks + BroadcastChannel,fallback 到 in-process FIFO mutex / no-op channel |
+
+### F-5 reaper cron(prod robustness 加分)
+
+| | PR | 內容 |
+|---|---|---|
+| reaper script + spec + install.md | #1005 | `server/deploy/reaper-magic-link-tokens.sh`(`expires_at < NOW() - INTERVAL '30 days'`)+ install.md Phase 15 + `docs/magic-link-spec.md § Token Lifecycle / Reaper` 30-day rationale + future pg_partman path |
+| prod ops | ssh manual | `chmod +x` + `touch /var/log/erythos-reaper.log` + chown erythos + erythos user crontab `0 4 * * * /opt/erythos/server/deploy/reaper-magic-link-tokens.sh >> /var/log/erythos-reaper.log 2>&1` + 首次 dry-run 0 row(rows 都 < 1 天舊)|
+
+decisions log `aa4ceb7` 已記。
+
+### F-3 手測準備(指揮家 device 拿到後跑)
+
+兩份 cheatsheet 寫在 `.claude/scratch/`(gitignored,janitor 14 天清):
+- `f3-multi-device-checklist.md` — 6 場景:單 tab autosave / 多 tab 同 device / cross-device 412 / 413 payload / 500 network / sign in-out
+- `f3-handtest-observability.md` — ssh prod `journalctl -u erythos-server -f` + 場景 ↔ log line 對照 + DB query + rollback 路徑
+
+### v0.1 release 剩餘 blocker
+
+| | 等什麼 |
+|---|---|
+| F-3 multi-device 手測 e2e | **指揮家** 2-3 device(audit 4 🔴 全補完,checklist + observability cheatsheet 已備好)|
+| B2 產品定位 / onboarding / landing | **指揮家** 設計 input |
+
+兩件都不是 AH 可代做,session 推進到此乾涸。下一步:`/handoff` 或等指揮家更新。
+
+### 主 HEAD(本段結束時)
+
+`aa4ceb7`(decisions log F-5 reaper 啟用)。v0.1.237 prod live。
