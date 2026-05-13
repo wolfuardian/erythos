@@ -17,6 +17,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db.js';
 import { scenes, sceneShareTokens } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
+import { requireSceneIdUuid } from '../middleware/validate-uuid.js';
 import type { Context, Next } from 'hono';
 
 // ---------------------------------------------------------------------------
@@ -60,7 +61,7 @@ async function requireOwner(c: Context<{ Variables: Variables }>, sceneId: strin
 // POST /scenes/:id/share-tokens
 // ---------------------------------------------------------------------------
 
-shareTokenRoutes.post('/:id/share-tokens', authMiddleware, async (c) => {
+shareTokenRoutes.post('/:id/share-tokens', requireSceneIdUuid, authMiddleware, async (c) => {
   const sceneId = c.req.param('id')!;
   const scene = await requireOwner(c, sceneId);
   if (!scene) return c.json({ error: 'Not Found' }, 404);
@@ -88,7 +89,7 @@ shareTokenRoutes.post('/:id/share-tokens', authMiddleware, async (c) => {
 // GET /scenes/:id/share-tokens
 // ---------------------------------------------------------------------------
 
-shareTokenRoutes.get('/:id/share-tokens', authMiddleware, async (c) => {
+shareTokenRoutes.get('/:id/share-tokens', requireSceneIdUuid, authMiddleware, async (c) => {
   const sceneId = c.req.param('id')!;
   const scene = await requireOwner(c, sceneId);
   if (!scene) return c.json({ error: 'Not Found' }, 404);
@@ -113,7 +114,7 @@ shareTokenRoutes.get('/:id/share-tokens', authMiddleware, async (c) => {
 // Non-existent token or wrong scene → 404.
 // ---------------------------------------------------------------------------
 
-shareTokenRoutes.delete('/:id/share-tokens/:token', authMiddleware, async (c) => {
+shareTokenRoutes.delete('/:id/share-tokens/:token', requireSceneIdUuid, authMiddleware, async (c) => {
   const sceneId = c.req.param('id')!;
   const tokenParam = c.req.param('token')!;
   const scene = await requireOwner(c, sceneId);

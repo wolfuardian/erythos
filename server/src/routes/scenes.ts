@@ -18,6 +18,7 @@ import { db } from '../db.js';
 import { scenes, scene_versions, sceneShareTokens } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
 import { bodyLimitMiddleware } from '../middleware/body-limit.js';
+import { requireSceneIdUuid } from '../middleware/validate-uuid.js';
 import { counters } from '../counters.js';
 import type { Context, Next } from 'hono';
 
@@ -95,7 +96,7 @@ function jsonToBuffer(obj: unknown): Buffer {
 // No authMiddleware — resolveSession inline (may return null).
 // ---------------------------------------------------------------------------
 
-sceneRoutes.get('/:id', async (c) => {
+sceneRoutes.get('/:id', requireSceneIdUuid, async (c) => {
   const id = c.req.param('id')!;
   const user = await resolveSession(c);
   const shareTokenParam = c.req.query('share_token');
@@ -164,7 +165,7 @@ sceneRoutes.get('/:id', async (c) => {
 // Requires auth. Owner-only write. Optimistic concurrency via If-Match.
 // ---------------------------------------------------------------------------
 
-sceneRoutes.put('/:id', bodyLimitMiddleware, authMiddleware, async (c) => {
+sceneRoutes.put('/:id', requireSceneIdUuid, bodyLimitMiddleware, authMiddleware, async (c) => {
   const id = c.req.param('id')!;
   const user = c.get('user');
 
@@ -298,7 +299,7 @@ sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
 // Requires auth. Owner-only.
 // ---------------------------------------------------------------------------
 
-sceneRoutes.patch('/:id/visibility', bodyLimitMiddleware, authMiddleware, async (c) => {
+sceneRoutes.patch('/:id/visibility', requireSceneIdUuid, bodyLimitMiddleware, authMiddleware, async (c) => {
   const id = c.req.param('id')!;
   const user = c.get('user');
 
@@ -333,7 +334,7 @@ sceneRoutes.patch('/:id/visibility', bodyLimitMiddleware, authMiddleware, async 
 // Requires auth. Source must be public OR caller is owner; else 404 (no leak).
 // ---------------------------------------------------------------------------
 
-sceneRoutes.post('/:id/fork', bodyLimitMiddleware, authMiddleware, async (c) => {
+sceneRoutes.post('/:id/fork', requireSceneIdUuid, bodyLimitMiddleware, authMiddleware, async (c) => {
   const sourceId = c.req.param('id')!;
   const user = c.get('user');
 
