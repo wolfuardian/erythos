@@ -144,6 +144,35 @@ export const magicLinkTokens = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// scene_share_tokens  (share URL token model — refs #1012 G5; spec docs/cloud-project-spec.md § 資料模型)
+// ---------------------------------------------------------------------------
+//
+// token = random opaque hex (32 char / 16 byte);  PRIMARY KEY — token is the identifier.
+// revoked_at: soft-delete; owner can see history even after revoke.
+// ON DELETE CASCADE: removing scene or user also removes their tokens.
+
+export const sceneShareTokens = pgTable(
+  'scene_share_tokens',
+  {
+    token: text('token').primaryKey(),
+    scene_id: uuid('scene_id')
+      .notNull()
+      .references(() => scenes.id, { onDelete: 'cascade' }),
+    created_by: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
+    revoked_at: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('scene_share_tokens_scene_idx').on(t.scene_id),
+    index('scene_share_tokens_active_idx')
+      .on(t.scene_id)
+      .where(sql`revoked_at IS NULL`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // assets  (content-addressed binary storage — refs #957 F-1b; spec docs/asset-sync-protocol.md)
 // ---------------------------------------------------------------------------
 //

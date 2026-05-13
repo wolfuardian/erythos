@@ -4,6 +4,7 @@ import { Editor } from '../core/Editor';
 import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
 import { createAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
+import { defaultBaseUrl } from '../core/sync/baseUrl';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
 import { ProjectManager } from '../core/project/ProjectManager';
 import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
@@ -28,7 +29,7 @@ import {
   getLastProjectId, setLastProjectId, clearLastProjectId,
   getLastScenePath, setLastScenePath, clearLastScenePath,
 } from './projectSession';
-import { currentRoute } from './router';
+import { currentRoute, navigateToScene } from './router';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import styles from './App.module.css';
@@ -57,6 +58,10 @@ const App: Component = () => {
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
   const [viewerSceneName, setViewerSceneName] = createSignal<string>('Untitled Scene');
+  // Share token viewer — set when URL has ?share_token=<token>
+  const [viewerShareToken, setViewerShareToken] = createSignal<string | undefined>(undefined);
+  const [viewerSharedBy, setViewerSharedBy] = createSignal<string | undefined>(undefined);
+  const [viewerTokenInvalid, setViewerTokenInvalid] = createSignal(false);
 
   // auth_error banner: set from URL query on mount, dismissed by user
   const [authError, setAuthError] = createSignal<AuthErrorCode | null>(null);
@@ -328,7 +333,50 @@ const App: Component = () => {
     const route = currentRoute();
 
     if (route.kind === 'scene') {
-      // URL is /scenes/{uuid} — check if we own this scene locally
+      // URL has ?share_token=<token> — anonymous share viewer mode
+      if (route.shareToken) {
+        const { sceneId, shareToken } = route;
+        void (async () => {
+          try {
+            const apiBase = defaultBaseUrl();
+            const res = await fetch(
+              `${apiBase}/scenes/${encodeURIComponent(sceneId)}?share_token=${encodeURIComponent(shareToken)}`,
+              { credentials: 'include' },
+            );
+            if (!res.ok) {
+              // Invalid or revoked token → show error viewer
+              setViewerTokenInvalid(true);
+              setViewerSceneId(sceneId);
+              setViewerShareToken(shareToken);
+              return;
+            }
+            const data = await res.json() as {
+              id: string;
+              owner_id: string;
+              name: string;
+              version: number;
+              body: unknown;
+              visibility: string;
+            };
+            // owner_id is a UUID; we don't have a users endpoint to resolve
+            // github_login here. Display the UUID as placeholder;
+            // a follow-up can add owner resolution once GET /api/users/:id lands.
+            const sharedBy = data.owner_id;
+            setViewerSceneId(sceneId);
+            setViewerSceneName(data.name ?? sceneId);
+            setViewerShareToken(shareToken);
+            setViewerSharedBy(sharedBy);
+          } catch {
+            // Network error — show invalid page
+            setViewerTokenInvalid(true);
+            setViewerSceneId(sceneId);
+            setViewerShareToken(shareToken);
+          }
+        })();
+        return;
+      }
+
+      // URL is /scenes/{uuid} (no share_token) — check if we own this scene locally
       void (async () => {
         try {
           await syncEngine.fetch(route.sceneId);
@@ -401,12 +449,32 @@ const App: Component = () => {
       <Show
         when={!isViewerMode()}
         fallback={
-          <ViewerShell
-            sceneId={viewerSceneId()!}
-            sceneName={viewerSceneName()}
-            syncEngine={syncEngine}
-            onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
-          />
+          <Show
+            when={!viewerTokenInvalid()}
+            fallback={
+              <ShareTokenInvalidView />
+            }
+          >
+            <Show
+              when={viewerShareToken() !== undefined}
+              fallback={
+                <ViewerShell
+                  sceneId={viewerSceneId()!}
+                  sceneName={viewerSceneName()}
+                  syncEngine={syncEngine}
+                  onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
+                />
+              }
+            >
+              <ShareTokenViewerShell
+                sceneId={viewerSceneId()!}
+                sceneName={viewerSceneName()}
+                sharedBy={viewerSharedBy()}
+                syncEngine={syncEngine}
+                onSignIn={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
+              />
+            </Show>
+          </Show>
         }
       >
         <Show when={projectOpen() && editor() && bridge()} fallback={
@@ -479,6 +547,119 @@ const StatusBar: Component<{ bridge: EditorBridge }> = (props) => {
           </button>
         </Show>
       </Show>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ShareTokenViewerShell — viewer mode for anonymous share URL
+// Shows "Shared by <owner>" badge + Fork button + "Sign in to edit" footer
+// ---------------------------------------------------------------------------
+
+interface ShareTokenViewerProps {
+  sceneId: string;
+  sceneName: string;
+  sharedBy?: string;
+  syncEngine: { fork(id: string, name?: string): Promise<{ id: string; version: number; forkedFrom: string }> };
+  onSignIn: () => void;
+}
+
+const ShareTokenViewerShell: Component<ShareTokenViewerProps> = (props) => {
+  const [forking, setForking] = createSignal(false);
+  const [forkError, setForkError] = createSignal<string | null>(null);
+  const [needsAuth, setNeedsAuth] = createSignal(false);
+
+  const handleFork = async () => {
+    if (forking()) return;
+    setForking(true);
+    setForkError(null);
+    setNeedsAuth(false);
+    try {
+      const result = await props.syncEngine.fork(props.sceneId);
+      navigateToScene(result.id);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        setNeedsAuth(true);
+      } else {
+        setForkError(err instanceof Error ? err.message : 'Fork failed');
+      }
+      setForking(false);
+    }
+  };
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', 'flex-direction': 'column', background: 'var(--bg-app)' }}>
+      {/* Viewer header */}
+      <div style={{
+        height: '36px', display: 'flex', 'align-items': 'center', gap: '8px',
+        padding: '0 12px', background: 'var(--bg-header)',
+        'border-bottom': '1px solid var(--border-subtle)', 'flex-shrink': '0',
+      }}>
+        <span style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)' }}>Viewing</span>
+        <span style={{ color: 'var(--text-default)', 'font-weight': '500', 'font-size': 'var(--font-size-sm)' }}>
+          {props.sceneName}
+        </span>
+        <Show when={props.sharedBy}>
+          <span style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
+            · Shared by {props.sharedBy}
+          </span>
+        </Show>
+        <Show when={forkError()}>
+          <span role="alert" aria-live="polite" style={{ 'font-size': 'var(--font-size-sm)', color: 'var(--text-danger, #e05252)' }}>
+            &nbsp;— {forkError()}
+          </span>
+        </Show>
+        <div style={{ flex: '1' }} />
+        <Show
+          when={!needsAuth()}
+          fallback={
+            <button
+              style={{ 'font-size': 'var(--font-size-sm)', padding: '3px 10px', background: 'var(--accent-blue, #3b82f6)', color: '#fff', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}
+              onClick={props.onSignIn}
+            >
+              Sign in to fork
+            </button>
+          }
+        >
+          <button
+            data-testid="share-viewer-fork"
+            disabled={forking()}
+            style={{ 'font-size': 'var(--font-size-sm)', padding: '3px 10px', background: 'var(--accent-blue, #3b82f6)', color: '#fff', border: 'none', 'border-radius': '4px', cursor: 'pointer' }}
+            onClick={() => void handleFork()}
+          >
+            <span aria-live="polite">{forking() ? 'Forking…' : 'Fork'}</span>
+          </button>
+        </Show>
+      </div>
+      {/* Viewer content placeholder */}
+      <div style={{ flex: '1', overflow: 'hidden', display: 'flex', 'align-items': 'center', 'justify-content': 'center', color: 'var(--text-muted)', 'font-size': 'var(--font-size-sm)', 'flex-direction': 'column', gap: '12px' }}>
+        <span>Loading scene…</span>
+      </div>
+      {/* Footer */}
+      <div style={{ padding: '8px 12px', 'border-top': '1px solid var(--border-subtle)', 'font-size': 'var(--font-size-sm)', color: 'var(--text-muted)', 'text-align': 'center' }}>
+        Sign in to edit your own copy —{' '}
+        <button
+          style={{ background: 'none', border: 'none', color: 'var(--text-link, #3b82f6)', cursor: 'pointer', 'font-size': 'inherit', padding: '0' }}
+          onClick={props.onSignIn}
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ShareTokenInvalidView — shown when share token is invalid or revoked
+// ---------------------------------------------------------------------------
+
+const ShareTokenInvalidView: Component = () => {
+  return (
+    <div data-testid="share-token-invalid" style={{ width: '100%', height: '100%', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'flex-direction': 'column', gap: '12px', background: 'var(--bg-app)', color: 'var(--text-muted)' }}>
+      <p style={{ 'font-size': 'var(--font-size-lg)', color: 'var(--text-primary)' }}>Link not found</p>
+      <p style={{ 'font-size': 'var(--font-size-sm)' }}>
+        This share link is invalid or revoked. Ask the owner for a new link.
+      </p>
     </div>
   );
 };

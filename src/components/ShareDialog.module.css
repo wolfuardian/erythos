@@ -133,3 +133,105 @@
 .closeButton:hover {
   background: var(--bg-hover);
 }
+
+/* ── Token section ─────────────────────────────────────────────────── */
+
+.tokenSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-md);
+}
+
+.tokenHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tokenSectionLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.generateButton {
+  padding: 4px 12px;
+  height: 28px;
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.generateButton:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.generateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tokenError {
+  font-size: var(--font-size-sm);
+  color: var(--text-danger, #e05252);
+  margin: 0;
+}
+
+.tokenEmptyHint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.tokenList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs, 4px);
+}
+
+.tokenItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tokenValue {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-family: monospace;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.revokeButton {
+  padding: 3px 10px;
+  height: 26px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.revokeButton:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.revokeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

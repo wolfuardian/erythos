@@ -9,7 +9,11 @@ import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
 import { store, mutate, addWorkspace } from '../app/workspaceStore';
 import { WorkspaceTab } from '../app/layout/WorkspaceTab';
+import { ShareTokenClient } from '../core/sync/ShareTokenClient';
+import type { ShareToken } from '../core/sync/ShareTokenClient';
 import styles from './Toolbar.module.css';
+
+const shareTokenClient = new ShareTokenClient();
 
 export const Toolbar: Component = () => {
   const bridge = useEditor();
@@ -18,19 +22,33 @@ export const Toolbar: Component = () => {
   const [shareVisibility, setShareVisibility] = createSignal<SceneVisibility>('private');
   const [shareError, setShareError] = createSignal<string | null>(null);
   const [signInOpen, setSignInOpen] = createSignal(false);
+  // Token state — undefined = not loaded (non-owner or not yet fetched)
+  const [shareTokens, setShareTokens] = createSignal<ShareToken[] | undefined>(undefined);
+  const [tokenError, setTokenError] = createSignal<string | null>(null);
   let signInTriggerRef: HTMLButtonElement | undefined;
 
-  // When dialog opens, fetch current visibility from SyncEngine
+  // When dialog opens, fetch current visibility + tokens (if owner)
   createEffect(() => {
     if (!shareOpen()) return;
     const sceneId = bridge.currentSceneId();
     const syncEngine = bridge.editor.syncEngine;
     if (!sceneId || !syncEngine) return;
     setShareError(null);
+    setTokenError(null);
+    setShareTokens(undefined);
+
+    // Load visibility
     void syncEngine.fetch(sceneId).then((result) => {
       setShareVisibility(result.visibility);
     }).catch((err: unknown) => {
       setShareError(err instanceof Error ? err.message : 'Failed to load visibility');
+    });
+
+    // Load tokens — only succeeds if caller is owner (returns undefined on 404/401)
+    void shareTokenClient.list(sceneId).then((tokens) => {
+      setShareTokens(tokens);
+    }).catch(() => {
+      // Non-owner or error: leave tokens as undefined (hide token section)
     });
   });
 
@@ -44,6 +62,39 @@ export const Toolbar: Component = () => {
       setShareError(err instanceof Error ? err.message : 'Failed to update visibility');
       setShareVisibility(prev); // rollback to captured prev
     });
+  };
+
+  const handleGenerateToken = async () => {
+    const sceneId = bridge.currentSceneId();
+    if (!sceneId) return;
+    setTokenError(null);
+    try {
+      const generated = await shareTokenClient.generate(sceneId);
+      // Append new token to existing list
+      setShareTokens((prev) => [
+        ...(prev ?? []),
+        { token: generated.token, created_at: generated.created_at, revoked_at: null },
+      ]);
+    } catch (err) {
+      setTokenError(err instanceof Error ? err.message : 'Failed to generate token');
+    }
+  };
+
+  const handleRevokeToken = async (token: string) => {
+    const sceneId = bridge.currentSceneId();
+    if (!sceneId) return;
+    setTokenError(null);
+    try {
+      await shareTokenClient.revoke(sceneId, token);
+      // Mark token as revoked in local state
+      setShareTokens((prev) =>
+        prev?.map((t) =>
+          t.token === token ? { ...t, revoked_at: new Date().toISOString() } : t,
+        ),
+      );
+    } catch (err) {
+      setTokenError(err instanceof Error ? err.message : 'Failed to revoke token');
+    }
   };
 
   return (
@@ -115,7 +166,8 @@ export const Toolbar: Component = () => {
       {/* Split divider */}
       <div class={styles.divider} />
 
-      {/* Share button — disabled until scene has a sync ID */}
+      {/* Share button — visible when there is a sync ID;
+          owner-check is done lazily via token load on dialog open */}
       <button
         data-testid="toolbar-share"
         onClick={() => setShareOpen(true)}
@@ -170,10 +222,14 @@ export const Toolbar: Component = () => {
 
       <ShareDialog
         open={shareOpen()}
-        onClose={() => { setShareOpen(false); setShareError(null); }}
+        onClose={() => { setShareOpen(false); setShareError(null); setTokenError(null); }}
         sceneId={bridge.currentSceneId() ?? ''}
         visibility={shareVisibility()}
         onVisibilityChange={handleVisibilityChange}
+        tokens={shareTokens()}
+        onGenerateToken={handleGenerateToken}
+        onRevokeToken={handleRevokeToken}
+        tokenError={tokenError()}
       />
       <Show when={shareOpen() && shareError()}>
         <div data-testid="share-error" class={styles.shareError}>

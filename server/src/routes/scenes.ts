@@ -12,9 +12,9 @@
 
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { scenes, scene_versions } from '../db/schema.js';
+import { scenes, scene_versions, sceneShareTokens } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
 import { bodyLimitMiddleware } from '../middleware/body-limit.js';
 import { counters } from '../counters.js';
@@ -65,12 +65,14 @@ function jsonToBuffer(obj: unknown): Buffer {
 // ---------------------------------------------------------------------------
 // GET /scenes/:id
 // Anonymous OK for public scenes; owner OK for private; else 404.
+// share_token query param: valid active token → bypass visibility check.
 // No authMiddleware — resolveSession inline (may return null).
 // ---------------------------------------------------------------------------
 
 sceneRoutes.get('/:id', async (c) => {
   const id = c.req.param('id')!;
   const user = await resolveSession(c);
+  const shareTokenParam = c.req.query('share_token');
 
   const rows = await db
     .select()
@@ -80,6 +82,38 @@ sceneRoutes.get('/:id', async (c) => {
 
   const scene = rows[0];
   if (!scene) return c.json({ error: 'Not Found' }, 404);
+
+  // share_token path: validate against scene_share_tokens
+  if (shareTokenParam) {
+    const tokenRows = await db
+      .select()
+      .from(sceneShareTokens)
+      .where(
+        and(
+          eq(sceneShareTokens.token, shareTokenParam),
+          eq(sceneShareTokens.scene_id, id),
+          isNull(sceneShareTokens.revoked_at),
+        ),
+      )
+      .limit(1);
+
+    if (!tokenRows[0]) {
+      // Invalid or revoked token → 404 (spec: "token invalid / token revoked → 404")
+      return c.json({ error: 'Not Found' }, 404);
+    }
+
+    // Valid token → bypass visibility check, return scene
+    c.header('ETag', `"${scene.version}"`);
+    return c.json({
+      id: scene.id,
+      owner_id: scene.owner_id,
+      name: scene.name,
+      version: scene.version,
+      body: bufferToJson(scene.body),
+      visibility: scene.visibility,
+      forked_from: scene.forked_from ?? null,
+    });
+  }
 
   // Private scene: only owner may view; everyone else gets 404 (no existence leak)
   if (scene.visibility === 'private' && (!user || user.id !== scene.owner_id)) {
