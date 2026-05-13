@@ -305,7 +305,20 @@ export function createCloudAutoSave(
     timer = setTimeout(() => { void flushNow(); }, DEBOUNCE_DELAY);
   };
 
-  const flushNow = async (): Promise<void> => {
+  // Serializes concurrent flushNow callers. Without this, a debounce timer that
+  // fires while a previous push is still awaiting fetch would start a second
+  // doFlushUnsafe() with a stale baseVersion, hitting server 409 even though
+  // there's no real conflict — just the local push hadn't returned to update
+  // baseVersion yet. Chaining each call after the previous one guarantees
+  // baseVersion is current when the snapshot is taken.
+  let lastFlush: Promise<void> = Promise.resolve();
+
+  const flushNow = (): Promise<void> => {
+    lastFlush = lastFlush.catch(() => undefined).then(() => doFlushUnsafe());
+    return lastFlush;
+  };
+
+  const doFlushUnsafe = async (): Promise<void> => {
     if (timer !== null) { clearTimeout(timer); timer = null; }
 
     const scene = editor.sceneDocument.serialize();

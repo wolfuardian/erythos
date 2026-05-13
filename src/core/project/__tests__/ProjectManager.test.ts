@@ -135,7 +135,12 @@ describe('ProjectManager.createScene', () => {
     const writeCalls = (await Promise.resolve(null), fileHandle.createWritable.mock.results[0].value);
     const firstWritable = await writeCalls;
     expect(firstWritable.write).toHaveBeenCalledWith(
-      JSON.stringify({ version: 1, nodes: [] }),
+      JSON.stringify({
+        version: 3,
+        upAxis: 'Y',
+        env: { hdri: null, intensity: 1, rotation: 0 },
+        nodes: [],
+      }),
     );
     void writable; // used above
   });
