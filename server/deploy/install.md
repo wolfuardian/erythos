@@ -763,3 +763,60 @@ ssh erythos@139.162.101.231 "ln -snf /opt/erythos/client/releases/<previous-rele
 ```
 
 > Caddy 直接讀 symlink 指向的目錄,`ln -snf` 是原子操作,切換後下個 request 立即生效,中間無停機視窗。
+
+---
+
+## Phase 15 — Magic-link tokens reaper cron (F-5)
+
+`magic_link_tokens` 表每次 sign-in request 寫一筆,token TTL 只 15 分鐘但 row 永久保留(spec § Token Lifecycle 設計保留 30 天供 ops grep-audit)。沒 cleanup 表會無限長。本 phase 設 daily cron 清 30 天前過期 token。
+
+> Script `server/deploy/reaper-magic-link-tokens.sh` 已透過 deploy.yml `Sync server/deploy/` step 自動上 prod。本 phase 只設 crontab + log。
+
+### 15-a:手動跑一次驗通
+
+```bash
+chmod +x /opt/erythos/server/deploy/reaper-magic-link-tokens.sh
+bash /opt/erythos/server/deploy/reaper-magic-link-tokens.sh
+```
+
+預期 output:
+
+```
+[reaper] Starting at 2026-...
+[reaper] Deleted 0 row(s) from magic_link_tokens
+[reaper] Done at 2026-...
+```
+
+(剛上線 row 都不到 30 天舊,deleted 為 0 正常)
+
+### 15-b:設 crontab
+
+```bash
+crontab -e
+```
+
+加一行(凌晨 4 點,排在 backup `0 3 * * *` 後一小時避免同時跑):
+
+```
+0 4 * * * /opt/erythos/server/deploy/reaper-magic-link-tokens.sh >> /var/log/erythos-reaper.log 2>&1
+```
+
+驗證:
+
+```bash
+crontab -l
+```
+
+### 15-c:確認 log 位置可寫入
+
+```bash
+sudo touch /var/log/erythos-reaper.log
+sudo chown erythos:erythos /var/log/erythos-reaper.log
+```
+
+### 維運提示
+
+- 保留 30 天的 rationale:遇到使用者回報「沒收到 magic link」,30 天內可 grep 確認 server 端確實寫過 row + 寄出 Resend call
+- 保留期可調(改 SQL `INTERVAL '30 days'`);調短會少 ops 偵錯窗,調長 row 累積快
+- 失敗時 `set -euo pipefail` 確保 stderr 進 cron mail(若 MAILTO 設)
+- 替代方案:`pg_partman` 或 Postgres native partitioning by month,reaper 直接 DROP 舊 partition。當前單表 + DELETE 在 v0 量級(每日幾百 row)夠用
