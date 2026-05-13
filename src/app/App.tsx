@@ -437,8 +437,18 @@ const App: Component = () => {
       void (async () => {
         try {
           const freshDoc = await cm.loadScene();
-          currentEditor.sceneDocument.deserialize(freshDoc.serialize());
-          currentEditor.syncBaseVersion = cm.currentVersion ?? remoteVersion;
+          // Suppress AutoSave while overwriting the local scene with the server
+          // snapshot — without this, the deserialize() emits sceneReplaced which
+          // re-triggers a push, broadcasts a new version, and another tab reloads
+          // → echo storm that silently overwrites unsaved in-flight user edits
+          // (refs T5/T6 stability report 2026-05-14).
+          autosaveHandle?.suppress?.(true);
+          try {
+            currentEditor.sceneDocument.deserialize(freshDoc.serialize());
+            currentEditor.syncBaseVersion = cm.currentVersion ?? remoteVersion;
+          } finally {
+            autosaveHandle?.suppress?.(false);
+          }
         } catch (err) {
           // Non-fatal: other tab's changes simply won't appear until manual reload.
           console.warn('[App] Cross-tab scene reload failed:', err);

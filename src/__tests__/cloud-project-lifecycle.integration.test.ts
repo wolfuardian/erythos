@@ -313,6 +313,63 @@ describe('cloud project lifecycle — integration', () => {
     expect(s.cloudMgr.currentVersion).toBe(2);
   });
 
+  it('suppress: mutations during suppress() do NOT schedule a debounced push (cross-tab reload echo guard)', async () => {
+    const s = await newCloudSession('test');
+    const suppress = s.autoSave.suppress;
+    expect(suppress).toBeDefined();
+
+    vi.useFakeTimers();
+    try {
+      suppress!(true);
+      // Mutate while suppressed — would normally schedule a push.
+      s.editor.sceneDocument.addNode(makeCubeNode('reload-1'));
+      s.editor.sceneDocument.addNode(makeCubeNode('reload-2'));
+      suppress!(false);
+
+      // Advance past the debounce window. No PUT must fire because schedule
+      // was skipped while suppressed.
+      vi.advanceTimersByTime(5000);
+      // Let any pending microtasks settle.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(putCalls).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('suppress balance: nested suppress(true) + matching suppress(false) re-enables scheduling', async () => {
+    const s = await newCloudSession('test');
+    const suppress = s.autoSave.suppress!;
+
+    suppress(true);
+    suppress(true);
+    suppress(false);
+    // Still suppressed once.
+
+    vi.useFakeTimers();
+    try {
+      s.editor.sceneDocument.addNode(makeCubeNode('still-suppressed'));
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+      expect(putCalls).toHaveLength(0);
+
+      // Now fully release.
+      suppress(false);
+      s.editor.sceneDocument.addNode(makeCubeNode('after-release', 'AfterRelease'));
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    } finally {
+      vi.useRealTimers();
+    }
+
+    // After release, a normal flushNow should push without race.
+    await s.autoSave.flushNow();
+    expect(putCalls.length).toBeGreaterThanOrEqual(1);
+    expect(putCalls[0]!.baseVersion).toBe(0);
+  });
+
   it('race: second mutation during in-flight push — second flushNow must use the post-push baseVersion', async () => {
     const s = await newCloudSession('test');
 

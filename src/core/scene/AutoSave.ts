@@ -28,6 +28,19 @@ export interface AutoSaveHandle {
   flushNow(): Promise<void>;
   resolveConflict(choice: 'keep-local' | 'use-cloud'): Promise<void>;
   dispose(): void;
+  /**
+   * Temporarily suppress debounced snapshot scheduling. While suppressed,
+   * scene mutations do NOT schedule a push. Used by cross-tab reload paths
+   * that overwrite the local scene with a server snapshot — the mutations
+   * driving the reload come from the server, not the user, and re-pushing
+   * them creates an echo storm where two tabs alternately overwrite each
+   * other (and silently revert in-flight user edits — refs T5/T6 stability
+   * report 2026-05-14).
+   *
+   * Refcounted: nested suppress(true) / suppress(false) pair must balance.
+   * `flushNow` (explicit) is NOT affected — only debounced scheduling.
+   */
+  suppress?(on: boolean): void;
 }
 
 export function createAutoSave(editor: Editor, coord?: MultiTabCoord): AutoSaveHandle {
@@ -300,6 +313,10 @@ export function createCloudAutoSave(
   };
 
   const scheduleSnapshot = (): void => {
+    // Cross-tab reload writes a server snapshot into editor.sceneDocument.
+    // The resulting sceneReplaced / nodeAdded events would otherwise enqueue
+    // a push that re-broadcasts the version, triggering an echo storm.
+    if (suppressDepth > 0) return;
     editor.events.emit('autosaveStatusChanged', 'pending');
     if (timer !== null) clearTimeout(timer);
     timer = setTimeout(() => { void flushNow(); }, DEBOUNCE_DELAY);
@@ -312,6 +329,9 @@ export function createCloudAutoSave(
   // baseVersion yet. Chaining each call after the previous one guarantees
   // baseVersion is current when the snapshot is taken.
   let lastFlush: Promise<void> = Promise.resolve();
+
+  // Suppress depth — see AutoSaveHandle.suppress doc.
+  let suppressDepth = 0;
 
   const flushNow = (): Promise<void> => {
     lastFlush = lastFlush.catch(() => undefined).then(() => doFlushUnsafe());
@@ -501,5 +521,13 @@ export function createCloudAutoSave(
 
   subscribeVersionUpdates(cloudManager.sceneId);
 
-  return { flushNow, resolveConflict, dispose };
+  const suppress = (on: boolean): void => {
+    suppressDepth += on ? 1 : -1;
+    if (suppressDepth < 0) {
+      console.warn('[CloudAutoSave] suppress(false) called more than suppress(true) — balance broken');
+      suppressDepth = 0;
+    }
+  };
+
+  return { flushNow, resolveConflict, dispose, suppress };
 }
