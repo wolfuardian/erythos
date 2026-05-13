@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { createAutoSave } from './AutoSave';
+import type { MultiTabCoord } from '../sync/MultiTabCoord';
 import { SceneDocument } from './SceneDocument';
 import {
   ConflictError,
@@ -397,5 +398,247 @@ describe('AutoSave conflict flow', () => {
     const writeFileMock = (editor.projectManager.writeFile as ReturnType<typeof vi.fn>);
     const regularWrites = writeFileMock.mock.calls.filter(([path]) => !String(path).includes('.bak'));
     expect(regularWrites.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ── F-3 multi-tab coordination tests ────────────────────────────────────────
+
+/** Build a minimal MultiTabCoord mock. */
+function makeMockCoord(): {
+  coord: MultiTabCoord;
+  acquireCount: number[];
+  broadcastedVersions: { sceneId: string; version: number }[];
+  versionCallbacks: Map<string, (v: number) => void>;
+} {
+  const acquireCount = [0];
+  const broadcastedVersions: { sceneId: string; version: number }[] = [];
+  const versionCallbacks = new Map<string, (v: number) => void>();
+
+  const coord: MultiTabCoord = {
+    withWriteLock: vi.fn(async (_sceneId: string, fn: () => Promise<unknown>) => {
+      acquireCount[0]++;
+      return fn();
+    }),
+    broadcastVersion: vi.fn((sceneId: string, version: number) => {
+      broadcastedVersions.push({ sceneId, version });
+    }),
+    onVersionChanged: vi.fn((sceneId: string, cb: (v: number) => void) => {
+      versionCallbacks.set(sceneId, cb);
+      return () => { versionCallbacks.delete(sceneId); };
+    }),
+    dispose: vi.fn(),
+  };
+
+  return { coord, acquireCount, broadcastedVersions, versionCallbacks };
+}
+
+describe('AutoSave multi-tab coordination (F-3)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * MT-1: successful push broadcasts the new version to other tabs
+   */
+  it('MT-1. successful push → broadcastVersion called with new version', async () => {
+    const { coord, broadcastedVersions } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 0,
+      pushImpl: () => Promise.resolve({ version: 3 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+    await handle.flushNow();
+
+    expect(broadcastedVersions).toHaveLength(1);
+    expect(broadcastedVersions[0]).toEqual({ sceneId: 'scene-1', version: 3 });
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-2: each flushNow acquires withWriteLock once per call
+   */
+  it('MT-2. flushNow acquires write lock once per push attempt', async () => {
+    const { coord, acquireCount } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 0,
+      pushImpl: () => Promise.resolve({ version: 1 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+    await handle.flushNow();
+    expect(acquireCount[0]).toBe(1);
+
+    await handle.flushNow();
+    expect(acquireCount[0]).toBe(2);
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-3: receiving a version update from another tab bumps baseVersion
+   * so the next push uses the current version instead of stale one
+   */
+  it('MT-3. onVersionChanged callback raises baseVersion when higher', async () => {
+    const { coord, versionCallbacks } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 2,
+      pushImpl: () => Promise.resolve({ version: 5 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+
+    // Simulate another tab broadcasting version 4 (higher than our base 2).
+    const cb = versionCallbacks.get('scene-1');
+    expect(cb).toBeDefined();
+    cb!(4);
+
+    // syncBaseVersion should now be 4.
+    expect(editor.syncBaseVersion).toBe(4);
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-4: receiving a version update that is NOT higher than baseVersion is ignored
+   */
+  it('MT-4. onVersionChanged ignores stale version (not higher than baseVersion)', async () => {
+    const { coord, versionCallbacks } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 10,
+      pushImpl: () => Promise.resolve({ version: 11 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+
+    const cb = versionCallbacks.get('scene-1');
+    cb!(5); // stale — below current base 10
+
+    // Should NOT change.
+    expect(editor.syncBaseVersion).toBe(10);
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-5: resolveConflict('keep-local') also acquires lock for its re-push
+   */
+  it('MT-5. resolveConflict(keep-local) re-push also acquires write lock', async () => {
+    const { coord, acquireCount, broadcastedVersions } = makeMockCoord();
+
+    let pushCallCount = 0;
+    const remoteDoc = new SceneDocument();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 1,
+      pushImpl: () => {
+        pushCallCount++;
+        if (pushCallCount === 1) {
+          return Promise.reject(new ConflictError('scene-1', 5, remoteDoc));
+        }
+        return Promise.resolve({ version: 6 });
+      },
+    });
+
+    const handle = createAutoSave(editor, coord);
+    await handle.flushNow(); // first push: 409, pendingConflict set; lock acquired once
+
+    const lockCountAfterFirst = acquireCount[0];
+    expect(lockCountAfterFirst).toBe(1);
+
+    await handle.resolveConflict('keep-local'); // re-push: lock acquired again
+
+    expect(acquireCount[0]).toBe(2);
+    expect(broadcastedVersions).toHaveLength(1);
+    expect(broadcastedVersions[0].version).toBe(6);
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-6: syncSceneIdChanged re-wires version subscription to new sceneId
+   */
+  it('MT-6. syncSceneIdChanged re-subscribes version updates to new sceneId', () => {
+    const { coord, versionCallbacks } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-old',
+      syncBaseVersion: 0,
+      pushImpl: () => Promise.resolve({ version: 1 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+
+    // Initially subscribed to 'scene-old'.
+    expect(versionCallbacks.has('scene-old')).toBe(true);
+
+    // Simulate scene load → new sceneId.
+    editor.syncSceneId = 'scene-new' as any;
+    editor.events.emit('syncSceneIdChanged', 'scene-new');
+
+    // Now subscribed to 'scene-new', unsubscribed from 'scene-old'.
+    expect(versionCallbacks.has('scene-old')).toBe(false);
+    expect(versionCallbacks.has('scene-new')).toBe(true);
+
+    handle.dispose();
+  });
+
+  /**
+   * MT-7: dispose cleans up coord and unsubscribes version listener
+   */
+  it('MT-7. dispose calls coord.dispose and removes syncSceneIdChanged listener', () => {
+    const { coord } = makeMockCoord();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 0,
+      pushImpl: () => Promise.resolve({ version: 1 }),
+    });
+
+    const handle = createAutoSave(editor, coord);
+    handle.dispose();
+
+    expect(coord.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * MT-8: lock is NOT acquired when pendingConflict is set (suppression stays outside lock)
+   */
+  it('MT-8. pending conflict suppression short-circuits before acquiring lock', async () => {
+    const { coord, acquireCount } = makeMockCoord();
+
+    let pushCallCount = 0;
+    const remoteDoc = new SceneDocument();
+
+    const editor = makeEditor({
+      syncSceneId: 'scene-1',
+      syncBaseVersion: 0,
+      pushImpl: () => {
+        pushCallCount++;
+        if (pushCallCount === 1) {
+          return Promise.reject(new ConflictError('scene-1', 3, remoteDoc));
+        }
+        return Promise.resolve({ version: 4 });
+      },
+    });
+
+    const handle = createAutoSave(editor, coord);
+    await handle.flushNow(); // first flush: 409, pendingConflict set; lock acquired once
+    const lockAfterFirst = acquireCount[0];
+
+    await handle.flushNow(); // second flush: suppressed (pendingConflict set) → no lock
+    expect(acquireCount[0]).toBe(lockAfterFirst); // lock count unchanged
+
+    handle.dispose();
   });
 });
