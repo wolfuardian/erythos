@@ -3,6 +3,7 @@ import type { AssetPath } from '../utils/branded';
 import { Editor } from '../core/Editor';
 import { HttpAssetClient } from '../core/sync/asset/HttpAssetClient';
 import { createAutoSave, createCloudAutoSave, type AutoSaveHandle } from '../core/scene/AutoSave';
+import { createMultiTabCoord, type MultiTabCoord } from '../core/sync/MultiTabCoord';
 import { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
 import { defaultBaseUrl } from '../core/sync/baseUrl';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
@@ -58,6 +59,8 @@ const App: Component = () => {
   let autosaveHandle: AutoSaveHandle | null = null;
   // Active CloudProjectManager — set by openCloudProject, null for local projects
   let activeCloudManager: CloudProjectManager | null = null;
+  // Cross-tab coordinator for #1006 cloud scene invalidation broadcasts
+  let activeCloudTabCoord: MultiTabCoord | null = null;
 
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
@@ -267,6 +270,10 @@ const App: Component = () => {
 
     // Persist for auto-restore on next page reload
     if (projectManager.currentId) setLastProjectId(projectManager.currentId);
+    // Persist active project kind for cold-start resume (spec § D-6)
+    try {
+      localStorage.setItem('activeProject', JSON.stringify({ kind: 'local' }));
+    } catch { /* localStorage disabled — auto-restore silently skipped */ }
   };
 
   const closeProject = async () => {
@@ -299,11 +306,21 @@ const App: Component = () => {
       projectManager.closeSync();
     }
 
+    // Dispose cross-tab reload coordinator (#1006)
+    if (activeCloudTabCoord) {
+      activeCloudTabCoord.dispose();
+      activeCloudTabCoord = null;
+    }
+
     setBridge(null);
     setEditor(null);
 
     // Explicit close → don't auto-restore on next reload
     clearLastProjectId();
+    // Clear active project kind (spec § D-6 + G4 closeProject lifecycle)
+    try {
+      localStorage.removeItem('activeProject');
+    } catch { /* localStorage disabled */ }
   };
 
   const openProjectById = async (id: string) => {
@@ -392,8 +409,38 @@ const App: Component = () => {
     setBridge(b);
     setProjectOpen(true);
 
+    // #1006 Cross-tab cache invalidation: when another tab saves a newer version of this
+    // scene, reload the scene body from the server so this tab sees the update automatically.
+    // We use a dedicated MultiTabCoord (not shared with CloudAutoSave) so disposal is
+    // independent and the channels are separate instances (no self-echo from our own saves).
+    const tabCoord = createMultiTabCoord();
+    activeCloudTabCoord = tabCoord;
+    tabCoord.onVersionChanged(sceneId, (remoteVersion) => {
+      // Guard: only reload if we have an active cloudManager bound to this scene,
+      // the editor is still open, and the remote version is newer than what we have.
+      const cm = activeCloudManager;
+      const currentEditor = editor();
+      if (!cm || cm.sceneId !== sceneId || !currentEditor) return;
+      if (cm.currentVersion !== null && remoteVersion <= cm.currentVersion) return;
+
+      // Reload scene from server to reflect the other tab's changes.
+      // Fire-and-forget: if the reload fails (offline/error), we stay on the cached state.
+      void (async () => {
+        try {
+          const freshDoc = await cm.loadScene();
+          currentEditor.sceneDocument.deserialize(freshDoc.serialize());
+          currentEditor.syncBaseVersion = cm.currentVersion ?? remoteVersion;
+        } catch (err) {
+          // Non-fatal: other tab's changes simply won't appear until manual reload.
+          console.warn('[App] Cross-tab scene reload failed:', err);
+        }
+      })();
+    });
+
     // Persist cloud project for cold-start auto-resume (spec § Cold start with active cloud project)
-    localStorage.setItem('activeProject', JSON.stringify({ kind: 'cloud', sceneId }));
+    try {
+      localStorage.setItem('activeProject', JSON.stringify({ kind: 'cloud', sceneId }));
+    } catch { /* localStorage disabled — cold-start resume silently skipped */ }
   };
 
   // Persist active scene path per-project so reload resumes the right scene.
@@ -519,20 +566,28 @@ const App: Component = () => {
       try {
         const activeProject = JSON.parse(activeProjectRaw) as { kind: string; sceneId?: string };
         if (activeProject.kind === 'cloud' && activeProject.sceneId) {
-          // Cloud cold-start: resume if signed in
-          // (currentUser may still be resolving; fire-and-forget)
+          // Cloud cold-start: await auth resolution, then resume if signed in.
+          // spec § Cold start with active cloud project: "currentUser() resolved + non-null"
+          const sceneIdToResume = activeProject.sceneId;
           void (async () => {
             try {
-              await openCloudProject(activeProject.sceneId!);
+              // Resolve auth (getCurrentUser is already running above in parallel;
+              // await it here so we only attempt cloud resume when we know the user state).
+              const user = await authClient.getCurrentUser();
+              if (!user) {
+                // Guest — don't auto-open cloud project; show Welcome
+                return;
+              }
+              await openCloudProject(sceneIdToResume);
             } catch {
               // Failed (offline/unauth) — clear and show Welcome
-              localStorage.removeItem('activeProject');
+              try { localStorage.removeItem('activeProject'); } catch { /* ignore */ }
             }
           })();
           return;
         }
       } catch {
-        localStorage.removeItem('activeProject');
+        try { localStorage.removeItem('activeProject'); } catch { /* ignore */ }
       }
     }
 
@@ -610,13 +665,10 @@ const App: Component = () => {
             currentUser={currentUser}
             listCloudScenes={() => authClient.listCloudScenes()}
             onOpenCloudProject={async (sceneId) => {
-              // G2 not yet landed — store intent and notify user.
-              // Once G2 merges, App.tsx will handle this via CloudProjectManager.
-              console.warn('[G3] openCloudProject stub — G2 CloudProjectManager not yet landed', sceneId);
+              await openCloudProject(sceneId);
             }}
             onCreateCloudProject={async (name) => {
-              // Create cloud scene via POST /api/scenes, then wire to CloudProjectManager (G2).
-              // For G3, we fire the POST and log the returned id — G2 will complete the flow.
+              // Create cloud scene via POST /api/scenes, then open via CloudProjectManager (G2+G4).
               const apiBase = defaultBaseUrl();
               const res = await fetch(`${apiBase}/scenes`, {
                 method: 'POST',
@@ -626,7 +678,7 @@ const App: Component = () => {
               });
               if (!res.ok) throw new Error(`Failed to create cloud project: ${res.status}`);
               const data = await res.json() as { id: string };
-              console.warn('[G3] createCloudProject stub — G2 CloudProjectManager not yet landed', data.id);
+              await openCloudProject(data.id);
             }}
           />
         }>
