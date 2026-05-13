@@ -27,6 +27,7 @@ import { CopyAsJsonModal } from '../components/CopyAsJsonModal';
 import { PasteFromJsonModal } from '../components/PasteFromJsonModal';
 import { ErrorDialog } from '../components/ErrorDialog';
 import { UnsupportedVersionError, SceneInvariantError } from '../core/scene/SceneDocument';
+import { createEmptyScene } from '../core/scene/io/types';
 import { NotFoundError } from '../core/sync/SyncEngine';
 import {
   DEFAULT_SCENE_PATH,
@@ -686,7 +687,7 @@ const App: Component = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ name, body: {} }),
+                body: JSON.stringify({ name, body: createEmptyScene() }),
               });
               if (!res.ok) throw new Error(`Failed to create cloud project: ${res.status}`);
               const data = await res.json() as { id: string };
