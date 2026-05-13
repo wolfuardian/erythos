@@ -27,8 +27,8 @@ import { eq } from 'drizzle-orm';
 
 export const SESSION_COOKIE = 'session';
 
-/** 30-day expiry (seconds) */
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** 90-day expiry (ms) — v0.2 拉長從 30 day,降低 magic-link Resend cost 觸發頻率(repeat visitor 不會每次 magic link),refs spec `cloud-project-spec.md` § Resend Cost 緩解 #1 */
+const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** Generate a cryptographically random session token */
 export function generateSessionToken(): string {
