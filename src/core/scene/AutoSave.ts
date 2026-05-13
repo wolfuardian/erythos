@@ -11,6 +11,8 @@ import {
   ServerError,
   NetworkError,
 } from '../sync/SyncEngine';
+import { createMultiTabCoord } from '../sync/MultiTabCoord';
+import type { MultiTabCoord } from '../sync/MultiTabCoord';
 
 const DEBOUNCE_DELAY = 2000;
 const RETRY_DELAY_MS = 1000;
@@ -27,9 +29,28 @@ export interface AutoSaveHandle {
   dispose(): void;
 }
 
-export function createAutoSave(editor: Editor): AutoSaveHandle {
+export function createAutoSave(editor: Editor, coord?: MultiTabCoord): AutoSaveHandle {
+  // If no coord is provided, create a default one using browser globals.
+  const multiTabCoord: MultiTabCoord = coord ?? createMultiTabCoord();
+
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pendingConflict: PendingConflict | null = null;
+
+  // Track the current version subscription's unsubscribe fn so it can be
+  // re-wired when the scene changes (Editor.loadScene fires syncSceneIdChanged).
+  let versionUnsub: (() => void) | null = null;
+
+  const subscribeVersionUpdates = (sceneId: string | null): void => {
+    if (versionUnsub) { versionUnsub(); versionUnsub = null; }
+    if (!sceneId) return;
+    versionUnsub = multiTabCoord.onVersionChanged(sceneId, (v) => {
+      // Another tab completed a PUT successfully — advance our baseVersion so
+      // our next PUT doesn't collide.
+      if (editor.syncBaseVersion !== null && v > editor.syncBaseVersion) {
+        editor.syncBaseVersion = v;
+      }
+    });
+  };
 
   const scheduleSnapshot = (): void => {
     editor.events.emit('autosaveStatusChanged', 'pending');
@@ -59,6 +80,8 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
         editor.syncBaseVersion,
       );
       editor.syncBaseVersion = version;
+      // Broadcast the new version to other tabs so they update their baseVersion.
+      multiTabCoord.broadcastVersion(editor.syncSceneId, version);
     } catch (err) {
       if (err instanceof ConflictError) {
         // Capture base version BEFORE any mutation — this is the stale version
@@ -124,6 +147,7 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
             editor.syncBaseVersion,
           );
           editor.syncBaseVersion = version;
+          multiTabCoord.broadcastVersion(editor.syncSceneId, version);
         } catch {
           // Second attempt also failed — local is already saved, show banner.
           editor.events.emit('syncError', {
@@ -165,7 +189,8 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
 
     // Lock 1: suppress sync push when conflict dialog is open
     if (pendingConflict === null && editor.syncEngine && editor.syncSceneId !== null && editor.syncBaseVersion !== null) {
-      await pushOrCaptureConflict(json);
+      const sceneId = editor.syncSceneId;
+      await multiTabCoord.withWriteLock(sceneId, () => pushOrCaptureConflict(json));
     }
 
     editor.events.emit('autosaveStatusChanged', 'saved');
@@ -185,7 +210,12 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
       const json = JSON.stringify(scene);
 
       // Lock 4: walk the same pushOrCaptureConflict path — if 409 again, new bak + new emit
-      await pushOrCaptureConflict(json);
+      if (editor.syncEngine && editor.syncSceneId !== null) {
+        const sceneId = editor.syncSceneId;
+        await multiTabCoord.withWriteLock(sceneId, () => pushOrCaptureConflict(json));
+      } else {
+        await pushOrCaptureConflict(json);
+      }
     } else {
       // use-cloud: Lock 5 — round-trip via serialize/deserialize
       editor.sceneDocument.deserialize(pc.remoteBody.serialize());
@@ -194,15 +224,24 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
     }
   };
 
+  // Re-wire version subscription when the loaded scene changes.
+  const onSyncSceneIdChanged = (id: string | null): void => {
+    subscribeVersionUpdates(id);
+  };
+
   const dispose = (): void => {
     if (timer !== null) { clearTimeout(timer); timer = null; }
     // Lock 6: clear pendingConflict on dispose
     pendingConflict = null;
+    // Clean up version subscription and coord channels.
+    if (versionUnsub) { versionUnsub(); versionUnsub = null; }
+    multiTabCoord.dispose();
     editor.sceneDocument.events.off('nodeAdded', scheduleSnapshot);
     editor.sceneDocument.events.off('nodeRemoved', scheduleSnapshot);
     editor.sceneDocument.events.off('nodeChanged', scheduleSnapshot);
     editor.sceneDocument.events.off('sceneReplaced', scheduleSnapshot);
     editor.sceneDocument.events.off('envChanged', scheduleSnapshot);
+    editor.events.off('syncSceneIdChanged', onSyncSceneIdChanged);
   };
 
   // Attach listeners
@@ -211,6 +250,10 @@ export function createAutoSave(editor: Editor): AutoSaveHandle {
   editor.sceneDocument.events.on('nodeChanged', scheduleSnapshot);
   editor.sceneDocument.events.on('sceneReplaced', scheduleSnapshot);
   editor.sceneDocument.events.on('envChanged', scheduleSnapshot);
+  editor.events.on('syncSceneIdChanged', onSyncSceneIdChanged);
+
+  // Subscribe to version updates for the currently loaded scene (if any).
+  subscribeVersionUpdates(editor.syncSceneId ?? null);
 
   return { flushNow, resolveConflict, dispose };
 }

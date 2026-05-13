@@ -28,6 +28,8 @@ function makeEditor(scenePath = 'scenes/scene.erythos') {
     },
     events: {
       emit: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
     },
     _listeners: listeners,
   } as any;
