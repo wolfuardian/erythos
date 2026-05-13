@@ -142,3 +142,22 @@ export type ErythosSceneV3 = {
   env: SceneEnv;
   nodes: SceneNode[];
 };
+
+/**
+ * Build a valid empty v3 scene blob.
+ *
+ * Single source of truth for "what shape does a freshly-created scene have"
+ * — callers that POST a new scene (local file write, cloud POST /api/scenes)
+ * use this so the resulting blob round-trips through SceneInvariants on load.
+ *
+ * Bumping the current schema version means updating this one factory; all
+ * creation sites stay correct.
+ */
+export function createEmptyScene(): ErythosSceneV3 {
+  return {
+    version: 3,
+    upAxis: 'Y',
+    env: { hdri: null, intensity: 1, rotation: 0 },
+    nodes: [],
+  };
+}

@@ -30,6 +30,7 @@ import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 import { generateUUID } from '../../utils/uuid';
 import type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult } from './ProjectManager';
 import { SceneDocument } from '../scene/SceneDocument';
+import { createEmptyScene } from '../scene/io/types';
 
 type Listener = () => void;
 type FileChangedListener = (path: AssetPath, newURL: BlobURL) => void;
@@ -388,7 +389,7 @@ export class LocalProjectManager implements ProjectManager {
 
     const fileHandle = await scenesDir.getFileHandle(filename, { create: true });
     const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify({ version: 1, nodes: [] }));
+    await writable.write(JSON.stringify(createEmptyScene()));
     await writable.close();
 
     await this.rescan();
