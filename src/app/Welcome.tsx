@@ -73,6 +73,7 @@ const ThumbnailPlaceholder = () => (
 export const Welcome: Component<Props> = (props) => {
   const [recentProjects, setRecentProjects] = createSignal<ProjectEntry[]>([]);
   const [showModal, setShowModal] = createSignal(false);
+  const [modalKind, setModalKind] = createSignal<'local' | 'cloud'>('local');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [signInOpen, setSignInOpen] = createSignal(false);
   let signInTriggerRef: HTMLButtonElement | undefined;
@@ -144,7 +145,7 @@ export const Welcome: Component<Props> = (props) => {
             <button
               class={styles.tile}
               classList={{ [styles.accent]: true }}
-              onClick={() => setShowModal(true)}
+              onClick={() => { setModalKind('local'); setShowModal(true); }}
             >
               <div class={styles.tileIcon}>
                 <PlusIcon />
@@ -173,16 +174,12 @@ export const Welcome: Component<Props> = (props) => {
           {/* Footer */}
           <div class={styles.footer}>
             <div class={styles.footerText}>v0.2 — Local + cloud 3D editor</div>
-            <Show
-              when={props.currentUser?.() === null && props.onOpenOAuth}
-              fallback={<div class={styles.footerSub}>Sign in to sync across devices</div>}
-            >
+            <Show when={props.currentUser?.() === null && props.onOpenOAuth}>
               <button
-                ref={(el) => { signInTriggerRef = el; }}
                 data-testid="welcome-sign-in"
                 type="button"
                 class={styles.signInButton}
-                onClick={() => setSignInOpen(true)}
+                onClick={(e) => { signInTriggerRef = e.currentTarget; setSignInOpen(true); }}
               >
                 Sign in to sync across devices
               </button>
@@ -211,11 +208,14 @@ export const Welcome: Component<Props> = (props) => {
                 }
               >
                 <For each={cloudScenes()} fallback={
-                  <div class={styles.emptyState}>
+                  <button
+                    class={styles.emptyStateButton}
+                    onClick={() => { setModalKind('cloud'); setShowModal(true); }}
+                  >
                     <span class={styles.emptyText}>
-                      No cloud projects yet — create one or sign in elsewhere
+                      No cloud projects yet — create your first one
                     </span>
-                  </div>
+                  </button>
                 }>
                   {(scene) => (
                     <div
@@ -241,6 +241,20 @@ export const Welcome: Component<Props> = (props) => {
             </Show>
 
             {/* Divider before local projects */}
+            <div class={styles.sectionDivider} />
+          </Show>
+
+          {/* Signed-out: surface that cloud projects exist + offer sign-in */}
+          <Show when={props.currentUser?.() === null}>
+            <div class={styles.recentHeader}>
+              <div class={styles.subHeader}>Your Cloud Projects</div>
+            </div>
+            <button
+              class={styles.cloudSignedOut}
+              onClick={(e) => { signInTriggerRef = e.currentTarget; setSignInOpen(true); }}
+            >
+              <span class={styles.emptyText}>Sign in to sync scenes across devices</span>
+            </button>
             <div class={styles.sectionDivider} />
           </Show>
 
@@ -291,6 +305,7 @@ export const Welcome: Component<Props> = (props) => {
         onAfterCreate={() => { void refresh(); void refreshCloudScenes(); }}
         currentUser={props.currentUser}
         onCreateCloudProject={props.onCreateCloudProject}
+        initialKind={modalKind()}
       />
 
       {/* Pre-project sign-in entry — Toolbar's sign-in is unavailable until a project opens */}

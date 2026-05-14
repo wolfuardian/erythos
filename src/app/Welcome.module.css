@@ -119,14 +119,6 @@
   line-height: 1.6;
 }
 
-.footerSub {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  opacity: 0.7;
-  margin-top: 2px;
-  line-height: 1.4;
-}
-
 .signInButton {
   font-size: var(--font-size-xs);
   color: var(--accent-blue);
@@ -202,6 +194,46 @@
 .emptyText {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
+}
+
+/* Clickable empty-state inside projectList (signed-in, no cloud projects) */
+.emptyStateButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-height: 80px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+}
+
+.emptyStateButton:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+}
+
+/* Signed-out cloud placeholder card (sits directly in rightCol, not projectList) */
+.cloudSignedOut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-height: 80px;
+  background: none;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+  margin-bottom: var(--space-md);
+}
+
+.cloudSignedOut:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
 }
 
 /* Recent project row */

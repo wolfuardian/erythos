@@ -1,4 +1,4 @@
-import { type Component, createSignal, Show } from 'solid-js';
+import { type Component, createSignal, createEffect, Show } from 'solid-js';
 import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { User } from '../core/auth/AuthClient';
 import styles from './NewProjectModal.module.css';
@@ -23,6 +23,8 @@ interface NewProjectModalProps {
   currentUser?: () => User | null | undefined;
   /** Called to create a new cloud project with the given name. */
   onCreateCloudProject?: (name: string) => Promise<void>;
+  /** Project kind to pre-select when the modal opens. Defaults to 'local'. */
+  initialKind?: ProjectKind;
 }
 
 export const NewProjectModal: Component<NewProjectModalProps> = (props) => {
@@ -38,6 +40,11 @@ export const NewProjectModal: Component<NewProjectModalProps> = (props) => {
     const u = props.currentUser?.();
     return u != null && u !== undefined;
   };
+
+  // Pre-select project kind from the opening trigger each time the modal opens.
+  createEffect(() => {
+    if (props.show()) setProjectKind(props.initialKind ?? 'local');
+  });
 
   const handlePickLocation = async () => {
     try {
