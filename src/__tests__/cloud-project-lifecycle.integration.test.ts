@@ -213,6 +213,11 @@ describe('cloud project lifecycle — integration', () => {
     expect(s.editor.syncBaseVersion).toBe(0);
   });
 
+  it('cloudMgr.name reflects server scene name after loadScene (#1036)', async () => {
+    const s = await newCloudSession('My Cloud Scene');
+    expect(s.cloudMgr.name).toBe('My Cloud Scene');
+  });
+
   it('T3: adding a primitive cube + flushNow pushes without touching LocalProjectManager.readFile', async () => {
     const s = await newCloudSession('test');
     const pmReadSpy = vi.spyOn(s.pm, 'readFile');

@@ -388,6 +388,7 @@ const App: Component = () => {
     const b = createEditorBridge(e, sharedGridObjects, {
       closeProject,
       projectManager,
+      projectName: cloudManager.name,
       openProjectById,
       autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
       resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),

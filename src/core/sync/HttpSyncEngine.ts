@@ -143,6 +143,7 @@ export class HttpSyncEngine implements SyncEngine {
   async fetch(id: SceneId): Promise<{
     body: SceneDocument;
     version: number;
+    name: string;
     visibility: SceneVisibility;
     forkedFrom: SceneId | null;
   }> {
@@ -165,6 +166,7 @@ export class HttpSyncEngine implements SyncEngine {
     return {
       body: doc,
       version: payload.version,
+      name: payload.name,
       visibility: payload.visibility,
       forkedFrom: payload.forked_from,
     };
