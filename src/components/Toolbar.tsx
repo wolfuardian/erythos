@@ -122,6 +122,8 @@ export const Toolbar: Component = () => {
           recentProjects={bridge.recentProjects()}
           currentProjectId={bridge.currentProjectId()}
           onOpenProject={bridge.openProjectById}
+          projectType={bridge.projectType()}
+          onDeleteProject={bridge.deleteCloudProject}
         />
         {/* Cloud sync indicator — shown in cloud project mode (G3) */}
         <Show when={bridge.projectType() === 'cloud'}>
