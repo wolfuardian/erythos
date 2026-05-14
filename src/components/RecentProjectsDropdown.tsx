@@ -12,6 +12,9 @@ interface RecentProjectsDropdownProps {
   dropdownPos: () => { top: number; left: number };
   onOpenProject: (id: string) => void;
   onCloseProject: () => void;
+  /** Show "Delete project" action — only for cloud projects */
+  projectType?: 'local' | 'cloud';
+  onDeleteProject?: () => void;
   /** Forwarded ref for outside-click detection in parent */
   ref?: (el: HTMLDivElement) => void;
 }
@@ -47,6 +50,17 @@ const CloseProjectItem: Component<{ onClick: () => void }> = (props) => (
   </button>
 );
 
+const DeleteProjectItem: Component<{ onClick: () => void }> = (props) => (
+  <button
+    data-testid="project-chip-delete-project"
+    onClick={props.onClick}
+    class={styles.deleteProjectBtn}
+  >
+    <span class={styles.deleteIcon}>🗑</span>
+    Delete project
+  </button>
+);
+
 const RecentProjectsDropdown: Component<RecentProjectsDropdownProps> = (props) => {
   const total = () => props.recentProjects.length;
   const visibleRows = () =>
@@ -64,11 +78,16 @@ const RecentProjectsDropdown: Component<RecentProjectsDropdownProps> = (props) =
           // inline-allowed: computed offset from getBoundingClientRect
           style={{ top: `${props.dropdownPos().top}px`, left: `${props.dropdownPos().left}px` }}
         >
-          {/* State C: no recent projects — show only Close Project */}
+          {/* State C: no recent projects — show Close Project (+ Delete for cloud) */}
           <Show
             when={hasRecent()}
             fallback={
-              <CloseProjectItem onClick={props.onCloseProject} />
+              <>
+                <CloseProjectItem onClick={props.onCloseProject} />
+                <Show when={props.projectType === 'cloud' && props.onDeleteProject}>
+                  <DeleteProjectItem onClick={props.onDeleteProject!} />
+                </Show>
+              </>
             }
           >
             {/* States A1/A2/B: has recent projects */}
@@ -144,6 +163,11 @@ const RecentProjectsDropdown: Component<RecentProjectsDropdownProps> = (props) =
 
             {/* Close Project — fixed at bottom */}
             <CloseProjectItem onClick={props.onCloseProject} />
+
+            {/* Delete Project — cloud projects only, same action group as Close */}
+            <Show when={props.projectType === 'cloud' && props.onDeleteProject}>
+              <DeleteProjectItem onClick={props.onDeleteProject!} />
+            </Show>
           </Show>
         </div>
       </Portal>

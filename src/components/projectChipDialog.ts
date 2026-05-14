@@ -1,7 +1,8 @@
 /** Pending confirm intent — tracks what to do after user confirms */
 export type ConfirmIntent =
   | { kind: 'close' }
-  | { kind: 'open'; id: string; name: string };
+  | { kind: 'open'; id: string; name: string }
+  | { kind: 'delete' };
 
 /**
  * Builds the ConfirmDialog copy for a given intent + autosave status.
@@ -24,6 +25,14 @@ export function buildChipConfirmDialog(
       title: 'Close project?',
       message: 'The current project will be closed.',
       confirm: 'Close',
+      variant: 'danger',
+    };
+  }
+  if (intent.kind === 'delete') {
+    return {
+      title: 'Delete cloud project?',
+      message: 'This permanently deletes the scene on the server. This cannot be undone.',
+      confirm: 'Delete',
       variant: 'danger',
     };
   }

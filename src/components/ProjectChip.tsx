@@ -13,6 +13,10 @@ interface Props {
   recentProjects: ProjectEntry[];
   currentProjectId: string | null;
   onOpenProject: (id: string) => Promise<void>;
+  /** Type of the active project — controls visibility of cloud-only actions */
+  projectType?: 'local' | 'cloud';
+  /** Callback for the delete cloud project action */
+  onDeleteProject?: () => void;
 }
 
 const ProjectChip: Component<Props> = (props) => {
@@ -73,6 +77,13 @@ const ProjectChip: Component<Props> = (props) => {
     setConfirmOpen(true);
   };
 
+  const handleDeleteProject = () => {
+    setOpen(false);
+    setExpanded(false);
+    setConfirmIntent({ kind: 'delete' });
+    setConfirmOpen(true);
+  };
+
   const handleOpenProject = (id: string) => {
     if (id === props.currentProjectId) return; // no-op for current
     const target = props.recentProjects.find((e) => e.id === id);
@@ -88,6 +99,8 @@ const ProjectChip: Component<Props> = (props) => {
     const intent = confirmIntent();
     if (intent.kind === 'close') {
       props.onCloseProject();
+    } else if (intent.kind === 'delete') {
+      props.onDeleteProject?.();
     } else {
       void props.onOpenProject(intent.id);
     }
@@ -130,6 +143,8 @@ const ProjectChip: Component<Props> = (props) => {
         dropdownPos={dropdownPos}
         onOpenProject={handleOpenProject}
         onCloseProject={handleCloseProject}
+        projectType={props.projectType}
+        onDeleteProject={props.projectType === 'cloud' ? handleDeleteProject : undefined}
         ref={(el) => (dropdownRef = el)}
       />
 

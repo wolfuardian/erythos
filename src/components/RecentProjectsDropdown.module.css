@@ -185,3 +185,31 @@
   text-align: center;
   flex-shrink: 0;
 }
+
+.deleteProjectBtn {
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--text-danger);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background var(--transition-fast);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.deleteProjectBtn:hover {
+  background: var(--bg-danger-hover);
+}
+
+.deleteIcon {
+  font-size: 11px;
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
