@@ -127,6 +127,22 @@
   line-height: 1.4;
 }
 
+.signInButton {
+  font-size: var(--font-size-xs);
+  color: var(--accent-blue);
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+}
+
+.signInButton:hover {
+  text-decoration: underline;
+}
+
 /* Right column */
 .rightCol {
   flex: 1;

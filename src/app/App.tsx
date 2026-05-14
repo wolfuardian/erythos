@@ -703,6 +703,8 @@ const App: Component = () => {
               const data = await res.json() as { id: string };
               await openCloudProject(data.id);
             }}
+            onOpenOAuth={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
+            onRequestMagicLink={(email) => authClient.requestMagicLink(email)}
           />
         }>
           <EditorProvider bridge={bridge()!} editors={editors}>
