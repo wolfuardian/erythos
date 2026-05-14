@@ -33,12 +33,14 @@ import { Hono } from 'hono';
 const mockSelect = vi.fn();
 const mockDelete = vi.fn();
 const mockInsert = vi.fn();
+const mockTransaction = vi.fn();
 
 vi.mock('../db.js', () => ({
   db: {
     select: mockSelect,
     delete: mockDelete,
     insert: mockInsert,
+    transaction: mockTransaction,
   },
   pool: {},
 }));
@@ -265,6 +267,12 @@ describe('GET /auth/github/callback', () => {
       GITHUB_CLIENT_ID: FAKE_CLIENT_ID,
       GITHUB_CLIENT_SECRET: FAKE_CLIENT_SECRET,
     };
+    // Default transaction: execute callback with a fake tx that delegates to mockInsert.
+    // Tests that care about provisioning override this per-test.
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const fakeTx = { insert: mockInsert };
+      return cb(fakeTx);
+    });
   });
 
   afterEach(() => {
@@ -354,7 +362,7 @@ describe('GET /auth/github/callback', () => {
     expect(location).toContain('auth_error=oauth_failed');
   });
 
-  it('happy path → 302 redirect to / with Set-Cookie session', async () => {
+  it('happy path → 302 redirect to / with Set-Cookie session (existing user, no provisioning)', async () => {
     const state = buildValidState(TEST_SECRET);
 
     const fakeAccessToken = 'gho_fake_access_token';
@@ -383,19 +391,26 @@ describe('GET /auth/github/callback', () => {
         }),
     );
 
-    // Mock db.insert chain (createSession also inserts into sessions table)
-    const insertChain = {
+    // The upsert now runs inside db.transaction().
+    // inserted=false → existing user (FIND path), no demo-scene provisioning.
+    const upsertChain = {
       values: vi.fn().mockReturnThis(),
       onConflictDoUpdate: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'new-user-uuid' }]),
+      returning: vi.fn().mockResolvedValue([{ id: 'existing-user-uuid', inserted: false }]),
     };
-    // Second insert: sessions table (no returning needed, just resolves)
+    // createSession INSERT (outside transaction)
     const sessionInsertChain = {
       values: vi.fn().mockResolvedValue(undefined),
     };
     mockInsert
-      .mockReturnValueOnce(insertChain)       // users upsert
-      .mockReturnValueOnce(sessionInsertChain); // sessions insert
+      .mockReturnValueOnce(upsertChain)         // users upsert (inside tx)
+      .mockReturnValueOnce(sessionInsertChain); // sessions insert (outside tx)
+
+    // transaction mock: execute the callback with a fake tx that delegates to mockInsert
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const fakeTx = { insert: mockInsert, update: mockInsert };
+      return cb(fakeTx);
+    });
 
     const res = await app.request(
       makeRequest(`/api/auth/github/callback?code=valid-code&state=${encodeURIComponent(state)}`, {
@@ -410,5 +425,70 @@ describe('GET /auth/github/callback', () => {
     // Verify session cookie was set
     const setCookieHeader = res.headers.get('set-cookie') ?? '';
     expect(setCookieHeader).toMatch(/session=/);
+    // Existing user (inserted=false) — only 2 inserts: upsert + session
+    expect(mockInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('new user (inserted=true) → demo scene provisioned inside transaction', async () => {
+    const state = buildValidState(TEST_SECRET);
+
+    const fakeAccessToken = 'gho_new_user_token';
+    const fakeGitHubUser = {
+      id: 11111,
+      login: 'newuser',
+      avatar_url: null,
+      email: 'newuser@example.com',
+    };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ access_token: fakeAccessToken, token_type: 'bearer', scope: 'user:email' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(fakeGitHubUser),
+        }),
+    );
+
+    // inserted=true → new user → provisionDemoScene called inside tx
+    const upsertChain = {
+      values: vi.fn().mockReturnThis(),
+      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([{ id: 'new-user-uuid', inserted: true }]),
+    };
+    // session insert
+    const sessionInsertChain = {
+      values: vi.fn().mockResolvedValue(undefined),
+    };
+
+    let insertCalls = 0;
+    mockInsert.mockImplementation(() => {
+      insertCalls++;
+      if (insertCalls === 1) return upsertChain;       // users upsert (in tx)
+      if (insertCalls <= 3) return { values: vi.fn().mockResolvedValue(undefined) }; // scenes + scene_versions (in tx)
+      return sessionInsertChain;                        // sessions (outside tx)
+    });
+
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+      const fakeTx = { insert: mockInsert };
+      return cb(fakeTx);
+    });
+
+    const res = await app.request(
+      makeRequest(`/api/auth/github/callback?code=valid-code&state=${encodeURIComponent(state)}`, {
+        cookie: `oauth_state=${state}`,
+      }),
+    );
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/');
+    // 3 inserts inside tx (users + scenes + scene_versions) + 1 outside (sessions) = 4
+    expect(mockInsert).toHaveBeenCalledTimes(4);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
   });
 });

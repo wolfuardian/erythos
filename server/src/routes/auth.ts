@@ -15,10 +15,12 @@
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { users } from '../db/schema.js';
 import { resolveSession, createSession, deleteSession } from '../auth.js';
 import { counters } from '../counters.js';
+import { provisionDemoScene } from '../provision-demo-scene.js';
 
 export const authRoutes = new Hono();
 
@@ -228,29 +230,47 @@ authRoutes.get('/github/callback', async (c) => {
       email = await fetchGitHubPrimaryEmail(accessToken);
     }
 
-    // Upsert user: insert or update github_login / avatar_url / email
-    const result = await db
-      .insert(users)
-      .values({
-        github_id: ghUser.id,
-        email,
-        github_login: ghUser.login,
-        avatar_url: ghUser.avatar_url,
-      })
-      .onConflictDoUpdate({
-        target: users.github_id,
-        set: {
+    // Upsert user: insert or update github_login / avatar_url / email.
+    // RETURNING (xmax = 0) AS inserted — Postgres sets xmax=0 on INSERT (new row),
+    // nonzero on UPDATE (existing row).  inserted === true means a new user was created.
+    let userId: string;
+    let isNewUser: boolean;
+
+    await db.transaction(async (tx) => {
+      const result = await tx
+        .insert(users)
+        .values({
+          github_id: ghUser.id,
+          email,
           github_login: ghUser.login,
           avatar_url: ghUser.avatar_url,
-          email,
-        },
-      })
-      .returning({ id: users.id });
+        })
+        .onConflictDoUpdate({
+          target: users.github_id,
+          set: {
+            github_login: ghUser.login,
+            avatar_url: ghUser.avatar_url,
+            email,
+          },
+        })
+        .returning({
+          id: users.id,
+          inserted: sql<boolean>`(xmax = 0)`,
+        });
 
-    const userId = result[0]?.id;
-    if (!userId) throw new Error('Failed to upsert user');
+      const row = result[0];
+      if (!row) throw new Error('Failed to upsert user');
+      userId = row.id;
+      // pg driver returns boolean as string 'true'/'false' depending on type
+      // parser configuration — normalise defensively.
+      isNewUser = row.inserted === true || (row.inserted as unknown) === 'true';
 
-    await createSession(c, userId);
+      if (isNewUser) {
+        await provisionDemoScene(tx, userId);
+      }
+    });
+
+    await createSession(c, userId!);
     counters.auth_signin_total += 1;
 
     // Always redirect to root after successful OAuth.
