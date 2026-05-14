@@ -342,7 +342,13 @@ describe('POST /scenes', () => {
     mockResolveSession.mockResolvedValue(FAKE_USER);
   });
 
-  it('returns 201 with id and version=0 on successful create', async () => {
+  it('returns 201 with id and version=0 on successful create (free plan, under limit)', async () => {
+    // First select: plan lookup → free plan
+    // Second select: scene count → 2 scenes (under limit of 3)
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ plan: 'free' }]))
+      .mockReturnValueOnce(selectChain([{ count: 2 }]));
+
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
@@ -365,6 +371,75 @@ describe('POST /scenes', () => {
     expect(body.version).toBe(0);
     expect(res.headers.get('Location')).toMatch(/^\/api\/scenes\//);
     expect(res.headers.get('ETag')).toBe('"0"');
+  });
+
+  it('returns 403 with ERR_SCENE_QUOTA_EXCEEDED when free plan is at limit (3 scenes)', async () => {
+    // Plan lookup → free; count → exactly 3 (at limit)
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ plan: 'free' }]))
+      .mockReturnValueOnce(selectChain([{ count: 3 }]));
+
+    const res = await app.request(
+      makeRequest('/api/scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Fourth Scene', body: { nodes: [] } }),
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.code).toBe('E1003 ERR_SCENE_QUOTA_EXCEEDED');
+    expect(typeof body.error).toBe('string');
+    // Must not proceed to transaction
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when free plan has more than 3 scenes (over limit)', async () => {
+    // Plan lookup → free; count → 5 (over limit)
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ plan: 'free' }]))
+      .mockReturnValueOnce(selectChain([{ count: 5 }]));
+
+    const res = await app.request(
+      makeRequest('/api/scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Another Scene', body: { nodes: [] } }),
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.code).toBe('E1003 ERR_SCENE_QUOTA_EXCEEDED');
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('skips scene count check and allows create for pro plan', async () => {
+    // Plan lookup → pro; no count select needed
+    mockSelect.mockReturnValueOnce(selectChain([{ plan: 'pro' }]));
+
+    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
+      };
+      return fn(tx);
+    });
+
+    const res = await app.request(
+      makeRequest('/api/scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Pro Scene', body: { nodes: [] } }),
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    // Count select should not have been called (only one select: plan lookup)
+    expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
   it('returns 401 when not authenticated', async () => {

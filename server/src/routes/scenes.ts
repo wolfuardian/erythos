@@ -15,12 +15,19 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { scenes, scene_versions, sceneShareTokens } from '../db/schema.js';
+import { scenes, scene_versions, sceneShareTokens, users } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
 import { bodyLimitMiddleware } from '../middleware/body-limit.js';
 import { requireSceneIdUuid } from '../middleware/validate-uuid.js';
 import { counters } from '../counters.js';
 import type { Context, Next } from 'hono';
+
+// ---------------------------------------------------------------------------
+// Quota constants (v0 hard-coded — inline, consistent with assets.ts pattern)
+// ---------------------------------------------------------------------------
+
+/** Free plan: max 3 cloud scenes */
+const FREE_SCENE_LIMIT = 3;
 
 // ---------------------------------------------------------------------------
 // Auth middleware (wraps resolveSession — applied to 4 write endpoints)
@@ -262,6 +269,34 @@ sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
   }
   if (bodyObj === undefined || bodyObj === null) {
     return c.json({ error: 'body is required' }, 400);
+  }
+
+  // --- Scene quota check (free plan only) ---
+  // Mirror assets.ts plan lookup pattern: resolveSession returns storage_used only,
+  // so re-query users table for plan field.
+  const userPlanRows = await db
+    .select({ plan: users.plan })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const plan = userPlanRows[0]?.plan ?? 'free';
+
+  if (plan === 'free') {
+    const countRows = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(scenes)
+      .where(eq(scenes.owner_id, user.id))
+      .limit(1);
+    const sceneCount = Number(countRows[0]?.count ?? 0);
+    if (sceneCount >= FREE_SCENE_LIMIT) {
+      return c.json(
+        {
+          error: 'Free plan allows a maximum of 3 cloud scenes',
+          code: 'E1003 ERR_SCENE_QUOTA_EXCEEDED',
+        },
+        403,
+      );
+    }
   }
 
   const id = randomUUID();
