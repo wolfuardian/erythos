@@ -2,6 +2,7 @@ import { type Component, onMount, Show, For } from 'solid-js';
 import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { NewProjectModal } from './NewProjectModal';
+import { SignInDialog } from '../components/SignInDialog';
 import { createSignal } from 'solid-js';
 import type { User, CloudScene } from '../core/auth/AuthClient';
 import styles from './Welcome.module.css';
@@ -17,6 +18,10 @@ interface Props {
   onOpenCloudProject?: (sceneId: string) => Promise<void>;
   /** Create a new cloud project with the given name. */
   onCreateCloudProject?: (name: string) => Promise<void>;
+  /** Open GitHub OAuth sign-in — caller navigates away. */
+  onOpenOAuth?: () => void;
+  /** Request a magic-link sign-in email. */
+  onRequestMagicLink?: (email: string) => Promise<void>;
 }
 
 function formatLastOpened(ts: number): string {
@@ -69,6 +74,8 @@ export const Welcome: Component<Props> = (props) => {
   const [recentProjects, setRecentProjects] = createSignal<ProjectEntry[]>([]);
   const [showModal, setShowModal] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
+  const [signInOpen, setSignInOpen] = createSignal(false);
+  let signInTriggerRef: HTMLButtonElement | undefined;
 
   // Cloud project list — only loaded when user is signed in
   const [cloudScenes, setCloudScenes] = createSignal<CloudScene[]>([]);
@@ -166,7 +173,20 @@ export const Welcome: Component<Props> = (props) => {
           {/* Footer */}
           <div class={styles.footer}>
             <div class={styles.footerText}>v0.2 — Local + cloud 3D editor</div>
-            <div class={styles.footerSub}>Sign in to sync across devices</div>
+            <Show
+              when={props.currentUser?.() === null && props.onOpenOAuth}
+              fallback={<div class={styles.footerSub}>Sign in to sync across devices</div>}
+            >
+              <button
+                ref={(el) => { signInTriggerRef = el; }}
+                data-testid="welcome-sign-in"
+                type="button"
+                class={styles.signInButton}
+                onClick={() => setSignInOpen(true)}
+              >
+                Sign in to sync across devices
+              </button>
+            </Show>
           </div>
         </div>
 
@@ -271,6 +291,15 @@ export const Welcome: Component<Props> = (props) => {
         onAfterCreate={() => { void refresh(); void refreshCloudScenes(); }}
         currentUser={props.currentUser}
         onCreateCloudProject={props.onCreateCloudProject}
+      />
+
+      {/* Pre-project sign-in entry — Toolbar's sign-in is unavailable until a project opens */}
+      <SignInDialog
+        open={signInOpen()}
+        onOpenOAuth={() => props.onOpenOAuth?.()}
+        onRequestMagicLink={async (email) => { await props.onRequestMagicLink?.(email); }}
+        onClose={() => setSignInOpen(false)}
+        triggerRef={signInTriggerRef ?? null}
       />
     </div>
   );
