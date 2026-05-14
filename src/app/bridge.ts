@@ -120,6 +120,11 @@ export interface EditorBridge {
   requestMagicLink: (email: string) => Promise<void>;
   /** Whether the editor is in read-only mode (viewer mode). Panels should disable all mutation UI when true. */
   editorReadOnly: Accessor<boolean>;
+  /**
+   * Delete the current cloud project (calls DELETE /api/scenes/:id then closes the project).
+   * undefined for local projects.
+   */
+  deleteCloudProject: (() => void) | undefined;
   dispose: () => void;
 }
 
@@ -145,6 +150,12 @@ export interface EditorBridgeDeps {
   authDeleteAccount?: () => Promise<void>;
   /** Auth: requestMagicLink method (from AuthClient instance) */
   authRequestMagicLink?: (email: string) => Promise<void>;
+  /**
+   * Delete the current cloud project.
+   * App.tsx implements this as a DELETE fetch + closeProject.
+   * Only set for cloud projects; undefined for local.
+   */
+  deleteCloudProject?: () => void;
 }
 
 export function createEditorBridge(
@@ -365,6 +376,7 @@ export function createEditorBridge(
     requestMagicLink:
       deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
     editorReadOnly: editor.readOnly,
+    deleteCloudProject: deps?.deleteCloudProject,
     dispose,
   };
 }

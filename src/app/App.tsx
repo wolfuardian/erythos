@@ -385,6 +385,25 @@ const App: Component = () => {
     };
     e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
+    const deleteCloudProject = () => {
+      // Fire-and-forget: DELETE the scene on the server, then close regardless.
+      // closeProject flushes autosave first; if the PUT races the DELETE the server
+      // returns 404 → mapped to 'unauthorized' SaveResult → swallowed by AutoSave.
+      void (async () => {
+        const apiBase = defaultBaseUrl();
+        try {
+          await fetch(`${apiBase}/scenes/${encodeURIComponent(sceneId)}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+        } catch {
+          // Network error — close anyway; scene may still exist on server.
+          // User can retry deletion from Welcome after reconnecting.
+        }
+        await closeProject();
+      })();
+    };
+
     const b = createEditorBridge(e, sharedGridObjects, {
       closeProject,
       projectManager,
@@ -399,6 +418,7 @@ const App: Component = () => {
       authGetExportUrl: () => authClient.getExportUrl(),
       authDeleteAccount: () => authClient.deleteAccount(),
       authRequestMagicLink: (email) => authClient.requestMagicLink(email),
+      deleteCloudProject,
     });
 
     e.keybindings.registerMany([
