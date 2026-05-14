@@ -55,6 +55,9 @@ export class CloudProjectManager implements ProjectManager {
    */
   private _currentVersion: number | null = null;
 
+  /** Scene name from the server. Null before first loadScene. */
+  private _name: string | null = null;
+
   /** Blob URL cache: assets:// hash → blob URL (to revoke on close) */
   private readonly _blobUrlCache = new Map<string, string>();
 
@@ -91,8 +94,9 @@ export class CloudProjectManager implements ProjectManager {
    */
   async loadScene(): Promise<SceneDocument> {
     try {
-      const { body, version } = await this._syncEngine.fetch(this._sceneId);
+      const { body, version, name } = await this._syncEngine.fetch(this._sceneId);
       this._currentVersion = version;
+      this._name = name;
 
       // Write-through to IndexedDB throwaway cache (cold-start fast-open)
       try {
@@ -277,6 +281,11 @@ export class CloudProjectManager implements ProjectManager {
   /** The sceneId this manager is bound to. */
   get sceneId(): string {
     return this._sceneId;
+  }
+
+  /** Scene name from the server — null before first loadScene. */
+  get name(): string | null {
+    return this._name;
   }
 
   /**

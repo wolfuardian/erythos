@@ -126,6 +126,8 @@ export interface EditorBridge {
 export interface EditorBridgeDeps {
   closeProject: () => void;
   projectManager: LocalProjectManager;
+  /** Cloud project name — overrides editor.projectManager.name (cloud projects don't open a LocalProjectManager). */
+  projectName?: string | null;
   openProjectById: (id: string) => Promise<void>;
   autosaveFlush: () => Promise<void>;
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
@@ -162,7 +164,9 @@ export function createEditorBridge(
   const [autosaveStatus, setAutosaveStatus] = createSignal<'idle' | 'pending' | 'saved' | 'error'>('idle');
   const [hasClipboard, setHasClipboard] = createSignal(false);
   const [projectOpen, setProjectOpen] = createSignal(editor.projectManager.isOpen);
-  const [projectName, setProjectName] = createSignal<string | null>(editor.projectManager.name);
+  const [projectName, setProjectName] = createSignal<string | null>(
+    deps?.projectName ?? editor.projectManager.name,
+  );
   const [projectFiles, setProjectFiles] = createSignal<ProjectFile[]>(editor.projectManager.getFiles());
   const [activeViewportId, setActiveViewportId] = createSignal<string | null>(null);
   const [draggingViewportId, _setDraggingViewportId] = createSignal<string | null>(null);
