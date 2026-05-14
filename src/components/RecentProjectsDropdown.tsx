@@ -50,13 +50,26 @@ const CloseProjectItem: Component<{ onClick: () => void }> = (props) => (
   </button>
 );
 
+// Trash SVG icon — project convention is inline SVG, no emoji (see Welcome.tsx)
+const TrashIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5v9h7v-9"
+      stroke="currentColor"
+      stroke-width="1.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 const DeleteProjectItem: Component<{ onClick: () => void }> = (props) => (
   <button
     data-testid="project-chip-delete-project"
     onClick={props.onClick}
     class={styles.deleteProjectBtn}
   >
-    <span class={styles.deleteIcon}>🗑</span>
+    <TrashIcon />
     Delete project
   </button>
 );

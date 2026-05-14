@@ -206,10 +206,3 @@
 .deleteProjectBtn:hover {
   background: var(--bg-danger-hover);
 }
-
-.deleteIcon {
-  font-size: 11px;
-  width: 12px;
-  text-align: center;
-  flex-shrink: 0;
-}
