@@ -34,6 +34,7 @@ const mockSelect = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
+const mockTransaction = vi.fn();
 
 vi.mock('../db.js', () => ({
   db: {
@@ -41,6 +42,7 @@ vi.mock('../db.js', () => ({
     insert: mockInsert,
     update: mockUpdate,
     delete: mockDelete,
+    transaction: mockTransaction,
   },
   pool: {},
 }));
@@ -124,6 +126,12 @@ beforeEach(() => {
   vi.mocked(Resend).mockImplementation(
     () => ({ emails: { send: mockResendSend } }) as unknown as Resend,
   );
+  // Default transaction mock: execute the callback synchronously with a fake tx.
+  // Tests that verify transaction internals override this per-test.
+  mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+    const fakeTx = { insert: mockInsert, update: mockUpdate, select: mockSelect };
+    return cb(fakeTx);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -486,7 +494,9 @@ describe('GET /api/auth/magic-link/verify', () => {
     // Phase 3: SELECT user lookup — empty (new user path)
     mockSelect.mockReturnValue(selectChain([]));
 
-    // Phase 3: INSERT users with .returning(); createSession INSERT (no .returning)
+    // Phase 3 (CREATE): transaction wraps user-insert + demo-scene-inserts.
+    // insertCalls sequence inside tx: 1=users, 2=scenes, 3=scene_versions
+    // insertCalls outside tx: 4=sessions (createSession)
     let insertCalls = 0;
     const userInsertValuesSpy = vi.fn().mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ id: 'new-user-uuid' }]),
@@ -494,8 +504,10 @@ describe('GET /api/auth/magic-link/verify', () => {
     mockInsert.mockImplementation(() => {
       insertCalls++;
       if (insertCalls === 1) {
+        // users insert (inside tx via mockTransaction default)
         return { values: userInsertValuesSpy };
       }
+      // scenes, scene_versions (inside tx), sessions (outside tx)
       return insertChain();
     });
 
@@ -515,6 +527,8 @@ describe('GET /api/auth/magic-link/verify', () => {
     expect(newUserRow.github_id).toBeNull();
     expect(newUserRow.email).toBe('new@example.com');
     expect(newUserRow.github_login).toBe('');
+    // transaction was used for atomicity
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
   });
 
   it('redirects to /?auth_error=rate_limited on per-IP verify limit (>20/min)', async () => {

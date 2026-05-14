@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "upAxis": "Y",
+  "env": {
+    "hdri": null,
+    "intensity": 1,
+    "rotation": 0
+  },
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Cube",
+      "parent": null,
+      "order": 0,
+      "nodeType": "mesh",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "asset": "project://primitives/box",
+      "mat": {
+        "color": "#808080"
+      },
+      "userData": {}
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Sun",
+      "parent": null,
+      "order": 1,
+      "nodeType": "light",
+      "position": [5, 10, 5],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "light": {
+        "type": "directional",
+        "color": "#ffffff",
+        "intensity": 1
+      },
+      "userData": {}
+    }
+  ]
+}

@@ -17,6 +17,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db.js';
 import { magicLinkTokens, users } from '../db/schema.js';
+import { provisionDemoScene } from '../provision-demo-scene.js';
 
 export const MAGIC_LINK_TTL_MS = Number(
   process.env.MAGIC_LINK_TTL_MS ?? 15 * 60 * 1000,
@@ -130,29 +131,40 @@ export async function verifyMagicLink(
     return { error: 'expired' };
   }
 
-  // Phase 3 — find-or-create user using email from the claimed row
-  let userId: string;
+  // Phase 3 — find-or-create user using email from the claimed row.
+  // CREATE path wraps user-insert + demo-scene-insert in a transaction for atomicity.
+  // FIND path runs outside a transaction (single SELECT, no write).
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.email, claimed.email))
     .limit(1);
 
+  let userId: string;
+
   if (existing) {
     userId = existing.id;
   } else {
-    const [created] = await db
-      .insert(users)
-      .values({
-        github_id: null,
-        email: claimed.email,
-        github_login: '',
-      })
-      .returning({ id: users.id });
-    userId = created.id;
+    // New user — insert user + demo scene atomically.
+    // Return userId from the transaction callback to ensure TypeScript sees it assigned.
+    userId = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(users)
+        .values({
+          github_id: null,
+          email: claimed.email,
+          github_login: '',
+        })
+        .returning({ id: users.id });
+      const newUserId = created.id;
+
+      await provisionDemoScene(tx, newUserId);
+      return newUserId;
+    });
   }
 
-  // Phase 4 — bookkeeping: record user_id on the token row
+  // Phase 4 — bookkeeping: record user_id on the token row (outside transaction,
+  // mirrors original structure; token-row update is cosmetic bookkeeping only).
   await db
     .update(magicLinkTokens)
     .set({ userId })
