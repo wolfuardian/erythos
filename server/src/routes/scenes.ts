@@ -330,6 +330,32 @@ sceneRoutes.patch('/:id/visibility', requireSceneIdUuid, bodyLimitMiddleware, au
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /scenes/:id — permanently delete a scene owned by the caller
+// Requires auth. Owner-only.
+// scene_versions + scene_share_tokens: ON DELETE CASCADE → DB handles them.
+// scenes.forked_from: ON DELETE SET NULL → forks survive.
+// No storage_used accounting (assets are global content-addressed dedup).
+// ---------------------------------------------------------------------------
+
+sceneRoutes.delete('/:id', requireSceneIdUuid, authMiddleware, async (c) => {
+  const id = c.req.param('id')!;
+  const user = c.get('user');
+
+  const rows = await db.select().from(scenes).where(eq(scenes.id, id)).limit(1);
+  const scene = rows[0];
+  if (!scene) return c.json({ error: 'Not Found' }, 404);
+
+  // Owner check: non-owner sees 404 (no existence leak; consistent with PUT/PATCH)
+  if (scene.owner_id !== user.id) {
+    return c.json({ error: 'Not Found' }, 404);
+  }
+
+  await db.delete(scenes).where(eq(scenes.id, id));
+
+  return c.body(null, 204);
+});
+
+// ---------------------------------------------------------------------------
 // POST /scenes/:id/fork — fork scene to caller's account
 // Requires auth. Source must be public OR caller is owner; else 404 (no leak).
 // ---------------------------------------------------------------------------
