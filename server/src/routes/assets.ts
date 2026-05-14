@@ -21,7 +21,7 @@
  * This aligns with how GET /scenes/:id is anonymous for public scenes.
  *
  * Quota (hard-coded v0, per spec § Quota):
- *   free plan: 500 MB total, 50 MB per file
+ *   free plan: 150 MB total, 50 MB per file
  *   pro  plan: 50 GB total, 500 MB per file
  *
  * S3 ordering on POST: SHA-256 verify → dedup check → quota check → S3 PUT →
@@ -53,8 +53,8 @@ import type { Context, Next } from 'hono';
 const FREE_PER_FILE_LIMIT = 50 * 1024 * 1024;
 /** Pro plan: 500 MB per file */
 const PRO_PER_FILE_LIMIT = 500 * 1024 * 1024;
-/** Free plan: 500 MB total storage */
-const FREE_TOTAL_QUOTA = 500 * 1024 * 1024;
+/** Free plan: 150 MB total storage */
+const FREE_TOTAL_QUOTA = 150 * 1024 * 1024;
 /** Pro plan: 50 GB total storage */
 const PRO_TOTAL_QUOTA = 50 * 1024 * 1024 * 1024;
 

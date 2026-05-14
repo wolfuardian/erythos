@@ -178,6 +178,12 @@ describe('counter increment — scene_create_total', () => {
     // Record baseline
     const before = counters.scene_create_total;
 
+    // POST /scenes now queries plan + scene count before inserting
+    // First select: plan lookup → free plan; second: scene count → 0 (under limit)
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ plan: 'free' }]))
+      .mockReturnValueOnce(selectChain([{ count: 0 }]));
+
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
