@@ -170,6 +170,7 @@ export class RealtimeClient {
       // reconnect (if localState !== null), but onAuthenticated is the safer
       // hook because it fires strictly after auth — not just WS open.
       onAuthenticated: () => {
+        warnIfAwarenessPayloadTooLarge(this.localState);
         this.provider.awareness?.setLocalState(this.localState);
       },
       onDisconnect: () => {
