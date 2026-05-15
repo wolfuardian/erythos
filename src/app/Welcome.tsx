@@ -3,6 +3,7 @@ import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { NewProjectModal } from './NewProjectModal';
 import { SignInDialog } from '../components/SignInDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { createSignal } from 'solid-js';
 import type { User, CloudScene } from '../core/auth/AuthClient';
 import styles from './Welcome.module.css';
@@ -18,6 +19,8 @@ interface Props {
   onOpenCloudProject?: (sceneId: string) => Promise<void>;
   /** Create a new cloud project with the given name. */
   onCreateCloudProject?: (name: string) => Promise<void>;
+  /** Permanently delete a cloud project on the server. Lets users recover from an unopenable / invalid project. */
+  onDeleteCloudProject?: (sceneId: string) => Promise<void>;
   /** Open GitHub OAuth sign-in — caller navigates away. */
   onOpenOAuth?: () => void;
   /** Request a magic-link sign-in email. */
@@ -60,6 +63,19 @@ const PlusIcon = () => (
   </svg>
 );
 
+// Trash icon — for cloud project delete; matches RecentProjectsDropdown convention (no emoji, inline SVG)
+const TrashIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5v9h7v-9"
+      stroke="currentColor"
+      stroke-width="1.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 // Thumbnail placeholder — 32x32 dark geometric hint
 const ThumbnailPlaceholder = () => (
   <div class={styles.thumbnail}>
@@ -82,6 +98,8 @@ export const Welcome: Component<Props> = (props) => {
   const [cloudScenes, setCloudScenes] = createSignal<CloudScene[]>([]);
   const [cloudLoading, setCloudLoading] = createSignal(false);
   const [cloudError, setCloudError] = createSignal('');
+  // Cloud delete confirm — null = no dialog open
+  const [deleteConfirmScene, setDeleteConfirmScene] = createSignal<CloudScene | null>(null);
 
   const refresh = async () => setRecentProjects(await props.projectManager.getRecentProjects());
 
@@ -121,6 +139,19 @@ export const Welcome: Component<Props> = (props) => {
       await refresh();
     } catch (e: any) {
       if (e.name !== 'AbortError') setErrorMsg(e.message || String(e));
+    }
+  };
+
+  const handleDeleteCloud = async () => {
+    const scene = deleteConfirmScene();
+    if (!scene || !props.onDeleteCloudProject) return;
+    setDeleteConfirmScene(null);
+    setCloudError('');
+    try {
+      await props.onDeleteCloudProject(scene.id);
+      await refreshCloudScenes();
+    } catch (e: any) {
+      setCloudError(e?.message ?? 'Failed to delete cloud project');
     }
   };
 
@@ -219,17 +250,29 @@ export const Welcome: Component<Props> = (props) => {
                 }>
                   {(scene) => (
                     <div
-                      class={styles.projectRow}
+                      class={styles.cloudProjectRow}
                       onClick={() => props.onOpenCloudProject?.(scene.id)}
                     >
                       <ThumbnailPlaceholder />
                       <div class={styles.projectMeta}>
-                        <div class={styles.projectName}>{scene.name}</div>
+                        <div class={styles.projectName}>{scene.name || 'Untitled'}</div>
                         <div class={styles.projectId}>{scene.id}</div>
                       </div>
                       <div class={styles.projectDate}>
                         {formatLastOpened(new Date(scene.updated_at).getTime())}
                       </div>
+                      <Show when={props.onDeleteCloudProject}>
+                        <button
+                          class={styles.deleteRowButton}
+                          title="Delete this cloud project"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmScene(scene);
+                          }}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </Show>
                     </div>
                   )}
                 </For>
@@ -315,6 +358,18 @@ export const Welcome: Component<Props> = (props) => {
         onRequestMagicLink={async (email) => { await props.onRequestMagicLink?.(email); }}
         onClose={() => setSignInOpen(false)}
         triggerRef={signInTriggerRef ?? null}
+      />
+
+      {/* Cloud project delete confirmation — list-level affordance so an unopenable / invalid project is still recoverable */}
+      <ConfirmDialog
+        open={deleteConfirmScene() !== null}
+        title="Delete Cloud Project"
+        message={`Delete "${deleteConfirmScene()?.name || 'Untitled'}"? This permanently removes it from the server and cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteCloud()}
+        onCancel={() => setDeleteConfirmScene(null)}
       />
     </div>
   );

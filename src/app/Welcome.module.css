@@ -293,3 +293,38 @@
   background: var(--border-subtle);
   margin: var(--space-md) 0;
 }
+
+/* Cloud project row — like .projectRow but with a 4th column for inline trash button */
+.cloudProjectRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 28px;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s;
+}
+
+.cloudProjectRow:hover {
+  background: var(--bg-hover);
+}
+
+.deleteRowButton {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+
+.deleteRowButton:hover {
+  color: var(--accent-red);
+  background: var(--bg-section);
+}
