@@ -17,7 +17,7 @@ import { PrefabRegistry } from './scene/PrefabRegistry';
 import type { SceneNode } from './scene/SceneFormat';
 import type { SceneEnv } from './scene/SceneFormat';
 import type { PrefabAsset } from './scene/PrefabFormat';
-import { AssetResolver } from './io/AssetResolver';
+import { AssetResolver, parseAssetUrl } from './io/AssetResolver';
 import { PrefabGraph } from './io/PrefabGraph';
 import { prefabPathForName } from '../utils/prefabPath';
 import type { SyncEngine, SceneId } from './sync/SyncEngine';
@@ -256,8 +256,8 @@ export class Editor {
     // setResolvedBlobUrl() so SceneSync can look them up without data-loss on save.
     for (const node of this.sceneDocument.getAllNodes()) {
       if (node.nodeType === 'mesh' && node.asset) {
-        // Skip primitives — no file loading needed
-        if (node.asset.startsWith('project://primitives/')) continue;
+        // Skip primitives:// — built-in geometry, no file loading needed (refs #1027)
+        if (parseAssetUrl(node.asset)?.scheme === 'primitives') continue;
 
         try {
           const blobUrl = await this.assetResolver.resolve(node.asset);

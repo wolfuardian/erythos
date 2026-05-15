@@ -3,11 +3,12 @@ import type { MaterialOverride, LightProps } from './SceneFormat';
 import { generateUUID } from '../../utils/uuid';
 import { asNodeUUID } from '../../utils/branded';
 import type { NodeUUID } from '../../utils/branded';
-import type { ErythosSceneV3 } from './io/types';
+import type { ErythosSceneV3, ErythosSceneV4 } from './io/types';
 import type { HexColor } from './io/types';
 import { v0_to_v1 } from './io/migrations/v0_to_v1';
 import { v1_to_v2 } from './io/migrations/v1_to_v2';
 import { v2_to_v3 } from './io/migrations/v2_to_v3';
+import { v3_to_v4 } from './io/migrations/v3_to_v4';
 import {
   checkRawVersion,
   checkRawUpAxis,
@@ -237,13 +238,14 @@ export class SceneDocument {
   // ── Serialization ─────────────────────────────────────────────────────────
 
   /**
-   * Serialize the runtime model to the v3 persistence shape (ErythosSceneV3).
+   * Serialize the runtime model to the v4 persistence shape (ErythosSceneV4).
    * Colors are converted from runtime numbers to hex strings.
    * upAxis is always 'Y' — not user-configurable.
+   * Built-in primitive meshes are serialized with the primitives:// scheme (refs #1027).
    */
-  serialize(): ErythosSceneV3 {
+  serialize(): ErythosSceneV4 {
     return {
-      version: 3,
+      version: 4,
       upAxis: 'Y',
       env: {
         hdri: this._env.hdri,
@@ -251,7 +253,7 @@ export class SceneDocument {
         rotation: this._env.rotation,
       },
       nodes: Array.from(this._nodes.values()).map(n => {
-        const persisted: ErythosSceneV3['nodes'][number] = {
+        const persisted: ErythosSceneV4['nodes'][number] = {
           id: n.id,
           name: n.name,
           parent: n.parent,
@@ -274,14 +276,14 @@ export class SceneDocument {
   /**
    * Deserialize raw JSON data into the runtime model.
    * Accepts v0 (components-bag), v1 (nodeType + assets:// local), v2 (nodeType + project://),
-   * or v3 (upAxis: 'Y' added) shapes.
+   * v3 (upAxis: 'Y' added), or v4 (primitives:// scheme) shapes.
    * Colors in the persistence shape (hex strings) are converted to runtime numbers.
    *
    * Validation order:
    *   1. checkRawVersion -- rejects non-integer, <=0, or future version
    *      (throws UnsupportedVersionError or SceneInvariantError for bad version field)
-   *   2. v0_to_v1 → v1_to_v2 → v2_to_v3 migration chain
-   *   3. validateScene -- structural invariants on migrated v3 scene (throws SceneInvariantError on violations)
+   *   2. v0_to_v1 → v1_to_v2 → v2_to_v3 → v3_to_v4 migration chain
+   *   3. validateScene -- structural invariants on migrated v4 scene (throws SceneInvariantError on violations)
    *
    * @param data  Parsed JSON from a .erythos file (may be any legacy version).
    * @throws {UnsupportedVersionError} if version > CURRENT_VERSION
@@ -292,20 +294,22 @@ export class SceneDocument {
 
     // Step 1: version gate (runs on raw JSON before migration)
     checkRawVersion(data);
-    // Step 1b: upAxis gate — rejects v3 inputs with upAxis !== 'Y' before
+    // Step 1b: upAxis gate — rejects v3/v4 inputs with upAxis !== 'Y' before
     //   v2_to_v3 silently overwrites the corrupt value.
     checkRawUpAxis(data);
 
-    // Step 2: Run migration chain v0→v1→v2→v3.
+    // Step 2: Run migration chain v0→v1→v2→v3→v4.
     //   v0→v1: legacy components-bag → nodeType shape + inject default env
     //   v1→v2: `assets://<path>` (local) → `project://<path>` scheme rename
     //   v2→v3: add `upAxis: 'Y'` invariant field
+    //   v3→v4: `project://primitives/<type>` → `primitives://<type>` scheme (refs #1027)
     const asV1 = v0_to_v1(data);
     const asV2 = v1_to_v2(asV1);
-    const v3: ErythosSceneV3 = v2_to_v3(asV2);
+    const asV3: ErythosSceneV3 = v2_to_v3(asV2);
+    const v4: ErythosSceneV4 = v3_to_v4(asV3);
 
-    // Step 3: structural invariants on migrated v3 scene
-    const violations = validateScene(v3);
+    // Step 3: structural invariants on migrated v4 scene
+    const violations = validateScene(v4 as unknown as ErythosSceneV3);
     if (violations.length > 0) {
       console.error('[SceneDocument] Scene invariant violations:');
       for (const v of violations) {
@@ -316,13 +320,13 @@ export class SceneDocument {
 
     // Restore env
     this._env = {
-      hdri:      v3.env.hdri,
-      intensity: v3.env.intensity,
-      rotation:  v3.env.rotation,
+      hdri:      v4.env.hdri,
+      intensity: v4.env.intensity,
+      rotation:  v4.env.rotation,
     };
 
     // Convert persistence nodes -> runtime nodes
-    for (const pn of v3.nodes) {
+    for (const pn of v4.nodes) {
       const node: SceneNode = {
         id:       asNodeUUID(pn.id),
         name:     pn.name,
@@ -400,25 +404,26 @@ export class SceneDocument {
     //   v2_to_v3 silently overwrites the corrupt value.
     checkRawUpAxis(raw);
 
-    // Step 2: migration chain v0→v1→v2→v3
+    // Step 2: migration chain v0→v1→v2→v3→v4
     const asV1 = v0_to_v1(raw);
     const asV2 = v1_to_v2(asV1);
-    const v3: ErythosSceneV3 = v2_to_v3(asV2);
+    const asV3: ErythosSceneV3 = v2_to_v3(asV2);
+    const v4: ErythosSceneV4 = v3_to_v4(asV3);
 
     // Step 3: structural invariants
-    const violations = validateScene(v3);
+    const violations = validateScene(v4 as unknown as ErythosSceneV3);
     if (violations.length > 0) {
       throw new SceneInvariantError(violations);
     }
 
     // Step 4: build old-id -> new-id map (re-mint ALL ids unconditionally)
     const idMap = new Map<string, NodeUUID>();
-    for (const pn of v3.nodes) {
+    for (const pn of v4.nodes) {
       idMap.set(pn.id, asNodeUUID(generateUUID()));
     }
 
     // Step 5 & 6: convert persistence nodes -> runtime nodes with fresh ids
-    return v3.nodes.map(pn => {
+    return v4.nodes.map(pn => {
       const node: SceneNode = {
         id:       idMap.get(pn.id)!,
         name:     pn.name,
@@ -436,9 +441,12 @@ export class SceneDocument {
       };
 
       if (pn.asset  !== undefined) node.asset  = pn.asset;
-      if (pn.mat    !== undefined) node.mat    = persistMatToRuntime(pn.mat);
-      if (pn.light  !== undefined) node.light  = persistLightToRuntime(pn.light);
-      if (pn.camera !== undefined) node.camera = { ...pn.camera };
+      if (pn.mat    !== undefined) node.mat    = persistMatToRuntime(pn.mat as ErythosSceneV3['nodes'][number]['mat']);
+      if (pn.light  !== undefined) node.light  = persistLightToRuntime(pn.light as NonNullable<ErythosSceneV3['nodes'][number]['light']>);
+      if (pn.camera !== undefined) {
+        const cam = pn.camera as NonNullable<ErythosSceneV3['nodes'][number]['camera']>;
+        node.camera = { type: cam.type, fov: cam.fov, near: cam.near, far: cam.far };
+      }
 
       return node;
     });

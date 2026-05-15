@@ -36,7 +36,7 @@ const repoRoot = resolve(__dirname, '../../../../../');
 
 function makeValidScene() {
   return {
-    version: 3 as const, upAxis: 'Y' as const,
+    version: 4 as const, upAxis: 'Y' as const,
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [] as unknown[],
   };
@@ -589,7 +589,7 @@ describe('invariant 9: userData must be empty {}', () => {
     // We need to test with a synthetic scene since Zod allows Record<string,unknown>
     // but our invariant catches non-empty userData post-Zod.
     const syntheticScene = {
-      version: 3 as const, upAxis: 'Y' as const,
+      version: 4 as const, upAxis: 'Y' as const,
       env: { hdri: null, intensity: 1, rotation: 0 },
       nodes: [{
         id: 'a1',
@@ -689,27 +689,31 @@ describe('SceneInvariantError', () => {
 
 // ── v0 fixture via migrate -> validateScene ───────────────────────────────────
 
-describe('migration path: v0 fixture -> v0_to_v1 -> v1_to_v2 -> v2_to_v3 -> validateScene', () => {
-  it('v0 sample migrates through full chain to valid v3 (0 violations)', async () => {
+describe('migration path: v0 fixture -> v0_to_v1 -> v1_to_v2 -> v2_to_v3 -> v3_to_v4 -> validateScene', () => {
+  it('v0 sample migrates through full chain to valid v4 (0 violations)', async () => {
     const { v0_to_v1 } = await import('../migrations/v0_to_v1');
     const { v1_to_v2 } = await import('../migrations/v1_to_v2');
     const { v2_to_v3 } = await import('../migrations/v2_to_v3');
+    const { v3_to_v4 } = await import('../migrations/v3_to_v4');
     const v0sample = JSON.parse(readFileSync(resolve(repoRoot, 'fixtures/v0_sample.erythos'), 'utf-8'));
     const v1 = v0_to_v1(v0sample);
     const v2 = v1_to_v2(v1);
     const v3 = v2_to_v3(v2);
-    const violations = validateScene(v3);
+    const v4 = v3_to_v4(v3);
+    const violations = validateScene(v4);
     expect(violations).toHaveLength(0);
   });
 
-  it('empty v0 scene migrates through full chain to valid v3', async () => {
+  it('empty v0 scene migrates through full chain to valid v4', async () => {
     const { v0_to_v1 } = await import('../migrations/v0_to_v1');
     const { v1_to_v2 } = await import('../migrations/v1_to_v2');
     const { v2_to_v3 } = await import('../migrations/v2_to_v3');
+    const { v3_to_v4 } = await import('../migrations/v3_to_v4');
     const v1 = v0_to_v1({ version: 1, nodes: [] });
     const v2 = v1_to_v2(v1);
     const v3 = v2_to_v3(v2);
-    const violations = validateScene(v3);
+    const v4 = v3_to_v4(v3);
+    const violations = validateScene(v4);
     expect(violations).toHaveLength(0);
   });
 });

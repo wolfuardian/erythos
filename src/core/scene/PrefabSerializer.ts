@@ -29,14 +29,13 @@ export function serializeToPrefab(
     const components: Record<string, unknown> = {};
 
     if (node.asset && node.nodeType === 'mesh') {
-      // Convert project:// back to a path for prefab storage
-      const assetPath = node.asset.startsWith('project://primitives/')
-        ? null  // skip primitives — handled by geometry field below
-        : node.asset.replace('project://', '');
-      if (assetPath) {
+      if (node.asset.startsWith('primitives://')) {
+        // primitives:// built-in geometry — store as geometry component (refs #1027)
+        components['geometry'] = { type: node.asset.slice('primitives://'.length) };
+      } else {
+        // Convert project:// to a path for prefab storage
+        const assetPath = node.asset.replace('project://', '');
         components['mesh'] = { path: assetPath };
-      } else if (node.asset.startsWith('project://primitives/')) {
-        components['geometry'] = { type: node.asset.replace('project://primitives/', '') };
       }
     }
 
@@ -117,7 +116,7 @@ export function deserializeFromPrefab(
     } else if (comps['geometry']) {
       const geo = comps['geometry'] as { type: string };
       nodeType = 'mesh';
-      asset = `project://primitives/${geo.type}`;
+      asset = `primitives://${geo.type}`;
     } else if (comps['prefab']) {
       const pref = comps['prefab'] as { asset?: string };
       nodeType = 'prefab';

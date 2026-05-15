@@ -136,7 +136,7 @@ describe('ProjectManager.createScene', () => {
     const firstWritable = await writeCalls;
     expect(firstWritable.write).toHaveBeenCalledWith(
       JSON.stringify({
-        version: 3,
+        version: 4,
         upAxis: 'Y',
         env: { hdri: null, intensity: 1, rotation: 0 },
         nodes: [],

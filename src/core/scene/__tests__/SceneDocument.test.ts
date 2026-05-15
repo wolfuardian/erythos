@@ -172,7 +172,7 @@ describe('SceneDocument', () => {
       doc.addNode(makeNode({ id: asNodeUUID('b'), name: 'Beta', parent: asNodeUUID('a') }));
 
       const file = doc.serialize();
-      expect(file.version).toBe(3);
+      expect(file.version).toBe(4);
       expect(file.upAxis).toBe('Y');
       expect(file.nodes).toHaveLength(2);
 

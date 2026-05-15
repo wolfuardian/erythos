@@ -126,7 +126,7 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 
 ## URI Scheme
 
-`AssetUrl` 分五個 scheme,語意嚴格區分:
+`AssetUrl` 分六個 scheme,語意嚴格區分:
 
 | Scheme | 內容 | 範例 | 可變性 |
 |---|---|---|---|
@@ -135,6 +135,7 @@ type AssetUrl = string;         // 見 URI Scheme 章節
 | `prefabs://` | 場景片段(`.erythos` 引用 `.erythos`) | `prefabs://tree-pine` | 可變(原 prefab 更新時引用方跟著新) |
 | `materials://` | 共用 PBR material | `materials://gold` | 可變 |
 | `blob://` | 本機 IndexedDB 暫存(尚未持久化的 anonymous user 資產) | `blob://abc123` | 不可變(in-memory snapshot) |
+| `primitives://` | 內建幾何體(box / sphere / plane / cylinder),無對應檔案 | `primitives://box` | 不可變(scheme 本身即幾何定義,無外部資源) |
 
 **`assets://` vs `project://`**:`assets://` 是 cloud-backed 不可變(hash-pinned),`project://` 是 project file system 內可變引用。寫入時偏好 `assets://`(跨裝置 / 跨帳號可重現);`project://` 留給尚未上傳或無雲端帳號的本機專案。Asset sync Phase B 上線後 client 才開始產 `assets://`,在那之前所有引用都是 `project://`。詳見 `docs/asset-sync-protocol.md` § 跟 local project files 共存。
 
@@ -291,6 +292,26 @@ Migration 行為:
 
 實作於 `src/core/scene/io/migrations/v2_to_v3.ts` + fixture `fixtures/v2_sample.erythos` → `v3_sample.erythos`。
 
+### v3 → v4(已實作,primitives:// scheme 專用化)
+
+對應 issue #1027:`project://primitives/<type>` 是誤用 `project://` scheme 的合成 URL — 內建幾何體(box / sphere / plane / cylinder)沒有對應的 project 檔案,這讓 `Editor.ts` 與 `uploadSceneBinaries.ts` 需要 string prefix guard(`startsWith('project://primitives/')`)才能跳過載入/上傳。v4 改以專屬 `primitives://` scheme 表達,呼叫端只要 `parseAssetUrl(url).scheme === 'primitives'` 即可 dispatch,不需要字串比對前綴。
+
+Migration 行為:
+
+- `node.asset` 符合 `project://primitives/<type>` → rewrite 為 `primitives://<type>`
+- 所有其他 scheme(包含 `project://models/...`、`assets://`、`blob://` 等)原樣通過
+- `env.hdri` 不可能是 primitives URL,不做 rewrite
+
+```typescript
+type ErythosSceneV4 = {
+  version: 4;
+  upAxis: 'Y';
+  env: SceneEnv;
+  nodes: SceneNode[];   // node.asset 使用 primitives:// 代替舊 project://primitives/
+};
+```
+
+實作於 `src/core/scene/io/migrations/v3_to_v4.ts`。無 fixture 檔(migration 邏輯單純,以 unit test 覆蓋四種 case 代替 fixture)。
 
 ## 砍掉的東西(對照 Three.js `toJSON()`)
 

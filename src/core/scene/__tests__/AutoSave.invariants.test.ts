@@ -12,16 +12,16 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAutoSave } from '../AutoSave';
-import type { ErythosSceneV3 } from '../io/types';
+import type { ErythosSceneV4 } from '../io/types';
 import { asNodeUUID, asAssetPath } from '../../../utils/branded';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeEditor(overrideSerialize?: () => ErythosSceneV3) {
+function makeEditor(overrideSerialize?: () => ErythosSceneV4) {
   const listeners: Record<string, (() => void)[]> = {};
 
-  const defaultSerialize = (): ErythosSceneV3 => ({
-    version: 3,
+  const defaultSerialize = (): ErythosSceneV4 => ({
+    version: 4,
     upAxis: 'Y',
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [],
@@ -59,9 +59,9 @@ function makeEditor(overrideSerialize?: () => ErythosSceneV3) {
 }
 
 // A valid scene with a single mesh node
-function makeValidScene(): ErythosSceneV3 {
+function makeValidScene(): ErythosSceneV4 {
   return {
-    version: 3,
+    version: 4,
     upAxis: 'Y',
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [
@@ -83,9 +83,9 @@ function makeValidScene(): ErythosSceneV3 {
 
 // An invalid scene: mesh node missing required asset field.
 // We cast to bypass TS to simulate a corrupted in-memory state.
-function makeInvalidScene(): ErythosSceneV3 {
+function makeInvalidScene(): ErythosSceneV4 {
   return {
-    version: 3,
+    version: 4,
     upAxis: 'Y',
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [

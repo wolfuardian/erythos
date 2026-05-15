@@ -416,7 +416,7 @@ describe('BakeCommand', () => {
       const baked = doc.getAllNodes()[0];
       expect(baked).toBeDefined();
       expect(baked.nodeType).toBe('mesh');
-      expect(baked.asset).toBe('project://primitives/box');
+      expect(baked.asset).toBe('primitives://box');
     });
   });
 });

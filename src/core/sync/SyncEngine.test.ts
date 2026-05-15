@@ -312,9 +312,9 @@ describe("LocalSyncEngine v2-to-v3 migration", () => {
     // Now open via LocalSyncEngine at DB v3 -- should trigger v3 body migration
     const engine = new LocalSyncEngine(dbName);
     const { body } = await engine.fetch("v2-scene-id");
-    // serialize() must produce v3 output now (deserialized via v2→v3 migration chain)
+    // serialize() must produce v4 output now (deserialized via v2→v3→v4 migration chain)
     const serialized = body.serialize();
-    expect(serialized.version).toBe(3);
+    expect(serialized.version).toBe(4);
     expect(serialized.upAxis).toBe("Y");
   });
 });
