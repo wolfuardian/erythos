@@ -26,7 +26,7 @@ export const HeaderToolBar: Component<{
       case 'cube': {
         const node = editor.sceneDocument.createNode('Cube');
         node.nodeType = 'mesh';
-        node.asset = 'project://primitives/box';
+        node.asset = 'primitives://box';
         node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
@@ -34,7 +34,7 @@ export const HeaderToolBar: Component<{
       case 'sphere': {
         const node = editor.sceneDocument.createNode('Sphere');
         node.nodeType = 'mesh';
-        node.asset = 'project://primitives/sphere';
+        node.asset = 'primitives://sphere';
         node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
@@ -42,7 +42,7 @@ export const HeaderToolBar: Component<{
       case 'plane': {
         const node = editor.sceneDocument.createNode('Plane');
         node.nodeType = 'mesh';
-        node.asset = 'project://primitives/plane';
+        node.asset = 'primitives://plane';
         node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;
@@ -50,7 +50,7 @@ export const HeaderToolBar: Component<{
       case 'cylinder': {
         const node = editor.sceneDocument.createNode('Cylinder');
         node.nodeType = 'mesh';
-        node.asset = 'project://primitives/cylinder';
+        node.asset = 'primitives://cylinder';
         node.mat = { color: 0x808080 };
         editor.execute(new AddNodeCommand(editor, node));
         break;

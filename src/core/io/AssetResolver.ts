@@ -1,15 +1,20 @@
 /**
  * AssetResolver — unified URI scheme resolver for Erythos asset references.
  *
- * Resolves the five sanctioned AssetUrl schemes to runtime representations:
- *   project://  → ProjectManager file at the given path → blob URL
- *                 (local project file; formerly assets:// in schema v1)
- *   prefabs://  → ProjectManager file at prefabs/<name>.prefab → blob URL
- *   blob://     → IndexedDB / direct blob URL pass-through
- *   assets://   → Cloud content-addressed asset (Phase B PR2, refs #843).
- *                 Downloads via AssetSyncClient; blob URLs are cached by hash
- *                 with LRU eviction (cap = 100) and URL.revokeObjectURL on eviction.
- *   materials://→ reserved (佔位); throws clearly if called (not yet implemented)
+ * Resolves the six sanctioned AssetUrl schemes to runtime representations:
+ *   project://    → ProjectManager file at the given path → blob URL
+ *                   (local project file; formerly assets:// in schema v1)
+ *   prefabs://    → ProjectManager file at prefabs/<name>.prefab → blob URL
+ *   blob://       → IndexedDB / direct blob URL pass-through
+ *   assets://     → Cloud content-addressed asset (Phase B PR2, refs #843).
+ *                   Downloads via AssetSyncClient; blob URLs are cached by hash
+ *                   with LRU eviction (cap = 100) and URL.revokeObjectURL on eviction.
+ *   materials://  → reserved (佔位); throws clearly if called (not yet implemented)
+ *   primitives:// → Built-in geometry (box / sphere / plane / cylinder).
+ *                   These have no backing file — geometry is created inline by SceneSync.
+ *                   resolve() throws a descriptive error; callers should check the scheme
+ *                   via parseAssetUrl() and handle primitives before calling resolve().
+ *                   Introduced in schema v4 (refs #1027), migrating from project://primitives/.
  *
  * See docs/erythos-format.md § URI Scheme
  */
@@ -22,7 +27,7 @@ import type { AssetSyncClient } from '../sync/asset/AssetSyncClient';
 // Default LRU cap for the assets:// blob URL cache
 const DEFAULT_BLOB_CACHE_CAP = 100;
 
-export type AssetScheme = 'project' | 'assets' | 'prefabs' | 'blob' | 'materials';
+export type AssetScheme = 'project' | 'assets' | 'prefabs' | 'blob' | 'materials' | 'primitives';
 
 export interface ResolvedAsset {
   scheme: AssetScheme;
@@ -44,7 +49,7 @@ export function parseAssetUrl(url: string): { scheme: AssetScheme; rest: string 
   if (!match) return null;
   const scheme = match[1] as AssetScheme;
   const rest = match[2] ?? '';
-  if (!['project', 'assets', 'prefabs', 'blob', 'materials'].includes(scheme)) return null;
+  if (!['project', 'assets', 'prefabs', 'blob', 'materials', 'primitives'].includes(scheme)) return null;
   return { scheme, rest };
 }
 
@@ -151,6 +156,16 @@ export class AssetResolver {
           `AssetResolver: materials:// scheme is reserved and not yet implemented. ` +
           `URL: "${assetUrl}". To add shared materials support, implement the ` +
           `MaterialsRegistry and add a case here.`
+        );
+      }
+
+      case 'primitives': {
+        // primitives:// built-in geometry has no backing file — SceneSync creates it inline.
+        // Callers should check parseAssetUrl(url)?.scheme === 'primitives' before calling resolve().
+        throw new Error(
+          `AssetResolver: primitives:// scheme has no backing file — geometry is created ` +
+          `inline by SceneSync. URL: "${assetUrl}". ` +
+          `Guard with parseAssetUrl(url)?.scheme === 'primitives' before calling resolve() (refs #1027).`
         );
       }
     }

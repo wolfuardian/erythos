@@ -14,11 +14,15 @@ import { asAssetPath, type BlobURL, type NodeUUID } from '../../utils/branded';
 // ── Geometry helpers ──────────────────────────────────────────────────────────
 
 /**
- * Parse a primitive geometry type from a project://primitives/ URL.
+ * Parse a primitive geometry type from a primitives:// URL.
  * Returns the geometry type string or null if not a primitives URL.
+ *
+ * Schema v4+: primitives://<type> (e.g. "primitives://box").
+ * Legacy v3 files using project://primitives/<type> are normalized to primitives://
+ * by the v3→v4 migration before reaching SceneSync.
  */
 function parsePrimitiveType(assetUrl: string): string | null {
-  const prefix = 'project://primitives/';
+  const prefix = 'primitives://';
   if (!assetUrl.startsWith(prefix)) return null;
   return assetUrl.slice(prefix.length);
 }
@@ -73,7 +77,7 @@ function buildLight(light: LightProps): DirectionalLight | AmbientLight | PointL
  *   - Dispatches hydration based on SceneNode.nodeType (not components bag)
  *   - Prefab nodes: runtime-only expansion into Three.js Object3D subtrees.
  *     Prefab children are NOT added to SceneDocument — only to the Three.js scene.
- *   - mesh with project://primitives/ → inline geometry
+ *   - mesh with primitives:// → inline geometry (v4+; v3 files migrated on load)
  *   - mesh with project://* or blob:// → ResourceCache lookup
  */
 export class SceneSync {
@@ -355,7 +359,7 @@ export class SceneSync {
   private hydrateMesh(obj: Object3D, node: SceneNode): void {
     if (!node.asset) return;
 
-    // Check for primitive geometry URL: project://primitives/<type>
+    // Check for primitive geometry URL: primitives://<type> (refs #1027)
     const primitiveType = parsePrimitiveType(node.asset);
     if (primitiveType !== null) {
       const geo = createPrimitiveGeometry(primitiveType);

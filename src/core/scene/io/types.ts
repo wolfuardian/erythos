@@ -16,8 +16,16 @@ import type { NodeUUID } from '../../../utils/branded';
 export type NodeId = NodeUUID;
 
 /**
- * Asset URL — five sanctioned schemes: project://, assets://, prefabs://, materials://, blob://.
+ * Asset URL — six sanctioned schemes: project://, assets://, prefabs://, materials://, blob://, primitives://.
  * Plain string alias (not branded — resolver handles scheme dispatch).
+ *
+ * Scheme semantics:
+ *   project://    — local project file (e.g. project://models/chair.glb)
+ *   assets://     — cloud content-addressed (e.g. assets://<sha256>/chair.glb)
+ *   prefabs://    — prefab asset reference (e.g. prefabs://tree-pine)
+ *   materials://  — shared PBR material (reserved; not yet implemented)
+ *   blob://       — IndexedDB ephemeral blob
+ *   primitives:// — built-in geometry, no backing file (e.g. primitives://box) (refs #1027)
  */
 export type AssetUrl = string;
 
@@ -144,7 +152,25 @@ export type ErythosSceneV3 = {
 };
 
 /**
- * Build a valid empty v3 scene blob.
+ * Schema v4 — introduces `primitives://` scheme for built-in geometry (refs #1027).
+ *
+ * `project://primitives/<type>` (synthetic, v3 and earlier) is rewritten to
+ * `primitives://<type>` on load via the v3→v4 migration. The dedicated scheme
+ * makes the intent explicit and eliminates fragile path-prefix guards in
+ * Editor.ts and uploadSceneBinaries.ts.
+ *
+ * Shape is identical to v3 except version literal and the `primitives://` scheme
+ * now appearing in node.asset for built-in primitive meshes.
+ */
+export type ErythosSceneV4 = {
+  version: 4;
+  upAxis: 'Y';
+  env: SceneEnv;
+  nodes: SceneNode[];
+};
+
+/**
+ * Build a valid empty v4 scene blob.
  *
  * Single source of truth for "what shape does a freshly-created scene have"
  * — callers that POST a new scene (local file write, cloud POST /api/scenes)
@@ -153,9 +179,9 @@ export type ErythosSceneV3 = {
  * Bumping the current schema version means updating this one factory; all
  * creation sites stay correct.
  */
-export function createEmptyScene(): ErythosSceneV3 {
+export function createEmptyScene(): ErythosSceneV4 {
   return {
-    version: 3,
+    version: 4,
     upAxis: 'Y',
     env: { hdri: null, intensity: 1, rotation: 0 },
     nodes: [],

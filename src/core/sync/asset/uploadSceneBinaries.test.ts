@@ -225,19 +225,20 @@ describe('uploadSceneBinaries', () => {
     expect(result).not.toBe(scene);
   });
 
-  it('skips project://primitives/* — built-in primitives have no backing file (T3 regression)', async () => {
-    // `project://primitives/box` is a synthetic URL; no readFile must happen.
+  it('skips primitives:// — built-in primitives have no backing file (T3 regression)', async () => {
+    // `primitives://box` is a built-in geometry URL with no backing file (refs #1027).
+    // The v3→v4 migration rewrites `project://primitives/box` → `primitives://box`.
     // Reproduces T3: cloud autosave used to throw "No project open" because
     // walker called LocalProjectManager.readFile on the primitive path.
     const pm = makeMockPm({}); // empty — any readFile would throw "not found"
     const client = new MockAssetServer();
 
-    const scene = makeSceneWithNode('project://primitives/box');
+    const scene = makeSceneWithNode('primitives://box');
     const result = await uploadSceneBinaries(scene, pm, client);
 
     // URL must be passed through unchanged
     const nodes = result.getAllNodes();
-    expect(nodes[0].asset).toBe('project://primitives/box');
+    expect(nodes[0].asset).toBe('primitives://box');
 
     // No IO whatsoever
     expect(pm.readFile).not.toHaveBeenCalled();

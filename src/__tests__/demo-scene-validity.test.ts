@@ -37,13 +37,13 @@ describe('shared/onboarding/demo-scene.json validity', () => {
     expect(names).toEqual(['Cube', 'Sun']);
   });
 
-  it('Cube node is a mesh with project://primitives/box asset', () => {
+  it('Cube node is a mesh with primitives://box asset', () => {
     const doc = new SceneDocument();
     doc.deserialize(demoScene);
     const cube = doc.getAllNodes().find(n => n.name === 'Cube');
     expect(cube).toBeDefined();
     expect(cube!.nodeType).toBe('mesh');
-    expect(cube!.asset).toBe('project://primitives/box');
+    expect(cube!.asset).toBe('primitives://box');
   });
 
   it('Sun node is a directional light', () => {

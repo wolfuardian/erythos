@@ -28,8 +28,11 @@ import { z } from 'zod';
 /**
  * Maximum supported schema version. Files with version > CURRENT_VERSION are
  * rejected with UnsupportedVersionError (spec line 227-230).
+ *
+ * v4 (refs #1027): introduces primitives:// scheme for built-in geometry,
+ * migrating from the synthetic project://primitives/<type> pattern.
  */
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 4;
 
 // ── Zod schema for ErythosSceneV1 ───────────────────────────────────────────
 
@@ -107,13 +110,26 @@ export const ErythosSceneV2Schema = z.object({
 /**
  * Zod schema for ErythosSceneV3.
  * Adds the required `upAxis: 'Y'` invariant field.
- * Used by validateScene() after the full migration chain v0→v1→v2→v3 runs.
+ * Kept for reference / legacy fixture tests; runtime validation uses V4.
  *
  * upAxis must be the literal string 'Y'. Any other value (including missing)
  * is a schema violation — treated as corrupt data, not a migration target.
  */
 export const ErythosSceneV3Schema = z.object({
   version: z.literal(3),
+  upAxis: z.literal('Y'),
+  env: SceneEnvSchema,
+  nodes: z.array(SceneNodeSchema),
+});
+
+/**
+ * Zod schema for ErythosSceneV4.
+ * Introduces primitives:// scheme for built-in geometry (refs #1027).
+ * Shape is identical to v3 except version literal.
+ * Used by validateScene() after the full migration chain v0→v1→v2→v3→v4 runs.
+ */
+export const ErythosSceneV4Schema = z.object({
+  version: z.literal(4),
   upAxis: z.literal('Y'),
   env: SceneEnvSchema,
   nodes: z.array(SceneNodeSchema),
@@ -194,7 +210,7 @@ export function checkRawVersion(raw: unknown): void {
 }
 
 /**
- * Pre-migration guard for the upAxis invariant on raw v3 inputs.
+ * Pre-migration guard for the upAxis invariant on raw v3/v4 inputs.
  *
  * The migration chain (v2_to_v3) hardcodes `upAxis: 'Y'` for backfill, which
  * means a corrupt v3 input with `upAxis: 'Z'` would otherwise be silently
@@ -204,16 +220,17 @@ export function checkRawVersion(raw: unknown): void {
  *   docs/erythos-format.md Invariant #11 — upAxis must be 'Y'; deserialize
  *   throws SceneInvariantError when reading any other value.
  *
- * Only applies to v3 inputs. v0/v1/v2 schemas have no `upAxis` field; the
- * migration chain ignores any stray field on those versions.
+ * Applies to v3 and v4 inputs (both have the upAxis field). v0/v1/v2 schemas
+ * have no `upAxis` field; the migration chain ignores any stray field on those versions.
  *
- * @throws SceneInvariantError if version === 3 and upAxis is present and not 'Y'.
+ * @throws SceneInvariantError if version >= 3 and upAxis is present and not 'Y'.
  */
 export function checkRawUpAxis(raw: unknown): void {
   if (typeof raw !== 'object' || raw === null) return; // checkRawVersion handles
   const input = raw as Record<string, unknown>;
+  const version = input['version'];
   if (
-    input['version'] === 3 &&
+    (version === 3 || version === 4) &&
     input['upAxis'] !== undefined &&
     input['upAxis'] !== 'Y'
   ) {
@@ -229,7 +246,7 @@ export function checkRawUpAxis(raw: unknown): void {
 // ── Core invariant validator ──────────────────────────────────────────────────
 
 /**
- * Validates an already-migrated ErythosSceneV3 against the in-scope invariants.
+ * Validates an already-migrated ErythosSceneV4 against the in-scope invariants.
  *
  * Pure function — accumulates violations, never throws.
  * Callers should throw SceneInvariantError when violations.length > 0.
@@ -238,8 +255,8 @@ export function checkRawUpAxis(raw: unknown): void {
  *   - DAG cycle detection (spec invariant #6)
  *   - Broken AssetUrl resolution (spec 機械驗收清單: 404 → warning, not fail)
  *
- * @param scene  A migrated ErythosSceneV3 (version already checked by checkRawVersion,
- *               full migration chain v0→v1→v2→v3 already applied).
+ * @param scene  A migrated ErythosSceneV4 (version already checked by checkRawVersion,
+ *               full migration chain v0→v1→v2→v3→v4 already applied).
  * @param serializedJson  The JSON string of the scene (used for file-size check).
  *                        Pass undefined to skip the size check (e.g. in unit tests).
  */
@@ -282,7 +299,7 @@ export function validateScene(
   }
 
   // ── Invariant 2: Zod schema validate ─────────────────────────────────────
-  const zodResult = ErythosSceneV3Schema.safeParse(scene);
+  const zodResult = ErythosSceneV4Schema.safeParse(scene);
   if (!zodResult.success) {
     for (const issue of zodResult.error.issues) {
       violations.push({
@@ -304,19 +321,19 @@ export function validateScene(
     return violations;
   }
 
-  const v3 = zodResult.data;
+  const v4 = zodResult.data;
 
   // Build id lookup set for O(1) parent checks.
-  const idSet = new Set<string>(v3.nodes.map(n => n.id));
+  const idSet = new Set<string>(v4.nodes.map(n => n.id));
   // Build set of ids that are parents of some node (for invariant 10).
   const parentIdSet = new Set<string>();
-  for (const n of v3.nodes) {
+  for (const n of v4.nodes) {
     if (n.parent !== null) parentIdSet.add(n.parent);
   }
 
   // ── Invariant 4: node.parent → existing id or null ───────────────────────
-  for (let i = 0; i < v3.nodes.length; i++) {
-    const n = v3.nodes[i];
+  for (let i = 0; i < v4.nodes.length; i++) {
+    const n = v4.nodes[i];
     if (n.parent !== null && !idSet.has(n.parent)) {
       violations.push({
         path: `nodes[${i}].parent`,
@@ -328,8 +345,8 @@ export function validateScene(
   // ── Invariant 5: nodes[].id globally unique ───────────────────────────────
   {
     const seen = new Map<string, number>();
-    for (let i = 0; i < v3.nodes.length; i++) {
-      const id = v3.nodes[i].id;
+    for (let i = 0; i < v4.nodes.length; i++) {
+      const id = v4.nodes[i].id;
       if (seen.has(id)) {
         violations.push({
           path: `nodes[${i}].id`,
@@ -343,8 +360,8 @@ export function validateScene(
 
   // ── Invariant 7: materialOverride field count ≤ 8 (excl. transparent/wireframe) ──
   const MAT_EXCLUDED = new Set(['transparent', 'wireframe']);
-  for (let i = 0; i < v3.nodes.length; i++) {
-    const mat = v3.nodes[i].mat;
+  for (let i = 0; i < v4.nodes.length; i++) {
+    const mat = v4.nodes[i].mat;
     if (mat === undefined) continue;
     const countableFields = Object.keys(mat).filter(k => !MAT_EXCLUDED.has(k));
     if (countableFields.length > 8) {
@@ -356,8 +373,8 @@ export function validateScene(
   }
 
   // ── Invariant 8: nodeType vs auxiliary fields consistency ─────────────────
-  for (let i = 0; i < v3.nodes.length; i++) {
-    const n = v3.nodes[i];
+  for (let i = 0; i < v4.nodes.length; i++) {
+    const n = v4.nodes[i];
     switch (n.nodeType) {
       case 'mesh':
       case 'prefab':
@@ -444,8 +461,8 @@ export function validateScene(
   }
 
   // ── Invariant 9: userData must be empty {} ────────────────────────────────
-  for (let i = 0; i < v3.nodes.length; i++) {
-    const ud = v3.nodes[i].userData;
+  for (let i = 0; i < v4.nodes.length; i++) {
+    const ud = v4.nodes[i].userData;
     if (ud !== undefined && Object.keys(ud).length > 0) {
       violations.push({
         path: `nodes[${i}].userData`,
@@ -457,8 +474,8 @@ export function validateScene(
   // ── Invariant 10: no prefab subtree expansion ─────────────────────────────
   // Structural proxy: a nodeType:'prefab' node must have no children in nodes[].
   // If any other node has parent === prefabNodeId, a subtree has been expanded.
-  for (let i = 0; i < v3.nodes.length; i++) {
-    const n = v3.nodes[i];
+  for (let i = 0; i < v4.nodes.length; i++) {
+    const n = v4.nodes[i];
     if (n.nodeType === 'prefab' && parentIdSet.has(n.id)) {
       violations.push({
         path: `nodes[${i}]`,

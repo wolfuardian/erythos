@@ -35,6 +35,7 @@ import { SceneDocument } from '../../scene/SceneDocument';
 import type { AssetSyncClient } from './AssetSyncClient';
 import { asAssetPath } from '../../../utils/branded';
 import { sha256 } from './sha256';
+import { parseAssetUrl } from '../../io/AssetResolver';
 
 /** Minimal ProjectManager surface needed by this helper (for testability). */
 export interface ProjectManagerLike {
@@ -123,18 +124,15 @@ export async function uploadSceneBinaries(
 
   // Rewrite node.asset (mesh / prefab nodes).
   //
-  // `project://primitives/*` is a synthetic URL for built-in primitive meshes
-  // (box / sphere / plane) — it has no backing file on disk. Editor.ts:260
-  // already short-circuits these at load time; mirror that here so cloud
-  // saves don't try to readFile them (which fails with "No project open"
-  // when the active project is a CloudProject — refs T3 release blocker).
-  // Long-term: a dedicated `primitives://` scheme would make this explicit
-  // (see follow-up issue).
+  // `primitives://` URLs are built-in geometry with no backing file on disk.
+  // Skip them so cloud saves don't try to readFile them (refs #1027).
+  // Schema v4 migration ensures all legacy `project://primitives/*` are already
+  // rewritten to `primitives://` before reaching this function.
   for (const node of raw.nodes) {
     if (
       typeof node.asset === 'string' &&
       node.asset.startsWith('project://') &&
-      !node.asset.startsWith('project://primitives/')
+      parseAssetUrl(node.asset)?.scheme !== 'primitives'
     ) {
       node.asset = await resolveAndUpload(node.asset, pm, client, uploadCache);
     }

@@ -22,7 +22,7 @@ describe('SetMaterialPropertyCommand', () => {
   function addNodeWithMaterial(name: string, mat: MaterialOverride) {
     const node = editor.sceneDocument.createNode(name);
     node.nodeType = 'mesh';
-    node.asset = 'project://primitives/box';
+    node.asset = 'primitives://box';
     node.mat = mat;
     editor.sceneDocument.addNode(node);
     return editor.sceneDocument.getNode(node.id)!;
@@ -84,7 +84,7 @@ describe('SetMaterialPropertyCommand', () => {
     editor.execute(new SetMaterialPropertyCommand(editor, node.id, 'color', 0x123456, 0xffffff));
     const updated = editor.sceneDocument.getNode(node.id)!;
     expect(updated.nodeType).toBe('mesh');
-    expect(updated.asset).toBe('project://primitives/box');
+    expect(updated.asset).toBe('primitives://box');
     expect(updated.mat?.color).toBe(0x123456);
   });
 

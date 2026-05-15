@@ -197,7 +197,7 @@ function makeCubeNode(idStr = 'cube-1', name = 'Cube'): SceneNode {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
     scale: [1, 1, 1],
-    asset: 'project://primitives/box',
+    asset: 'primitives://box',
     mat: { color: 0x808080 },
     userData: {},
   };
@@ -261,7 +261,7 @@ describe('cloud project lifecycle — integration', () => {
       position: [5, 5, 5],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
-      asset: 'project://primitives/box',
+      asset: 'primitives://box',
       mat: { color: '#808080' },
       userData: {},
     };

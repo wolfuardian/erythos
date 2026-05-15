@@ -71,7 +71,7 @@ export const SceneOpsToolbar: Component<{
   const addMesh = (name: string, type: 'box' | 'sphere' | 'plane' | 'cylinder') => {
     const node = editor.sceneDocument.createNode(name);
     node.nodeType = 'mesh';
-    node.asset = `project://primitives/${type}`;
+    node.asset = `primitives://${type}`;
     node.mat = { color: 0x808080 };
     editor.execute(new AddNodeCommand(editor, node));
   };

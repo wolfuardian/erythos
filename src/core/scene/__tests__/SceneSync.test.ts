@@ -323,11 +323,11 @@ describe('SceneSync', () => {
   // ── geometry + material component ───────────────────────────────────────────
 
   describe('nodeType mesh (primitives)', () => {
-    it('attaches a Mesh child to the entity Object3D', () => {
+    it('attaches a Mesh child to the entity Object3D (primitives:// scheme)', () => {
       doc.addNode(makeNode({
         id: asNodeUUID('geo-node'),
         nodeType: 'mesh',
-        asset: 'project://primitives/box',
+        asset: 'primitives://box',
         mat: { color: 0xff0000 },
       }));
       const obj = sync.getObject3D(asNodeUUID('geo-node'))!;
@@ -340,7 +340,7 @@ describe('SceneSync', () => {
         doc.addNode(makeNode({
           id: asNodeUUID(`geo-${type}`),
           nodeType: 'mesh',
-          asset: 'project://primitives/' + type,
+          asset: 'primitives://' + type,
           mat: { color: 0xffffff },
         }));
         const obj = sync.getObject3D(asNodeUUID(`geo-${type}`))!;
