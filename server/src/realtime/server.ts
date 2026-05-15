@@ -21,15 +21,39 @@
  * Scene visibility:
  *   onAuthenticate verifies the authenticated user can access the scene
  *   (owner OR visibility = 'public').  Anonymous / expired sessions → throw.
+ *
+ * Stale session disconnect (L3-A4):
+ *   onAuthenticate handles the initial "no token / invalid token → reject" case.
+ *   For already-connected clients whose session expires mid-session, we use the
+ *   `connected` hook to set a per-connection interval that re-validates the
+ *   session token every STALE_SESSION_CHECK_INTERVAL_MS (60s default).
+ *   If the session is no longer valid, the connection is closed immediately.
+ *   The interval is cleaned up via `onDisconnect`.
+ *
+ *   Spec: docs/realtime-co-edit-spec.md § L3-A scope
+ *   Issue: #1067 (L3-A4)
  */
 
 import { Server } from '@hocuspocus/server';
+import type { connectedPayload, onDisconnectPayload } from '@hocuspocus/server';
 import { Database } from '@hocuspocus/extension-database';
 import { eq } from 'drizzle-orm';
 import { db, pool } from '../db.js';
 import { yjsDocuments, scenes } from '../db/schema.js';
 import { resolveSessionByToken, SESSION_COOKIE } from '../auth.js';
 import { logger } from '../middleware/logger.js';
+
+// ---------------------------------------------------------------------------
+// Stale session disconnect constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Interval (ms) between session re-validation checks for connected clients.
+ * Spec does not specify a value; 60s is a conservative default that catches
+ * expired sessions within a minute without hammering the DB.
+ * Refs: docs/realtime-co-edit-spec.md § L3-A scope; Issue #1067 (L3-A4)
+ */
+const STALE_SESSION_CHECK_INTERVAL_MS = 60_000;
 
 // ---------------------------------------------------------------------------
 // Cookie parsing helper
@@ -117,8 +141,54 @@ export function createRealtimeServer() {
 
       logger.info({ documentName, userId: user.id }, 'realtime: onAuthenticate — OK');
 
-      // Return user context so downstream hooks can identify the connection
-      return { userId: user.id, githubLogin: user.github_login };
+      // Return user context so downstream hooks (connected, onDisconnect)
+      // can identify the connection and re-validate the session.
+      // rawToken is stored for periodic stale-session check (L3-A4).
+      return { userId: user.id, githubLogin: user.github_login, rawToken };
+    },
+
+    // -------------------------------------------------------------------
+    // Stale session disconnect (L3-A4)
+    // -------------------------------------------------------------------
+    // `connected` fires after the full auth handshake succeeds.
+    // We set a per-connection interval to re-validate the session token.
+    // If the token is no longer valid (session expired or revoked), we
+    // close the connection immediately.
+    //
+    // The interval ID is stored in the connection context so `onDisconnect`
+    // can clear it without leaking timers.
+    //
+    // Context shape from onAuthenticate:
+    //   { userId, githubLogin, rawToken, _staleCheckInterval? }
+    async connected({ context, connection, documentName }: connectedPayload) {
+      const ctx = context as { userId: string; rawToken: string; _staleCheckInterval?: ReturnType<typeof setInterval> };
+
+      const intervalId = setInterval(async () => {
+        const user = await resolveSessionByToken(ctx.rawToken).catch(() => null);
+        if (!user) {
+          logger.warn(
+            { documentName, userId: ctx.userId },
+            'realtime: stale session detected — closing connection',
+          );
+          connection.close();
+        }
+      }, STALE_SESSION_CHECK_INTERVAL_MS);
+
+      // Store interval ID in context for cleanup on disconnect
+      ctx._staleCheckInterval = intervalId;
+    },
+
+    // -------------------------------------------------------------------
+    // Stale session cleanup (L3-A4)
+    // -------------------------------------------------------------------
+    // Clear the per-connection stale-check interval when the client
+    // disconnects (normal or abnormal).  Prevents timer leaks.
+    async onDisconnect({ context }: onDisconnectPayload) {
+      const ctx = context as { _staleCheckInterval?: ReturnType<typeof setInterval> };
+      if (ctx._staleCheckInterval !== undefined) {
+        clearInterval(ctx._staleCheckInterval);
+        ctx._staleCheckInterval = undefined;
+      }
     },
 
     // -------------------------------------------------------------------

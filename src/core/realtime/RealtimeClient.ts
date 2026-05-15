@@ -7,6 +7,8 @@
  *   2. 30 Hz client-side cursor throttle (33 ms tick)
  *   3. On-change selection broadcast (no throttle)
  *   4. SolidJS signals for connection status — consumed by L3-A3 (viewport UI)
+ *   5. Awareness rebroadcast on reconnect (L3-A4)
+ *   6. Payload size budget warning (L3-A4)
  *
  * Y.Doc is empty in L3-A (awareness-transport only).  CRDT scene writes
  * are deferred to L3-B.
@@ -17,8 +19,23 @@
  * Caddy-proxied subpath).  The server's onAuthenticate hook falls back to
  * parsing the Cookie header when `token` is empty.
  *
+ * Reconnect rebroadcast (L3-A4):
+ *   HocusPocus provider already calls startSync() → sends awareness on
+ *   reconnect if localState !== null.  We additionally subscribe to
+ *   onAuthenticated (fires after server auth handshake completes) to guarantee
+ *   that our full localState is pushed even on reconnect edge cases where the
+ *   provider's internal rebroadcast might not include our latest state.
+ *
+ * Payload budget (L3-A4):
+ *   Spec (§ L3-A > Awareness payload 預算) defines throttle rates but no
+ *   explicit byte limit.  We use 8 KB (8192 bytes) as the warn threshold:
+ *   a normal awareness payload (user + cursor + ~10 nodeIds) is ~200–500 bytes;
+ *   8 KB signals clearly runaway selection state (1000+ nodeIds).  This is far
+ *   below typical WebSocket maxPayload defaults (1–16 MB).  Adjust via
+ *   AWARENESS_PAYLOAD_WARN_BYTES if needed.
+ *
  * Spec ref: docs/realtime-co-edit-spec.md § L3-A scope > Client integration
- * Issue: #1065 (parent #1068)
+ * Issue: #1067 (L3-A4 polish)
  */
 
 import * as Y from 'yjs';
@@ -28,6 +45,7 @@ import type { User } from '../auth/AuthClient';
 import { realtimeUrl } from './realtimeUrl';
 import { throttle } from '../../utils/throttle';
 import type { AwarenessState, RemoteAwarenessEntry } from './awareness';
+import { warnIfAwarenessPayloadTooLarge } from './awareness';
 
 // ─── Color palette ───────────────────────────────────────────────────────────
 
@@ -115,6 +133,7 @@ export class RealtimeClient {
           ...this.localState,
           cursor: { x, y, viewport },
         };
+        warnIfAwarenessPayloadTooLarge(this.localState);
         this.provider.awareness?.setLocalState(this.localState);
       },
       33,
@@ -135,13 +154,23 @@ export class RealtimeClient {
       onStatus: ({ status }: { status: WebSocketStatus }) => {
         if (status === WebSocketStatus.Connected) {
           this._setStatus('connected');
-          // Publish local awareness state immediately after connect
-          this.provider.awareness?.setLocalState(this.localState);
         } else if (status === WebSocketStatus.Connecting) {
           this._setStatus('connecting');
         } else {
           this._setStatus('disconnected');
         }
+      },
+      // L3-A4 reconnect rebroadcast:
+      // onAuthenticated fires after the server completes the auth handshake,
+      // which happens on every connect including reconnects.  At this point
+      // the WebSocket is confirmed live and authenticated, so we push the full
+      // localState to guarantee remote peers see us after any reconnect.
+      //
+      // HocusPocus provider's own startSync() also broadcasts awareness on
+      // reconnect (if localState !== null), but onAuthenticated is the safer
+      // hook because it fires strictly after auth — not just WS open.
+      onAuthenticated: () => {
+        this.provider.awareness?.setLocalState(this.localState);
       },
       onDisconnect: () => {
         this._setStatus('disconnected');
@@ -202,6 +231,7 @@ export class RealtimeClient {
       ...this.localState,
       selection: { nodeIds },
     };
+    warnIfAwarenessPayloadTooLarge(this.localState);
     this.provider.awareness?.setLocalState(this.localState);
   }
 
@@ -219,6 +249,7 @@ export class RealtimeClient {
         color: colorForId(user.id),
       },
     };
+    warnIfAwarenessPayloadTooLarge(this.localState);
     this.provider.awareness?.setLocalState(this.localState);
   }
 

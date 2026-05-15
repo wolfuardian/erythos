@@ -5,6 +5,87 @@ All notable changes to Erythos will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-05-15
+
+Real-time presence (L3-A): multi-user cursor / selection visualization,
+online avatar bar, and HocusPocus WebSocket infrastructure.  Scene data
+writes remain on the existing HTTP sync path; Y.Doc is presence-only.
+
+### Added
+
+#### Real-time multi-cursor & selection (L3-A1 / L3-A2 / L3-A3)
+
+- **Multi-cursor visualization** — remote editors appear in the viewport
+  with colored cursors, name tags, and user avatars. Color is deterministic
+  (hash of user ID) so the same user always shows the same color.
+- **Selection outline** — remote editors' selected scene nodes are highlighted
+  with colored outlines in both the viewport and the scene-tree panel.
+- **Online users avatar bar** — the toolbar shows live avatars of everyone
+  currently connected to the scene. Presence updates via HocusPocus awareness
+  (30 Hz cursor, on-change selection).
+- `RealtimeClient` — new module (`src/core/realtime/`) wrapping
+  `@hocuspocus/provider` with SolidJS reactive signals for connection status
+  and remote awareness states.
+- HocusPocus WebSocket server (`server/src/realtime/server.ts`) — session
+  cookie auth, scene access check (owner OR public), Y.Doc persistence via
+  `@hocuspocus/extension-database` + Postgres.
+  (PRs #1064, #1065, #1066)
+
+#### Reconnect awareness rebroadcast (L3-A4)
+
+- On WebSocket reconnect, local awareness state (cursor + selection + user)
+  is automatically re-published after the server auth handshake completes.
+  Remote peers now see you again immediately after any network interruption,
+  rather than waiting for your next cursor move or selection change.
+  Uses `onAuthenticated` callback (fires post-auth, not just WS open) for
+  reliability.
+  (PR #1067)
+
+#### Awareness payload budget warning (L3-A4)
+
+- `warnIfAwarenessPayloadTooLarge()` — exported utility (`awareness.ts`)
+  that emits `console.warn` when an awareness payload exceeds 8 KB.
+  Fired before every `awareness.setLocalState()` in `RealtimeClient`.
+  Does not block the broadcast; purely observability for runaway selection
+  state (e.g. 1000+ nodes selected simultaneously).
+  Threshold: 8192 bytes (normal payload ~200–500 bytes; 8 KB = clearly
+  abnormal). Spec (§ L3-A > Awareness payload 預算) defines throttle rates
+  but no explicit byte limit; 8 KB chosen conservatively.
+  (PR #1067)
+
+#### Server stale session disconnect (L3-A4)
+
+- Already-connected clients whose session expires mid-session are now
+  forcibly disconnected.  A per-connection `setInterval` (60-second default)
+  re-validates the session token via `resolveSessionByToken`; on failure the
+  connection is closed immediately.  The interval is cleared on disconnect
+  to prevent timer leaks.
+  (PR #1067)
+
+### Known limitations
+
+#### Yjs tree-move caveat (deferred to v0.6.0)
+
+> **IMPORTANT for v0.6.0 multi-user editing:**
+> Yjs represents scene nodes as nested `Y.Map` entries and has **no native
+> move operation**.  Reparenting a SceneNode (drag-and-drop in the scene
+> tree) is internally a delete-then-insert.  If two users reparent the same
+> subtree simultaneously, or if one user edits a property of a subtree while
+> another user moves it, a **lost update** is possible.
+>
+> **v0.5.0 is not affected** — Y.Doc is empty (presence-only); scene writes
+> still go through the existing HTTP sync path.
+>
+> **v0.6.0 short-term mitigation (L3-B, OQ-2 拍板 Option A):**
+> Awareness will broadcast `"subtree X moving by user Y"`.  The UX layer
+> will disable subtree property edits for < 1 second, covering ~90% of
+> real-world concurrent-reparent cases.
+>
+> **Mid-term:** fractional indexing via `yjs-orderedtree`.
+> **Long-term:** evaluate Loro 1.5+ once stable (est. 6–12 months).
+
+[0.5.0]: https://github.com/wolfuardian/erythos/releases/tag/v0.5.0
+
 ## [0.4.0] — 2026-05-15
 
 Audit-driven polish + quality release. Establishes ERROR CODE
