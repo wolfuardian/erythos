@@ -1,6 +1,5 @@
 import {
   DirectionalLight,
-  Euler,
   MeshLambertMaterial,
   ACESFilmicToneMapping,
   NoToneMapping,
@@ -107,8 +106,8 @@ export class ShadingManager {
     // --- capture ---
     const prevOverrideMaterial = scene.overrideMaterial;
     const prevEnvironment = scene.environment;
-    const prevEnvIntensity = (scene as any).environmentIntensity as number | undefined;
-    const prevEnvRotation = (scene as any).environmentRotation?.y as number | undefined;
+    const prevEnvIntensity = scene.environmentIntensity;
+    const prevEnvRotationY = scene.environmentRotation.y;
 
     try {
       // --- set ---
@@ -116,12 +115,8 @@ export class ShadingManager {
 
       if (this._mode === 'rendering') {
         scene.environment = this.customEnv?.texture ?? this.defaultEnv?.texture ?? null;
-        (scene as any).environmentIntensity = this._envIntensity;
-        if ((scene as any).environmentRotation) {
-          (scene as any).environmentRotation.y = this._envRotation;
-        } else {
-          (scene as any).environmentRotation = new Euler(0, this._envRotation, 0);
-        }
+        scene.environmentIntensity = this._envIntensity;
+        scene.environmentRotation.y = this._envRotation;
       } else {
         // solid：明確隔離 HDRI
         scene.environment = null;
@@ -133,18 +128,8 @@ export class ShadingManager {
       // --- restore（renderFn throw 時仍執行）---
       scene.overrideMaterial = prevOverrideMaterial;
       scene.environment = prevEnvironment;
-      if (prevEnvIntensity !== undefined) {
-        (scene as any).environmentIntensity = prevEnvIntensity;
-      } else {
-        delete (scene as any).environmentIntensity;
-      }
-      if ((scene as any).environmentRotation) {
-        if (prevEnvRotation !== undefined) {
-          (scene as any).environmentRotation.y = prevEnvRotation;
-        } else {
-          delete (scene as any).environmentRotation;
-        }
-      }
+      scene.environmentIntensity = prevEnvIntensity;
+      scene.environmentRotation.y = prevEnvRotationY;
     }
   }
 
