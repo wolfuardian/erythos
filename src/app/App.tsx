@@ -340,9 +340,14 @@ const App: Component = () => {
    * Wires CloudProjectManager + createCloudAutoSave (no local file write).
    * LocalProject path is 100% unaffected — this function is a parallel entry point.
    *
+   * @param resolvedUser - Optional: pre-resolved user from an awaited auth call (cold-start
+   *   path). Avoids reading the signal before setCurrentUser() has fired. Other callers
+   *   (Welcome, onCreate) omit this and fall back to the signal (safe — they run after the
+   *   auth gate in JSX ensures currentUser() is already resolved).
+   *
    * Spec: docs/cloud-project-spec.md § Client Flow § Open cloud project
    */
-  const openCloudProject = async (sceneId: string) => {
+  const openCloudProject = async (sceneId: string, resolvedUser?: User | null) => {
     await closeProject();
 
     // CloudProjectManager owns the cloud scene lifecycle
@@ -407,8 +412,11 @@ const App: Component = () => {
     };
 
     // L3-A3: Mount RealtimeClient for cloud projects when user is signed in.
-    // currentUser() has been resolved (awaited above) before openCloudProject runs.
-    const user = currentUser();
+    // Use resolvedUser (passed from cold-start path) to avoid a race where
+    // currentUser() is still undefined while authClient.getCurrentUser() is in-flight.
+    // Other callers (Welcome) omit resolvedUser and fall back to the signal — safe
+    // because those paths execute only after the auth gate in JSX is passed.
+    const user = resolvedUser !== undefined ? resolvedUser : currentUser();
     let realtimeClient: RealtimeClient | undefined;
     if (user) {
       try {
@@ -627,7 +635,9 @@ const App: Component = () => {
                 // Guest — don't auto-open cloud project; show Welcome
                 return;
               }
-              await openCloudProject(sceneIdToResume);
+              // Pass awaited user to avoid cold-start race: currentUser() signal may
+              // still be undefined when openCloudProject runs (setCurrentUser fires later).
+              await openCloudProject(sceneIdToResume, user);
             } catch {
               // Failed (offline/unauth) — clear and show Welcome
               try { localStorage.removeItem('activeProject'); } catch { /* ignore */ }

@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createEffect, createSignal, Show, For, type Component } from 'solid-js';
+import { onMount, onCleanup, createEffect, createSignal, Show, Index, type Component } from 'solid-js';
 import styles from './ViewportPanel.module.css';
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
@@ -602,26 +602,28 @@ const ViewportPanel: Component = () => {
             onClose={() => setErrorMessage(null)}
           />
           {/* L3-A3: Remote cursor overlay — pointer-events:none so it never blocks viewport interaction */}
+          {/* <Index> instead of <For>: positional binding prevents unmount+remount on every */}
+          {/* awareness emit (30 Hz). entry() is an Accessor so reads are always reactive.  */}
           <Show when={bridge.remoteStates() !== null}>
             <div class={styles.cursorOverlay} aria-hidden="true">
-              <For each={bridge.remoteStates()!.filter(e => e.state.cursor.viewport === 'main')}>
+              <Index each={bridge.remoteStates()!.filter(e => e.state.cursor.viewport === 'main')}>
                 {(entry) => {
-                  const x = () => `${entry.state.cursor.x * 100}%`;
-                  const y = () => `${entry.state.cursor.y * 100}%`;
-                  const color = entry.state.user.color;
-                  const name = entry.state.user.name;
+                  const x = () => `${entry().state.cursor.x * 100}%`;
+                  const y = () => `${entry().state.cursor.y * 100}%`;
+                  const color = () => entry().state.user.color;
+                  const name = () => entry().state.user.name;
                   return (
                     <div
                       class={styles.remoteCursor}
                       // inline-allowed: per-frame cursor position + dynamic user color injection
-                      style={{ left: x(), top: y(), '--remote-color': color }}
+                      style={{ left: x(), top: y(), '--remote-color': color() }}
                     >
                       <div class={styles.remoteCursorDot} />
-                      <div class={styles.remoteCursorLabel}>{name}</div>
+                      <div class={styles.remoteCursorLabel}>{name()}</div>
                     </div>
                   );
                 }}
-              </For>
+              </Index>
             </div>
           </Show>
         </div>
