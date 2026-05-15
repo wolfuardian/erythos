@@ -88,7 +88,7 @@ server-side schema(Postgres):
 ```sql
 CREATE TABLE users (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  github_id    BIGINT UNIQUE NOT NULL,         -- GitHub OAuth 主識別
+  github_id    BIGINT UNIQUE,                  -- GitHub OAuth 主識別(nullable: magic-link-only 用戶無 github_id)
   email        TEXT UNIQUE NOT NULL,           -- 必須要 email scope
   github_login TEXT NOT NULL,                  -- GitHub username,展示用
   avatar_url   TEXT,                           -- GitHub avatar URL
