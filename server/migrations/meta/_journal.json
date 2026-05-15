@@ -50,6 +50,13 @@
       "when": 1778654669301,
       "tag": "0006_round_iceman",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778841482602,
+      "tag": "0007_pink_gabe_jones",
+      "breakpoints": true
     }
   ]
 }
