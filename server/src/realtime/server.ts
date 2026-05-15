@@ -11,10 +11,12 @@
  *     yjs_documents table.  L3-B will migrate to append-only yjs_updates.
  *
  * Auth:
- *   Client sends the session cookie value as the HocusPocusProvider `token`
- *   option.  onAuthenticate reads `token` (not `requestHeaders`) so the
- *   client does NOT need to forward the raw Cookie header, which avoids CORS
- *   issues in browser-WS contexts.  Throw = reject (close code 4401).
+ *   Primary path (L3-A2 browser client): HocusPocusProvider `token: null`,
+ *   browser auto-attaches the session cookie on the WS upgrade handshake,
+ *   server reads it via parseCookieValue on the Cookie request header.
+ *   Fallback path (wscat / Postman / non-browser): pass the session token
+ *   string directly as `token`.  Throw = reject (close code 4401, auto-emitted
+ *   by HocusPocus — not our choice of convention).
  *
  * Scene visibility:
  *   onAuthenticate verifies the authenticated user can access the scene
@@ -56,6 +58,9 @@ function parseCookieValue(cookieHeader: string | null | undefined, name: string)
 
 export function createRealtimeServer() {
   return new Server({
+    // Suppress HocusPocus default verbose console logging; we use pino via logger.
+    quiet: true,
+
     // -------------------------------------------------------------------
     // onAuthenticate
     // -------------------------------------------------------------------
@@ -63,9 +68,11 @@ export function createRealtimeServer() {
     // admitted into the document.
     //
     // `token` = the value passed as `token` in HocusPocusProvider on the
-    //   client.  Client must send its session cookie value as the token.
-    //   If token is empty, fall back to parsing the Cookie request header
-    //   directly (useful for wscat / Postman testing without JS provider).
+    //   client.  Primary path (L3-A2 browser client): `token: null` so the
+    //   browser auto-attaches the session cookie on the WS upgrade handshake;
+    //   server reads it via parseCookieValue on the Cookie request header.
+    //   Fallback path (wscat / Postman / non-browser): pass the session token
+    //   string directly as `token`.
     // -------------------------------------------------------------------
     async onAuthenticate({ token, requestHeaders, documentName }) {
       // Resolve the plaintext session token to a user
@@ -75,6 +82,7 @@ export function createRealtimeServer() {
 
       if (!rawToken) {
         logger.warn({ documentName }, 'realtime: onAuthenticate — no token');
+        // HocusPocus auto-emits close code 4401 on thrown error here — not our convention.
         throw new Error('Unauthorized: missing session token');
       }
 
