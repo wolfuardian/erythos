@@ -386,19 +386,25 @@ const App: Component = () => {
     e.sceneDocument.events.on('sceneReplaced', onSceneReplaced);
 
     const deleteCloudProject = () => {
-      // Fire-and-forget: DELETE the scene on the server, then close regardless.
-      // closeProject flushes autosave first; if the PUT races the DELETE the server
-      // returns 404 → mapped to 'unauthorized' SaveResult → swallowed by AutoSave.
       void (async () => {
         const apiBase = defaultBaseUrl();
+        let res: Response;
         try {
-          await fetch(`${apiBase}/scenes/${encodeURIComponent(sceneId)}`, {
+          res = await fetch(`${apiBase}/scenes/${encodeURIComponent(sceneId)}`, {
             method: 'DELETE',
             credentials: 'include',
           });
         } catch {
-          // Network error — close anyway; scene may still exist on server.
-          // User can retry deletion from Welcome after reconnecting.
+          // Network error path: close anyway; user can retry from Welcome after reconnecting.
+          await closeProject();
+          return;
+        }
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
+          const human = body?.error ?? `Failed to delete cloud project: ${res.status}`;
+          const message = body?.code ? `${human} (${body.code})` : human;
+          alert(message);
+          return;
         }
         await closeProject();
       })();
