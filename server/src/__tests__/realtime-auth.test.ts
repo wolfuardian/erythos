@@ -54,7 +54,7 @@ vi.mock('../middleware/logger.js', () => ({
 // ---------------------------------------------------------------------------
 
 import { createRealtimeServer } from '../realtime/server.js';
-import type { Server } from '@hocuspocus/server';
+import type { Server, Hocuspocus } from '@hocuspocus/server';
 import type { onAuthenticatePayload } from '@hocuspocus/server';
 
 // ---------------------------------------------------------------------------
@@ -87,9 +87,9 @@ async function callOnAuthenticate(
 ) {
   // HocusPocus Server wraps Hocuspocus internally; the onAuthenticate hook
   // ends up on hocuspocus.configuration (the inner instance).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const inner = (server as any).hocuspocus as any;
-  const hook = inner?.configuration?.onAuthenticate as
+  // Both `hocuspocus` and `configuration` are publicly typed in @hocuspocus/server.
+  const inner: Hocuspocus = server.hocuspocus;
+  const hook = inner.configuration.onAuthenticate as
     | ((data: onAuthenticatePayload) => Promise<unknown>)
     | undefined;
 
