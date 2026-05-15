@@ -2,6 +2,12 @@
  * Drizzle ORM schema — 4 tables as defined in docs/sync-protocol.md § 資料模型
  *
  * users / sessions / scenes / scene_versions
+ *
+ * L3-A addition: yjs_documents — full-snapshot persistence for HocusPocus
+ * extension-database.  Stores the latest Y.Doc encoded state per scene.
+ * Note: L3-B spec describes an append-only yjs_updates table; this table uses
+ * the snapshot model that matches @hocuspocus/extension-database's fetch/store
+ * contract.  Migration to append-only is deferred to L3-B.
  */
 import { sql } from 'drizzle-orm';
 import {
@@ -198,3 +204,24 @@ export const assets = pgTable(
   },
   (t) => [index('assets_uploader_idx').on(t.uploadedBy)],
 );
+
+// ---------------------------------------------------------------------------
+// yjs_documents  (HocusPocus full-snapshot persistence — refs #1064 L3-A)
+// ---------------------------------------------------------------------------
+//
+// name = HocusPocus documentName, which equals the scene UUID (e.g. "abc-123").
+// state = Y.Doc encoded state snapshot (Buffer); written by extension-database
+//         onStoreDocument, read by onLoadDocument.
+//
+// L3-A only uses Y.Doc as an awareness transport (scene state not in Y.Doc),
+// so this table will typically hold small/empty docs.
+//
+// L3-B forward note: spec describes an append-only yjs_updates table.
+// This snapshot table is intentional for L3-A; migration to append-only
+// is deferred to the L3-B phase.
+
+export const yjsDocuments = pgTable('yjs_documents', {
+  name: text('name').primaryKey(),
+  state: bytea('state').notNull(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
+});

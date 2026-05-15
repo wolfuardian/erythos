@@ -12,6 +12,7 @@ import { magicLinkRoutes } from './routes/magic-link.js';
 import { userRoutes } from './routes/users.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
+import { createRealtimeServer } from './realtime/server.js';
 
 const app = new Hono();
 
@@ -113,5 +114,30 @@ const port = Number(process.env.PORT ?? 3000);
 serve({ fetch: app.fetch, port }, () => {
   logger.info(`Server listening on http://localhost:${port}`);
 });
+
+// ---------------------------------------------------------------------------
+// HocusPocus real-time server — runs on a dedicated port (refs #1064 L3-A)
+//
+// HocusPocus's Server class manages its own http.Server internally (via
+// crossws / ws), so it cannot share the Hono http.Server.  A separate port
+// keeps the servers decoupled without requiring a custom upgrade-event patch.
+//
+// Default: REALTIME_PORT = PORT + 1 (e.g. 3001 when PORT=3000).
+// In production, Caddy reverse-proxies both:
+//   https://erythos.app/api/*        → localhost:3000
+//   wss://erythos.app/realtime/*     → localhost:3001
+// ---------------------------------------------------------------------------
+const realtimePort = Number(process.env.REALTIME_PORT ?? port + 1);
+
+const realtimeServer = createRealtimeServer();
+realtimeServer
+  .listen(realtimePort)
+  .then(() => {
+    logger.info(`Realtime server listening on ws://localhost:${realtimePort}`);
+  })
+  .catch((err: unknown) => {
+    logger.error({ err }, 'Realtime server failed to start');
+    process.exit(1);
+  });
 
 export default app;

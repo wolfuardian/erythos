@@ -89,10 +89,16 @@ export interface AuthUser {
  * Resolve the session cookie to a user row.
  * Returns null if cookie is absent, expired, or not found.
  */
-export async function resolveSession(c: Context): Promise<AuthUser | null> {
-  const token = getCookie(c, SESSION_COOKIE);
-  if (!token) return null;
-
+/**
+ * Resolve a plaintext session token to a user row.
+ *
+ * Extracted from resolveSession so that the HocusPocus onAuthenticate hook
+ * (which has no Hono Context — only raw headers and a token string) can reuse
+ * the same session validation logic without duplicating the DB query.
+ *
+ * Returns null if token is absent, expired, or not found in DB.
+ */
+export async function resolveSessionByToken(token: string): Promise<AuthUser | null> {
   const now = new Date();
   const tokenHash = hashSessionToken(token);
 
@@ -125,6 +131,16 @@ export async function resolveSession(c: Context): Promise<AuthUser | null> {
     handle: row.handle,
     storage_used: row.storage_used,
   };
+}
+
+/**
+ * Resolve the session cookie to a user row.
+ * Returns null if cookie is absent, expired, or not found.
+ */
+export async function resolveSession(c: Context): Promise<AuthUser | null> {
+  const token = getCookie(c, SESSION_COOKIE);
+  if (!token) return null;
+  return resolveSessionByToken(token);
 }
 
 /**
