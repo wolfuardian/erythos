@@ -17,6 +17,7 @@
  */
 
 import { defaultBaseUrl } from '../baseUrl';
+import { formatErrorMessage } from '../../errors/codes';
 import {
   type AssetSyncClient,
   AssetNotFoundError,
@@ -43,8 +44,8 @@ export class AssetClientError extends Error {
  * per-file or total storage quota.
  */
 export class AssetQuotaExceededError extends AssetClientError {
-  constructor() {
-    super('Asset quota exceeded', 413);
+  constructor(message = 'Asset quota exceeded') {
+    super(message, 413);
     this.name = 'AssetQuotaExceededError';
   }
 }
@@ -127,29 +128,38 @@ export class HttpAssetClient implements AssetSyncClient {
     }
 
     if (res.status === 401) {
-      throw new AssetClientError('Upload requires authentication (not signed in)', 401);
+      let body: { error?: string; code?: string } = {};
+      try { body = await res.json() as typeof body; } catch { /* ignore */ }
+      const msg = body.code
+        ? formatErrorMessage(body.code, body.error ?? 'Not signed in')
+        : body.error ?? 'Upload requires authentication (not signed in)';
+      throw new AssetClientError(msg, 401);
     }
 
     if (res.status === 413) {
-      throw new AssetQuotaExceededError();
+      let body: { error?: string; code?: string } = {};
+      try { body = await res.json() as typeof body; } catch { /* ignore */ }
+      const msg = body.code
+        ? formatErrorMessage(body.code, body.error ?? 'Asset quota exceeded')
+        : body.error ?? 'Asset quota exceeded';
+      throw new AssetQuotaExceededError(msg);
     }
 
     if (res.status === 400) {
-      // hash_mismatch: server computed a different sha256 from what we sent.
-      // The server response body doesn't include the actual hash it computed —
-      // surface a generic AssetHashMismatchError with what we know.
-      let serverErr: { error?: string } = {};
+      // Parse body — server returns { error, code } shape.
+      // hash_mismatch (E1203) → AssetHashMismatchError; other 400s → AssetClientError.
+      let body: { error?: string; code?: string } = {};
       try {
-        serverErr = await res.json() as { error?: string };
+        body = await res.json() as typeof body;
       } catch { /* ignore JSON parse error */ }
 
-      if (serverErr.error === 'hash_mismatch') {
+      if (body.code === 'E1203 ERR_ASSET_HASH_MISMATCH' || body.error === 'Asset hash mismatch') {
         throw new AssetHashMismatchError(expectedHash, '(server-computed)');
       }
-      throw new AssetClientError(
-        `Bad request on POST /assets: ${serverErr.error ?? 'unknown'}`,
-        400,
-      );
+      const msg = body.code
+        ? formatErrorMessage(body.code, body.error ?? 'Bad request')
+        : body.error ?? `Bad request on POST /assets`;
+      throw new AssetClientError(msg, 400);
     }
 
     if (res.status === 200 || res.status === 201) {

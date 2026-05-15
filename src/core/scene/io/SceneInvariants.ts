@@ -22,6 +22,7 @@
  */
 
 import { z } from 'zod';
+import { ERR_SCENE_INVARIANT } from '../../errors/codes';
 
 // ── CURRENT_VERSION ─────────────────────────────────────────────────────────
 
@@ -164,8 +165,13 @@ export class UnsupportedVersionError extends Error {
 /**
  * Thrown when validateScene() returns one or more violations.
  * Contains the full list for structured error handling / display.
+ *
+ * Error code: E1004 ERR_SCENE_INVARIANT (refs #1025 taxonomy).
  */
 export class SceneInvariantError extends Error {
+  /** Stable error code — use with formatErrorMessage() for user-facing display. */
+  readonly code = ERR_SCENE_INVARIANT;
+
   constructor(public readonly violations: InvariantViolation[]) {
     const summary = violations
       .map(v => `  [${v.path}] ${v.reason}`)

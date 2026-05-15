@@ -1,4 +1,5 @@
 import type { SceneDocument } from '../scene/SceneDocument';
+import { ERR_SCENE_PAYLOAD_TOO_LARGE } from '../errors/codes';
 
 // v0: plain string; no SceneId branded type found in src/utils/branded.ts
 export type SceneId = string;
@@ -71,8 +72,13 @@ export class PreconditionRequiredError extends Error {
  *
  * The scene body exceeded the server's size limit (1 MB). The user must reduce
  * the scene size before pushing again.
+ *
+ * Error code: E1101 ERR_SCENE_PAYLOAD_TOO_LARGE (refs #1025 taxonomy).
  */
 export class PayloadTooLargeError extends Error {
+  /** Stable error code — use with formatErrorMessage() for user-facing display. */
+  readonly code = ERR_SCENE_PAYLOAD_TOO_LARGE;
+
   constructor(public sceneId: SceneId) {
     super(`Payload too large on scene ${sceneId}: scene body exceeds server limit`);
     this.name = 'PayloadTooLargeError';

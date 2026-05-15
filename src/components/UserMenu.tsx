@@ -73,8 +73,11 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     closeMenu();
   };
 
-  document.addEventListener('pointerdown', onPointerDown);
-  onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  createEffect(() => {
+    if (!open()) return;
+    document.addEventListener('pointerdown', onPointerDown);
+    onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  });
 
   // Escape closes dropdown (only when open)
   createEffect(() => {
@@ -190,7 +193,8 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
               <div class={styles.quotaBar}>
                 <div
                   class={`${styles.quotaFill} ${quotaFillClass()}`}
-                  style={{ width: `${storagePercent()}%` }}
+                  // inline-allowed: CSS variable injection — dynamic storage percent
+                  style={`--storage-pct: ${storagePercent()}%`}
                 />
               </div>
             </div>
