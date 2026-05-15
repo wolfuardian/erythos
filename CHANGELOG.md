@@ -5,6 +5,91 @@ All notable changes to Erythos will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-15
+
+Free-tier onboarding + cloud project recovery. Quota enforcement
+(3 cloud scenes / 150MB assets per user), auto-provisioned Demo
+scene for new sign-ups, and inline cloud-project management from
+both the editor toolbar and the Welcome list.
+
+### Added
+
+#### Cloud project management
+
+- Delete cloud project — `DELETE /api/scenes/:id` (owner-only;
+  non-owner → 404) + ProjectChip dropdown "Delete project" action
+  (PR [#1040](https://github.com/wolfuardian/erythos/pull/1040))
+- Inline delete from Welcome cloud list — trash button per row +
+  ConfirmDialog; recovery path for an unopenable / invalid project
+  (PR [#1048](https://github.com/wolfuardian/erythos/pull/1048))
+
+#### Free-tier quota
+
+- 3 cloud scenes per user, 150MB total asset storage (revised down
+  from the v0.2 working hypothesis of 10 scenes / 500MB)
+- `E1003 ERR_SCENE_QUOTA_EXCEEDED` returned with `{error, code}`
+  shape on `POST /api/scenes` when the limit is reached
+  (PR [#1043](https://github.com/wolfuardian/erythos/pull/1043))
+
+#### Demo scene auto-provision (onboarding)
+
+- New users get one starter Demo scene (cube + directional light)
+  created server-side during user provision; counts toward the
+  3-scene quota, user-deletable
+- `shared/onboarding/demo-scene.json` — single source: server imports
+  to provision, client test imports the same file for validity check
+- OAuth + magic-link signup paths wrap user-insert + demo-insert in
+  `db.transaction()` for atomicity
+  (PR [#1045](https://github.com/wolfuardian/erythos/pull/1045))
+
+#### Client-side error code display
+
+- `${error} (${code})` parallel format defined for the first time on
+  the client; applied to cloud-project create + delete error paths.
+  Seeds the client half of the [#1025] ERROR CODE taxonomy
+  (PR [#1046](https://github.com/wolfuardian/erythos/pull/1046),
+   [#1048](https://github.com/wolfuardian/erythos/pull/1048))
+
+### Fixed
+
+- ProjectChip dropdown "Delete project" action invisible on cloud
+  projects — `bridge.projectType()` read `editor.projectManager.type`,
+  which is the LocalProjectManager singleton for cloud projects
+  (always `'local'`). Mirrored the [#1036] deps-threading fix. Same
+  fix restores the Toolbar Cloud sync indicator, which had the same
+  latent gate bug since G3
+  (PR [#1046](https://github.com/wolfuardian/erythos/pull/1046))
+- Cloud project create errors only surfaced HTTP status — now parses
+  the server's response body and displays `${error} (${code})`
+  (PR [#1046](https://github.com/wolfuardian/erythos/pull/1046))
+
+### Tests
+
+- `src/__tests__/demo-scene-validity.test.ts` —
+  `shared/onboarding/demo-scene.json` round-trips through
+  `SceneDocument.deserialize()` (regression guard for the T2-class
+  "server hand-written blob fails client load" scenario)
+
+### Changed
+
+- `docs/cloud-project-spec.md` § Onboarding revised from v0.2 working
+  hypothesis to v0.3 拍板: scene 10→3, asset 500MB→150MB, placeholder
+  empty → auto-provisioned Demo scene
+
+### Known limitations (deferred to v0.4)
+
+- `assets.ts` error responses don't follow `{error, code}` ERROR CODE
+  pattern; `HttpAssetClient` ignores response bodies
+  ([#1047](https://github.com/wolfuardian/erythos/issues/1047))
+- `deleteCloudProject` swallows non-2xx DELETE responses
+  ([#1041](https://github.com/wolfuardian/erythos/issues/1041), polish)
+- ERROR CODE taxonomy full rollout
+  ([#1025](https://github.com/wolfuardian/erythos/issues/1025))
+- `primitives://` dedicated scheme — still synthetic
+  `project://primitives/*` ([#1027](https://github.com/wolfuardian/erythos/issues/1027))
+
+[0.3.0]: https://github.com/wolfuardian/erythos/releases/tag/v0.3.0
+
 ## [0.2.0] — 2026-05-14
 
 Cross-device cloud scene sync. Adds canonical cloud projects alongside
