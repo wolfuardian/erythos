@@ -93,7 +93,8 @@ const SyncConflictDialog: Component<SyncConflictDialogProps> = (props) => {
           class={styles.overlay}
         >
           <div
-            class={`${styles.dialog} ${showDiff() ? styles.dialogExpanded : ''}`}
+            class={styles.dialog}
+            classList={{ [styles.dialogExpanded]: showDiff() }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 class={styles.title}>Sync conflict</h3>
