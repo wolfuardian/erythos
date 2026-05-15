@@ -33,7 +33,14 @@ export const ERR_SCENE_INVARIANT = 'E1004 ERR_SCENE_INVARIANT' as const;
 /** Scene body exceeds the server 1 MB size limit. */
 export const ERR_SCENE_PAYLOAD_TOO_LARGE = 'E1101 ERR_SCENE_PAYLOAD_TOO_LARGE' as const;
 
-// ── Segment E1200–E1299: Asset (reserved for #1047) ──────────────────────────
+// ── Segment E1200–E1299: Asset ───────────────────────────────────────────────
+//
+// E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED  — server/src/routes/assets.ts
+// E1202 ERR_ASSET_TOTAL_QUOTA_EXCEEDED     — server/src/routes/assets.ts
+// E1203 ERR_ASSET_HASH_MISMATCH            — server/src/routes/assets.ts
+// E1204 ERR_ASSET_INVALID_FORM             — server/src/routes/assets.ts
+// E1205 ERR_ASSET_MISSING_FILE_FIELD       — server/src/routes/assets.ts
+// E1206 ERR_ASSET_UNAUTHORIZED             — server/src/routes/assets.ts
 
 // ── Segment E1300–E1399: Auth / Session ──────────────────────────────────────
 

@@ -59,6 +59,17 @@ const FREE_TOTAL_QUOTA = 150 * 1024 * 1024;
 const PRO_TOTAL_QUOTA = 50 * 1024 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
+// Error codes — E1200-E1299 asset segment (inline, no cross-workspace import)
+// ---------------------------------------------------------------------------
+
+const ERR_ASSET_PER_FILE_QUOTA_EXCEEDED  = 'E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED';
+const ERR_ASSET_TOTAL_QUOTA_EXCEEDED     = 'E1202 ERR_ASSET_TOTAL_QUOTA_EXCEEDED';
+const ERR_ASSET_HASH_MISMATCH            = 'E1203 ERR_ASSET_HASH_MISMATCH';
+const ERR_ASSET_INVALID_FORM             = 'E1204 ERR_ASSET_INVALID_FORM';
+const ERR_ASSET_MISSING_FILE_FIELD       = 'E1205 ERR_ASSET_MISSING_FILE_FIELD';
+const ERR_ASSET_UNAUTHORIZED             = 'E1206 ERR_ASSET_UNAUTHORIZED';
+
+// ---------------------------------------------------------------------------
 // Auth middleware — applied only to POST
 // ---------------------------------------------------------------------------
 
@@ -74,7 +85,7 @@ type Variables = {
 
 async function authMiddleware(c: Context, next: Next) {
   const user = await resolveSession(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  if (!user) return c.json({ error: 'Not signed in', code: ERR_ASSET_UNAUTHORIZED }, 401);
   c.set('user', user);
   await next();
 }
@@ -107,14 +118,14 @@ assetRoutes.post('/', authMiddleware, async (c) => {
   try {
     formData = await c.req.formData();
   } catch {
-    return c.json({ error: 'Invalid multipart form data' }, 400);
+    return c.json({ error: 'Invalid multipart form data', code: ERR_ASSET_INVALID_FORM }, 400);
   }
 
   const fileEntry = formData.get('file');
   const expectedHash = formData.get('expected_hash');
 
   if (!(fileEntry instanceof File)) {
-    return c.json({ error: 'file field is required' }, 400);
+    return c.json({ error: "Missing 'file' field", code: ERR_ASSET_MISSING_FILE_FIELD }, 400);
   }
   if (typeof expectedHash !== 'string' || !expectedHash) {
     return c.json({ error: 'expected_hash field is required' }, 400);
@@ -139,13 +150,13 @@ assetRoutes.post('/', authMiddleware, async (c) => {
   const totalQuota = plan === 'pro' ? PRO_TOTAL_QUOTA : FREE_TOTAL_QUOTA;
 
   if (fileSize > perFileLimit) {
-    return c.json({ error: 'quota_exceeded' }, 413);
+    return c.json({ error: 'Asset exceeds 50 MB per-file limit', code: ERR_ASSET_PER_FILE_QUOTA_EXCEEDED }, 413);
   }
 
   // --- Server-side SHA-256 verification ---
   const serverHash = createHash('sha256').update(fileBuffer).digest('hex');
   if (serverHash !== expectedHash) {
-    return c.json({ error: 'hash_mismatch' }, 400);
+    return c.json({ error: 'Asset hash mismatch', code: ERR_ASSET_HASH_MISMATCH }, 400);
   }
 
   const hash = serverHash;
@@ -167,7 +178,7 @@ assetRoutes.post('/', authMiddleware, async (c) => {
 
   // --- Quota check (total storage) ---
   if (user.storage_used + fileSize > totalQuota) {
-    return c.json({ error: 'quota_exceeded' }, 413);
+    return c.json({ error: 'Free tier asset storage limit (150 MB) reached', code: ERR_ASSET_TOTAL_QUOTA_EXCEEDED }, 413);
   }
 
   // --- S3 PutObject ---

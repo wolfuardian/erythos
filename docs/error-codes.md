@@ -20,7 +20,7 @@ E<NNNN> ERR_SCREAMING_SNAKE
 |---------------|---------------------------------|------------------------------|
 | E1001–E1099   | Scene I/O (UUID, quota)         | E1001/E1002/E1003 occupied   |
 | E1100–E1199   | Sync / conflict                 | E1101 occupied               |
-| E1200–E1299   | Asset                           | Reserved for #1047           |
+| E1200–E1299   | Asset                           | E1201–E1206 occupied         |
 | E1300–E1399   | Auth / session                  |                              |
 | E1400–E1499   | IO / file system                |                              |
 
@@ -33,6 +33,12 @@ E<NNNN> ERR_SCREAMING_SNAKE
 | `E1003 ERR_SCENE_QUOTA_EXCEEDED` | `server/src/routes/scenes.ts` (server)           | Free plan 3-scene limit exceeded         |
 | `E1004 ERR_SCENE_INVARIANT`    | `src/core/errors/codes.ts` → `SceneInvariantError` | Scene shape violated one or more invariants |
 | `E1101 ERR_SCENE_PAYLOAD_TOO_LARGE` | `src/core/errors/codes.ts` → `PayloadTooLargeError` | Scene body exceeds 1 MB server limit |
+| `E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED` | `server/src/routes/assets.ts` (server) | Asset exceeds 50 MB per-file limit |
+| `E1202 ERR_ASSET_TOTAL_QUOTA_EXCEEDED` | `server/src/routes/assets.ts` (server) | Free tier asset storage limit (150 MB) reached |
+| `E1203 ERR_ASSET_HASH_MISMATCH` | `server/src/routes/assets.ts` (server) | Server-computed SHA-256 does not match expected_hash |
+| `E1204 ERR_ASSET_INVALID_FORM` | `server/src/routes/assets.ts` (server) | Multipart form data could not be parsed |
+| `E1205 ERR_ASSET_MISSING_FILE_FIELD` | `server/src/routes/assets.ts` (server) | 'file' field missing from upload form |
+| `E1206 ERR_ASSET_UNAUTHORIZED` | `server/src/routes/assets.ts` (server) | Upload attempted without a valid session |
 
 ## Wire envelope formats
 

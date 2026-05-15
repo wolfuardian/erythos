@@ -260,7 +260,8 @@ describe('POST /api/assets', () => {
 
     expect(res.status).toBe(400);
     const body = await res.json() as Record<string, unknown>;
-    expect(body.error).toBe('hash_mismatch');
+    expect(body.error).toBe('Asset hash mismatch');
+    expect(body.code).toBe('E1203 ERR_ASSET_HASH_MISMATCH');
   });
 
   it('returns 413 when file exceeds per-file limit for free plan (50 MB)', async () => {
@@ -285,7 +286,8 @@ describe('POST /api/assets', () => {
 
     expect(res.status).toBe(413);
     const body = await res.json() as Record<string, unknown>;
-    expect(body.error).toBe('quota_exceeded');
+    expect(body.error).toBe('Asset exceeds 50 MB per-file limit');
+    expect(body.code).toBe('E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED');
   }, 15000); // extended timeout for large buffer creation
 
   it('returns 413 when total storage quota would be exceeded', async () => {
@@ -309,7 +311,8 @@ describe('POST /api/assets', () => {
 
     expect(res.status).toBe(413);
     const body = await res.json() as Record<string, unknown>;
-    expect(body.error).toBe('quota_exceeded');
+    expect(body.error).toBe('Free tier asset storage limit (150 MB) reached');
+    expect(body.code).toBe('E1202 ERR_ASSET_TOTAL_QUOTA_EXCEEDED');
   });
 
   it('returns 401 when not authenticated', async () => {
