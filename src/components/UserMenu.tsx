@@ -73,8 +73,11 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
     closeMenu();
   };
 
-  document.addEventListener('pointerdown', onPointerDown);
-  onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  createEffect(() => {
+    if (!open()) return;
+    document.addEventListener('pointerdown', onPointerDown);
+    onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  });
 
   // Escape closes dropdown (only when open)
   createEffect(() => {

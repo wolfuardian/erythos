@@ -133,8 +133,11 @@ export const EditorSwitcher: Component<EditorSwitcherProps> = (props) => {
     }
   };
 
-  document.addEventListener('pointerdown', onPointerDown);
-  onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  createEffect(() => {
+    if (!open()) return;
+    document.addEventListener('pointerdown', onPointerDown);
+    onCleanup(() => document.removeEventListener('pointerdown', onPointerDown));
+  });
 
   createEffect(() => {
     if (!open()) return;
