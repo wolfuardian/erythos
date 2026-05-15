@@ -8,4 +8,5 @@
 export { RealtimeClient } from './RealtimeClient';
 export type { ConnectionStatus } from './RealtimeClient';
 export type { AwarenessState, AwarenessUser, AwarenessCursor, AwarenessSelection, RemoteAwarenessEntry } from './awareness';
+export { warnIfAwarenessPayloadTooLarge, AWARENESS_PAYLOAD_WARN_BYTES } from './awareness';
 export { realtimeUrl } from './realtimeUrl';

@@ -66,3 +66,42 @@ export interface RemoteAwarenessEntry {
   clientId: number;
   state: AwarenessState;
 }
+
+// ─── Payload budget ────────────────────────────────────────────────────────────
+
+/**
+ * Maximum recommended JSON byte size for a single awareness state payload.
+ *
+ * Spec (§ L3-A > Awareness payload 預算) defines throttle rates but no
+ * explicit byte limit.  8 KB is chosen as the warn threshold:
+ *   - Normal payload (user + cursor + ~10 nodeIds) ≈ 200–500 bytes
+ *   - 8 KB = clearly runaway (e.g. 1000+ nodeIds selected)
+ *   - Well below typical WebSocket maxPayload defaults (1–16 MB)
+ *
+ * RealtimeClient calls warnIfAwarenessPayloadTooLarge() before every
+ * setLocalState().  Threshold can be overridden for testing.
+ *
+ * Issue: #1067 (L3-A4)
+ */
+export const AWARENESS_PAYLOAD_WARN_BYTES = 8192;
+
+/**
+ * Warn via console.warn if the JSON-serialised awareness state exceeds
+ * AWARENESS_PAYLOAD_WARN_BYTES.  Does NOT block the broadcast.
+ *
+ * Exported for unit testing.  RealtimeClient calls this before every
+ * awareness.setLocalState().
+ */
+export function warnIfAwarenessPayloadTooLarge(
+  state: AwarenessState,
+  warnThreshold = AWARENESS_PAYLOAD_WARN_BYTES,
+): void {
+  const bytes = JSON.stringify(state).length;
+  if (bytes > warnThreshold) {
+    console.warn(
+      `[RealtimeClient] awareness payload too large: ${bytes} bytes ` +
+        `(threshold: ${warnThreshold} bytes). ` +
+        `selection.nodeIds.length=${state.selection.nodeIds.length}`,
+    );
+  }
+}
