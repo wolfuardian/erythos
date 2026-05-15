@@ -11,10 +11,11 @@ import { defaultBaseUrl } from '../core/sync/baseUrl';
 import { AuthClient, AuthError, type User } from '../core/auth/AuthClient';
 import { LocalProjectManager } from '../core/project/LocalProjectManager';
 import { CloudProjectManager } from '../core/project/CloudProjectManager';
-import { RemoveNodeCommand } from '../core/commands/RemoveNodeCommand';
 import { AddNodeCommand } from '../core/commands/AddNodeCommand';
 import { MultiCmdsCommand } from '../core/commands/MultiCmdsCommand';
 import { createEditorBridge, type EditorBridge } from './bridge';
+import { registerEditorKeybindings } from './editorKeybindings';
+import { makeAuthCallbacks } from './authCallbacks';
 import { EditorProvider } from './EditorContext';
 import { editors } from './editors';
 import { AreaTreeRenderer } from './layout/AreaTreeRenderer';
@@ -252,25 +253,10 @@ const App: Component = () => {
       resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
       currentUser,
       setCurrentUser,
-      authSignOut: () => authClient.signOut(),
-      authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
-      authGetExportUrl: () => authClient.getExportUrl(),
-      authDeleteAccount: () => authClient.deleteAccount(),
-      authRequestMagicLink: (email) => authClient.requestMagicLink(email),
+      ...makeAuthCallbacks(authClient),
     });
 
-    e.keybindings.registerMany([
-      { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
-      { key: 'y', ctrl: true, action: () => e.redo(), description: 'Redo' },
-      { key: 'z', ctrl: true, shift: true, action: () => e.redo(), description: 'Redo (alt)' },
-      { key: 'Delete', action: () => {
-        const uuid = e.selection.primary;
-        if (uuid) e.execute(new RemoveNodeCommand(e, uuid));
-      }, description: 'Delete selected' },
-      { key: 'w', action: () => e.setTransformMode('translate'), description: 'Translate mode' },
-      { key: 'e', action: () => e.setTransformMode('rotate'), description: 'Rotate mode' },
-      { key: 'r', action: () => e.setTransformMode('scale'), description: 'Scale mode' },
-    ]);
+    registerEditorKeybindings(e);
     e.keybindings.attach();
 
     setEditor(e);
@@ -420,26 +406,11 @@ const App: Component = () => {
       resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
       currentUser,
       setCurrentUser,
-      authSignOut: () => authClient.signOut(),
-      authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
-      authGetExportUrl: () => authClient.getExportUrl(),
-      authDeleteAccount: () => authClient.deleteAccount(),
-      authRequestMagicLink: (email) => authClient.requestMagicLink(email),
+      ...makeAuthCallbacks(authClient),
       deleteCloudProject,
     });
 
-    e.keybindings.registerMany([
-      { key: 'z', ctrl: true, action: () => e.undo(), description: 'Undo' },
-      { key: 'y', ctrl: true, action: () => e.redo(), description: 'Redo' },
-      { key: 'z', ctrl: true, shift: true, action: () => e.redo(), description: 'Redo (alt)' },
-      { key: 'Delete', action: () => {
-        const uuid = e.selection.primary;
-        if (uuid) e.execute(new RemoveNodeCommand(e, uuid));
-      }, description: 'Delete selected' },
-      { key: 'w', action: () => e.setTransformMode('translate'), description: 'Translate mode' },
-      { key: 'e', action: () => e.setTransformMode('rotate'), description: 'Rotate mode' },
-      { key: 'r', action: () => e.setTransformMode('scale'), description: 'Scale mode' },
-    ]);
+    registerEditorKeybindings(e);
     e.keybindings.attach();
 
     setEditor(e);
