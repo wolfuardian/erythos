@@ -5,6 +5,149 @@ All notable changes to Erythos will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-05-15
+
+Audit-driven polish + quality release. Establishes ERROR CODE
+taxonomy and applies it across scene / sync / asset paths.
+Resolves v0.3 audit findings across four axes (architecture /
+spec drift / code quality / test coverage). Schema v3 → v4
+migration introduces `primitives://` scheme for built-in
+geometry URLs.
+
+### Added
+
+#### ERROR CODE taxonomy (foundation)
+
+- `docs/error-codes.md` — taxonomy spec (naming convention
+  `E#### ERR_SCREAMING_SNAKE`, numeric segment allocation,
+  registry table, wire envelope, how-to-add checklist)
+- `src/core/errors/codes.ts` — client error code registry +
+  `formatErrorMessage(code, human)` helper
+- `E1004 ERR_SCENE_INVARIANT` (`SceneInvariantError`) +
+  `E1101 ERR_SCENE_PAYLOAD_TOO_LARGE` (`PayloadTooLargeError`)
+  as reference implementations
+- `E1201`–`E1206` asset segment for `POST /api/assets` errors
+  (per-file / total quota / hash mismatch / invalid form /
+  missing field / unauthorized); client `HttpAssetClient`
+  parses `{error, code}` body and formats display as
+  `${human} (${code})`
+  (PR [#1049](https://github.com/wolfuardian/erythos/pull/1049),
+   [#1055](https://github.com/wolfuardian/erythos/pull/1055))
+
+#### Schema v4 + `primitives://` scheme
+
+- Dedicated `primitives://<name>` URL scheme for built-in
+  geometry (box / sphere / plane). Replaces synthetic
+  `project://primitives/*` and its scattered path-prefix
+  special-cases in `Editor.loadScene` + `uploadSceneBinaries`
+- `src/core/scene/io/migrations/v3_to_v4.ts` — auto-rewrites
+  `project://primitives/<type>` → `primitives://<type>` on load
+- `docs/erythos-format.md` § URI Scheme + § v3 → v4 Migration
+- 4 producer sites updated; scheme-based walker filters replace
+  path-prefix matching
+  (PR [#1058](https://github.com/wolfuardian/erythos/pull/1058))
+
+### Fixed
+
+#### `deleteCloudProject` silent failure (#1041)
+
+- Server `4xx` / `5xx` now surfaces via
+  `alert(${human} (${code}))` instead of silently closing —
+  user knows deletion did not succeed. Network error path
+  preserved (close anyway; user can retry from Welcome after
+  reconnecting)
+  (PR [#1051](https://github.com/wolfuardian/erythos/pull/1051))
+
+#### Component listener leak (audit P0)
+
+- `EditorSwitcher.tsx` + `UserMenu.tsx`: `pointerdown` listener
+  registered at component body root → wrapped in `createEffect`
+  gated by `open()`. Aligns with `components/CLAUDE.md`
+  convention; fixes HMR-time leak
+  (PR [#1052](https://github.com/wolfuardian/erythos/pull/1052))
+
+### Refactored (audit-driven)
+
+#### Dead code removal
+
+- `SceneOpsToolbar.tsx` + `.module.css` — 0 importer; also
+  flagged by architecture audit for bypassing `bridge` to call
+  `editor.loadScene` directly
+- `mockAuth.ts` — v0 stub, superseded by `AuthClient`
+- `EnvironmentSettings.ts` — v1 migration shim, no consumer
+  (PR [#1056](https://github.com/wolfuardian/erythos/pull/1056))
+
+#### styles-convention compliance
+
+- `UserMenu.tsx` storage indicator: inline `width: ${pct}%` →
+  CSS variable injection (`--storage-pct`), consumed by
+  `.quotaFill` in module CSS
+- `ContextMenu.tsx` + `SyncConflictDialog.tsx`: `class={}`
+  ternary in template literal → `classList`
+  (PR [#1056](https://github.com/wolfuardian/erythos/pull/1056))
+
+#### TypeScript cleanup
+
+- `ShadingManager.ts`: removed 10 `as any` casts —
+  `@types/three@0.184.1` already types
+  `Scene.environmentIntensity` + `environmentRotation`
+  (no module augmentation needed); dropped dead `Euler`
+  fallback branch
+  (PR [#1061](https://github.com/wolfuardian/erythos/pull/1061))
+
+#### `App.tsx` duplicate elimination
+
+- Extracted `registerEditorKeybindings(editor)` (6 keybindings)
+  and `makeAuthCallbacks(authClient)` (5 auth field bridge
+  deps) into `src/app/editorKeybindings.ts` +
+  `src/app/authCallbacks.ts`. Local + cloud project paths now
+  call helpers; App.tsx −29 lines
+  (PR [#1063](https://github.com/wolfuardian/erythos/pull/1063))
+
+### Tests
+
+- `server/src/__tests__/scene-routes.test.ts` +7 cases for
+  `DELETE /api/scenes/:id` — endpoint had zero coverage despite
+  destructive semantics (owner-only / 404 leak prevention /
+  cascade delete via FK)
+  (PR [#1062](https://github.com/wolfuardian/erythos/pull/1062))
+- `src/core/scene/io/__tests__/v3_to_v4.test.ts` +8 migration
+  cases (PR #1058)
+
+### Docs / Meta drift fixes
+
+- `docs/asset-sync-protocol.md` § Quota: free `500 MB` →
+  `150 MB` (aligns with v0.3 onboarding + server
+  `FREE_TOTAL_QUOTA`)
+- `docs/sync-protocol.md` users schema: `github_id NOT NULL` →
+  nullable (magic-link compat already in implementation)
+- `docs/erythos-architecture.md` § 認證: Library
+  `Lucia / Auth.js` → self-rolled HMAC (D3 Option C)
+- `CLAUDE.md` 事件名: `objectAdded → sceneGraphChanged` →
+  `nodeAdded → sceneReplaced` (aligns with `SceneDocument.ts`);
+  模組表 environment-panel / prefab-panel 路徑收斂
+- `src/core/CLAUDE.md`: Browser API 例外 paragraph for
+  `core/network/` / `core/auth/` / `core/sync/` subdirs
+- `src/app/App.tsx:469` cross-tab reload: INTENTIONAL bypass
+  注解 explaining why direct `sceneDocument.deserialize()`
+  is preferred over `Editor.loadScene()` for cloud refresh
+  (PR [#1050](https://github.com/wolfuardian/erythos/pull/1050),
+   [#1057](https://github.com/wolfuardian/erythos/pull/1057))
+
+### Known limitations (deferred to v0.5)
+
+- Local → Cloud project upgrade flow
+  ([#1053](https://github.com/wolfuardian/erythos/issues/1053))
+- Anonymous → Registered scene migration UI
+  ([#1054](https://github.com/wolfuardian/erythos/issues/1054))
+- P1 test coverage gaps — Clipboard / MultiCmdsCommand /
+  ShareTokenClient / viewport pure geometry
+  ([#1059](https://github.com/wolfuardian/erythos/issues/1059))
+- G6 Offline cold-start viewer mode not entered
+  ([#1060](https://github.com/wolfuardian/erythos/issues/1060))
+
+[0.4.0]: https://github.com/wolfuardian/erythos/releases/tag/v0.4.0
+
 ## [0.3.0] — 2026-05-15
 
 Free-tier onboarding + cloud project recovery. Quota enforcement
