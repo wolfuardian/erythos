@@ -28,7 +28,7 @@ import { inferFileType } from './ProjectFile';
 import * as ProjectHandleStore from './ProjectHandleStore';
 import type { ProjectEntry, ProjectStatus } from './ProjectHandleStore';
 import { generateUUID } from '../../utils/uuid';
-import type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult } from './ProjectManager';
+import type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult, LoadSceneResult } from './ProjectManager';
 import { SceneDocument } from '../scene/SceneDocument';
 import { createEmptyScene } from '../scene/io/types';
 
@@ -71,14 +71,16 @@ export class LocalProjectManager implements ProjectManager {
    *
    * Note: for G1 this is a thin wrapper; callers may still use readFile directly
    * during the transition. G2 will route AutoSave through saveScene uniformly.
+   *
+   * Always returns `fromCache: false` — local projects have no network/cache split.
    */
-  async loadScene(): Promise<SceneDocument> {
+  async loadScene(): Promise<LoadSceneResult> {
     const path = this._currentScenePath();
     const file = await this.readFile(path);
     const text = await file.text();
     const doc = new SceneDocument();
     doc.deserialize(JSON.parse(text) as Parameters<typeof doc.deserialize>[0]);
-    return doc;
+    return { doc, fromCache: false };
   }
 
   /**

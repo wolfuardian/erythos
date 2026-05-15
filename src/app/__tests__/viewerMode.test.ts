@@ -19,6 +19,9 @@ import { createRoot } from 'solid-js';
 import { NotFoundError } from '../../core/sync/SyncEngine';
 import type { SyncEngine, SceneId } from '../../core/sync/SyncEngine';
 import { navigateToScene, navigateHome, currentRoute } from '../router';
+import { Editor } from '../../core/Editor';
+import { LocalProjectManager } from '../../core/project/LocalProjectManager';
+import { AddNodeCommand } from '../../core/commands/AddNodeCommand';
 
 const ORIGINAL_PATHNAME = window.location.pathname;
 
@@ -146,5 +149,55 @@ describe('viewer mode — fork-navigate flow', () => {
       expect(r.kind).toBe('scene');
       if (r.kind === 'scene') expect(r.sceneId).toBe(newId);
     });
+  });
+});
+
+// ── #1060: offline cached mode → Editor.readOnly gate ────────────────────────
+
+describe('#1060 offline cached mode — Editor.readOnly gate', () => {
+  let editor: Editor;
+
+  afterEach(() => {
+    editor?.dispose();
+  });
+
+  it('editor.readOnly is false by default (online path)', () => {
+    editor = new Editor(new LocalProjectManager());
+    expect(editor.readOnly()).toBe(false);
+  });
+
+  it('editor.execute() is a no-op when setReadOnly(true) (offline cached mode)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    editor = new Editor(new LocalProjectManager());
+
+    // Simulate App.tsx setting readOnly=true when fromCache===true
+    editor.setReadOnly(true);
+
+    const node = editor.sceneDocument.createNode('Cube');
+    editor.execute(new AddNodeCommand(editor, node));
+
+    // Command must have been rejected — node should not exist in the document
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(false);
+    warnSpy.mockRestore();
+  });
+
+  it('editor.undo() and redo() are no-ops when readOnly=true', () => {
+    editor = new Editor(new LocalProjectManager());
+
+    // Add a node while not read-only so there is history
+    const node = editor.sceneDocument.createNode('Cube');
+    editor.execute(new AddNodeCommand(editor, node));
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+
+    // Enter offline cached read-only mode
+    editor.setReadOnly(true);
+
+    editor.undo();
+    // Node must still exist — undo was blocked
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
+
+    editor.redo();
+    // No change — redo also blocked
+    expect(editor.sceneDocument.hasNode(node.id)).toBe(true);
   });
 });

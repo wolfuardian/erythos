@@ -76,6 +76,13 @@ const App: Component = () => {
   // L3-A3: Active RealtimeClient — set when a cloud project is open, null otherwise
   let activeRealtimeClient: RealtimeClient | null = null;
 
+  // Offline cached mode — set when a cloud project loads from IndexedDB cache (offline cold-start).
+  // Causes the editor to be read-only + shows the cached-version OfflineBanner variant.
+  // spec § Offline 策略: 冷啟動有 cache → viewer mode + "Offline — viewing cached version" banner.
+  // TODO follow-up: auto-exit cached mode when user reconnects (requires another loadScene +
+  //   state reconciliation — out of scope for this fix).
+  const [offlineCachedMode, setOfflineCachedMode] = createSignal(false);
+
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
   const [viewerSceneName, setViewerSceneName] = createSignal<string>('Untitled Scene');
@@ -280,6 +287,7 @@ const App: Component = () => {
     const b = bridge();
     if (!e || !b) return;
     setProjectOpen(false);
+    setOfflineCachedMode(false);
 
     // flush pending autosave before teardown
     await autosaveHandle?.flushNow();
@@ -358,8 +366,9 @@ const App: Component = () => {
     );
     activeCloudManager = cloudManager;
 
-    // Load scene from server (with IndexedDB cache fallback on NetworkError)
-    const sceneDocument = await cloudManager.loadScene();
+    // Load scene from server (with IndexedDB cache fallback on NetworkError).
+    // fromCache is true when the scene was served from IndexedDB (offline cold-start).
+    const { doc: sceneDocument, fromCache } = await cloudManager.loadScene();
 
     // Editor still uses LocalProjectManager for local-only concerns
     // (PrefabRegistry, GridHelpers, key bindings) — D-1 constraint.
@@ -368,6 +377,12 @@ const App: Component = () => {
     e.syncEngine = syncEngine;
     e.syncSceneId = sceneId;
     e.syncBaseVersion = cloudManager.currentVersion ?? 0;
+
+    // spec § Offline 策略: 冷啟動有 cache → read-only mode.
+    // Editor.execute() / undo() / redo() are all gated on editor.readOnly.
+    if (fromCache) {
+      e.setReadOnly(true);
+    }
 
     await e.loadScene(sceneDocument.serialize());
 
@@ -449,6 +464,7 @@ const App: Component = () => {
     setEditor(e);
     setBridge(b);
     setProjectOpen(true);
+    setOfflineCachedMode(fromCache);
 
     // #1006 Cross-tab cache invalidation: when another tab saves a newer version of this
     // scene, reload the scene body from the server so this tab sees the update automatically.
@@ -468,7 +484,10 @@ const App: Component = () => {
       // Fire-and-forget: if the reload fails (offline/error), we stay on the cached state.
       void (async () => {
         try {
-          const freshDoc = await cm.loadScene();
+          // Destructure .doc; ignore fromCache — cross-tab reload fires while the
+          // editor is already open, so we must NOT flip read-only mode here even if
+          // the reload happens to hit the cache (e.g. transient network blip).
+          const { doc: freshDoc } = await cm.loadScene();
           // INTENTIONAL bypass of Editor.loadScene(): cloud asset URLs are already
           // cloud-resolvable (assets://<hash>/<filename>) and don't need re-hydration
           // through AssetResolver. Going through loadScene() would re-trigger asset
@@ -681,7 +700,10 @@ const App: Component = () => {
     <>
       <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
       {/* G6 — Offline banner: only for cloud projects, not local. Not dismissible. */}
-      <Show when={isOffline() && bridge() !== null && bridge()!.projectType() === 'cloud'}>
+      <Show when={offlineCachedMode()}>
+        <OfflineBanner cached />
+      </Show>
+      <Show when={!offlineCachedMode() && isOffline() && bridge() !== null && bridge()!.projectType() === 'cloud'}>
         <OfflineBanner />
       </Show>
       <Show when={bridge() !== null}>

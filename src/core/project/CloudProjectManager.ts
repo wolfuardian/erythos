@@ -16,7 +16,7 @@
  * Spec: docs/cloud-project-spec.md § ProjectManager 抽象 + § Phase G2
  */
 
-import type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult } from './ProjectManager';
+import type { ProjectManager, ProjectIdentifier, AssetMeta, SaveResult, LoadSceneResult } from './ProjectManager';
 import { SceneDocument } from '../scene/SceneDocument';
 import { HttpSyncEngine } from '../sync/HttpSyncEngine';
 import type { AssetSyncClient } from '../sync/asset/AssetSyncClient';
@@ -90,9 +90,13 @@ export class CloudProjectManager implements ProjectManager {
    * On success, updates the internal version and writes to IndexedDB cache.
    * On network failure, falls through to the IndexedDB cache (G6 offline UX).
    *
+   * Returns `{ doc, fromCache }` where `fromCache` is true when the scene was
+   * served from IndexedDB (offline cold-start). Callers should enter viewer mode
+   * (read-only) when `fromCache` is true (spec § Offline 策略 — 冷啟動有 cache).
+   *
    * Throws on auth errors or if no cache is available offline.
    */
-  async loadScene(): Promise<SceneDocument> {
+  async loadScene(): Promise<LoadSceneResult> {
     try {
       const { body, version, name } = await this._syncEngine.fetch(this._sceneId);
       this._currentVersion = version;
@@ -110,7 +114,7 @@ export class CloudProjectManager implements ProjectManager {
         console.warn('[CloudProjectManager] Failed to write scene to cache:', cacheErr);
       }
 
-      return body;
+      return { doc: body, fromCache: false };
     } catch (err) {
       if (err instanceof NetworkError) {
         // Offline path: try IndexedDB cache
@@ -122,7 +126,7 @@ export class CloudProjectManager implements ProjectManager {
           console.warn(
             `[CloudProjectManager] Offline: loaded scene from cache (version ${cached.version})`,
           );
-          return doc;
+          return { doc, fromCache: true };
         }
         // No cache — re-throw so caller can show offline error
         throw err;

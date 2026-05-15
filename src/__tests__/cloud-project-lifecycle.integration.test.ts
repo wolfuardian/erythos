@@ -174,7 +174,7 @@ async function newCloudSession(name: string) {
   const syncEngine = new HttpSyncEngine(BASE, pm, assetClient);
   const cloudMgr = new CloudProjectManager(id, syncEngine, assetClient, BASE);
 
-  const doc = await cloudMgr.loadScene();
+  const { doc } = await cloudMgr.loadScene();
 
   const editor = new Editor(pm, assetClient);
   editor.syncEngine = syncEngine;
