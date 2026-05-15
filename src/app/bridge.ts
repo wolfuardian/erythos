@@ -133,6 +133,8 @@ export interface EditorBridgeDeps {
   projectManager: LocalProjectManager;
   /** Cloud project name — overrides editor.projectManager.name (cloud projects don't open a LocalProjectManager). */
   projectName?: string | null;
+  /** Cloud project type — overrides editor.projectManager.type (cloud projects don't open a LocalProjectManager). */
+  projectType?: 'local' | 'cloud';
   openProjectById: (id: string) => Promise<void>;
   autosaveFlush: () => Promise<void>;
   resolveSyncConflict: (choice: 'keep-local' | 'use-cloud') => Promise<void>;
@@ -364,7 +366,7 @@ export function createEditorBridge(
     syncError,
     dismissSyncError: () => setSyncError(null),
     currentSceneId,
-    projectType: () => editor.projectManager.type as 'local' | 'cloud',
+    projectType: () => deps?.projectType ?? (editor.projectManager.type as 'local' | 'cloud'),
     currentUser,
     signOut: async () => {
       await (deps?.authSignOut ?? (() => Promise.resolve()))();

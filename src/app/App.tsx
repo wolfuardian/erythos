@@ -408,6 +408,7 @@ const App: Component = () => {
       closeProject,
       projectManager,
       projectName: cloudManager.name,
+      projectType: 'cloud',
       openProjectById,
       autosaveFlush: () => autosaveHandle?.flushNow() ?? Promise.resolve(),
       resolveSyncConflict: (choice) => autosaveHandle?.resolveConflict(choice) ?? Promise.resolve(),
@@ -720,7 +721,13 @@ const App: Component = () => {
                 credentials: 'include',
                 body: JSON.stringify({ name, body: createEmptyScene() }),
               });
-              if (!res.ok) throw new Error(`Failed to create cloud project: ${res.status}`);
+              if (!res.ok) {
+                const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
+                if (body?.error) {
+                  throw new Error(body.code ? `${body.error} (${body.code})` : body.error);
+                }
+                throw new Error(`Failed to create cloud project: ${res.status}`);
+              }
               const data = await res.json() as { id: string };
               await openCloudProject(data.id);
             }}
