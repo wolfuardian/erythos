@@ -91,35 +91,21 @@ describe('AutoSave', () => {
   });
 
   describe('env subscription (F-2)', () => {
-    it('env change (hdri) triggers save', async () => {
-      const editor = makeEditor();
-      const autosave = createAutoSave(editor);
-      editor.sceneDocument.events.emit('envChanged');
-      vi.advanceTimersByTime(2000);
-      await vi.runAllTimersAsync();
-      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
-      autosave.dispose();
-    });
-
-    it('env change (intensity) triggers save', async () => {
-      const editor = makeEditor();
-      const autosave = createAutoSave(editor);
-      editor.sceneDocument.events.emit('envChanged');
-      vi.advanceTimersByTime(2000);
-      await vi.runAllTimersAsync();
-      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
-      autosave.dispose();
-    });
-
-    it('env change (rotation) triggers save', async () => {
-      const editor = makeEditor();
-      const autosave = createAutoSave(editor);
-      editor.sceneDocument.events.emit('envChanged');
-      vi.advanceTimersByTime(2000);
-      await vi.runAllTimersAsync();
-      expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
-      autosave.dispose();
-    });
+    // All three env fields (hdri / intensity / rotation) share the same envChanged event.
+    // The single parametrized test below documents that each field triggers an autosave
+    // while avoiding triple duplication of identical code paths.
+    it.each(['hdri', 'intensity', 'rotation'])(
+      'env change (%s) triggers save via envChanged event',
+      async (_field) => {
+        const editor = makeEditor();
+        const autosave = createAutoSave(editor);
+        editor.sceneDocument.events.emit('envChanged');
+        vi.advanceTimersByTime(2000);
+        await vi.runAllTimersAsync();
+        expect(editor.projectManager.writeFile).toHaveBeenCalledTimes(1);
+        autosave.dispose();
+      },
+    );
 
     it('dispose unsubscribes envChanged — env change after dispose does not trigger save', () => {
       const editor = makeEditor();
