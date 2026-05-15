@@ -127,6 +127,13 @@ export interface EditorBridge {
    * undefined for local projects.
    */
   deleteCloudProject: (() => void) | undefined;
+  /**
+   * Upgrade the currently open LocalProject to a CloudProject.
+   * Uploads all assets + creates a cloud scene, then switches the editor.
+   * undefined for cloud projects (button hidden in that case).
+   * Spec ref: docs/cloud-project-spec.md § Local → Cloud 升級 (D-7, refs #1053)
+   */
+  upgradeLocalToCloud: (() => Promise<void>) | undefined;
 
   // ─── L3-A3: Realtime presence signals ─────────────────────────────────────
   /**
@@ -180,6 +187,12 @@ export interface EditorBridgeDeps {
    * Only set for cloud projects; undefined for local.
    */
   deleteCloudProject?: () => void;
+  /**
+   * Upgrade the currently open LocalProject to a CloudProject.
+   * Only set for local projects; undefined for cloud.
+   * Spec ref: docs/cloud-project-spec.md § Local → Cloud 升級 (refs #1053)
+   */
+  upgradeLocalToCloud?: () => Promise<void>;
 
   // ─── L3-A3: Realtime presence injection ───────────────────────────────────
   /**
@@ -417,6 +430,7 @@ export function createEditorBridge(
       deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
     editorReadOnly: editor.readOnly,
     deleteCloudProject: deps?.deleteCloudProject,
+    upgradeLocalToCloud: deps?.upgradeLocalToCloud,
 
     // L3-A3 realtime presence
     remoteStates,
