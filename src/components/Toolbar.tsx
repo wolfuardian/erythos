@@ -1,4 +1,4 @@
-import { type Component, For, Show, createEffect, createSignal } from 'solid-js';
+import { type Component, For, Show, createEffect, createSignal, createMemo } from 'solid-js';
 import { BrandMark } from './BrandMark';
 import { BrokenRefsBadge } from './BrokenRefsBadge';
 import { ProjectChip } from './ProjectChip';
@@ -96,6 +96,18 @@ export const Toolbar: Component = () => {
       setTokenError(err instanceof Error ? err.message : 'Failed to revoke token');
     }
   };
+
+  // L3-A3: Derive online user list from remote awareness states
+  const onlineUsers = createMemo(() => {
+    const states = bridge.remoteStates();
+    if (!states || states.length === 0) return [];
+    return states.map(e => ({
+      clientId: e.clientId,
+      name: e.state.user.name,
+      avatarUrl: e.state.user.avatarUrl,
+      color: e.state.user.color,
+    }));
+  });
 
   return (
     <div
@@ -210,6 +222,48 @@ export const Toolbar: Component = () => {
       >
         ↺
       </button>
+
+      {/* L3-A3: Online avatar row — shown when realtime is active and peers are present */}
+      <Show when={onlineUsers().length > 0}>
+        <div class={styles.divider} />
+        <div
+          data-testid="toolbar-online-avatars"
+          class={styles.onlineAvatars}
+          title={`${onlineUsers().length} user${onlineUsers().length === 1 ? '' : 's'} online`}
+        >
+          <For each={onlineUsers()}>
+            {(u) => {
+              const [imgFailed, setImgFailed] = createSignal(false);
+              return (
+                <div
+                  class={styles.avatarChip}
+                  title={u.name}
+                  // inline-allowed: dynamic user color CSS variable injection
+                  style={{ '--remote-color': u.color }}
+                >
+                  <Show
+                    when={u.avatarUrl && !imgFailed()}
+                    fallback={
+                      <div class={styles.avatarFallback}>
+                        {u.name.slice(0, 1)}
+                      </div>
+                    }
+                  >
+                    <img
+                      class={styles.avatarImg}
+                      src={u.avatarUrl!}
+                      alt={u.name}
+                      // inline-allowed: dynamic user color CSS variable injection
+                      style={{ '--remote-color': u.color }}
+                      onError={() => setImgFailed(true)}
+                    />
+                  </Show>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
 
       {/* Auth section — three-state: undefined (loading) / null (guest) / User (signed in) */}
       <Show when={bridge.currentUser() !== undefined}>

@@ -215,3 +215,11 @@
 .row.brokenRef .nodeName {
   color: var(--accent-red, #e05252);
 }
+
+/* ── L3-A3: Remote peer selection highlight ──────────────────────────────── */
+
+/* Inset border using box-shadow so it doesn't affect layout.
+   --remote-color is injected inline (inline-allowed: dynamic user color). */
+.row.remoteSelected {
+  box-shadow: inset 0 0 0 1px var(--remote-color, transparent);
+}

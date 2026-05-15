@@ -11,6 +11,8 @@ import type { AssetPath, NodeUUID } from '../utils/branded';
 import type { SceneId } from '../core/sync/SyncEngine';
 import type { SceneDocument } from '../core/scene/SceneDocument';
 import type { User } from '../core/auth/AuthClient';
+import type { RealtimeClient, ConnectionStatus } from '../core/realtime/RealtimeClient';
+import type { RemoteAwarenessEntry } from '../core/realtime/awareness';
 
 export const CONFIRM_LOAD_KEY = 'erythos-settings-confirmLoad';
 const [confirmBeforeLoad, _setConfirmBeforeLoad] = createSignal<boolean>(
@@ -125,6 +127,26 @@ export interface EditorBridge {
    * undefined for local projects.
    */
   deleteCloudProject: (() => void) | undefined;
+
+  // ─── L3-A3: Realtime presence signals ─────────────────────────────────────
+  /**
+   * Reactive remote peer awareness states.
+   * null = no realtime client mounted (local project / viewer mode).
+   */
+  remoteStates: Accessor<RemoteAwarenessEntry[] | null>;
+  /** Reactive realtime connection status. null when not connected. */
+  realtimeStatus: Accessor<ConnectionStatus | null>;
+  /**
+   * Broadcast local cursor position (normalized 0..1 viewport coords).
+   * No-op when realtime is not mounted or editorReadOnly.
+   */
+  setCursor: (x: number, y: number, viewport: 'main' | 'scene-tree' | null) => void;
+  /**
+   * Broadcast local selection change.
+   * No-op when realtime is not mounted or editorReadOnly.
+   */
+  setSelection: (nodeIds: string[]) => void;
+
   dispose: () => void;
 }
 
@@ -158,6 +180,13 @@ export interface EditorBridgeDeps {
    * Only set for cloud projects; undefined for local.
    */
   deleteCloudProject?: () => void;
+
+  // ─── L3-A3: Realtime presence injection ───────────────────────────────────
+  /**
+   * Mounted RealtimeClient instance (cloud project only).
+   * When provided, bridge exposes its signals and write API.
+   */
+  realtimeClient?: RealtimeClient;
 }
 
 export function createEditorBridge(
@@ -197,6 +226,15 @@ export function createEditorBridge(
   const [_localCurrentUser, _setLocalCurrentUser] = createSignal<User | null | undefined>(undefined);
   const currentUser: Accessor<User | null | undefined> = deps?.currentUser ?? _localCurrentUser;
   const _setCurrentUser = deps?.setCurrentUser ?? _setLocalCurrentUser;
+
+  // L3-A3: Realtime presence — derive signals from injected RealtimeClient (if any)
+  const rt = deps?.realtimeClient;
+  const remoteStates: Accessor<RemoteAwarenessEntry[] | null> = rt
+    ? () => rt.remoteStates()
+    : () => null;
+  const realtimeStatus: Accessor<ConnectionStatus | null> = rt
+    ? () => rt.status()
+    : () => null;
 
   // 非同步初始化（fire-and-forget）
   void editor.projectManager.getRecentProjects().then(setRecentProjects);
@@ -379,6 +417,17 @@ export function createEditorBridge(
       deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
     editorReadOnly: editor.readOnly,
     deleteCloudProject: deps?.deleteCloudProject,
+
+    // L3-A3 realtime presence
+    remoteStates,
+    realtimeStatus,
+    setCursor: (x, y, viewport) => {
+      if (rt && !editor.readOnly()) rt.setCursor(x, y, viewport);
+    },
+    setSelection: (nodeIds) => {
+      if (rt && !editor.readOnly()) rt.setSelection(nodeIds);
+    },
+
     dispose,
   };
 }
