@@ -45,8 +45,8 @@ Erythos 的定位是 Figma for 3D,但有一件事永遠贏不了 Figma:cloud SLA
 
 ### 認證
 
-- **Magic link**(email + 一次性連結),不要密碼登入
-- **Library:** Lucia / Auth.js / Resend 寄信
+- **GitHub OAuth + Magic link**:GitHub OAuth day 1 起;Magic link v0.2 加入(Resend 寄信)
+- **Library:** self-rolled HMAC session(D3 Option C, 2026-05-09;見 `sync-protocol.md` § 認證實作)。Lucia / Auth.js 探過後棄
 - 第一週就上 — 沒帳號 = 沒雲端,「分享連結」會變「全網路任何人都能改」
 
 ### 匿名模式

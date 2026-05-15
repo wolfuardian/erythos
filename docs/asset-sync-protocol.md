@@ -151,10 +151,10 @@ Response 200:
 
 | Plan | Asset 總空間 | 單檔上限 |
 |------|-------------|---------|
-| free | 500 MB | 50 MB |
+| free | 150 MB | 50 MB |
 | pro  | 50 GB   | 500 MB |
 
-(數字 v0 暫定,Phase D 上線時再校準。)
+(free total 於 v0.3 onboarding 拍板 500 MB → 150 MB;對齊 `cloud-project-spec.md` § Onboarding 與 `server/src/routes/assets.ts` `FREE_TOTAL_QUOTA`。)
 
 `storage_used` 欄位 day 1 起就在 `users` 表(已釘進 sync-protocol.md「資料模型」),計費時直接讀。
 
