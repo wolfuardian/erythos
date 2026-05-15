@@ -193,7 +193,8 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
               <div class={styles.quotaBar}>
                 <div
                   class={`${styles.quotaFill} ${quotaFillClass()}`}
-                  style={{ width: `${storagePercent()}%` }}
+                  // inline-allowed: CSS variable injection — dynamic storage percent
+                  style={`--storage-pct: ${storagePercent()}%`}
                 />
               </div>
             </div>

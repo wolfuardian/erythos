@@ -61,7 +61,11 @@ const MenuItemRow: Component<{ item: MenuItem; onClose: () => void }> = (props) 
 
       <Show when={showSub()}>
         <div
-          class={`${styles.menu} ${styles.subMenu} ${shouldFlip() ? styles.subMenuLeft : styles.subMenuRight}`}
+          class={`${styles.menu} ${styles.subMenu}`}
+          classList={{
+            [styles.subMenuLeft]: shouldFlip(),
+            [styles.subMenuRight]: !shouldFlip(),
+          }}
         >
           <For each={props.item.children}>
             {(child) => <MenuItemRow item={child} onClose={props.onClose} />}
