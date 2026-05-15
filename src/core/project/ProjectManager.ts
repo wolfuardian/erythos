@@ -15,6 +15,21 @@
 
 import type { SceneDocument } from '../scene/SceneDocument';
 
+// ── LoadSceneResult ───────────────────────────────────────────────────────────
+
+/**
+ * Discriminated result from ProjectManager.loadScene().
+ *
+ * `fromCache` is true only for CloudProjectManager when the scene was served
+ * from IndexedDB (offline cold-start). Callers should enter read-only viewer
+ * mode when `fromCache` is true (spec § Offline 策略 — 冷啟動有 cache, #1060).
+ * LocalProjectManager always returns `fromCache: false`.
+ */
+export interface LoadSceneResult {
+  doc: SceneDocument;
+  fromCache: boolean;
+}
+
 // ── Identifier ────────────────────────────────────────────────────────────────
 
 export type ProjectIdentifier =
@@ -46,8 +61,13 @@ export interface ProjectManager {
   readonly type: 'local' | 'cloud';
   readonly identifier: ProjectIdentifier;
 
-  /** Load the primary scene blob for this project. */
-  loadScene(): Promise<SceneDocument>;
+  /**
+   * Load the primary scene blob for this project.
+   * Returns `{ doc, fromCache }` — `fromCache` is true when served from
+   * IndexedDB cache (cloud offline cold-start). Callers enter read-only mode
+   * when `fromCache` is true (spec § Offline 策略, #1060).
+   */
+  loadScene(): Promise<LoadSceneResult>;
 
   /**
    * Persist the scene blob.

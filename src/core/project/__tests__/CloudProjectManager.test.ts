@@ -117,21 +117,23 @@ describe('CloudProjectManager.loadScene', () => {
     vi.mocked(CloudSceneCache.setScene).mockResolvedValue(undefined);
   });
 
-  it('fetches from server and returns SceneDocument', async () => {
+  it('fetches from server and returns { doc: SceneDocument, fromCache: false }', async () => {
     const { cpm, syncEngine } = makeCPM();
 
     const result = await cpm.loadScene();
 
     expect(syncEngine.fetch).toHaveBeenCalledWith(SCENE_ID);
-    expect(result).toBeInstanceOf(SceneDocument);
+    expect(result.doc).toBeInstanceOf(SceneDocument);
+    expect(result.fromCache).toBe(false);
     expect(cpm.currentVersion).toBe(3);
   });
 
   it('writes to IndexedDB cache after successful server fetch', async () => {
     const { cpm } = makeCPM();
 
-    await cpm.loadScene();
+    const result = await cpm.loadScene();
 
+    expect(result.fromCache).toBe(false);
     expect(CloudSceneCache.setScene).toHaveBeenCalledWith(
       SCENE_ID,
       expect.any(String),
@@ -139,7 +141,7 @@ describe('CloudProjectManager.loadScene', () => {
     );
   });
 
-  it('falls through to IndexedDB cache on NetworkError', async () => {
+  it('returns { fromCache: true } when loaded from IndexedDB on NetworkError', async () => {
     const doc = makeEmptySceneDocument();
     const serialised = JSON.stringify(doc.serialize());
 
@@ -154,7 +156,8 @@ describe('CloudProjectManager.loadScene', () => {
 
     const result = await cpm.loadScene();
 
-    expect(result).toBeInstanceOf(SceneDocument);
+    expect(result.doc).toBeInstanceOf(SceneDocument);
+    expect(result.fromCache).toBe(true);
     expect(cpm.currentVersion).toBe(2);
   });
 
@@ -169,6 +172,41 @@ describe('CloudProjectManager.loadScene', () => {
     const { cpm } = makeCPM({ fetchError: new AuthError('Unauthorized') });
 
     await expect(cpm.loadScene()).rejects.toBeInstanceOf(AuthError);
+  });
+
+  // ── New tests for #1060 fromCache discriminant ────────────────────────────
+
+  it('[#1060] fromCache is false on successful server fetch', async () => {
+    const { cpm } = makeCPM();
+
+    const { fromCache } = await cpm.loadScene();
+
+    expect(fromCache).toBe(false);
+  });
+
+  it('[#1060] fromCache is true on NetworkError + cache present', async () => {
+    const doc = makeEmptySceneDocument();
+    vi.mocked(CloudSceneCache.getScene).mockResolvedValue({
+      key: `project-cache-${SCENE_ID}`,
+      data: JSON.stringify(doc.serialize()),
+      version: 7,
+      cachedAt: Date.now(),
+    });
+
+    const { cpm } = makeCPM({ fetchError: new NetworkError('offline') });
+
+    const { fromCache, doc: resultDoc } = await cpm.loadScene();
+
+    expect(fromCache).toBe(true);
+    expect(resultDoc).toBeInstanceOf(SceneDocument);
+    expect(cpm.currentVersion).toBe(7);
+  });
+
+  it('[#1060] throws (not fromCache) on NetworkError + no cache present', async () => {
+    vi.mocked(CloudSceneCache.getScene).mockResolvedValue(null);
+    const { cpm } = makeCPM({ fetchError: new NetworkError('offline') });
+
+    await expect(cpm.loadScene()).rejects.toBeInstanceOf(NetworkError);
   });
 });
 
