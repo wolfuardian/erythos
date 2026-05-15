@@ -38,6 +38,7 @@ import {
 import { currentRoute, navigateToScene } from './router';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
+import { RealtimeClient } from '../core/realtime/RealtimeClient';
 import styles from './App.module.css';
 import viewerStyles from './ShareTokenViewer.module.css';
 
@@ -71,6 +72,9 @@ const App: Component = () => {
   let activeCloudManager: CloudProjectManager | null = null;
   // Cross-tab coordinator for #1006 cloud scene invalidation broadcasts
   let activeCloudTabCoord: MultiTabCoord | null = null;
+
+  // L3-A3: Active RealtimeClient — set when a cloud project is open, null otherwise
+  let activeRealtimeClient: RealtimeClient | null = null;
 
   // Viewer mode state — set when URL is /scenes/{uuid} and scene is not locally owned
   const [viewerSceneId, setViewerSceneId] = createSignal<string | null>(null);
@@ -288,6 +292,12 @@ const App: Component = () => {
       onSceneReplaced = null;
     }
 
+    // L3-A3: destroy realtime client before bridge dispose
+    if (activeRealtimeClient) {
+      activeRealtimeClient.destroy();
+      activeRealtimeClient = null;
+    }
+
     b.dispose();
     sharedGrid?.dispose();
     sharedGrid = null;
@@ -396,6 +406,20 @@ const App: Component = () => {
       })();
     };
 
+    // L3-A3: Mount RealtimeClient for cloud projects when user is signed in.
+    // currentUser() has been resolved (awaited above) before openCloudProject runs.
+    const user = currentUser();
+    let realtimeClient: RealtimeClient | undefined;
+    if (user) {
+      try {
+        realtimeClient = new RealtimeClient(sceneId, user);
+        activeRealtimeClient = realtimeClient;
+      } catch (err) {
+        // Non-fatal — presence features disabled for this session.
+        console.warn('[App] Failed to mount RealtimeClient:', err);
+      }
+    }
+
     const b = createEditorBridge(e, sharedGridObjects, {
       closeProject,
       projectManager,
@@ -408,6 +432,7 @@ const App: Component = () => {
       setCurrentUser,
       ...makeAuthCallbacks(authClient),
       deleteCloudProject,
+      realtimeClient,
     });
 
     registerEditorKeybindings(e);

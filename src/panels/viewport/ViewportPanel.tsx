@@ -1,4 +1,4 @@
-import { onMount, onCleanup, createEffect, createSignal, Show, type Component } from 'solid-js';
+import { onMount, onCleanup, createEffect, createSignal, Show, For, type Component } from 'solid-js';
 import styles from './ViewportPanel.module.css';
 import type { ShadingMode } from '../../viewport/ShadingManager';
 import type { QualityLevel } from '../../viewport/PostProcessing';
@@ -389,6 +389,26 @@ const ViewportPanel: Component = () => {
         hdrRotation: hdrRotation(),
       });
     });
+
+    // L3-A3: Broadcast local cursor position to realtime peers (normalized 0..1 coords).
+    // Throttling is handled by RealtimeClient (33 ms), so calling on every pointermove is fine.
+    const onPointerMove = (e: PointerEvent) => {
+      if (bridge.editorReadOnly()) return;
+      const rect = canvasRef.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const normX = (e.clientX - rect.left) / rect.width;
+      const normY = (e.clientY - rect.top) / rect.height;
+      bridge.setCursor(normX, normY, 'main');
+    };
+    const onPointerLeave = () => {
+      if (!bridge.editorReadOnly()) bridge.setCursor(0, 0, null);
+    };
+    canvasRef.addEventListener('pointermove', onPointerMove);
+    canvasRef.addEventListener('pointerleave', onPointerLeave);
+    onCleanup(() => {
+      canvasRef.removeEventListener('pointermove', onPointerMove);
+      canvasRef.removeEventListener('pointerleave', onPointerLeave);
+    });
   });
 
   // Sync selection → viewport (UUID → Object3D)
@@ -511,6 +531,11 @@ const ViewportPanel: Component = () => {
       });
   });
 
+  // L3-A3: Broadcast local selection to realtime peers on change
+  createEffect(() => {
+    bridge.setSelection(bridge.selectedUUIDs());
+  });
+
   onCleanup(() => {
     viewport?.dispose();
     viewport = null;
@@ -576,6 +601,29 @@ const ViewportPanel: Component = () => {
             message={errorMessage() ?? ''}
             onClose={() => setErrorMessage(null)}
           />
+          {/* L3-A3: Remote cursor overlay — pointer-events:none so it never blocks viewport interaction */}
+          <Show when={bridge.remoteStates() !== null}>
+            <div class={styles.cursorOverlay} aria-hidden="true">
+              <For each={bridge.remoteStates()!.filter(e => e.state.cursor.viewport === 'main')}>
+                {(entry) => {
+                  const x = () => `${entry.state.cursor.x * 100}%`;
+                  const y = () => `${entry.state.cursor.y * 100}%`;
+                  const color = entry.state.user.color;
+                  const name = entry.state.user.name;
+                  return (
+                    <div
+                      class={styles.remoteCursor}
+                      // inline-allowed: per-frame cursor position + dynamic user color injection
+                      style={{ left: x(), top: y(), '--remote-color': color }}
+                    >
+                      <div class={styles.remoteCursorDot} />
+                      <div class={styles.remoteCursorLabel}>{name}</div>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
+          </Show>
         </div>
       </PanelContent>
     </Panel>

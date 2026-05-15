@@ -1,4 +1,4 @@
-import { For, Show, type Component } from 'solid-js';
+import { For, Show, createMemo, type Component } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { useEditor } from '../../app/EditorContext';
 import { MoveNodeCommand } from '../../core/commands/MoveNodeCommand';
@@ -57,6 +57,22 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
 
   /** True if this node has an unresolvable asset reference. */
   const isBrokenRef = () => bridge.brokenRefIds().has(props.node.id);
+
+  /**
+   * L3-A3: Remote peers who have this node in their selection.
+   * Returns the first remote user's color (if any) for the selection border.
+   * Multiple remote selectors: only the first is visualized (L3-D will decide layering).
+   */
+  const remoteSelectColor = createMemo((): string | null => {
+    const states = bridge.remoteStates();
+    if (!states) return null;
+    for (const entry of states) {
+      if (entry.state.selection.nodeIds.includes(props.node.id)) {
+        return entry.state.user.color;
+      }
+    }
+    return null;
+  });
 
   const childNodes = () =>
     bridge.nodes()
@@ -211,9 +227,15 @@ export const TreeNode: Component<TreeNodeProps> = (props) => {
           [styles.dropTargetInside]: isDropTarget() && indicator()?.position === 'inside',
           [styles.dragging]: props.draggedId() === props.node.id,
           [styles.brokenRef]: isBrokenRef(),
+          [styles.remoteSelected]: remoteSelectColor() !== null,
         }}
-        // inline-allowed: CSS variable injection — depth-based padding-left consumed by CSS
-        style={{ '--depth': props.depth, '--row-padding-left': `${ROW_PADDING_LEFT}px`, '--indent-w': `${INDENT_W}px` }}
+        // inline-allowed: CSS variable injection — depth-based padding + remote selection color
+        style={{
+          '--depth': props.depth,
+          '--row-padding-left': `${ROW_PADDING_LEFT}px`,
+          '--indent-w': `${INDENT_W}px`,
+          '--remote-color': remoteSelectColor() ?? 'transparent',
+        }}
       >
         {/* Selected: left 2px accent bar */}
         <Show when={isSelected()}>
