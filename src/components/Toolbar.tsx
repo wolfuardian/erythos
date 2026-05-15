@@ -232,35 +232,35 @@ export const Toolbar: Component = () => {
           title={`${onlineUsers().length} user${onlineUsers().length === 1 ? '' : 's'} online`}
         >
           <For each={onlineUsers()}>
-            {(u) => (
-              <div
-                class={styles.avatarChip}
-                title={u.name}
-                // inline-allowed: dynamic user color CSS variable injection
-                style={{ '--remote-color': u.color }}
-              >
-                <Show
-                  when={u.avatarUrl}
-                  fallback={
-                    <div class={styles.avatarFallback}>
-                      {u.name.slice(0, 1)}
-                    </div>
-                  }
+            {(u) => {
+              const [imgFailed, setImgFailed] = createSignal(false);
+              return (
+                <div
+                  class={styles.avatarChip}
+                  title={u.name}
+                  // inline-allowed: dynamic user color CSS variable injection
+                  style={{ '--remote-color': u.color }}
                 >
-                  <img
-                    class={styles.avatarImg}
-                    src={u.avatarUrl!}
-                    alt={u.name}
-                    // inline-allowed: dynamic user color CSS variable injection
-                    style={{ '--remote-color': u.color }}
-                    onError={(e) => {
-                      // Hide broken image, fallback div will show instead via Show
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </Show>
-              </div>
-            )}
+                  <Show
+                    when={u.avatarUrl && !imgFailed()}
+                    fallback={
+                      <div class={styles.avatarFallback}>
+                        {u.name.slice(0, 1)}
+                      </div>
+                    }
+                  >
+                    <img
+                      class={styles.avatarImg}
+                      src={u.avatarUrl!}
+                      alt={u.name}
+                      // inline-allowed: dynamic user color CSS variable injection
+                      style={{ '--remote-color': u.color }}
+                      onError={() => setImgFailed(true)}
+                    />
+                  </Show>
+                </div>
+              );
+            }}
           </For>
         </div>
       </Show>
