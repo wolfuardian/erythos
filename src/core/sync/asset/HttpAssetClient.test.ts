@@ -114,24 +114,30 @@ describe('HttpAssetClient.upload', () => {
     expect(result.hash).toBe(fakeHash);
   });
 
-  it('401 → throws AssetClientError with status 401', async () => {
-    mockFetchSingle(401, { error: 'Unauthorized' });
+  it('401 → throws AssetClientError with status 401 and formatted message', async () => {
+    mockFetchSingle(401, { error: 'Not signed in', code: 'E1206 ERR_ASSET_UNAUTHORIZED' });
     const client = new HttpAssetClient(BASE_URL);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toThrow(AssetClientError);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toMatchObject({ status: 401 });
+    await expect(client.upload(fakeBlob, fakeHash)).rejects.toMatchObject({
+      message: 'Not signed in (E1206 ERR_ASSET_UNAUTHORIZED)',
+    });
   });
 
-  it('400 hash_mismatch → throws AssetHashMismatchError', async () => {
-    mockFetchSingle(400, { error: 'hash_mismatch' });
+  it('400 hash_mismatch (new error code shape) → throws AssetHashMismatchError', async () => {
+    mockFetchSingle(400, { error: 'Asset hash mismatch', code: 'E1203 ERR_ASSET_HASH_MISMATCH' });
     const client = new HttpAssetClient(BASE_URL);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toThrow(AssetHashMismatchError);
   });
 
-  it('413 → throws AssetQuotaExceededError', async () => {
-    mockFetchSingle(413, { error: 'quota_exceeded' });
+  it('413 → throws AssetQuotaExceededError with formatted message', async () => {
+    mockFetchSingle(413, { error: 'Asset exceeds 50 MB per-file limit', code: 'E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED' });
     const client = new HttpAssetClient(BASE_URL);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toThrow(AssetQuotaExceededError);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toMatchObject({ status: 413 });
+    await expect(client.upload(fakeBlob, fakeHash)).rejects.toMatchObject({
+      message: 'Asset exceeds 50 MB per-file limit (E1201 ERR_ASSET_PER_FILE_QUOTA_EXCEEDED)',
+    });
   });
 
   it('500 → throws AssetClientError with status 500', async () => {
@@ -161,10 +167,13 @@ describe('HttpAssetClient.upload', () => {
     expect(callArgs.body).toBeInstanceOf(FormData);
   });
 
-  it('400 non-hash-mismatch → throws AssetClientError', async () => {
-    mockFetchSingle(400, { error: 'file field is required' });
+  it('400 non-hash-mismatch (with code) → throws AssetClientError with formatted message', async () => {
+    mockFetchSingle(400, { error: "Missing 'file' field", code: 'E1205 ERR_ASSET_MISSING_FILE_FIELD' });
     const client = new HttpAssetClient(BASE_URL);
     await expect(client.upload(fakeBlob, fakeHash)).rejects.toThrow(AssetClientError);
+    await expect(client.upload(fakeBlob, fakeHash)).rejects.toMatchObject({
+      message: "Missing 'file' field (E1205 ERR_ASSET_MISSING_FILE_FIELD)",
+    });
   });
 });
 
