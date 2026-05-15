@@ -39,6 +39,7 @@ import { currentRoute, navigateToScene } from './router';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import { RealtimeClient } from '../core/realtime/RealtimeClient';
+import { upgradeLocalToCloud } from './upgradeLocalToCloud';
 import styles from './App.module.css';
 import viewerStyles from './ShareTokenViewer.module.css';
 
@@ -265,6 +266,15 @@ const App: Component = () => {
       currentUser,
       setCurrentUser,
       ...makeAuthCallbacks(authClient),
+      // Local → Cloud upgrade (D-7, refs #1053): available in local project mode only.
+      // closeProject / openCloudProject are captured closures from App scope.
+      upgradeLocalToCloud: () => upgradeLocalToCloud({
+        editor: e,
+        syncEngine,
+        closeProject,
+        openCloudProject,
+        currentUser: currentUser(),
+      }),
     });
 
     registerEditorKeybindings(e);

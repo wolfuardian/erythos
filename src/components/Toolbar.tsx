@@ -5,6 +5,8 @@ import { ProjectChip } from './ProjectChip';
 import { ShareDialog, type SceneVisibility } from './ShareDialog';
 import { SignInDialog } from './SignInDialog';
 import { UserMenu } from './UserMenu';
+import { ConfirmDialog } from './ConfirmDialog';
+import { ErrorDialog } from './ErrorDialog';
 import { useEditor } from '../app/EditorContext';
 import { clearSavedLayout } from '../app/workspaceStore';
 import { store, mutate, addWorkspace } from '../app/workspaceStore';
@@ -26,6 +28,28 @@ export const Toolbar: Component = () => {
   const [shareTokens, setShareTokens] = createSignal<ShareToken[] | undefined>(undefined);
   const [tokenError, setTokenError] = createSignal<string | null>(null);
   let signInTriggerRef: HTMLButtonElement | undefined;
+
+  // Upload to cloud — confirm dialog + in-progress state + error dialog
+  // Spec ref: docs/cloud-project-spec.md § Local → Cloud 升級 (refs #1053)
+  const [uploadConfirmOpen, setUploadConfirmOpen] = createSignal(false);
+  const [uploadInProgress, setUploadInProgress] = createSignal(false);
+  const [uploadErrorOpen, setUploadErrorOpen] = createSignal(false);
+  const [uploadErrorMessage, setUploadErrorMessage] = createSignal('');
+
+  const handleUploadConfirm = async () => {
+    setUploadConfirmOpen(false);
+    setUploadInProgress(true);
+    try {
+      await bridge.upgradeLocalToCloud?.();
+      // On success the editor switches to cloud mode; Toolbar re-renders with
+      // projectType === 'cloud' and the Upload button no longer shows.
+    } catch (err) {
+      setUploadErrorMessage(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+      setUploadErrorOpen(true);
+    } finally {
+      setUploadInProgress(false);
+    }
+  };
 
   // When dialog opens, fetch current visibility + tokens (if owner)
   createEffect(() => {
@@ -205,6 +229,20 @@ export const Toolbar: Component = () => {
       {/* Split divider */}
       <div class={styles.divider} />
 
+      {/* Upload to cloud — local project + signed in only (refs #1053, D-7) */}
+      <Show when={bridge.projectType() === 'local' && bridge.currentUser()}>
+        <button
+          data-testid="toolbar-upload-to-cloud"
+          type="button"
+          class={styles.shareButton}
+          disabled={uploadInProgress()}
+          onClick={() => setUploadConfirmOpen(true)}
+          title="Upload local project to cloud"
+        >
+          {uploadInProgress() ? 'Uploading…' : 'Upload to cloud'}
+        </button>
+      </Show>
+
       {/* Share button — visible when there is a sync ID;
           owner-check is done lazily via token load on dialog open */}
       <button
@@ -333,6 +371,23 @@ export const Toolbar: Component = () => {
         onRequestMagicLink={bridge.requestMagicLink}
         onClose={() => setSignInOpen(false)}
         triggerRef={signInTriggerRef ?? null}
+      />
+
+      {/* Upload to cloud — confirm + error dialogs (refs #1053) */}
+      <ConfirmDialog
+        open={uploadConfirmOpen()}
+        title="Upload to cloud?"
+        message="Upload your local project to cloud? Assets will need to be re-uploaded."
+        confirmLabel="Upload"
+        cancelLabel="Cancel"
+        onConfirm={handleUploadConfirm}
+        onCancel={() => setUploadConfirmOpen(false)}
+      />
+      <ErrorDialog
+        open={uploadErrorOpen()}
+        title="Upload failed"
+        message={uploadErrorMessage()}
+        onClose={() => setUploadErrorOpen(false)}
       />
     </div>
   );
