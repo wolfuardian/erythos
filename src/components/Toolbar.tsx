@@ -98,6 +98,8 @@ export const Toolbar: Component = () => {
   };
 
   // L3-A3: Derive online user list from remote awareness states
+  const MAX_VISIBLE_AVATARS = 5;
+
   const onlineUsers = createMemo(() => {
     const states = bridge.remoteStates();
     if (!states || states.length === 0) return [];
@@ -108,6 +110,9 @@ export const Toolbar: Component = () => {
       color: e.state.user.color,
     }));
   });
+
+  const visibleUsers = createMemo(() => onlineUsers().slice(0, MAX_VISIBLE_AVATARS));
+  const overflowCount = createMemo(() => Math.max(0, onlineUsers().length - MAX_VISIBLE_AVATARS));
 
   return (
     <div
@@ -224,6 +229,7 @@ export const Toolbar: Component = () => {
       </button>
 
       {/* L3-A3: Online avatar row — shown when realtime is active and peers are present */}
+      {/* Capped at MAX_VISIBLE_AVATARS; excess peers shown as "+M" overflow chip. */}
       <Show when={onlineUsers().length > 0}>
         <div class={styles.divider} />
         <div
@@ -231,7 +237,7 @@ export const Toolbar: Component = () => {
           class={styles.onlineAvatars}
           title={`${onlineUsers().length} user${onlineUsers().length === 1 ? '' : 's'} online`}
         >
-          <For each={onlineUsers()}>
+          <For each={visibleUsers()}>
             {(u) => {
               const [imgFailed, setImgFailed] = createSignal(false);
               return (
@@ -262,6 +268,14 @@ export const Toolbar: Component = () => {
               );
             }}
           </For>
+          <Show when={overflowCount() > 0}>
+            <div
+              class={styles.overflowChip}
+              title={`${overflowCount()} more user${overflowCount() === 1 ? '' : 's'}`}
+            >
+              +{overflowCount()}
+            </div>
+          </Show>
         </div>
       </Show>
 

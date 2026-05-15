@@ -30,9 +30,17 @@ export interface AwarenessUser {
 // ─── Cursor position (updated at 30 Hz) ─────────────────────────────────────
 
 export interface AwarenessCursor {
-  /** Viewport-space X coordinate */
+  /**
+   * Normalized X coordinate within the sender's viewport rect — value in [0, 1].
+   * Sender divides `clientX` by the viewport container width; receiver multiplies by
+   * 100 to obtain a CSS `left` percentage. Never in raw pixel units.
+   */
   x: number;
-  /** Viewport-space Y coordinate */
+  /**
+   * Normalized Y coordinate within the sender's viewport rect — value in [0, 1].
+   * Sender divides `clientY` by the viewport container height; receiver multiplies by
+   * 100 to obtain a CSS `top` percentage. Never in raw pixel units.
+   */
   y: number;
   /**
    * Which viewport the cursor is in.
