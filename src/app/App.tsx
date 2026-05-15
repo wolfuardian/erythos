@@ -731,6 +731,20 @@ const App: Component = () => {
               const data = await res.json() as { id: string };
               await openCloudProject(data.id);
             }}
+            onDeleteCloudProject={async (sceneId) => {
+              const apiBase = defaultBaseUrl();
+              const res = await fetch(`${apiBase}/scenes/${encodeURIComponent(sceneId)}`, {
+                method: 'DELETE',
+                credentials: 'include',
+              });
+              if (!res.ok) {
+                const body = (await res.json().catch(() => null)) as { error?: string; code?: string } | null;
+                if (body?.error) {
+                  throw new Error(body.code ? `${body.error} (${body.code})` : body.error);
+                }
+                throw new Error(`Failed to delete cloud project: ${res.status}`);
+              }
+            }}
             onOpenOAuth={() => { window.location.href = authClient.getOAuthStartUrl('github'); }}
             onRequestMagicLink={(email) => authClient.requestMagicLink(email)}
           />
