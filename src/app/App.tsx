@@ -465,6 +465,12 @@ const App: Component = () => {
       void (async () => {
         try {
           const freshDoc = await cm.loadScene();
+          // INTENTIONAL bypass of Editor.loadScene(): cloud asset URLs are already
+          // cloud-resolvable (assets://<hash>/<filename>) and don't need re-hydration
+          // through AssetResolver. Going through loadScene() would re-trigger asset
+          // hydration + brokenRefs scan that's redundant for cloud refresh and could
+          // race with the in-flight server state.
+          //
           // Suppress AutoSave while overwriting the local scene with the server
           // snapshot — without this, the deserialize() emits sceneReplaced which
           // re-triggers a push, broadcasts a new version, and another tab reloads
