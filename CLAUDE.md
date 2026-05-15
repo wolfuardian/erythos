@@ -82,6 +82,7 @@ TypeScript + SolidJS + Three.js 打造的 3D 編輯器。Dockview 面板系統,V
 | scene-tree | src/panels/scene-tree/ | `[scene-tree]` |
 | properties | src/panels/properties/ | `[properties]` |
 | prefab-panel | src/panels/project/ | `[prefab-panel]` |
+| server | server/ | `[server]` |
 | scripts | scripts/ | `[scripts]` |
 
 ---
