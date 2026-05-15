@@ -13,6 +13,10 @@
  *   POST /scenes         — happy 201, 401 (no auth)
  *   PATCH /scenes/:id/visibility — happy 200, 401 (no auth), 404 (non-owner)
  *   POST /scenes/:id/fork — happy 201, 401 (no auth), 404 (private non-owner source)
+ *   DELETE /scenes/:id   — 204 (owner), 401 (no auth), 404 (non-owner/no-leak),
+ *                          404 (non-existent UUID), 400 (non-UUID id),
+ *                          cascade verified (db.delete called → FK handles versions),
+ *                          idempotency (second DELETE → 404), GET-after-DELETE → 404
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -25,6 +29,7 @@ import { Hono } from 'hono';
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockInsert = vi.fn();
+const mockDelete = vi.fn();
 const mockTransaction = vi.fn();
 
 vi.mock('../db.js', () => ({
@@ -32,6 +37,7 @@ vi.mock('../db.js', () => ({
     select: mockSelect,
     update: mockUpdate,
     insert: mockInsert,
+    delete: mockDelete,
     transaction: mockTransaction,
   },
   pool: {},
@@ -733,5 +739,164 @@ describe('GET /api/scenes', () => {
 
     const res = await app.request(makeRequest('/api/scenes'));
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /scenes/:id
+// ---------------------------------------------------------------------------
+
+/** Build a delete chain: .where() resolves to undefined */
+function deleteChain() {
+  return {
+    where: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+describe('DELETE /scenes/:id', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+  });
+
+  it('returns 204 and removes scene row when owner deletes own scene', async () => {
+    mockSelect.mockReturnValue(selectChain([fakeScene()]));
+    mockDelete.mockReturnValue(deleteChain());
+
+    const res = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(204);
+    // Verify db.delete was invoked (DB FK cascade handles scene_versions)
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    mockResolveSession.mockResolvedValue(null);
+
+    const res = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+      }),
+    );
+
+    expect(res.status).toBe(401);
+    // Auth rejected before any DB access
+    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 (no existence leak) when caller is not the owner', async () => {
+    mockResolveSession.mockResolvedValue({ ...FAKE_USER, id: OTHER_USER_ID });
+    mockSelect.mockReturnValue(selectChain([fakeScene()])); // scene exists, owned by FAKE_USER
+
+    const res = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=other-token',
+      }),
+    );
+
+    expect(res.status).toBe(404);
+    // db.delete must NOT have been called — owner check fires first
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when scene UUID does not exist', async () => {
+    mockSelect.mockReturnValue(selectChain([])); // no rows
+
+    const res = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa99', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(404);
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 with E1002 code when id is not a UUID', async () => {
+    const res = await app.request(
+      makeRequest('/api/scenes/not-a-uuid', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.code).toBe('E1002 ERR_SCENE_ID_FORMAT');
+    expect(body.error).toMatch(/UUID/i);
+    // UUID middleware short-circuits before any DB call
+    expect(mockSelect).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it('db.delete is called once (scene_versions cascade is DB-level via FK ON DELETE CASCADE)', async () => {
+    mockSelect.mockReturnValue(selectChain([fakeScene()]));
+    mockDelete.mockReturnValue(deleteChain());
+
+    await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    // Only one db.delete call — the FK cascade (scene_versions, share_tokens) is handled
+    // transparently by Postgres, no additional delete call in application code.
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 on second DELETE of the same scene (idempotency)', async () => {
+    // First call: scene exists
+    mockSelect.mockReturnValueOnce(selectChain([fakeScene()]));
+    mockDelete.mockReturnValue(deleteChain());
+
+    const firstRes = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+    expect(firstRes.status).toBe(204);
+
+    // Second call: scene no longer in DB → select returns []
+    mockSelect.mockReturnValueOnce(selectChain([]));
+
+    const secondRes = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+    expect(secondRes.status).toBe(404);
+  });
+
+  it('GET after DELETE returns 404', async () => {
+    // DELETE succeeds
+    mockSelect.mockReturnValueOnce(selectChain([fakeScene()]));
+    mockDelete.mockReturnValue(deleteChain());
+
+    const deleteRes = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+    expect(deleteRes.status).toBe(204);
+
+    // Subsequent GET: scene no longer exists
+    mockSelect.mockReturnValueOnce(selectChain([]));
+
+    const getRes = await app.request(
+      makeRequest('/api/scenes/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11'),
+    );
+    expect(getRes.status).toBe(404);
   });
 });
