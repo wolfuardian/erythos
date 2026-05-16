@@ -46,6 +46,7 @@ import {
   markAddressed,
   isMigrationDisabled,
   disableMigration,
+  getMigratedEntryIds,
 } from './anonMigrateState';
 import type { ProjectEntry } from '../core/project/ProjectHandleStore';
 import { loadProjects } from '../core/project/ProjectHandleStore';
@@ -89,6 +90,8 @@ const App: Component = () => {
   // #1054 Anonymous → Registered migration prompt state
   const [migrateDialogOpen, setMigrateDialogOpen] = createSignal(false);
   const [migrateEntries, setMigrateEntries] = createSignal<ProjectEntry[]>([]);
+  // #1082 — set of entry IDs already uploaded via Toolbar; used to show badge in dialog
+  const [migrateBadgeIds, setMigrateBadgeIds] = createSignal<ReadonlySet<string>>(new Set());
   // Guard: prevents re-trigger while batch is running
   let migrateBatchRunning = false;
 
@@ -759,6 +762,9 @@ const App: Component = () => {
         const addressed = getAddressedIds();
         const pending = all.filter((e) => !addressed.has(e.id));
         if (pending.length === 0) return;
+        // #1082 — snapshot already-migrated IDs at dialog open time so the dialog
+        // can show "Already uploaded" badges and default those entries to unchecked.
+        setMigrateBadgeIds(getMigratedEntryIds());
         setMigrateEntries(pending);
         setMigrateDialogOpen(true);
       } catch {
@@ -853,6 +859,7 @@ const App: Component = () => {
       <AnonMigrateDialog
         open={migrateDialogOpen()}
         entries={migrateEntries()}
+        migratedEntryIds={migrateBadgeIds()}
         onAddSelected={handleMigrateAddSelected}
         onSkip={handleMigrateSkip}
         onSkipAll={handleMigrateSkipAll}

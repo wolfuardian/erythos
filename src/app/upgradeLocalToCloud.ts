@@ -8,8 +8,10 @@
  *   1. syncEngine.create(name, sceneDocument)
  *      — internally calls uploadSceneBinaries (project:// → assets://) then
  *        POST /api/scenes. All asset upload + scene creation is one atomic call.
- *   2. closeProject() — tears down local editor state.
- *   3. openCloudProject(sceneId) — mounts CloudProjectManager + new Editor.
+ *   2. markEntryMigrated(entryId, sceneId) — record the mapping so the batch dialog
+ *      can detect already-migrated entries and avoid cloud duplicates (#1082).
+ *   3. closeProject() — tears down local editor state.
+ *   4. openCloudProject(sceneId) — mounts CloudProjectManager + new Editor.
  *
  * Error strategy (mirrors dispatch spec):
  *   - upload / POST fails → throw, caller surfaces via ErrorDialog.
@@ -19,12 +21,13 @@
  *
  * Spec ref: docs/cloud-project-spec.md § Local → Cloud 升級
  * Design decision D-7: upgrade does not delete local file.
- * Refs: #1053
+ * Refs: #1053, #1082
  */
 
 import type { Editor } from '../core/Editor';
 import type { HttpSyncEngine } from '../core/sync/HttpSyncEngine';
 import type { User } from '../core/auth/AuthClient';
+import { markEntryMigrated } from './anonMigrateState';
 
 export interface UpgradeLocalToCloudDeps {
   editor: Editor;
@@ -44,14 +47,24 @@ export interface UpgradeLocalToCloudDeps {
 export async function upgradeLocalToCloud(deps: UpgradeLocalToCloudDeps): Promise<void> {
   const { editor, syncEngine, closeProject, openCloudProject, currentUser } = deps;
 
-  // Capture scene name and document before tearing down the project.
+  // Capture scene name, document, and entry ID before tearing down the project.
   const sceneName = editor.projectManager.name ?? 'Untitled';
   const sceneDocument = editor.sceneDocument;
+  // currentId is null when no project is open (should not happen here — guard by no-op).
+  const entryId = editor.projectManager.currentId;
 
   // Step 1: upload all project:// assets + POST /api/scenes in one call.
   // syncEngine.create() internally calls uploadSceneBinaries() when projectManager
   // and assetClient are wired (they are — App.tsx injects both at construction time).
   const { id: sceneId } = await syncEngine.create(sceneName, sceneDocument);
+
+  // Step 1b: record the local→cloud mapping so the batch dialog can detect entries
+  // that were already uploaded via the Toolbar button and avoid creating duplicates.
+  // No-op when entryId is null (no project was open — should not reach this path).
+  // Refs: #1082
+  if (entryId !== null) {
+    markEntryMigrated(entryId, sceneId);
+  }
 
   // Step 2: tear down the local editor (flushes autosave, destroys bridge, etc.)
   await closeProject();

@@ -114,6 +114,16 @@
   color: var(--text-secondary);
 }
 
+.alreadyUploadedBadge {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  color: var(--accent-green, var(--text-secondary));
+  background: var(--bg-success-subtle, var(--bg-section));
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
   align-items: center;
