@@ -43,8 +43,12 @@ process.on('uncaughtException', (err) => {
 
 // ---------------------------------------------------------------------------
 // Health endpoint — DB connectivity check, no auth required (uptime monitor)
+//
+// Mounted at BOTH `/health` (root — uptime monitor / install.md convention) and
+// `/api/health` (alias — client useOfflineStatus pings this every 30 s; without
+// the alias every prod client gets a 404 storm). Same handler, two routes.
 // ---------------------------------------------------------------------------
-app.get('/health', async (c) => {
+const healthHandler = async (c: import('hono').Context) => {
   const t0 = Date.now();
   let dbStatus: 'up' | 'down' = 'down';
 
@@ -64,7 +68,9 @@ app.get('/health', async (c) => {
 
   // Always 200 — uptime monitors read body to detect degraded state
   return c.json({ status, db: dbStatus, response_ms }, 200);
-});
+};
+
+app.get('/health', healthHandler);
 
 // ---------------------------------------------------------------------------
 // Origin validation middleware — defense-in-depth against subdomain-compromise
@@ -99,6 +105,7 @@ api.use('*', async (c, next) => {
   return next();
 });
 
+api.get('/health', healthHandler);
 api.route('/auth', authRoutes);
 api.route('/auth/magic-link', magicLinkRoutes);
 api.route('/scenes', sceneRoutes);
