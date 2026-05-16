@@ -15,7 +15,7 @@
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { users } from '../db/schema.js';
 import { resolveSession, createSession, deleteSession } from '../auth.js';
@@ -168,15 +168,27 @@ async function fetchGitHubPrimaryEmail(accessToken: string): Promise<string> {
 // Internal-only fields like `github_id` and `handle` stay on `AuthUser` for
 // server use only. `storage_used` is surfaced as `storageUsed` (camelCase)
 // for the client quota display (refs #957).
+// G2-3: is_admin is fetched via a separate SELECT (mirrors requireAdmin pattern;
+// does not extend AuthUser to avoid cascading type changes).
 authRoutes.get('/me', async (c) => {
   const user = await resolveSession(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  // Fetch is_admin separately — resolveSession's AuthUser does not expose it.
+  const adminRows = await db
+    .select({ is_admin: users.is_admin })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const isAdmin = adminRows[0]?.is_admin ?? false;
+
   return c.json({
     id: user.id,
     github_login: user.github_login,
     email: user.email,
     avatar_url: user.avatar_url,
     storageUsed: user.storage_used,
+    is_admin: isAdmin,
   });
 });
 

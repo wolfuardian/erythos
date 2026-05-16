@@ -223,6 +223,19 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
               Delete account
             </button>
 
+            {/* Admin — audit log link, only visible to admins */}
+            <Show when={props.user.isAdmin}>
+              <div class={styles.dropdownSeparator} />
+              <a
+                data-testid="toolbar-user-menu-admin-audit-log"
+                href="/admin/audit-log"
+                role="menuitem"
+                class={styles.dropdownItemLink}
+              >
+                Audit log
+              </a>
+            </Show>
+
             {/* Legal — separator + external links */}
             <div class={styles.dropdownSeparator} />
             <a

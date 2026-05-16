@@ -10,6 +10,7 @@ import { meRoutes } from './routes/me.js';
 import { metricsRoutes } from './routes/metrics.js';
 import { magicLinkRoutes } from './routes/magic-link.js';
 import { userRoutes } from './routes/users.js';
+import { adminRoutes } from './routes/admin.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
 import { createRealtimeServer } from './realtime/server.js';
@@ -114,6 +115,7 @@ api.route('/assets', assetRoutes);
 api.route('/me', meRoutes);
 api.route('/metrics', metricsRoutes);
 api.route('/users', userRoutes);
+api.route('/admin', adminRoutes);
 app.route('/api', api);
 
 const port = Number(process.env.PORT ?? 3000);
