@@ -85,6 +85,12 @@ This project is developed with **AI as primary implementer** and **a human as de
 
 I find this honest is more useful than pretending otherwise. The interesting work — what to build, what it should feel like, where to draw module boundaries, what to throw away — is unchanged. Only the typing has been delegated.
 
+## Ops
+
+Production server deployment, database backup, and restore procedures are documented in `docs/ops/`:
+
+- [DB Backup Runbook](docs/ops/db-backup-runbook.md) — daily `pg_dump` → Linode Object Storage, cron setup, restore steps
+
 ## Contributing
 
 This is a single-maintainer personal project pursued for craft. To set expectations:
