@@ -96,6 +96,15 @@ erythos.eoswolf.com {
 		reverse_proxy 127.0.0.1:3000
 	}
 
+	# ── Realtime (HocusPocus WebSocket) — refs #1064 L3-A ───────────────────
+	# HocusPocus server listens on REALTIME_PORT (default REST_PORT+1 = 3001).
+	# Caddy upgrades the connection and proxies to the WS server. The path
+	# `/realtime/<sceneId>` is preserved end-to-end; HocusPocus uses the
+	# pathname as the document name.
+	handle /realtime/* {
+		reverse_proxy 127.0.0.1:3001
+	}
+
 	# ── Client SPA — file_server with index.html fallback ───────────────────
 	# Static client build deployed via atomic symlink at /opt/erythos/client/current
 	# (see install.md Phase 12). All non-API non-asset paths fall back to
