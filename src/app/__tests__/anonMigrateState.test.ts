@@ -4,7 +4,7 @@
  * Unit tests for Anonymous → Registered migration localStorage helpers.
  * Uses vitest's built-in localStorage mock (jsdom environment).
  *
- * Refs: #1054
+ * Refs: #1054, #1082
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -13,10 +13,15 @@ import {
   markAddressed,
   isMigrationDisabled,
   disableMigration,
+  markEntryMigrated,
+  getMigratedSceneId,
+  getMigratedEntryIds,
+  clearMigratedMapping,
 } from '../anonMigrateState';
 
 const ADDRESSED_KEY = 'anon_migrate_addressed';
 const DISABLED_KEY = 'migrate_prompt_disabled';
+const MIGRATED_MAP_KEY = 'local_to_cloud_map';
 
 beforeEach(() => {
   localStorage.clear();
@@ -128,5 +133,65 @@ describe('disableMigration', () => {
     disableMigration();
     disableMigration();
     expect(isMigrationDisabled()).toBe(true);
+  });
+});
+
+// ── markEntryMigrated / getMigratedSceneId (#1082) ────────────────────────────
+
+describe('markEntryMigrated + getMigratedSceneId', () => {
+  it('write then read returns the stored sceneId', () => {
+    markEntryMigrated('entry-1', 'scene-abc');
+    expect(getMigratedSceneId('entry-1')).toBe('scene-abc');
+  });
+
+  it('overwriting an entry updates the sceneId', () => {
+    markEntryMigrated('entry-1', 'scene-abc');
+    markEntryMigrated('entry-1', 'scene-xyz');
+    expect(getMigratedSceneId('entry-1')).toBe('scene-xyz');
+  });
+
+  it('unknown entryId returns null', () => {
+    expect(getMigratedSceneId('entry-unknown')).toBeNull();
+  });
+
+  it('returns null when map is empty (no key set)', () => {
+    expect(getMigratedSceneId('entry-1')).toBeNull();
+  });
+
+  it('corruption fallback: invalid JSON returns null', () => {
+    localStorage.setItem(MIGRATED_MAP_KEY, 'not-json{{{{');
+    expect(getMigratedSceneId('entry-1')).toBeNull();
+  });
+});
+
+// ── getMigratedEntryIds (#1082) ───────────────────────────────────────────────
+
+describe('getMigratedEntryIds', () => {
+  it('returns empty set when no mapping exists', () => {
+    expect(getMigratedEntryIds().size).toBe(0);
+  });
+
+  it('returns set of all recorded entry IDs', () => {
+    markEntryMigrated('entry-1', 'scene-a');
+    markEntryMigrated('entry-2', 'scene-b');
+    const ids = getMigratedEntryIds();
+    expect(ids.size).toBe(2);
+    expect(ids.has('entry-1')).toBe(true);
+    expect(ids.has('entry-2')).toBe(true);
+  });
+});
+
+// ── clearMigratedMapping (#1082) ─────────────────────────────────────────────
+
+describe('clearMigratedMapping', () => {
+  it('clears previously written entries', () => {
+    markEntryMigrated('entry-1', 'scene-abc');
+    clearMigratedMapping();
+    expect(getMigratedSceneId('entry-1')).toBeNull();
+    expect(localStorage.getItem(MIGRATED_MAP_KEY)).toBeNull();
+  });
+
+  it('is a no-op when called on an empty store', () => {
+    expect(() => clearMigratedMapping()).not.toThrow();
   });
 });

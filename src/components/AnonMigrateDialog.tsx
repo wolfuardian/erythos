@@ -6,11 +6,14 @@
  *
  * Props:
  *   - entries: local ProjectEntry[] to offer for migration (pre-filtered, count > 0)
+ *   - migratedEntryIds: set of entryIds already uploaded via Toolbar (#1082); those
+ *     entries get an "Already uploaded" badge and are unchecked by default so the
+ *     batch will not create duplicate cloud scenes.
  *   - onAddSelected: callback with selected entry IDs to migrate
  *   - onSkip: dismiss and mark all listed entries as addressed
  *   - onSkipAll: set global "never ask again" flag + dismiss
  *
- * Refs: #1054
+ * Refs: #1054, #1082
  */
 
 import { type Component, createSignal, createMemo, For, Show, createEffect, onCleanup } from 'solid-js';
@@ -21,6 +24,12 @@ import styles from './AnonMigrateDialog.module.css';
 export interface AnonMigrateDialogProps {
   open: boolean;
   entries: ProjectEntry[];
+  /**
+   * Set of entry IDs that were already uploaded to the cloud (via per-project
+   * Toolbar button). These entries show an "Already uploaded" badge and are
+   * unchecked by default to prevent duplicate cloud scenes. Refs: #1082.
+   */
+  migratedEntryIds?: ReadonlySet<string>;
   onAddSelected: (selectedIds: string[]) => void;
   onSkip: () => void;
   onSkipAll: () => void;
@@ -36,13 +45,16 @@ function humanizeDate(tsMs: number): string {
 }
 
 const AnonMigrateDialog: Component<AnonMigrateDialogProps> = (props) => {
-  // Set of selected entry IDs — default all selected
+  const migrated = () => props.migratedEntryIds ?? new Set<string>();
+
+  // Set of selected entry IDs — already-migrated entries are unchecked by default
   const [selected, setSelected] = createSignal<Set<string>>(new Set());
 
-  // Re-initialise selection whenever the dialog opens with a new entry list
+  // Re-initialise selection whenever the dialog opens with a new entry list.
+  // Already-migrated entries start unchecked so the batch won't re-upload them.
   createEffect(() => {
     if (props.open) {
-      setSelected(new Set(props.entries.map((e) => e.id)));
+      setSelected(new Set(props.entries.filter((e) => !migrated().has(e.id)).map((e) => e.id)));
     }
   });
 
@@ -134,6 +146,14 @@ const AnonMigrateDialog: Component<AnonMigrateDialogProps> = (props) => {
                         onChange={() => toggleEntry(entry.id)}
                       />
                       <span class={styles.entryName}>{entry.name}</span>
+                      <Show when={migrated().has(entry.id)}>
+                        <span
+                          data-testid={`anon-migrate-badge-${entry.id}`}
+                          class={styles.alreadyUploadedBadge}
+                        >
+                          Already uploaded
+                        </span>
+                      </Show>
                       <span class={styles.entryDate}>{humanizeDate(entry.lastOpened)}</span>
                     </label>
                   </li>

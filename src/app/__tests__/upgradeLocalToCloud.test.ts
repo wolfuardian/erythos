@@ -4,17 +4,19 @@
  * Unit tests for the Local → Cloud upgrade function.
  *
  * Verifies:
- *   - happy path: create → closeProject → openCloudProject called with correct args
+ *   - happy path: create → markEntryMigrated → closeProject → openCloudProject called in order
  *   - asset upload fail: syncEngine.create throws → closeProject NOT called (no half-open)
  *   - POST /api/scenes fail: same as asset fail (create() wraps both)
  *   - openCloudProject fail: closeProject called, openCloudProject throws, error propagates
+ *   - markEntryMigrated: written after successful create when currentId is non-null (#1082)
  *
  * Spec ref: docs/cloud-project-spec.md § Local → Cloud 升級
- * Refs: #1053
+ * Refs: #1053, #1082
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { upgradeLocalToCloud } from '../upgradeLocalToCloud';
+import { getMigratedSceneId, clearMigratedMapping } from '../anonMigrateState';
 import { SceneDocument } from '../../core/scene/SceneDocument';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,15 +26,16 @@ function makeSceneDocument(): SceneDocument {
 }
 
 /**
- * Minimal mock Editor with a sceneDocument and projectManager.name.
+ * Minimal mock Editor with a sceneDocument, projectManager.name, and
+ * projectManager.currentId (the stable local entry ID).
  */
-function makeMockEditor(projectName: string = 'My Project'): {
+function makeMockEditor(projectName: string = 'My Project', currentId: string | null = null): {
   sceneDocument: SceneDocument;
-  projectManager: { name: string };
+  projectManager: { name: string; currentId: string | null };
 } {
   return {
     sceneDocument: makeSceneDocument(),
-    projectManager: { name: projectName },
+    projectManager: { name: projectName, currentId },
   };
 }
 
@@ -60,6 +63,12 @@ describe('upgradeLocalToCloud', () => {
   beforeEach(() => {
     closeProject = vi.fn().mockResolvedValue(undefined);
     openCloudProject = vi.fn().mockResolvedValue(undefined);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    clearMigratedMapping();
   });
 
   it('happy path: calls create, closeProject, openCloudProject in order', async () => {
@@ -88,7 +97,7 @@ describe('upgradeLocalToCloud', () => {
   });
 
   it('uses "Untitled" when projectManager.name is null', async () => {
-    const editor = { sceneDocument: makeSceneDocument(), projectManager: { name: null } };
+    const editor = { sceneDocument: makeSceneDocument(), projectManager: { name: null, currentId: null } };
     const syncEngine = makeMockSyncEngine();
 
     await upgradeLocalToCloud({
@@ -158,5 +167,38 @@ describe('upgradeLocalToCloud', () => {
 
     // undefined ?? undefined → passes undefined as resolvedUser (openCloudProject reads signal itself)
     expect(openCloudProject).toHaveBeenCalledWith('xyz', undefined);
+  });
+
+  // #1082 — dedup: markEntryMigrated written after successful upload
+  it('records entryId→sceneId mapping after successful create when currentId is set', async () => {
+    const editor = makeMockEditor('My Scene', 'entry-abc');
+    const syncEngine = makeMockSyncEngine({ createResult: { id: 'scene-xyz', version: 1 } });
+
+    await upgradeLocalToCloud({
+      editor: editor as any,
+      syncEngine: syncEngine as any,
+      closeProject,
+      openCloudProject,
+      currentUser: null,
+    });
+
+    // The mapping must be persisted so the batch dialog can detect the already-uploaded entry
+    expect(getMigratedSceneId('entry-abc')).toBe('scene-xyz');
+  });
+
+  it('does not write mapping when currentId is null (no project open)', async () => {
+    // currentId: null — should not write any mapping entry
+    const editor = makeMockEditor('My Scene', null);
+    const syncEngine = makeMockSyncEngine({ createResult: { id: 'scene-xyz', version: 1 } });
+
+    await upgradeLocalToCloud({
+      editor: editor as any,
+      syncEngine: syncEngine as any,
+      closeProject,
+      openCloudProject,
+      currentUser: null,
+    });
+
+    expect(getMigratedSceneId('entry-abc')).toBeNull();
   });
 });

@@ -272,3 +272,58 @@ describe('action buttons', () => {
     expect(onSkip).toHaveBeenCalledOnce();
   });
 });
+
+// ── Already-uploaded badge (#1082) ────────────────────────────────────────────
+
+describe('already-uploaded badge', () => {
+  it('shows "Already uploaded" badge for migrated entries', () => {
+    render(() => (
+      <AnonMigrateDialog
+        open={true}
+        entries={ENTRIES}
+        migratedEntryIds={new Set(['id-1'])}
+        onAddSelected={vi.fn()}
+        onSkip={vi.fn()}
+        onSkipAll={vi.fn()}
+      />
+    ));
+    expect(screen.getByTestId('anon-migrate-badge-id-1')).toBeTruthy();
+    expect(screen.getByTestId('anon-migrate-badge-id-1').textContent).toContain('Already uploaded');
+    // id-2 is not migrated — no badge
+    expect(screen.queryByTestId('anon-migrate-badge-id-2')).toBeNull();
+  });
+
+  it('migrated entries are unchecked by default', () => {
+    render(() => (
+      <AnonMigrateDialog
+        open={true}
+        entries={ENTRIES}
+        migratedEntryIds={new Set(['id-1'])}
+        onAddSelected={vi.fn()}
+        onSkip={vi.fn()}
+        onSkipAll={vi.fn()}
+      />
+    ));
+    const cb1 = screen.getByTestId('anon-migrate-entry-id-1') as HTMLInputElement;
+    const cb2 = screen.getByTestId('anon-migrate-entry-id-2') as HTMLInputElement;
+    // id-1 is already migrated → unchecked by default
+    expect(cb1.checked).toBe(false);
+    // id-2 is not migrated → checked by default (normal behaviour)
+    expect(cb2.checked).toBe(true);
+  });
+
+  it('no badge shown when migratedEntryIds is omitted', () => {
+    render(() => (
+      <AnonMigrateDialog
+        open={true}
+        entries={ENTRIES}
+        onAddSelected={vi.fn()}
+        onSkip={vi.fn()}
+        onSkipAll={vi.fn()}
+      />
+    ));
+    // No badge for either entry when prop is not provided
+    expect(screen.queryByTestId('anon-migrate-badge-id-1')).toBeNull();
+    expect(screen.queryByTestId('anon-migrate-badge-id-2')).toBeNull();
+  });
+});
