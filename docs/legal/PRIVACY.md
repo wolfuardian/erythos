@@ -57,12 +57,17 @@ Limited disclosure may occur:
 | Category | Retention |
 |---|---|
 | Account record (user row) | Until you request deletion |
-| Scene content | Until you delete the scene or close your account |
+| Scene content (current revision) | Until you delete the scene or close your account |
+| Scene version history | Same as the parent scene (cascade-removed on scene deletion) |
+| Realtime collaboration state | Tied to the parent scene; orphaned snapshots may persist briefly pending an explicit cleanup hook (planned in the realtime co-edit follow-up) |
+| Session records | Until `expires_at` (typically 30 days from sign-in) or you sign out |
+| Magic link tokens | 15 minutes from issue, or single-use upon redemption (whichever first) |
 | Audit log | 90 days |
-| Server request logs | ~7 days |
+| Server-side request logs | ~7 days |
 | Share tokens | Until you revoke them or close your account |
+| Uploaded asset binaries | Object storage records persist; the `uploaded_by` link is set to NULL when the uploader closes their account. Content may remain accessible via other users' scenes due to content-addressed deduplication. |
 
-When you delete your account, we permanently remove your account record, scenes, share tokens, and uploaded assets within 30 days. Audit log entries referring to you are anonymised but the security record itself is retained for the 90-day audit window.
+When you delete your account, we permanently remove your account record, scenes, scene version history, share tokens, magic link tokens, and session records. Audit log entries referring to you are anonymised (actor identity set to NULL) but the security record itself is retained for the 90-day audit window. Uploaded asset binaries are handled as described in the table above — your `uploaded_by` link is removed, but content-addressed binaries may persist if referenced by other users' scenes.
 
 ## 5. Your Rights
 
