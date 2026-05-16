@@ -50,6 +50,7 @@ export const users = pgTable('users', {
   handle: text('handle').unique(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
   plan: text('plan').notNull().default('free'),
+  is_admin: boolean('is_admin').notNull().default(false),
   storage_used: bigint('storage_used', { mode: 'number' }).notNull().default(0),
 });
 

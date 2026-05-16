@@ -64,6 +64,13 @@
       "when": 1778914211876,
       "tag": "0008_organic_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778916366044,
+      "tag": "0009_smart_freak",
+      "breakpoints": true
     }
   ]
 }
