@@ -135,6 +135,27 @@
   text-decoration: underline;
 }
 
+.legalLinks {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-sm);
+  line-height: 1.4;
+}
+
+.legalLink {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.legalLink:hover {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+.legalSeparator {
+  margin: 0 4px;
+}
+
 /* Right column */
 .rightCol {
   flex: 1;

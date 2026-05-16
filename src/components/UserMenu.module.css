@@ -109,6 +109,25 @@
   color: var(--text-primary);
 }
 
+.dropdownItemLink {
+  display: block;
+  width: 100%;
+  padding: 5px 12px;
+  background: transparent;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.dropdownItemLink:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
 .dropdownItemDanger {
   color: var(--text-danger, #e07070);
 }

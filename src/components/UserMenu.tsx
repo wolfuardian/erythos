@@ -223,6 +223,29 @@ export const UserMenu: Component<UserMenuProps> = (props) => {
               Delete account
             </button>
 
+            {/* Legal — separator + external links */}
+            <div class={styles.dropdownSeparator} />
+            <a
+              data-testid="toolbar-user-menu-privacy"
+              href="https://github.com/wolfuardian/erythos/blob/main/docs/legal/PRIVACY.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              role="menuitem"
+              class={styles.dropdownItemLink}
+            >
+              Privacy Policy
+            </a>
+            <a
+              data-testid="toolbar-user-menu-terms"
+              href="https://github.com/wolfuardian/erythos/blob/main/docs/legal/TERMS.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              role="menuitem"
+              class={styles.dropdownItemLink}
+            >
+              Terms of Service
+            </a>
+
             {/* Separator before Sign out */}
             <div class={styles.dropdownSeparator} />
 
