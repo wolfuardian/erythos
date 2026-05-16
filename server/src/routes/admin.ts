@@ -30,6 +30,9 @@ adminRoutes.use('*', requireAdmin());
 // Closed set of audit event types (source of truth for validation + UI).
 // Derived from grep of recordAudit() calls across server/src/routes/ — G2-1.
 // Update this list only when new event types are wired.
+// SYNC: keep in sync with the event-type comment in audit/recordAudit.ts (dual source-of-truth).
+// G1 additions: user.account_delete_scheduled, user.account_delete_cancelled,
+//               user.account_delete_executed (refs #1095).
 // ---------------------------------------------------------------------------
 
 export const AUDIT_EVENT_TYPES = [
@@ -44,6 +47,9 @@ export const AUDIT_EVENT_TYPES = [
   'share_token.revoke',
   'user.data_export',
   'user.account_delete',
+  'user.account_delete_scheduled',
+  'user.account_delete_cancelled',
+  'user.account_delete_executed',
   'admin.access_denied',
 ] as const;
 

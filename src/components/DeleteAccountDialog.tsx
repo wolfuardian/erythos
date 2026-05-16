@@ -6,7 +6,8 @@ import styles from './DeleteAccountDialog.module.css';
 export interface DeleteAccountDialogProps {
   open: boolean;
   user: User;
-  onConfirm: () => Promise<void>;
+  /** G1: called on confirm; resolves with scheduled deletion timestamp (refs #1095). */
+  onConfirm: () => Promise<{ scheduledDeleteAt: string }>;
   onClose: () => void;
   /** Optional ref to element that triggered the dialog; receives focus on close */
   triggerRef?: HTMLElement | null;
@@ -86,7 +87,9 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
     setError(null);
     try {
       await props.onConfirm();
-      // Server cleared cookie; reload redirects to guest view
+      // Server cleared session cookie; reload redirects to guest view.
+      // G1: account is now in 30-day grace period — user can sign back in during
+      // this period and cancel via the banner. After 30 days the account is deleted.
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
@@ -115,8 +118,9 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
           >
             <h3 id={TITLE_ID} class={styles.title}>Delete account</h3>
             <p class={styles.warning}>
-              This will permanently delete your account, scenes, and revision history.
-              This cannot be undone.
+              Your account will be scheduled for deletion in 30 days.
+              You can cancel within this grace period by signing back in.
+              After 30 days, your account, scenes, and revision history will be permanently deleted.
             </p>
 
             <label class={styles.confirmLabel}>
@@ -164,7 +168,7 @@ const DeleteAccountDialog: Component<DeleteAccountDialogProps> = (props) => {
                 disabled={!isConfirmed() || deleting()}
                 onClick={() => void handleDelete()}
               >
-                {deleting() ? 'Deleting…' : 'Delete account'}
+                {deleting() ? 'Scheduling…' : 'Schedule deletion'}
               </button>
             </div>
           </div>

@@ -116,8 +116,15 @@ export interface EditorBridge {
   getOAuthStartUrl: (provider: 'github') => string;
   /** Returns the URL for downloading the current user's data export. */
   getExportUrl: () => string;
-  /** Permanently deletes the current user's account (GDPR). */
-  deleteAccount: () => Promise<void>;
+  /**
+   * Schedules the current user's account for deletion (30-day grace period, G1 refs #1095).
+   * Returns the scheduled deletion timestamp on success.
+   */
+  deleteAccount: () => Promise<{ scheduledDeleteAt: string }>;
+  /**
+   * Cancels a pending account deletion during the 30-day grace period (G1 refs #1095).
+   */
+  cancelDeleteAccount: () => Promise<void>;
   /** Requests a magic-link sign-in email for the given address. */
   requestMagicLink: (email: string) => Promise<void>;
   /** Whether the editor is in read-only mode (viewer mode). Panels should disable all mutation UI when true. */
@@ -177,8 +184,10 @@ export interface EditorBridgeDeps {
   authGetOAuthStartUrl?: (provider: 'github') => string;
   /** Auth: getExportUrl method (from AuthClient instance) */
   authGetExportUrl?: () => string;
-  /** Auth: deleteAccount method (from AuthClient instance) */
-  authDeleteAccount?: () => Promise<void>;
+  /** Auth: deleteAccount method (from AuthClient instance) — G1 grace period (refs #1095) */
+  authDeleteAccount?: () => Promise<{ scheduledDeleteAt: string }>;
+  /** Auth: cancelDeleteAccount method (from AuthClient instance) — G1 cancel grace (refs #1095) */
+  authCancelDeleteAccount?: () => Promise<void>;
   /** Auth: requestMagicLink method (from AuthClient instance) */
   authRequestMagicLink?: (email: string) => Promise<void>;
   /**
@@ -425,7 +434,8 @@ export function createEditorBridge(
     },
     getOAuthStartUrl: deps?.authGetOAuthStartUrl ?? ((_provider: 'github') => ''),
     getExportUrl: deps?.authGetExportUrl ?? (() => ''),
-    deleteAccount: deps?.authDeleteAccount ?? (() => Promise.resolve()),
+    deleteAccount: deps?.authDeleteAccount ?? (() => Promise.resolve({ scheduledDeleteAt: '' })),
+    cancelDeleteAccount: deps?.authCancelDeleteAccount ?? (() => Promise.resolve()),
     requestMagicLink:
       deps?.authRequestMagicLink ?? ((_email: string) => Promise.resolve()),
     editorReadOnly: editor.readOnly,

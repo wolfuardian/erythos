@@ -39,6 +39,7 @@ import { currentRoute, navigateToScene } from './router';
 import { AdminAuditLog } from './AdminAuditLog';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
+import { DeletionPendingBanner } from '../components/DeletionPendingBanner';
 import { RealtimeClient } from '../core/realtime/RealtimeClient';
 import { upgradeLocalToCloud } from './upgradeLocalToCloud';
 import { AnonMigrateDialog } from '../components/AnonMigrateDialog';
@@ -886,6 +887,18 @@ const App: Component = () => {
         onSkip={handleMigrateSkip}
         onSkipAll={handleMigrateSkipAll}
       />
+      {/* G1 — Deletion pending banner: shown when account is in 30-day grace period (refs #1095). */}
+      <Show when={(currentUser()?.scheduledDeleteAt ?? null) !== null}>
+        <DeletionPendingBanner
+          scheduledDeleteAt={currentUser()!.scheduledDeleteAt!}
+          onCancel={async () => {
+            await authClient.cancelDeleteAccount();
+            // Refresh user state so scheduledDeleteAt clears and banner unmounts.
+            const updated = await authClient.getCurrentUser();
+            setCurrentUser(updated);
+          }}
+        />
+      </Show>
       {/* G6 — Offline banner: only for cloud projects, not local. Not dismissible. */}
       <Show when={offlineCachedMode()}>
         <OfflineBanner cached />

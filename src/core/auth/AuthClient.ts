@@ -24,6 +24,11 @@ export interface User {
   storageUsed: number;
   /** Whether this user has admin privileges, from server /api/auth/me (refs #1088 G2-3). */
   isAdmin: boolean;
+  /**
+   * ISO 8601 timestamp of scheduled account deletion, or null if not pending.
+   * Non-null means the account is in the 30-day grace period (refs #1095 G1).
+   */
+  scheduledDeleteAt: string | null;
 }
 
 /** Public-safe user info returned by GET /api/users/:id (#1017 owner resolver). */
@@ -101,6 +106,7 @@ export class AuthClient {
       avatar_url: string | null;
       storageUsed: number;
       is_admin: boolean;
+      scheduled_delete_at: string | null;
     };
 
     return {
@@ -110,6 +116,7 @@ export class AuthClient {
       avatarUrl: data.avatar_url,
       storageUsed: data.storageUsed ?? 0,
       isAdmin: data.is_admin ?? false,
+      scheduledDeleteAt: data.scheduled_delete_at ?? null,
     };
   }
 
@@ -207,16 +214,20 @@ export class AuthClient {
   }
 
   /**
-   * Permanently deletes the current user's account, all scenes, and revision
-   * history. The server clears the session cookie on success.
+   * Schedules the current user's account for deletion after a 30-day grace period.
+   * The server clears the session cookie and returns the scheduled deletion timestamp.
+   *
+   * G1 grace-period model (refs #1095):
+   *   - First call: schedules deletion, clears session, returns timestamp.
+   *   - Idempotent re-call during grace period: returns existing timestamp unchanged.
    *
    * DELETE /api/me
-   *   204 → resolves
-   *   non-204 → throws AuthError
+   *   200 { scheduled_delete_at } → resolves with { scheduledDeleteAt }
+   *   non-200 → throws AuthError
    *
-   * Spec refs: docs/sync-protocol.md § GDPR, #932
+   * Spec refs: docs/sync-protocol.md § GDPR, #1095 G1
    */
-  async deleteAccount(): Promise<void> {
+  async deleteAccount(): Promise<{ scheduledDeleteAt: string }> {
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/me`, {
@@ -227,9 +238,41 @@ export class AuthClient {
       throw new AuthError(`Network error: ${(err as Error).message}`);
     }
 
-    if (response.status !== 204) {
+    if (!response.ok) {
       throw new AuthError(
         `Unexpected response from DELETE /api/me: ${response.status}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as { scheduled_delete_at: string };
+    return { scheduledDeleteAt: data.scheduled_delete_at };
+  }
+
+  /**
+   * Cancels a pending account deletion during the 30-day grace period.
+   *
+   * POST /api/me/cancel-delete
+   *   200 → resolves
+   *   404 → throws AuthError (no pending deletion)
+   *   non-200 → throws AuthError
+   *
+   * Spec refs: #1095 G1
+   */
+  async cancelDeleteAccount(): Promise<void> {
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/me/cancel-delete`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      throw new AuthError(`Network error: ${(err as Error).message}`);
+    }
+
+    if (!response.ok) {
+      throw new AuthError(
+        `Unexpected response from POST /api/me/cancel-delete: ${response.status}`,
         response.status,
       );
     }

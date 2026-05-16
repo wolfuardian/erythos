@@ -170,17 +170,21 @@ async function fetchGitHubPrimaryEmail(accessToken: string): Promise<string> {
 // for the client quota display (refs #957).
 // G2-3: is_admin is fetched via a separate SELECT (mirrors requireAdmin pattern;
 // does not extend AuthUser to avoid cascading type changes).
+// G1: scheduled_delete_at is fetched in the same separate SELECT to surface
+// deletion-pending state to the client for banner display (refs #1095).
 authRoutes.get('/me', async (c) => {
   const user = await resolveSession(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-  // Fetch is_admin separately — resolveSession's AuthUser does not expose it.
-  const adminRows = await db
-    .select({ is_admin: users.is_admin })
+  // Fetch is_admin + scheduled_delete_at separately — resolveSession's AuthUser
+  // does not expose them. Single query covers both fields.
+  const extraRows = await db
+    .select({ is_admin: users.is_admin, scheduled_delete_at: users.scheduled_delete_at })
     .from(users)
     .where(eq(users.id, user.id))
     .limit(1);
-  const isAdmin = adminRows[0]?.is_admin ?? false;
+  const isAdmin = extraRows[0]?.is_admin ?? false;
+  const scheduledDeleteAt = extraRows[0]?.scheduled_delete_at ?? null;
 
   return c.json({
     id: user.id,
@@ -189,6 +193,7 @@ authRoutes.get('/me', async (c) => {
     avatar_url: user.avatar_url,
     storageUsed: user.storage_used,
     is_admin: isAdmin,
+    scheduled_delete_at: scheduledDeleteAt ? scheduledDeleteAt.toISOString() : null,
   });
 });
 

@@ -7,6 +7,7 @@ type AuthCallbacks = Pick<
   | 'authGetOAuthStartUrl'
   | 'authGetExportUrl'
   | 'authDeleteAccount'
+  | 'authCancelDeleteAccount'
   | 'authRequestMagicLink'
 >;
 
@@ -16,6 +17,7 @@ export function makeAuthCallbacks(authClient: AuthClient): AuthCallbacks {
     authGetOAuthStartUrl: (provider) => authClient.getOAuthStartUrl(provider),
     authGetExportUrl: () => authClient.getExportUrl(),
     authDeleteAccount: () => authClient.deleteAccount(),
+    authCancelDeleteAccount: () => authClient.cancelDeleteAccount(),
     authRequestMagicLink: (email) => authClient.requestMagicLink(email),
   };
 }

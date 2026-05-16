@@ -2,10 +2,17 @@
  * User account routes — GDPR endpoints (§ 41)
  *
  * Routes:
- *   GET    /me/export  — export all user data as JSON attachment
- *   DELETE /me         — delete account + cascade + clear session cookie → 204
+ *   GET    /me/export          — export all user data as JSON attachment
+ *   DELETE /me                 — schedule account deletion (30-day grace) → 200 { scheduled_delete_at }
+ *   POST   /me/cancel-delete   — cancel pending deletion → 200
  *
- * Auth required for both endpoints.
+ * G1 grace-period model (refs #1095):
+ *   DELETE /me sets scheduled_delete_at = now() + 30 days and clears the session.
+ *   Idempotent: if already scheduled, returns existing timestamp without re-auditing.
+ *   pruneScheduledDeletes (index.ts) runs every 24 h and performs the cascade hard
+ *   delete for users whose grace period has expired.
+ *
+ * Auth required for all endpoints.
  */
 
 import { Hono } from 'hono';
@@ -127,31 +134,40 @@ meRoutes.get('/export', async (c) => {
 // ---------------------------------------------------------------------------
 // DELETE /me
 //
-// Deletes the authenticated user and all their data via CASCADE:
-//   - sessions.user_id ON DELETE CASCADE
-//   - scenes.owner_id  ON DELETE CASCADE
-//     - scene_versions.scene_id ON DELETE CASCADE (via scenes)
-//   - scene_versions.saved_by ON DELETE SET NULL (forward-looking; currently
-//     saved_by ≡ owner_id so all versions are deleted via scene_id first)
+// G1 grace-period model (refs #1095):
+//   - First call: sets scheduled_delete_at = now() + 30 days, clears session
+//     cookie, records audit user.account_delete_scheduled.
+//     Returns 200 { scheduled_delete_at: <ISO string> }.
+//   - Idempotent re-call (already scheduled): returns existing timestamp,
+//     no DB update, no audit, no cookie clear. The user may have re-signed in
+//     during the grace period — we leave the session intact on the idempotent path.
+//   - 404 if user row not found (race condition).
 //
-// After deletion: clear session cookie → 204 No Content.
-// 404 if user row not found (race condition — client should re-sign in).
+// The actual cascade hard delete is deferred to pruneScheduledDeletes (index.ts)
+// which runs every 24 h and deletes users whose scheduled_delete_at < now().
 // ---------------------------------------------------------------------------
 
 meRoutes.delete('/', async (c) => {
   const user = await resolveSession(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-  // Verify user exists (guard against race condition)
+  // Verify user exists and fetch scheduled_delete_at in one query
   const existingRows = await db
-    .select({ id: users.id })
+    .select({ id: users.id, scheduled_delete_at: users.scheduled_delete_at })
     .from(users)
     .where(eq(users.id, user.id))
     .limit(1);
 
-  if (!existingRows[0]) return c.json({ error: 'Not Found' }, 404);
+  const existing = existingRows[0];
+  if (!existing) return c.json({ error: 'Not Found' }, 404);
 
-  // Count owned scenes and share tokens before cascade for audit metadata.
+  // Idempotent: if already scheduled, return existing timestamp without side-effects.
+  // The user may have re-signed in during grace — do not clear the session again.
+  if (existing.scheduled_delete_at !== null) {
+    return c.json({ scheduled_delete_at: existing.scheduled_delete_at.toISOString() }, 200);
+  }
+
+  // Count owned scenes and share tokens for audit metadata.
   const [sceneCountRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(scenes)
@@ -177,31 +193,77 @@ meRoutes.delete('/', async (c) => {
     cascadedShareTokens = Number(tokenCountRow?.count ?? 0);
   }
 
-  // Emit audit BEFORE the transaction so the actor_id FK is still valid.
-  // Trade-off: if the subsequent transaction throws, the audit row records success: true
-  // but the delete didn't happen. For account deletion this is the lesser evil vs.
-  // silently losing the audit row due to a 23503 FK violation (actor_id gone).
-  await recordAudit('user.account_delete', {
+  // Set scheduled_delete_at = now() + 30 days.
+  const updatedRows = await db
+    .update(users)
+    .set({ scheduled_delete_at: sql`now() + INTERVAL '30 days'` })
+    .where(eq(users.id, user.id))
+    .returning({ scheduled_delete_at: users.scheduled_delete_at });
+
+  const scheduledAt = updatedRows[0]?.scheduled_delete_at;
+  if (!scheduledAt) return c.json({ error: 'Internal error' }, 500);
+
+  // Emit audit BEFORE clearing the session so actor_id FK is still resolvable.
+  await recordAudit('user.account_delete_scheduled', {
     actor_id: user.id,
     actor_ip: extractActorIp(c),
     actor_ua: c.req.header('User-Agent') ?? null,
     resource_type: 'user',
     resource_id: user.id,
-    metadata: { cascaded_scenes: cascadedScenes, cascaded_share_tokens: cascadedShareTokens },
+    metadata: {
+      scheduled_delete_at: scheduledAt.toISOString(),
+      scenes_pending: cascadedScenes,
+      share_tokens_pending: cascadedShareTokens,
+    },
     success: true,
   });
 
-  // Delete user inside a transaction — cascades to sessions + scenes → scene_versions.
-  // Note: session cookie clear happens outside the transaction (no DB-level side effect).
-  await db.transaction(async (tx) => {
-    await tx.delete(users).where(eq(users.id, user.id));
-  });
-
-  // Clear session cookie. deleteSession tries to delete the DB row again but
-  // it's already gone via cascade — the DB no-ops gracefully (0 rows deleted).
-  // Cookie attributes mirror setSessionCookie exactly (Path=/ HttpOnly Secure(prod) SameSite=Lax)
-  // so the browser honours the clear.
+  // Clear session cookie — user is signed out during grace period.
   await deleteSession(c);
 
-  return new Response(null, { status: 204 });
+  return c.json({ scheduled_delete_at: scheduledAt.toISOString() }, 200);
+});
+
+// ---------------------------------------------------------------------------
+// POST /me/cancel-delete
+//
+// Cancels a pending account deletion by clearing scheduled_delete_at.
+// Authenticated endpoint — user must be signed in during the grace period.
+// 404 if no pending deletion (nothing to cancel).
+// ---------------------------------------------------------------------------
+
+meRoutes.post('/cancel-delete', async (c) => {
+  const user = await resolveSession(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  // Verify user exists and has a pending deletion
+  const existingRows = await db
+    .select({ id: users.id, scheduled_delete_at: users.scheduled_delete_at })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  const existing = existingRows[0];
+  if (!existing) return c.json({ error: 'Not Found' }, 404);
+
+  if (existing.scheduled_delete_at === null) {
+    return c.json({ error: 'No pending deletion to cancel' }, 404);
+  }
+
+  await db
+    .update(users)
+    .set({ scheduled_delete_at: null })
+    .where(eq(users.id, user.id));
+
+  await recordAudit('user.account_delete_cancelled', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'user',
+    resource_id: user.id,
+    metadata: {},
+    success: true,
+  });
+
+  return c.json({ ok: true }, 200);
 });

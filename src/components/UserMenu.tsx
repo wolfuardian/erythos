@@ -18,7 +18,8 @@ export interface UserMenuProps {
   user: User;
   onSignOut: () => Promise<void>;
   onExportData: () => void;
-  onDeleteAccount: () => Promise<void>;
+  /** G1: schedules account deletion (30-day grace period, refs #1095). */
+  onDeleteAccount: () => Promise<{ scheduledDeleteAt: string }>;
 }
 
 export const UserMenu: Component<UserMenuProps> = (props) => {

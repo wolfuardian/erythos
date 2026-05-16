@@ -36,6 +36,7 @@ describe('AuthClient.getCurrentUser', () => {
       avatar_url: 'https://avatars.githubusercontent.com/u/1',
       storageUsed: 1024,
       is_admin: false,
+      scheduled_delete_at: null,
     };
     mockFetch(200, serverPayload);
 
@@ -49,8 +50,26 @@ describe('AuthClient.getCurrentUser', () => {
       avatarUrl: 'https://avatars.githubusercontent.com/u/1',
       storageUsed: 1024,
       isAdmin: false,
+      scheduledDeleteAt: null,
     };
     expect(user).toEqual(expected);
+  });
+
+  it('200 with scheduled_delete_at → scheduledDeleteAt is ISO string', async () => {
+    mockFetch(200, {
+      id: 'uuid-1',
+      github_login: 'octocat',
+      email: 'octocat@github.com',
+      avatar_url: null,
+      storageUsed: 0,
+      is_admin: false,
+      scheduled_delete_at: '2026-06-15T00:00:00.000Z',
+    });
+
+    const client = new AuthClient(BASE_URL);
+    const user = await client.getCurrentUser();
+
+    expect(user?.scheduledDeleteAt).toBe('2026-06-15T00:00:00.000Z');
   });
 
   it('200 with null avatar_url → avatarUrl is null', async () => {
@@ -173,11 +192,12 @@ describe('AuthClient.getOAuthStartUrl', () => {
 // ─── deleteAccount ────────────────────────────────────────────────────────────
 
 describe('AuthClient.deleteAccount', () => {
-  it('204 → resolves without throwing', async () => {
-    mockFetch(204, null);
+  it('200 → resolves with scheduledDeleteAt', async () => {
+    mockFetch(200, { scheduled_delete_at: '2026-06-15T00:00:00.000Z' });
 
     const client = new AuthClient(BASE_URL);
-    await expect(client.deleteAccount()).resolves.toBeUndefined();
+    const result = await client.deleteAccount();
+    expect(result).toEqual({ scheduledDeleteAt: '2026-06-15T00:00:00.000Z' });
   });
 
   it('401 → throws AuthError with status 401', async () => {
@@ -213,7 +233,7 @@ describe('AuthClient.deleteAccount', () => {
   });
 
   it('calls DELETE /me with credentials: include', async () => {
-    mockFetch(204, null);
+    mockFetch(200, { scheduled_delete_at: '2026-06-15T00:00:00.000Z' });
 
     const client = new AuthClient(BASE_URL);
     await client.deleteAccount();

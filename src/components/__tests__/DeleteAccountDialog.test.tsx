@@ -27,18 +27,21 @@ const FAKE_USER: User = {
   githubLogin: 'octocat',
   email: 'octocat@github.com',
   avatarUrl: 'https://avatars.githubusercontent.com/u/1',
+  storageUsed: 0,
+  isAdmin: false,
+  scheduledDeleteAt: null,
 };
 
 function renderDialog(overrides: {
   open?: boolean;
   user?: User;
-  onConfirm?: () => Promise<void>;
+  onConfirm?: () => Promise<{ scheduledDeleteAt: string }>;
   onClose?: () => void;
 } = {}) {
   const props = {
     open: true,
     user: FAKE_USER,
-    onConfirm: vi.fn().mockResolvedValue(undefined),
+    onConfirm: vi.fn().mockResolvedValue({ scheduledDeleteAt: '2026-06-15T00:00:00.000Z' }),
     onClose: vi.fn(),
     ...overrides,
   };
@@ -56,11 +59,8 @@ describe('DeleteAccountDialog visibility', () => {
 
   it('renders dialog title when open=true', () => {
     renderDialog({ open: true });
-    // The h3 title and the Delete button both contain "Delete account";
-    // use getAllByText and check at least one element is the heading
-    const elements = screen.getAllByText('Delete account');
-    expect(elements.length).toBeGreaterThanOrEqual(1);
-    const heading = elements.find((el) => el.tagName === 'H3');
+    // The h3 title contains "Delete account"; the confirm button now says "Schedule deletion".
+    const heading = screen.getByRole('heading', { name: 'Delete account' });
     expect(heading).toBeTruthy();
   });
 });
@@ -70,7 +70,7 @@ describe('DeleteAccountDialog visibility', () => {
 describe('DeleteAccountDialog initial state', () => {
   it('Delete button is disabled when input is empty', () => {
     renderDialog();
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     expect(deleteBtn).toBeDisabled();
   });
 
@@ -93,7 +93,7 @@ describe('DeleteAccountDialog username guard', () => {
     renderDialog();
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'wronguser' } });
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     expect(deleteBtn).toBeDisabled();
   });
 
@@ -101,7 +101,7 @@ describe('DeleteAccountDialog username guard', () => {
     renderDialog();
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octo' } });
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     expect(deleteBtn).toBeDisabled();
   });
 
@@ -109,7 +109,7 @@ describe('DeleteAccountDialog username guard', () => {
     renderDialog();
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     expect(deleteBtn).not.toBeDisabled();
   });
 
@@ -118,7 +118,7 @@ describe('DeleteAccountDialog username guard', () => {
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
     fireEvent.input(input, { target: { value: '' } });
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     expect(deleteBtn).toBeDisabled();
   });
 });
@@ -136,25 +136,25 @@ describe('DeleteAccountDialog successful deletion', () => {
   });
 
   it('calls onConfirm when Delete button is clicked with correct username', async () => {
-    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const onConfirm = vi.fn().mockResolvedValue({ scheduledDeleteAt: '2026-06-15T00:00:00.000Z' });
     renderDialog({ onConfirm });
 
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    fireEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /schedule deletion/i }));
 
     await waitFor(() => {
       expect(onConfirm).toHaveBeenCalledOnce();
     });
   });
 
-  it('redirects to / after successful delete', async () => {
-    const onConfirm = vi.fn().mockResolvedValue(undefined);
+  it('redirects to / after successful delete (grace period begins)', async () => {
+    const onConfirm = vi.fn().mockResolvedValue({ scheduledDeleteAt: '2026-06-15T00:00:00.000Z' });
     renderDialog({ onConfirm });
 
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    fireEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /schedule deletion/i }));
 
     await waitFor(() => {
       expect(window.location.href).toBe('/');
@@ -171,7 +171,7 @@ describe('DeleteAccountDialog error handling', () => {
 
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    fireEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /schedule deletion/i }));
 
     await waitFor(() => {
       expect(screen.getByTestId('delete-account-error')).toBeTruthy();
@@ -187,11 +187,11 @@ describe('DeleteAccountDialog error handling', () => {
 
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    fireEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /schedule deletion/i }));
 
     await waitFor(() => {
       // After error, button should be enabled again (deleting state reset)
-      const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+      const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
       expect(deleteBtn).not.toBeDisabled();
     });
   });
@@ -208,12 +208,12 @@ describe('DeleteAccountDialog pending guard', () => {
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
 
-    const deleteBtn = screen.getByRole('button', { name: /delete account/i });
+    const deleteBtn = screen.getByRole('button', { name: /schedule deletion/i });
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
       // Button text changes to "Deleting…" and becomes disabled
-      expect(screen.getByRole('button', { name: /deleting/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /scheduling/i })).toBeDisabled();
     });
   });
 
@@ -223,7 +223,7 @@ describe('DeleteAccountDialog pending guard', () => {
 
     const input = screen.getByRole('textbox');
     fireEvent.input(input, { target: { value: 'octocat' } });
-    fireEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /schedule deletion/i }));
 
     await waitFor(() => {
       const cancelBtn = screen.getByRole('button', { name: 'Cancel' });

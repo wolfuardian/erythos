@@ -1,0 +1,47 @@
+.banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent-red, #b02020);
+  color: #fff;
+  font-size: var(--font-size-md);
+  min-height: 32px;
+  border-radius: 0 0 var(--radius-md, 4px) var(--radius-md, 4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 560px;
+  width: max-content;
+}
+
+.message {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cancelButton {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-sm, 3px);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
