@@ -81,6 +81,25 @@ export function extractActorIp(c: Context): string {
 // Main helper
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Audit event types — write-side reference
+//
+// Keep in sync with admin.ts AUDIT_EVENT_TYPES (closed set, dual source-of-truth).
+// Callers pass event_type as a string; admin.ts validates against its closed set.
+//
+// Current event types:
+//   auth.signin.success | auth.signin.failure | auth.signout
+//   auth.magic_link.request | auth.magic_link.consume
+//   scene.create | scene.delete
+//   share_token.create | share_token.revoke
+//   user.data_export | user.account_delete
+//   user.account_delete_scheduled | user.account_delete_cancelled | user.account_delete_executed
+//   admin.access_denied
+//
+// G1 additions (refs #1095): user.account_delete_scheduled,
+//   user.account_delete_cancelled, user.account_delete_executed.
+// ---------------------------------------------------------------------------
+
 /**
  * Write a single audit event row. Fire-and-forget: errors are swallowed and
  * logged; the returned Promise always resolves.

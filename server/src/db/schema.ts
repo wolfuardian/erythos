@@ -52,6 +52,10 @@ export const users = pgTable('users', {
   plan: text('plan').notNull().default('free'),
   is_admin: boolean('is_admin').notNull().default(false),
   storage_used: bigint('storage_used', { mode: 'number' }).notNull().default(0),
+  // G1 — 30-day grace period for account deletion (refs #1095).
+  // NULL = active account. Non-NULL = deletion-pending; pruneScheduledDeletes
+  // performs the cascade hard delete once now() > scheduled_delete_at.
+  scheduled_delete_at: timestamp('scheduled_delete_at', { withTimezone: true }),
 });
 
 // ---------------------------------------------------------------------------

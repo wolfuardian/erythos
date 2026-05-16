@@ -23,6 +23,7 @@ const BASE_USER: User = {
   avatarUrl: null,
   storageUsed: 0,
   isAdmin: false,
+  scheduledDeleteAt: null,
 };
 
 const ADMIN_USER: User = {
@@ -33,7 +34,7 @@ const ADMIN_USER: User = {
 const defaultProps = {
   onSignOut: vi.fn().mockResolvedValue(undefined),
   onExportData: vi.fn(),
-  onDeleteAccount: vi.fn().mockResolvedValue(undefined),
+  onDeleteAccount: vi.fn().mockResolvedValue({ scheduledDeleteAt: '2026-06-15T00:00:00.000Z' }),
 };
 
 function renderMenu(user: User) {

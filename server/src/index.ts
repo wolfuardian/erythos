@@ -13,6 +13,7 @@ import { userRoutes } from './routes/users.js';
 import { adminRoutes } from './routes/admin.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
+import { pruneScheduledDeletes } from './jobs/pruneScheduledDeletes.js';
 import { createRealtimeServer } from './realtime/server.js';
 
 const app = new Hono();
@@ -144,6 +145,22 @@ serve({ fetch: app.fetch, port }, () => {
 
   void pruneAuditLog();
   setInterval(() => void pruneAuditLog(), RETENTION_INTERVAL_MS).unref();
+
+  // ---------------------------------------------------------------------------
+  // Scheduled account deletion — cascade hard-delete users past grace period
+  //
+  // G1 (refs #1095): DELETE /me sets scheduled_delete_at = now() + 30 days.
+  // This job runs once at boot then every 24 h to cascade-delete rows where
+  // scheduled_delete_at < now().
+  //
+  // On failure: silent warn (per OQ-3 — alerting deferred to O1 epic).
+  // .unref() prevents the timer from blocking clean process shutdown.
+  //
+  // Implementation is in server/src/jobs/pruneScheduledDeletes.ts (exported
+  // so it can be unit-tested independently of the server bootstrap).
+  // ---------------------------------------------------------------------------
+  void pruneScheduledDeletes();
+  setInterval(() => void pruneScheduledDeletes(), RETENTION_INTERVAL_MS).unref();
 });
 
 // ---------------------------------------------------------------------------

@@ -1,14 +1,19 @@
 /**
- * Unit tests for /me routes — GDPR endpoints (refs #931).
+ * Unit tests for /me routes — GDPR endpoints (refs #931, #1095 G1).
  *
  * Strategy: mock db module so no real Postgres connection is needed.
  * Hono app exercised via app.request() — no network required.
  *
  * Covered:
- *   GET    /me/export  — 200 happy path (JSON shape + Content-Disposition)
- *   GET    /me/export  — 401 anonymous
- *   DELETE /me         — 204 happy path (cascade verify: db.delete called)
- *   DELETE /me         — 401 anonymous
+ *   GET    /me/export         — 200 happy path (JSON shape + Content-Disposition)
+ *   GET    /me/export         — 401 anonymous
+ *   DELETE /me                — 200 schedules deletion (G1 grace period)
+ *   DELETE /me                — 200 idempotent (already scheduled)
+ *   DELETE /me                — 401 anonymous
+ *   DELETE /me                — 404 user not found
+ *   POST   /me/cancel-delete  — 200 cancels pending deletion
+ *   POST   /me/cancel-delete  — 401 anonymous
+ *   POST   /me/cancel-delete  — 404 no pending deletion
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -20,12 +25,14 @@ import { Hono } from 'hono';
 
 const mockSelect = vi.fn();
 const mockDelete = vi.fn();
+const mockUpdate = vi.fn();
 const mockTransaction = vi.fn();
 
 vi.mock('../db.js', () => ({
   db: {
     select: mockSelect,
     delete: mockDelete,
+    update: mockUpdate,
     transaction: mockTransaction,
   },
   pool: {},
@@ -240,8 +247,19 @@ describe('GET /api/me/export', () => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /me
+// DELETE /me — G1 grace period (refs #1095)
 // ---------------------------------------------------------------------------
+
+/** Build a update chain that resolves via .returning() */
+function updateChain(rows: unknown[]) {
+  return {
+    set: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue(rows),
+  };
+}
+
+const SCHEDULED_AT = new Date('2026-06-15T00:00:00Z');
 
 describe('DELETE /api/me', () => {
   beforeEach(() => {
@@ -255,28 +273,23 @@ describe('DELETE /api/me', () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body).toMatchObject({ error: 'Unauthorized' });
-    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it('returns 204 and deletes user when authenticated', async () => {
+  it('returns 200 and schedules deletion when not yet scheduled', async () => {
     mockResolveSession.mockResolvedValue(FAKE_USER);
     mockDeleteSession.mockResolvedValue(undefined);
 
-    // existence check select (uses .limit)
+    // existence check (scheduled_delete_at = null → not yet scheduled)
     mockSelect
-      .mockReturnValueOnce(selectChain([{ id: FAKE_USER.id }]))   // existence check
-      .mockReturnValueOnce(selectChainNoLimit([{ count: 0 }]))     // COUNT scenes
-      .mockReturnValueOnce(selectChainNoLimit([]));                // scene IDs (empty → no token count)
+      .mockReturnValueOnce(selectChain([{ id: FAKE_USER.id, scheduled_delete_at: null }]))
+      .mockReturnValueOnce(selectChainNoLimit([{ count: 0 }]))    // COUNT scenes
+      .mockReturnValueOnce(selectChainNoLimit([]));               // scene IDs (empty → no token count)
 
-    // transaction runs the callback with a tx object
-    mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => {
-      const mockTx = {
-        delete: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue(undefined),
-        }),
-      };
-      await fn(mockTx);
-    });
+    // db.update chain for setting scheduled_delete_at
+    mockUpdate.mockReturnValueOnce(
+      updateChain([{ scheduled_delete_at: SCHEDULED_AT }]),
+    );
 
     const res = await app.request(
       makeRequest('/api/me', {
@@ -285,20 +298,51 @@ describe('DELETE /api/me', () => {
       }),
     );
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { scheduled_delete_at: string };
+    expect(body).toHaveProperty('scheduled_delete_at');
+    expect(new Date(body.scheduled_delete_at).getTime()).toBe(SCHEDULED_AT.getTime());
 
-    // Verify db.transaction was called (cascade delete happened)
-    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    // db.update was called (scheduled deletion set)
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
 
-    // Verify deleteSession was called (cookie cleared)
+    // db.transaction is NOT called (no immediate cascade delete)
+    expect(mockTransaction).not.toHaveBeenCalled();
+
+    // Session was cleared
     expect(mockDeleteSession).toHaveBeenCalledTimes(1);
 
-    // Verify recordAudit was called with user.account_delete
+    // recordAudit called with user.account_delete_scheduled
     expect(mockRecordAudit).toHaveBeenCalledOnce();
     const [eventType, opts] = mockRecordAudit.mock.calls[0] as [string, Record<string, unknown>];
-    expect(eventType).toBe('user.account_delete');
+    expect(eventType).toBe('user.account_delete_scheduled');
     expect(opts.actor_id).toBe(FAKE_USER.id);
     expect(opts.success).toBe(true);
+  });
+
+  it('returns 200 idempotent when already scheduled (does not re-audit or clear session)', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+
+    // scheduled_delete_at already set → idempotent path
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ id: FAKE_USER.id, scheduled_delete_at: SCHEDULED_AT }]),
+    );
+
+    const res = await app.request(
+      makeRequest('/api/me', {
+        method: 'DELETE',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { scheduled_delete_at: string };
+    expect(body).toHaveProperty('scheduled_delete_at');
+
+    // No DB update, no session clear, no audit on idempotent path
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockDeleteSession).not.toHaveBeenCalled();
+    expect(mockRecordAudit).not.toHaveBeenCalled();
   });
 
   it('returns 404 when user does not exist (race condition)', async () => {
@@ -315,8 +359,96 @@ describe('DELETE /api/me', () => {
     );
 
     expect(res.status).toBe(404);
-    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockDeleteSession).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /me/cancel-delete — G1 cancel grace period (refs #1095)
+// ---------------------------------------------------------------------------
+
+/** Build a update chain that resolves without .returning() */
+function updateChainNoReturn() {
+  return {
+    set: vi.fn().mockReturnThis(),
+    where: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+describe('POST /api/me/cancel-delete', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    mockResolveSession.mockResolvedValue(null);
+
+    const res = await app.request(makeRequest('/api/me/cancel-delete', { method: 'POST' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 200 and clears scheduled_delete_at when pending deletion exists', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ id: FAKE_USER.id, scheduled_delete_at: SCHEDULED_AT }]),
+    );
+    mockUpdate.mockReturnValueOnce(updateChainNoReturn());
+
+    const res = await app.request(
+      makeRequest('/api/me/cancel-delete', {
+        method: 'POST',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({ ok: true });
+
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+
+    expect(mockRecordAudit).toHaveBeenCalledOnce();
+    const [eventType, opts] = mockRecordAudit.mock.calls[0] as [string, Record<string, unknown>];
+    expect(eventType).toBe('user.account_delete_cancelled');
+    expect(opts.actor_id).toBe(FAKE_USER.id);
+    expect(opts.success).toBe(true);
+  });
+
+  it('returns 404 when no pending deletion to cancel', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+
+    mockSelect.mockReturnValueOnce(
+      selectChain([{ id: FAKE_USER.id, scheduled_delete_at: null }]),
+    );
+
+    const res = await app.request(
+      makeRequest('/api/me/cancel-delete', {
+        method: 'POST',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(404);
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockRecordAudit).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when user row not found', async () => {
+    mockResolveSession.mockResolvedValue(FAKE_USER);
+
+    mockSelect.mockReturnValueOnce(selectChain([]));
+
+    const res = await app.request(
+      makeRequest('/api/me/cancel-delete', {
+        method: 'POST',
+        cookie: 'session=valid-token',
+      }),
+    );
+
+    expect(res.status).toBe(404);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 
