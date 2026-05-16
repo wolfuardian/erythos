@@ -177,6 +177,20 @@ meRoutes.delete('/', async (c) => {
     cascadedShareTokens = Number(tokenCountRow?.count ?? 0);
   }
 
+  // Emit audit BEFORE the transaction so the actor_id FK is still valid.
+  // Trade-off: if the subsequent transaction throws, the audit row records success: true
+  // but the delete didn't happen. For account deletion this is the lesser evil vs.
+  // silently losing the audit row due to a 23503 FK violation (actor_id gone).
+  await recordAudit('user.account_delete', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'user',
+    resource_id: user.id,
+    metadata: { cascaded_scenes: cascadedScenes, cascaded_share_tokens: cascadedShareTokens },
+    success: true,
+  });
+
   // Delete user inside a transaction — cascades to sessions + scenes → scene_versions.
   // Note: session cookie clear happens outside the transaction (no DB-level side effect).
   await db.transaction(async (tx) => {
@@ -188,16 +202,6 @@ meRoutes.delete('/', async (c) => {
   // Cookie attributes mirror setSessionCookie exactly (Path=/ HttpOnly Secure(prod) SameSite=Lax)
   // so the browser honours the clear.
   await deleteSession(c);
-
-  await recordAudit('user.account_delete', {
-    actor_id: user.id,
-    actor_ip: extractActorIp(c),
-    actor_ua: c.req.header('User-Agent') ?? null,
-    resource_type: 'user',
-    resource_id: user.id,
-    metadata: { cascaded_scenes: cascadedScenes, cascaded_share_tokens: cascadedShareTokens },
-    success: true,
-  });
 
   return new Response(null, { status: 204 });
 });

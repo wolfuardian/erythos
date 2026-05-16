@@ -53,8 +53,10 @@ vi.mock('../auth.js', () => ({
 
 // recordAudit is fire-and-forget; mock it out so it doesn't hit db.insert
 // or cause flaky call-count assertions in these route tests.
+const mockRecordAudit = vi.fn().mockResolvedValue(undefined);
+
 vi.mock('../audit/recordAudit.js', () => ({
-  recordAudit: vi.fn().mockResolvedValue(undefined),
+  recordAudit: (...args: unknown[]) => mockRecordAudit(...args),
   extractActorIp: vi.fn().mockReturnValue(''),
   maskEmail: vi.fn().mockReturnValue(''),
 }));
@@ -290,6 +292,13 @@ describe('DELETE /api/me', () => {
 
     // Verify deleteSession was called (cookie cleared)
     expect(mockDeleteSession).toHaveBeenCalledTimes(1);
+
+    // Verify recordAudit was called with user.account_delete
+    expect(mockRecordAudit).toHaveBeenCalledOnce();
+    const [eventType, opts] = mockRecordAudit.mock.calls[0] as [string, Record<string, unknown>];
+    expect(eventType).toBe('user.account_delete');
+    expect(opts.actor_id).toBe(FAKE_USER.id);
+    expect(opts.success).toBe(true);
   });
 
   it('returns 404 when user does not exist (race condition)', async () => {
