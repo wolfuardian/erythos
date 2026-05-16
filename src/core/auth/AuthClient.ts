@@ -22,6 +22,8 @@ export interface User {
   avatarUrl: string | null;
   /** Storage used in bytes, from server /api/auth/me (refs #957). */
   storageUsed: number;
+  /** Whether this user has admin privileges, from server /api/auth/me (refs #1088 G2-3). */
+  isAdmin: boolean;
 }
 
 /** Public-safe user info returned by GET /api/users/:id (#1017 owner resolver). */
@@ -98,6 +100,7 @@ export class AuthClient {
       email: string;
       avatar_url: string | null;
       storageUsed: number;
+      is_admin: boolean;
     };
 
     return {
@@ -106,6 +109,7 @@ export class AuthClient {
       email: data.email,
       avatarUrl: data.avatar_url,
       storageUsed: data.storageUsed ?? 0,
+      isAdmin: data.is_admin ?? false,
     };
   }
 

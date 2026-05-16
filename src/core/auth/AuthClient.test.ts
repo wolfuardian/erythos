@@ -35,6 +35,7 @@ describe('AuthClient.getCurrentUser', () => {
       email: 'octocat@github.com',
       avatar_url: 'https://avatars.githubusercontent.com/u/1',
       storageUsed: 1024,
+      is_admin: false,
     };
     mockFetch(200, serverPayload);
 
@@ -47,6 +48,7 @@ describe('AuthClient.getCurrentUser', () => {
       email: 'octocat@github.com',
       avatarUrl: 'https://avatars.githubusercontent.com/u/1',
       storageUsed: 1024,
+      isAdmin: false,
     };
     expect(user).toEqual(expected);
   });

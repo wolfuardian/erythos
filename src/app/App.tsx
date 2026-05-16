@@ -36,6 +36,7 @@ import {
   getLastScenePath, setLastScenePath, clearLastScenePath,
 } from './projectSession';
 import { currentRoute, navigateToScene } from './router';
+import { AdminAuditLog } from './AdminAuditLog';
 import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import { RealtimeClient } from '../core/realtime/RealtimeClient';
@@ -64,6 +65,11 @@ const App: Component = () => {
   const syncEngine = new HttpSyncEngine(undefined, projectManager, new HttpAssetClient());
   // Singleton AuthClient — session via HttpOnly cookie; no token storage in JS.
   const authClient = new AuthClient();
+
+  // Admin route flag — read once on component creation.
+  // Full-page nav is used (no SPA router): value is stable for the lifetime of the component.
+  // G2-3 (refs #1088): if URL is /admin/audit-log and user is NOT admin, redirect to /.
+  const isAdminRoute = window.location.pathname === '/admin/audit-log';
 
   // Offline status — reactive boolean, true when client is offline.
   // Disposed on component cleanup. See src/core/network/useOfflineStatus.ts.
@@ -564,14 +570,25 @@ const App: Component = () => {
       history.replaceState({}, '', '/');
     }
 
-    // Resolve auth state on mount (fire-and-forget, parallel to route logic)
+    // Resolve auth state on mount (fire-and-forget, parallel to route logic).
+    // G2-3: when URL is /admin/audit-log, gate access after auth resolves.
     void (async () => {
       try {
         const user = await authClient.getCurrentUser();
         setCurrentUser(user); // User | null
+
+        // Admin route guard: redirect non-admins away from /admin/audit-log.
+        if (isAdminRoute) {
+          if (!user || !user.isAdmin) {
+            window.location.replace('/');
+          }
+        }
       } catch (err) {
         if (err instanceof AuthError) {
           setCurrentUser(null); // 降級訪客
+          if (isAdminRoute) {
+            window.location.replace('/');
+          }
         } else {
           throw err;
         }
@@ -854,6 +871,11 @@ const App: Component = () => {
 
   return (
     <>
+      {/* G2-3: Admin audit log page — full-page view, gated by is_admin */}
+      <Show when={isAdminRoute}>
+        <AdminAuditLog />
+      </Show>
+      <Show when={!isAdminRoute}>
       <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
       {/* #1054 Anonymous → Registered migration dialog — shown after first sign-in */}
       <AnonMigrateDialog
@@ -985,6 +1007,7 @@ const App: Component = () => {
             />
           </EditorProvider>
         </Show>
+      </Show>
       </Show>
     </>
   );
