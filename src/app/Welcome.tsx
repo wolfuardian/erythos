@@ -215,6 +215,27 @@ export const Welcome: Component<Props> = (props) => {
                 Sign in to sync across devices
               </button>
             </Show>
+            <div class={styles.legalLinks}>
+              <a
+                data-testid="welcome-link-privacy"
+                href="https://github.com/wolfuardian/erythos/blob/main/docs/legal/PRIVACY.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                class={styles.legalLink}
+              >
+                Privacy
+              </a>
+              <span class={styles.legalSeparator}>·</span>
+              <a
+                data-testid="welcome-link-terms"
+                href="https://github.com/wolfuardian/erythos/blob/main/docs/legal/TERMS.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                class={styles.legalLink}
+              >
+                Terms
+              </a>
+            </div>
           </div>
         </div>
 
