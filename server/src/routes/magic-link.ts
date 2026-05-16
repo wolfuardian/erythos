@@ -21,12 +21,17 @@ import { z } from 'zod';
 import {
   requestMagicLink,
   verifyMagicLink,
+  hashMagicLinkToken,
   MAGIC_LINK_BASE_URL,
 } from '../auth/magic-link.js';
 import { magicLinkEmail } from '../auth/email-template.js';
 import { sendMagicLinkEmail } from '../auth/resend-client.js';
 import { createSession } from '../auth.js';
 import { checkRateLimit } from '../middleware/rate-limit.js';
+import { recordAudit, extractActorIp, maskEmail } from '../audit/recordAudit.js';
+import { db } from '../db.js';
+import { magicLinkTokens } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 
 export const magicLinkRoutes = new Hono();
 
@@ -100,6 +105,18 @@ magicLinkRoutes.post('/request', async (c) => {
     ...magicLinkEmail({ link, validMinutes: 15 }),
   });
 
+  // Audit only the success path (token issued). Logging per-email rate-limit
+  // hits would create an admin-visible enumeration side-channel — even with
+  // email masked, a row proves prior interest. Silent 200 and IP-limit 429
+  // paths are intentionally not logged.
+  await recordAudit('auth.magic_link.request', {
+    actor_id: null,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    metadata: { email_masked: maskEmail(email) },
+    success: true,
+  });
+
   return c.json({ ok: true }, 200);
 });
 
@@ -120,6 +137,26 @@ magicLinkRoutes.get('/verify', async (c) => {
     return c.redirect(`/?auth_error=${result.error}`, 302);
   }
 
+  // Look up the email for masked audit metadata — a single extra SELECT on
+  // the already-consumed token row; this is the success path only.
+  const tokenHash = hashMagicLinkToken(token);
+  const [tokenRow] = await db
+    .select({ email: magicLinkTokens.email })
+    .from(magicLinkTokens)
+    .where(eq(magicLinkTokens.tokenHash, tokenHash))
+    .limit(1);
+
   await createSession(c, result.userId);
+
+  await recordAudit('auth.magic_link.consume', {
+    actor_id: result.userId,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'user',
+    resource_id: result.userId,
+    metadata: { email_masked: tokenRow ? maskEmail(tokenRow.email) : '' },
+    success: true,
+  });
+
   return c.redirect('/', 302);
 });

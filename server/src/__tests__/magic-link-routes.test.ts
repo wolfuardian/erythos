@@ -56,6 +56,14 @@ vi.mock('resend', () => ({
   Resend: vi.fn(),
 }));
 
+// recordAudit is fire-and-forget; mock it out so it doesn't hit db.insert
+// or cause flaky call-count assertions in these route tests.
+vi.mock('../audit/recordAudit.js', () => ({
+  recordAudit: vi.fn().mockResolvedValue(undefined),
+  extractActorIp: vi.fn().mockReturnValue(''),
+  maskEmail: vi.fn().mockReturnValue(''),
+}));
+
 const { magicLinkRoutes } = await import('../routes/magic-link.js');
 const { _resetRateLimit } = await import('../middleware/rate-limit.js');
 

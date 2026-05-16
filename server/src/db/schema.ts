@@ -12,9 +12,11 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   customType,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -203,6 +205,40 @@ export const assets = pgTable(
     refCount: integer('ref_count').notNull().default(0),
   },
   (t) => [index('assets_uploader_idx').on(t.uploadedBy)],
+);
+
+// ---------------------------------------------------------------------------
+// audit_log  (immutable append-only event log — refs #1086 G2-1)
+// ---------------------------------------------------------------------------
+//
+// actor_id: nullable — anonymous actions (magic-link request, OAuth failure)
+// have no authenticated actor. ON DELETE SET NULL preserves the log row when
+// a user is deleted; actor_ip/actor_ua are sufficient for reconstruction.
+//
+// resource_id is uuid type in the schema but stores scene / share_token / user
+// UUIDs depending on resource_type; NULL when not applicable.
+//
+// metadata: event-specific extras (email_masked, provider, reason, etc.).
+// Retention: app-side daily job deletes rows older than 90 days (refs PRIVACY.md §4).
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    timestamp: timestamp('timestamp', { withTimezone: true }).notNull().default(sql`now()`),
+    event_type: text('event_type').notNull(),
+    actor_id: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    actor_ip: text('actor_ip').notNull(),
+    actor_ua: text('actor_ua'),
+    resource_type: text('resource_type'),
+    resource_id: uuid('resource_id'),
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    success: boolean('success').notNull(),
+  },
+  (t) => [
+    index('audit_log_timestamp_idx').on(t.timestamp),
+    index('audit_log_actor_id_timestamp_idx').on(t.actor_id, t.timestamp),
+  ],
 );
 
 // ---------------------------------------------------------------------------
