@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { authRoutes } from './routes/auth.js';
 import { sceneRoutes } from './routes/scenes.js';
 import { shareTokenRoutes } from './routes/share-tokens.js';
@@ -13,8 +13,7 @@ import { userRoutes } from './routes/users.js';
 import { adminRoutes } from './routes/admin.js';
 import { loggerMiddleware, logger } from './middleware/logger.js';
 import { db } from './db.js';
-import { users } from './db/schema.js';
-import { recordAudit } from './audit/recordAudit.js';
+import { pruneScheduledDeletes } from './jobs/pruneScheduledDeletes.js';
 import { createRealtimeServer } from './realtime/server.js';
 
 const app = new Hono();
@@ -156,40 +155,10 @@ serve({ fetch: app.fetch, port }, () => {
   //
   // On failure: silent warn (per OQ-3 — alerting deferred to O1 epic).
   // .unref() prevents the timer from blocking clean process shutdown.
+  //
+  // Implementation is in server/src/jobs/pruneScheduledDeletes.ts (exported
+  // so it can be unit-tested independently of the server bootstrap).
   // ---------------------------------------------------------------------------
-
-  async function pruneScheduledDeletes(): Promise<void> {
-    try {
-      // Fetch expired users before deleting so we can emit audit events.
-      const expiredUsers = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(sql`${users.scheduled_delete_at} < now() AND ${users.scheduled_delete_at} IS NOT NULL`);
-
-      if (expiredUsers.length === 0) return;
-
-      for (const u of expiredUsers) {
-        // Emit audit BEFORE deleting — actor_id FK is still valid pre-delete.
-        // Fire-and-forget; audit failures do not block the cascade.
-        void recordAudit('user.account_delete_executed', {
-          actor_id: u.id,
-          actor_ip: '',
-          actor_ua: null,
-          resource_type: 'user',
-          resource_id: u.id,
-          metadata: { reason: 'grace_period_expired' },
-          success: true,
-        });
-
-        // Cascade delete: FK ON DELETE CASCADE removes sessions, scenes,
-        // scene_versions, magic_link_tokens, scene_share_tokens, yjs_documents.
-        await db.delete(users).where(eq(users.id, u.id));
-      }
-    } catch (err) {
-      logger.warn({ err }, 'scheduled-delete prune: failed');
-    }
-  }
-
   void pruneScheduledDeletes();
   setInterval(() => void pruneScheduledDeletes(), RETENTION_INTERVAL_MS).unref();
 });
