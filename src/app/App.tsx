@@ -40,6 +40,15 @@ import { ViewerShell } from './ViewerBanner';
 import { AuthErrorOverlay, parseAuthErrorCode, type AuthErrorCode } from './AuthErrorBanner';
 import { RealtimeClient } from '../core/realtime/RealtimeClient';
 import { upgradeLocalToCloud } from './upgradeLocalToCloud';
+import { AnonMigrateDialog } from '../components/AnonMigrateDialog';
+import {
+  getAddressedIds,
+  markAddressed,
+  isMigrationDisabled,
+  disableMigration,
+} from './anonMigrateState';
+import type { ProjectEntry } from '../core/project/ProjectHandleStore';
+import { loadProjects } from '../core/project/ProjectHandleStore';
 import styles from './App.module.css';
 import viewerStyles from './ShareTokenViewer.module.css';
 
@@ -76,6 +85,12 @@ const App: Component = () => {
 
   // L3-A3: Active RealtimeClient — set when a cloud project is open, null otherwise
   let activeRealtimeClient: RealtimeClient | null = null;
+
+  // #1054 Anonymous → Registered migration prompt state
+  const [migrateDialogOpen, setMigrateDialogOpen] = createSignal(false);
+  const [migrateEntries, setMigrateEntries] = createSignal<ProjectEntry[]>([]);
+  // Guard: prevents re-trigger while batch is running
+  let migrateBatchRunning = false;
 
   // Offline cached mode — set when a cloud project loads from IndexedDB cache (offline cold-start).
   // Causes the editor to be read-only + shows the cached-version OfflineBanner variant.
@@ -703,12 +718,145 @@ const App: Component = () => {
 
   onCleanup(() => { void closeProject(); });
 
+  // #1054 Anonymous → Registered migration prompt.
+  // Fires when currentUser transitions from null/undefined → User.
+  // Guards: viewer mode, share-token viewer, batch already running, dialog already open,
+  //         global "never ask again" flag, cold-start cloud auto-restore already happened.
+  let prevUser: User | null | undefined = undefined;
+  createEffect(() => {
+    const user = currentUser();
+
+    // Only react on null/undefined → User transition
+    if (!user || prevUser === user) {
+      prevUser = user;
+      return;
+    }
+    const wasSignedIn = prevUser !== null && prevUser !== undefined;
+    prevUser = user;
+    if (wasSignedIn) return; // already was a User (e.g. re-render without auth change)
+
+    // Skip if a viewer mode is active (share-token or public viewer)
+    if (viewerSceneId() !== null) return;
+    // Skip if batch is running
+    if (migrateBatchRunning) return;
+    // Skip if dialog already open
+    if (migrateDialogOpen()) return;
+    // Skip if user opted out globally
+    if (isMigrationDisabled()) return;
+    // Skip if a cloud project auto-restore is in progress (activeProject in localStorage).
+    // In that path the user is not in a "fresh sign-in" UX — they're being resumed.
+    try {
+      const raw = localStorage.getItem('activeProject');
+      if (raw) {
+        const parsed = JSON.parse(raw) as { kind: string };
+        if (parsed.kind === 'cloud') return;
+      }
+    } catch { /* ignore parse error — proceed with prompt */ }
+
+    void (async () => {
+      try {
+        const all = await loadProjects();
+        const addressed = getAddressedIds();
+        const pending = all.filter((e) => !addressed.has(e.id));
+        if (pending.length === 0) return;
+        setMigrateEntries(pending);
+        setMigrateDialogOpen(true);
+      } catch {
+        // Non-fatal — silently skip prompt on loadProjects failure
+      }
+    })();
+  });
+
+  /**
+   * Run the sequential batch upgrade for the selected entries.
+   * Each scene is opened as a local project, upgraded to cloud, then the next runs.
+   * On completion, a summary is shown and all attempted entries are marked as addressed.
+   */
+  const handleMigrateAddSelected = (selectedIds: string[]) => {
+    setMigrateDialogOpen(false);
+    if (selectedIds.length === 0) {
+      markAddressed(migrateEntries().map((e) => e.id));
+      return;
+    }
+
+    const entries = migrateEntries().filter((e) => selectedIds.includes(e.id));
+    markAddressed(migrateEntries().map((e) => e.id));
+    migrateBatchRunning = true;
+
+    void (async () => {
+      const results: { name: string; error: string | null }[] = [];
+
+      for (const entry of entries) {
+        try {
+          // Open the local project for this entry
+          const handle = await projectManager.openRecent(entry.id);
+          if (!handle) {
+            results.push({ name: entry.name, error: 'Could not open project (permission?)' });
+            continue;
+          }
+          // If a project is currently open, close it first
+          await closeProject();
+          await openProject(handle);
+          // Run upgrade
+          const e = editor();
+          if (!e) {
+            results.push({ name: entry.name, error: 'Editor not ready' });
+            continue;
+          }
+          await upgradeLocalToCloud({
+            editor: e,
+            syncEngine,
+            closeProject,
+            openCloudProject,
+            currentUser: currentUser(),
+          });
+          results.push({ name: entry.name, error: null });
+        } catch (err) {
+          results.push({ name: entry.name, error: err instanceof Error ? err.message : String(err) });
+          // Make sure editor is closed before next iteration
+          try { await closeProject(); } catch { /* ignore */ }
+        }
+      }
+
+      migrateBatchRunning = false;
+
+      const succeeded = results.filter((r) => r.error === null).length;
+      const failed = results.filter((r) => r.error !== null);
+      const failSummary = failed.map((r) => `• ${r.name}: ${r.error}`).join('\n');
+      const summary = failed.length > 0
+        ? `${succeeded} succeeded, ${failed.length} failed:\n${failSummary}`
+        : `${succeeded} project${succeeded !== 1 ? 's' : ''} added to your account.`;
+
+      // Show summary via browser alert (simple, no extra modal needed per spec)
+      // Follow-up: replace with proper summary modal if UX requires
+      alert(summary);
+    })();
+  };
+
+  const handleMigrateSkip = () => {
+    setMigrateDialogOpen(false);
+    markAddressed(migrateEntries().map((e) => e.id));
+  };
+
+  const handleMigrateSkipAll = () => {
+    setMigrateDialogOpen(false);
+    disableMigration();
+  };
+
   // Viewer mode: URL is /scenes/{uuid} and scene is not locally owned
   const isViewerMode = () => viewerSceneId() !== null;
 
   return (
     <>
       <AuthErrorOverlay code={authError()} onDismiss={() => setAuthError(null)} />
+      {/* #1054 Anonymous → Registered migration dialog — shown after first sign-in */}
+      <AnonMigrateDialog
+        open={migrateDialogOpen()}
+        entries={migrateEntries()}
+        onAddSelected={handleMigrateAddSelected}
+        onSkip={handleMigrateSkip}
+        onSkipAll={handleMigrateSkipAll}
+      />
       {/* G6 — Offline banner: only for cloud projects, not local. Not dismissible. */}
       <Show when={offlineCachedMode()}>
         <OfflineBanner cached />
