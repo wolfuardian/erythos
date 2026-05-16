@@ -51,6 +51,16 @@ vi.mock('../auth.js', () => ({
   SESSION_COOKIE: 'session',
 }));
 
+// recordAudit is fire-and-forget; mock it out so it doesn't hit db.insert
+// or cause flaky call-count assertions in these route tests.
+const mockRecordAudit = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../audit/recordAudit.js', () => ({
+  recordAudit: (...args: unknown[]) => mockRecordAudit(...args),
+  extractActorIp: vi.fn().mockReturnValue(''),
+  maskEmail: vi.fn().mockReturnValue(''),
+}));
+
 // ---------------------------------------------------------------------------
 // Import router under test AFTER mocks are registered
 // ---------------------------------------------------------------------------
@@ -252,8 +262,11 @@ describe('DELETE /api/me', () => {
     mockResolveSession.mockResolvedValue(FAKE_USER);
     mockDeleteSession.mockResolvedValue(undefined);
 
-    // existence check select
-    mockSelect.mockReturnValueOnce(selectChain([{ id: FAKE_USER.id }]));
+    // existence check select (uses .limit)
+    mockSelect
+      .mockReturnValueOnce(selectChain([{ id: FAKE_USER.id }]))   // existence check
+      .mockReturnValueOnce(selectChainNoLimit([{ count: 0 }]))     // COUNT scenes
+      .mockReturnValueOnce(selectChainNoLimit([]));                // scene IDs (empty → no token count)
 
     // transaction runs the callback with a tx object
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => {
@@ -279,6 +292,13 @@ describe('DELETE /api/me', () => {
 
     // Verify deleteSession was called (cookie cleared)
     expect(mockDeleteSession).toHaveBeenCalledTimes(1);
+
+    // Verify recordAudit was called with user.account_delete
+    expect(mockRecordAudit).toHaveBeenCalledOnce();
+    const [eventType, opts] = mockRecordAudit.mock.calls[0] as [string, Record<string, unknown>];
+    expect(eventType).toBe('user.account_delete');
+    expect(opts.actor_id).toBe(FAKE_USER.id);
+    expect(opts.success).toBe(true);
   });
 
   it('returns 404 when user does not exist (race condition)', async () => {

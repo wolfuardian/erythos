@@ -9,10 +9,11 @@
  */
 
 import { Hono } from 'hono';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { users, scenes, scene_versions } from '../db/schema.js';
+import { users, scenes, scene_versions, sceneShareTokens } from '../db/schema.js';
 import { resolveSession, deleteSession } from '../auth.js';
+import { recordAudit, extractActorIp } from '../audit/recordAudit.js';
 
 export const meRoutes = new Hono();
 
@@ -106,6 +107,16 @@ meRoutes.get('/export', async (c) => {
   c.header('Content-Type', 'application/json');
   c.header('Content-Disposition', `attachment; filename="${safeName}"`);
 
+  await recordAudit('user.data_export', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'user',
+    resource_id: user.id,
+    metadata: {},
+    success: true,
+  });
+
   return c.json({
     exported_at: new Date().toISOString(),
     user: userRecord,
@@ -139,6 +150,46 @@ meRoutes.delete('/', async (c) => {
     .limit(1);
 
   if (!existingRows[0]) return c.json({ error: 'Not Found' }, 404);
+
+  // Count owned scenes and share tokens before cascade for audit metadata.
+  const [sceneCountRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(scenes)
+    .where(eq(scenes.owner_id, user.id));
+  const cascadedScenes = Number(sceneCountRow?.count ?? 0);
+
+  const userSceneIds = await db
+    .select({ id: scenes.id })
+    .from(scenes)
+    .where(eq(scenes.owner_id, user.id));
+
+  let cascadedShareTokens = 0;
+  if (userSceneIds.length > 0) {
+    const [tokenCountRow] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sceneShareTokens)
+      .where(
+        inArray(
+          sceneShareTokens.scene_id,
+          userSceneIds.map((r) => r.id),
+        ),
+      );
+    cascadedShareTokens = Number(tokenCountRow?.count ?? 0);
+  }
+
+  // Emit audit BEFORE the transaction so the actor_id FK is still valid.
+  // Trade-off: if the subsequent transaction throws, the audit row records success: true
+  // but the delete didn't happen. For account deletion this is the lesser evil vs.
+  // silently losing the audit row due to a 23503 FK violation (actor_id gone).
+  await recordAudit('user.account_delete', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'user',
+    resource_id: user.id,
+    metadata: { cascaded_scenes: cascadedScenes, cascaded_share_tokens: cascadedShareTokens },
+    success: true,
+  });
 
   // Delete user inside a transaction — cascades to sessions + scenes → scene_versions.
   // Note: session cookie clear happens outside the transaction (no DB-level side effect).

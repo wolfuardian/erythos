@@ -21,6 +21,7 @@ import { users } from '../db/schema.js';
 import { resolveSession, createSession, deleteSession } from '../auth.js';
 import { counters } from '../counters.js';
 import { provisionDemoScene } from '../provision-demo-scene.js';
+import { recordAudit, extractActorIp } from '../audit/recordAudit.js';
 
 export const authRoutes = new Hono();
 
@@ -215,8 +216,24 @@ authRoutes.get('/github/callback', async (c) => {
   // Always clear the state cookie
   deleteCookie(c, STATE_COOKIE, { path: '/' });
 
-  if (!code) return c.redirect('/?auth_error=missing_code', 302);
+  if (!code) {
+    await recordAudit('auth.signin.failure', {
+      actor_id: null,
+      actor_ip: extractActorIp(c),
+      actor_ua: c.req.header('User-Agent') ?? null,
+      metadata: { provider: 'github', reason: 'missing_code' },
+      success: false,
+    });
+    return c.redirect('/?auth_error=missing_code', 302);
+  }
   if (!verifyOAuthState(stateParam ?? '', storedState ?? '')) {
+    await recordAudit('auth.signin.failure', {
+      actor_id: null,
+      actor_ip: extractActorIp(c),
+      actor_ua: c.req.header('User-Agent') ?? null,
+      metadata: { provider: 'github', reason: 'invalid_state' },
+      success: false,
+    });
     return c.redirect('/?auth_error=invalid_state', 302);
   }
 
@@ -273,18 +290,50 @@ authRoutes.get('/github/callback', async (c) => {
     await createSession(c, userId!);
     counters.auth_signin_total += 1;
 
+    await recordAudit('auth.signin.success', {
+      actor_id: userId!,
+      actor_ip: extractActorIp(c),
+      actor_ua: c.req.header('User-Agent') ?? null,
+      resource_type: 'user',
+      resource_id: userId!,
+      metadata: { provider: 'github' },
+      success: true,
+    });
+
     // Always redirect to root after successful OAuth.
     // We do NOT honor `?redirect=` from query — it would be an open-redirect surface.
     return c.redirect('/', 302);
   } catch (err) {
     console.error('[auth/callback]', err);
+    await recordAudit('auth.signin.failure', {
+      actor_id: null,
+      actor_ip: extractActorIp(c),
+      actor_ua: c.req.header('User-Agent') ?? null,
+      metadata: { provider: 'github', reason: 'oauth_failed' },
+      success: false,
+    });
     return c.redirect('/?auth_error=oauth_failed', 302);
   }
 });
 
 // POST /auth/signout
 authRoutes.post('/signout', async (c) => {
+  // Resolve before deleting so we have actor_id for the audit row.
+  const user = await resolveSession(c);
   await deleteSession(c);
   counters.auth_signout_total += 1;
+
+  if (user) {
+    await recordAudit('auth.signout', {
+      actor_id: user.id,
+      actor_ip: extractActorIp(c),
+      actor_ua: c.req.header('User-Agent') ?? null,
+      resource_type: 'user',
+      resource_id: user.id,
+      metadata: {},
+      success: true,
+    });
+  }
+
   return c.json({ ok: true });
 });

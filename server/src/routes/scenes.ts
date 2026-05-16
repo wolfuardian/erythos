@@ -20,6 +20,7 @@ import { resolveSession } from '../auth.js';
 import { bodyLimitMiddleware } from '../middleware/body-limit.js';
 import { requireSceneIdUuid } from '../middleware/validate-uuid.js';
 import { counters } from '../counters.js';
+import { recordAudit, extractActorIp } from '../audit/recordAudit.js';
 import type { Context, Next } from 'hono';
 
 // ---------------------------------------------------------------------------
@@ -326,6 +327,17 @@ sceneRoutes.post('/', bodyLimitMiddleware, authMiddleware, async (c) => {
   c.header('Location', `/api/scenes/${id}`);
   c.header('ETag', `"${version}"`);
   counters.scene_create_total += 1;
+
+  await recordAudit('scene.create', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'scene',
+    resource_id: id,
+    metadata: { title: name },
+    success: true,
+  });
+
   return c.json({ id, version }, 201);
 });
 
@@ -386,6 +398,16 @@ sceneRoutes.delete('/:id', requireSceneIdUuid, authMiddleware, async (c) => {
   }
 
   await db.delete(scenes).where(eq(scenes.id, id));
+
+  await recordAudit('scene.delete', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'scene',
+    resource_id: id,
+    metadata: { title: scene.name },
+    success: true,
+  });
 
   return c.body(null, 204);
 });

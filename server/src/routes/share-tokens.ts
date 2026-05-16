@@ -12,12 +12,13 @@
  */
 
 import { Hono } from 'hono';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db.js';
 import { scenes, sceneShareTokens } from '../db/schema.js';
 import { resolveSession } from '../auth.js';
 import { requireSceneIdUuid } from '../middleware/validate-uuid.js';
+import { recordAudit, extractActorIp } from '../audit/recordAudit.js';
 import type { Context, Next } from 'hono';
 
 // ---------------------------------------------------------------------------
@@ -82,6 +83,20 @@ shareTokenRoutes.post('/:id/share-tokens', requireSceneIdUuid, authMiddleware, a
 
   const createdAt = new Date().toISOString();
 
+  // Use sha256 first-8-hex of the raw token as token_id — the raw token is a
+  // bearer credential and must not be stored in audit_log.
+  const tokenId = createHash('sha256').update(token).digest('hex').slice(0, 8);
+
+  await recordAudit('share_token.create', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'scene',
+    resource_id: sceneId,
+    metadata: { token_id: tokenId },
+    success: true,
+  });
+
   return c.json({ token, url: shareUrl, created_at: createdAt }, 201);
 });
 
@@ -117,6 +132,7 @@ shareTokenRoutes.get('/:id/share-tokens', requireSceneIdUuid, authMiddleware, as
 shareTokenRoutes.delete('/:id/share-tokens/:token', requireSceneIdUuid, authMiddleware, async (c) => {
   const sceneId = c.req.param('id')!;
   const tokenParam = c.req.param('token')!;
+  const user = c.get('user') as Variables['user'];
   const scene = await requireOwner(c, sceneId);
   if (!scene) return c.json({ error: 'Not Found' }, 404);
 
@@ -140,6 +156,19 @@ shareTokenRoutes.delete('/:id/share-tokens/:token', requireSceneIdUuid, authMidd
         isNull(sceneShareTokens.revoked_at),
       ),
     );
+
+  // sha256 first-8-hex: raw token is a bearer credential, never log plaintext
+  const tokenId = createHash('sha256').update(tokenParam).digest('hex').slice(0, 8);
+
+  await recordAudit('share_token.revoke', {
+    actor_id: user.id,
+    actor_ip: extractActorIp(c),
+    actor_ua: c.req.header('User-Agent') ?? null,
+    resource_type: 'scene',
+    resource_id: sceneId,
+    metadata: { token_id: tokenId },
+    success: true,
+  });
 
   return new Response(null, { status: 204 });
 });

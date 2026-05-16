@@ -120,6 +120,28 @@ const port = Number(process.env.PORT ?? 3000);
 
 serve({ fetch: app.fetch, port }, () => {
   logger.info(`Server listening on http://localhost:${port}`);
+
+  // ---------------------------------------------------------------------------
+  // Audit log retention — delete rows older than 90 days (refs PRIVACY.md §4)
+  //
+  // App-side tick instead of pg_cron to avoid installing extensions.
+  // Runs once at boot, then every 24h. .unref() prevents the timer from
+  // blocking clean process shutdown.
+  // ---------------------------------------------------------------------------
+  const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+  async function pruneAuditLog(): Promise<void> {
+    try {
+      await db.execute(
+        sql`DELETE FROM audit_log WHERE timestamp < NOW() - INTERVAL '90 days'`,
+      );
+    } catch (err) {
+      logger.warn({ err }, 'audit retention: prune failed');
+    }
+  }
+
+  void pruneAuditLog();
+  setInterval(() => void pruneAuditLog(), RETENTION_INTERVAL_MS).unref();
 });
 
 // ---------------------------------------------------------------------------

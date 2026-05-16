@@ -45,6 +45,14 @@ vi.mock('../db.js', () => ({
   pool: {},
 }));
 
+// recordAudit is fire-and-forget; mock it out so it doesn't hit db.insert
+// or cause flaky call-count assertions in these route tests.
+vi.mock('../audit/recordAudit.js', () => ({
+  recordAudit: vi.fn().mockResolvedValue(undefined),
+  extractActorIp: vi.fn().mockReturnValue(''),
+  maskEmail: vi.fn().mockReturnValue(''),
+}));
+
 // ---------------------------------------------------------------------------
 // Import the router under test AFTER the mock is registered.
 // ---------------------------------------------------------------------------
@@ -185,6 +193,28 @@ describe('POST /auth/signout', () => {
   });
 
   it('returns 200 and clears the cookie when session exists', async () => {
+    // resolveSession does db.select().from().innerJoin().where().limit()
+    // We return a valid user so the audit row records actor_id.
+    const fakeExpiry = new Date(Date.now() + 60_000);
+    const selectChain = {
+      from: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([
+        {
+          id: 'user-uuid-1',
+          github_id: 12345,
+          github_login: 'alice',
+          email: 'alice@example.com',
+          avatar_url: null,
+          handle: null,
+          storage_used: 0,
+          expires_at: fakeExpiry,
+        },
+      ]),
+    };
+    mockSelect.mockReturnValue(selectChain);
+
     // db.delete() chain: .where() returns a promise
     const deleteChain = {
       where: vi.fn().mockResolvedValue(undefined),
